@@ -1,8 +1,8 @@
-import { Command, TransformContext } from "./types.ts";
+import { Command, MigrationConfig, TransformContext } from "./types.ts";
 
 export function createContext<T extends Record<string, unknown>>(
   record: T,
-  defaultTable: string
+  config: MigrationConfig
 ): TransformContext<T> {
   const commands: Command[] = [];
 
@@ -10,14 +10,29 @@ export function createContext<T extends Record<string, unknown>>(
     record: structuredClone(record),
     original: Object.freeze(structuredClone(record)),
     commands,
-    emit(command: Command) {
-      commands.push(command);
-    },
     replace(newRecord) {
       ctx.record = newRecord;
     },
-    putRecord(record: Record<string, unknown>, table = defaultTable) {
-      commands.push({ type: "PUT_RECORD", table, record });
+    putPrimaryRecord(record: Record<string, unknown>) {
+      commands.push({
+        type: "PUT_RECORD",
+        table: config.targetPrimaryTable,
+        record
+      });
+    },
+    putOsRecord(record: Record<string, unknown>) {
+      // Future implementation for OpenSearch/Elasticsearch
+      // For now, we can throw or use a placeholder table name
+      throw new Error("OpenSearch/Elasticsearch support not yet implemented");
+    },
+    copyFile(sourceKey: string, targetKey: string) {
+      commands.push({
+        type: "S3_COPY",
+        sourceBucket: config.sourceFmBucket,
+        sourceKey,
+        targetBucket: config.targetFmBucket,
+        targetKey
+      });
     }
   };
 

@@ -39,22 +39,9 @@ export const createFileMetadata: Transformer = {
       // Calculate new S3 key (without revision in the ID)
       const newKey = `tenants/${tenant}/files/${fileId}/${fileName}`;
 
-      // Emit S3 copy command if oldKey exists and differs from newKey
+      // Copy file to new S3 location if needed
       if (oldKey && oldKey !== newKey) {
-        // Get bucket names from context or use defaults
-        // These will be injected by the process-segment command
-        const sourceBucket = (ctx as any).sourceFmBucket || "";
-        const targetBucket = (ctx as any).targetFmBucket || "";
-
-        if (sourceBucket && targetBucket) {
-          ctx.emit({
-            type: "S3_COPY",
-            sourceBucket,
-            sourceKey: oldKey,
-            targetBucket,
-            targetKey: newKey
-          });
-        }
+        ctx.copyFile(oldKey, newKey);
       }
 
       // Create metadata record with NEW bucketKey
@@ -79,7 +66,7 @@ export const createFileMetadata: Transformer = {
         _md: new Date().toISOString()
       };
 
-      ctx.putRecord(metadataRecord);
+      ctx.putPrimaryRecord(metadataRecord);
     }
   }
 };

@@ -1,4 +1,15 @@
 // ============================================================================
+// Configuration
+// ============================================================================
+
+export interface MigrationConfig {
+  sourcePrimaryTable: string;
+  targetPrimaryTable: string;
+  sourceFmBucket: string;
+  targetFmBucket: string;
+}
+
+// ============================================================================
 // Commands - represent deferred side effects
 // ============================================================================
 
@@ -27,14 +38,16 @@ export interface TransformContext<TRecord = Record<string, unknown>> {
   record: TRecord;
   /** Original record (immutable) */
   readonly original: Readonly<TRecord>;
-  /** Accumulated commands */
+  /** Accumulated commands (internal use) */
   readonly commands: Command[];
-  /** Emit a side-effect command */
-  emit(command: Command): void;
   /** Replace the working record entirely (for schema migrations) */
   replace<TNew>(newRecord: TNew): void;
-  /** Emit an additional record (not the primary one) */
-  putRecord(record: Record<string, unknown>, table?: string): void;
+  /** Put a record to the primary DynamoDB table */
+  putPrimaryRecord(record: Record<string, unknown>): void;
+  /** Put a record to the OpenSearch/Elasticsearch index (future) */
+  putOsRecord(record: Record<string, unknown>): void;
+  /** Copy a file from source to target location in S3 */
+  copyFile(sourceKey: string, targetKey: string): void;
 }
 
 // ============================================================================

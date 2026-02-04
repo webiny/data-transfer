@@ -1,5 +1,5 @@
 import { TransformPipeline } from "./pipeline.ts";
-import { Command } from "./types.ts";
+import { Command, MigrationConfig } from "./types.ts";
 
 // ============================================================================
 // Migration Runner
@@ -7,6 +7,11 @@ import { Command } from "./types.ts";
 
 export class MigrationRunner {
   private pipelines: TransformPipeline<any>[] = [];
+  private config: MigrationConfig;
+
+  constructor(config: MigrationConfig) {
+    this.config = config;
+  }
 
   register(pipeline: TransformPipeline<any>): this {
     this.pipelines.push(pipeline);
@@ -16,7 +21,7 @@ export class MigrationRunner {
   async processRecord(record: Record<string, unknown>): Promise<Command[]> {
     for (const pipeline of this.pipelines) {
       if (pipeline.accepts(record)) {
-        const result = await pipeline.run(record);
+        const result = await pipeline.run(record, this.config);
         return result ? result.commands : [];
       }
     }

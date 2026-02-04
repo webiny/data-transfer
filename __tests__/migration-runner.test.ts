@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { bootstrapMigrationRunner } from "../src/utils/bootstrap-runner.ts";
 import { executeCommands } from "../src/core/executor.ts";
+import { MigrationConfig } from "../src/core/types.ts";
 import { MockDatabaseClient } from "./mocks/database-client.ts";
 import { MockStorageClient } from "./mocks/storage-client.ts";
 import {
@@ -16,16 +17,22 @@ import {
 describe("MigrationRunner", () => {
   let database: MockDatabaseClient;
   let storage: MockStorageClient;
-  const targetTable = "target-table";
+  let config: MigrationConfig;
 
   beforeEach(() => {
     database = new MockDatabaseClient();
     storage = new MockStorageClient();
+    config = {
+      sourcePrimaryTable: "source-table",
+      targetPrimaryTable: "target-table",
+      sourceFmBucket: "source-bucket",
+      targetFmBucket: "target-bucket"
+    };
   });
 
   describe("Security Groups to Roles", () => {
     it("should transform security.group to security.role", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -67,7 +74,7 @@ describe("MigrationRunner", () => {
 
   describe("File Manager Settings", () => {
     it("should migrate FM settings to KeyValue format", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5FileManagerSettings);
       await executeCommands(commands, { database, storage });
@@ -102,7 +109,7 @@ describe("MigrationRunner", () => {
 
   describe("Mailer Settings", () => {
     it("should migrate mailer settings to KeyValue format", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5MailerSettings);
       await executeCommands(commands, { database, storage });
@@ -131,7 +138,7 @@ describe("MigrationRunner", () => {
 
   describe("CMS Entries", () => {
     it("should transform CMS file entries", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5CmsFileEntry);
       await executeCommands(commands, { database, storage });
@@ -191,7 +198,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should create file metadata record", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5CmsFileEntry);
       await executeCommands(commands, { database, storage });
@@ -215,7 +222,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should remove duplicate #CME# from PK", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme);
       await executeCommands(commands, { database, storage });
@@ -235,7 +242,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should update modelIds in keys and data", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme);
       await executeCommands(commands, { database, storage });
@@ -250,7 +257,7 @@ describe("MigrationRunner", () => {
 
   describe("Folder Records", () => {
     it("should remove #0001 from folder IDs", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5FolderRecord);
       await executeCommands(commands, { database, storage });
@@ -270,7 +277,7 @@ describe("MigrationRunner", () => {
 
   describe("Global Transformations", () => {
     it("should wrap non-reserved attributes in data envelope", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -296,7 +303,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should add GSI_TENANT attribute", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -308,7 +315,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should remove locale from all keys", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -322,7 +329,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should remove webinyVersion attribute", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -337,7 +344,7 @@ describe("MigrationRunner", () => {
 
   describe("Record Filtering", () => {
     it("should skip records without matching pipeline", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const commands = await runner.processRecord(v5UnknownRecord);
 
@@ -348,7 +355,7 @@ describe("MigrationRunner", () => {
 
   describe("Batch Processing", () => {
     it("should process multiple records", async () => {
-      const runner = bootstrapMigrationRunner({ targetTable });
+      const runner = bootstrapMigrationRunner(config);
 
       const records = [
         v5SecurityGroup,

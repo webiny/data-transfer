@@ -7,6 +7,7 @@ import {
   isDefaultLocaleRecord
 } from "./utils/tenants.ts";
 import { bootstrapMigrationRunner } from "./utils/bootstrap-runner.ts";
+import { MigrationConfig } from "./core/types.ts";
 
 // ============================================================================
 // Process Segment Command
@@ -44,10 +45,16 @@ export async function processSegment(
   );
   logger.info(`Found ${tenantLocales.size} tenants`);
 
+  // Create migration config
+  const config: MigrationConfig = {
+    sourcePrimaryTable: options.sourcePrimaryTable,
+    targetPrimaryTable: options.targetPrimaryTable,
+    sourceFmBucket: options.sourceFmBucket,
+    targetFmBucket: options.targetFmBucket
+  };
+
   // Create and bootstrap migration runner
-  const runner = bootstrapMigrationRunner({
-    targetTable: options.targetPrimaryTable
-  });
+  const runner = bootstrapMigrationRunner(config);
 
   // Process records
   let processedCount = 0;

@@ -1,5 +1,5 @@
 import { Transformer } from "./transformer.ts";
-import { PipelineResult } from "./types.ts";
+import { MigrationConfig, PipelineResult } from "./types.ts";
 import { createContext } from "./context.ts";
 
 // ============================================================================
@@ -15,11 +15,6 @@ export type RecordFilter<T = Record<string, unknown>> = (record: T) => boolean;
 export class TransformPipeline<TInput extends Record<string, unknown>> {
   private transformers: Transformer<any>[] = [];
   private filters: RecordFilter<TInput>[] = [];
-  private defaultTable: string;
-
-  constructor(defaultTable: string) {
-    this.defaultTable = defaultTable;
-  }
 
   /** Add a filter - record must pass ALL filters to be processed */
   filter(predicate: RecordFilter<TInput>): this {
@@ -37,19 +32,22 @@ export class TransformPipeline<TInput extends Record<string, unknown>> {
     return this.filters.every(f => f(record));
   }
 
-  async run(record: TInput): Promise<PipelineResult | null> {
+  async run(
+    record: TInput,
+    config: MigrationConfig
+  ): Promise<PipelineResult | null> {
     // Skip records that don't pass filters
     if (!this.accepts(record)) {
       return null;
     }
 
-    const ctx = createContext(record, this.defaultTable);
+    const ctx = createContext(record, config);
 
     for (const transformer of this.transformers) {
       await transformer.transform(ctx);
     }
 
-    ctx.putRecord(ctx.record, this.defaultTable);
+    ctx.putPrimaryRecord(ctx.record);
 
     return { commands: ctx.commands };
   }

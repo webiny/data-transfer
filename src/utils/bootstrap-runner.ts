@@ -1,5 +1,6 @@
 import { MigrationRunner } from "../core/runner.ts";
 import { TransformPipeline } from "../core/pipeline.ts";
+import { MigrationConfig } from "../core/types.ts";
 
 // Import transformers
 import { wrapInData } from "../transformers/global/wrap-in-data.ts";
@@ -20,31 +21,26 @@ import { isType } from "../filters/index.ts";
 // Bootstrap Migration Runner
 // ============================================================================
 
-export interface BootstrapOptions {
-  targetTable: string;
-}
-
 /**
  * Bootstraps a MigrationRunner with all registered pipelines
  */
 export function bootstrapMigrationRunner(
-  options: BootstrapOptions
+  config: MigrationConfig
 ): MigrationRunner {
-  const runner = new MigrationRunner();
-  const targetTable = options.targetTable;
+  const runner = new MigrationRunner(config);
 
   // Pipeline for File Manager Settings
-  const fmSettingsPipeline = new TransformPipeline(targetTable)
+  const fmSettingsPipeline = new TransformPipeline()
     .filter(isType("fm.settings"))
     .use(migrateFileManagerSettings);
 
   // Pipeline for Mailer Settings
-  const mailerSettingsPipeline = new TransformPipeline(targetTable)
+  const mailerSettingsPipeline = new TransformPipeline()
     .filter(record => record.SK === "L" && record.modelId === "mailerSettings")
     .use(migrateMailerSettings);
 
   // Pipeline for Security Groups -> Roles
-  const securityGroupsPipeline = new TransformPipeline(targetTable)
+  const securityGroupsPipeline = new TransformPipeline()
     .filter(isType("security.group"))
     .use(addGsiTenant)
     .use(removeLocale)
@@ -52,7 +48,7 @@ export function bootstrapMigrationRunner(
     .use(wrapInData);
 
   // Pipeline for CMS Entries (including files)
-  const cmsEntriesPipeline = new TransformPipeline(targetTable)
+  const cmsEntriesPipeline = new TransformPipeline()
     .filter(isType("cms.entry.l"))
     .use(addGsiTenant)
     .use(removeLocale)
@@ -64,7 +60,7 @@ export function bootstrapMigrationRunner(
     .use(updateFileLocation);
 
   // Pipeline for FLP records (folders)
-  const flpPipeline = new TransformPipeline(targetTable)
+  const flpPipeline = new TransformPipeline()
     .filter(
       record => typeof record.PK === "string" && record.PK.includes("#FLP#")
     )
