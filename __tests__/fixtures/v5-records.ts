@@ -25,6 +25,36 @@ export const v5SecurityGroup: DatabaseRecord = {
     },
     {
       name: "adminUsers.*"
+    },
+    {
+      name: "cms.endpoint.manage"
+    },
+    {
+      name: "content.i18n"
+    },
+    {
+      name: "cms.contentModel",
+      own: false,
+      rwd: "r",
+      pw: "",
+      models: {
+        "en-US": ["article"]
+      }
+    },
+    {
+      name: "cms.contentModelGroup",
+      own: false,
+      rwd: "rw",
+      pw: "",
+      groups: {
+        "en-US": ["67af510eac973600020bb057"]
+      }
+    },
+    {
+      name: "cms.contentEntry",
+      own: false,
+      rwd: "rw",
+      pw: ""
     }
   ],
   slug: "test-role-1",
@@ -34,6 +64,61 @@ export const v5SecurityGroup: DatabaseRecord = {
   webinyVersion: "0.0.0",
   _ct: "2026-02-04T08:21:47.520Z",
   _et: "SecurityGroup",
+  _md: "2026-02-04T08:21:47.520Z"
+};
+
+export const v6SecurityRole: DatabaseRecord = {
+  PK: "T#root#ROLE#6983019b5119180002ccf5ee",
+  SK: "A",
+  createdBy: {
+    displayName: "Admin User",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  createdOn: "2026-02-04T08:21:47.519Z",
+  description: "Test role",
+  GSI1_PK: "T#root#ROLES",
+  GSI1_SK: "test-role-1",
+  id: "6983019b5119180002ccf5ee",
+  name: "Test Role #1",
+  permissions: [
+    {
+      name: "security.*"
+    },
+    {
+      name: "adminUsers.*"
+    },
+    {
+      name: "cms.endpoint.manage"
+    },
+    {
+      name: "cms.contentModel",
+      own: false,
+      rwd: "r",
+      pw: "",
+      models: ["article"]
+    },
+    {
+      name: "cms.contentModelGroup",
+      own: false,
+      rwd: "rw",
+      pw: "",
+      groups: ["ungrouped"]
+    },
+    {
+      name: "cms.contentEntry",
+      own: false,
+      rwd: "rw",
+      pw: ""
+    }
+  ],
+  slug: "test-role-1",
+  system: false,
+  tenant: "root",
+  TYPE: "security.role",
+  webinyVersion: "0.0.0",
+  _ct: "2026-02-04T08:21:47.520Z",
+  _et: "SecurityRole",
   _md: "2026-02-04T08:21:47.520Z"
 };
 
@@ -239,6 +324,51 @@ export const v5CmsEntryWithDuplicateCme: DatabaseRecord = {
     "text@title": "Test Folder"
   },
   webinyVersion: "5.0.0"
+};
+
+// Content Model Group record for lookup
+export const v5ContentModelGroup: DatabaseRecord = {
+  PK: "T#root#GROUP#67af510eac973600020bb057",
+  SK: "A",
+  slug: "ungrouped",
+  name: "Ungrouped",
+  description: "Ungrouped content models",
+  icon: "fas/folder",
+  tenant: "root",
+  TYPE: "cms.group",
+  _ct: "2026-02-04T08:21:47.520Z",
+  _et: "CmsGroup",
+  _md: "2026-02-04T08:21:47.520Z"
+};
+
+// Full access group (should be skipped)
+export const v5FullAccessGroup: DatabaseRecord = {
+  PK: "T#root#L#en-US#GROUP#full-access-id",
+  SK: "A",
+  slug: "full-access",
+  name: "Full Access",
+  description: "Full system access",
+  permissions: [],
+  tenant: "root",
+  TYPE: "security.group",
+  _ct: "2026-02-04T08:21:47.520Z",
+  _et: "SecurityGroup",
+  _md: "2026-02-04T08:21:47.520Z"
+};
+
+// Anonymous group (should be skipped)
+export const v5AnonymousGroup: DatabaseRecord = {
+  PK: "T#root#L#en-US#GROUP#anonymous-id",
+  SK: "A",
+  slug: "anonymous",
+  name: "Anonymous",
+  description: "Anonymous users",
+  permissions: [],
+  tenant: "root",
+  TYPE: "security.group",
+  _ct: "2026-02-04T08:21:47.520Z",
+  _et: "SecurityGroup",
+  _md: "2026-02-04T08:21:47.520Z"
 };
 
 // Record that should be skipped (different locale)

@@ -54,7 +54,7 @@ export async function processSegment(
   };
 
   // Create and bootstrap migration runner
-  const runner = bootstrapMigrationRunner(config);
+  const runner = bootstrapMigrationRunner(config, database);
 
   // Process records
   let processedCount = 0;

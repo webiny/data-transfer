@@ -10,6 +10,7 @@ import {
  */
 export class MockDatabaseClient implements DatabaseClient {
   private records: Map<string, DatabaseRecord[]> = new Map();
+  private queryResponses: Map<string, DatabaseRecord> = new Map();
   public putRecords: DatabaseRecord[] = [];
   public batchPutRecords: DatabaseRecord[] = [];
 
@@ -17,6 +18,14 @@ export class MockDatabaseClient implements DatabaseClient {
     for (const [table, records] of Object.entries(initialRecords)) {
       this.records.set(table, records);
     }
+  }
+
+  /**
+   * Mock a query response for testing
+   */
+  mockQueryResponse(pk: string, sk: string, record: DatabaseRecord): void {
+    const key = `${pk}:${sk}`;
+    this.queryResponses.set(key, record);
   }
 
   async *scan(
@@ -47,6 +56,14 @@ export class MockDatabaseClient implements DatabaseClient {
     sk?: string,
     options?: QueryOptions
   ): Promise<DatabaseRecord[]> {
+    // Check for mocked response first
+    const key = `${pk}:${sk || ""}`;
+    const mockedRecord = this.queryResponses.get(key);
+    if (mockedRecord) {
+      return [mockedRecord];
+    }
+
+    // Fall back to records
     const records = this.records.get(tableName) || [];
 
     return records.filter(record => {

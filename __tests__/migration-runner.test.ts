@@ -11,7 +11,10 @@ import {
   v5CmsFileEntry,
   v5FolderRecord,
   v5CmsEntryWithDuplicateCme,
-  v5UnknownRecord
+  v5UnknownRecord,
+  v5ContentModelGroup,
+  v5FullAccessGroup,
+  v5AnonymousGroup
 } from "./fixtures/v5-records.ts";
 
 describe("MigrationRunner", () => {
@@ -32,7 +35,14 @@ describe("MigrationRunner", () => {
 
   describe("Security Groups to Roles", () => {
     it("should transform security.group to security.role", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      // Mock group lookup for permission transformation
+      database.mockQueryResponse(
+        "T#root#GROUP#67af510eac973600020bb057",
+        "A",
+        v5ContentModelGroup
+      );
+
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -64,17 +74,103 @@ describe("MigrationRunner", () => {
       // Should wrap in data envelope
       expect(migratedRecord.data).toBeDefined();
       expect(migratedRecord.data.name).toBe("Test Role #1");
-      expect(migratedRecord.data.permissions).toHaveLength(2);
+      expect(migratedRecord.data.permissions).toHaveLength(6);
 
       // Should remove webinyVersion
       expect(migratedRecord.webinyVersion).toBeUndefined();
       expect(migratedRecord.data.webinyVersion).toBeUndefined();
+
+      // Should remove tenant attribute
+      expect(migratedRecord.tenant).toBeUndefined();
+      expect(migratedRecord.data.tenant).toBeUndefined();
+    });
+
+    it("should skip full-access role", async () => {
+      const runner = bootstrapMigrationRunner(config, database);
+
+      const commands = await runner.processRecord(v5FullAccessGroup);
+
+      // Should return empty commands (record skipped)
+      expect(commands).toHaveLength(0);
+    });
+
+    it("should skip anonymous role", async () => {
+      const runner = bootstrapMigrationRunner(config, database);
+
+      const commands = await runner.processRecord(v5AnonymousGroup);
+
+      // Should return empty commands (record skipped)
+      expect(commands).toHaveLength(0);
+    });
+
+    it("should remove content.i18n permission", async () => {
+      database.mockQueryResponse(
+        "T#root#GROUP#67af510eac973600020bb057",
+        "A",
+        v5ContentModelGroup
+      );
+
+      const runner = bootstrapMigrationRunner(config, database);
+
+      const commands = await runner.processRecord(v5SecurityGroup);
+      await executeCommands(commands, { database, storage });
+
+      const migratedRecord = database.batchPutRecords[0];
+      const hasContentI18n = migratedRecord.data.permissions.some(
+        (p: any) => p.name === "content.i18n"
+      );
+
+      expect(hasContentI18n).toBe(false);
+    });
+
+    it("should flatten cms.contentModel models from locale object to array", async () => {
+      database.mockQueryResponse(
+        "T#root#GROUP#67af510eac973600020bb057",
+        "A",
+        v5ContentModelGroup
+      );
+
+      const runner = bootstrapMigrationRunner(config, database);
+
+      const commands = await runner.processRecord(v5SecurityGroup);
+      await executeCommands(commands, { database, storage });
+
+      const migratedRecord = database.batchPutRecords[0];
+      const contentModelPerm = migratedRecord.data.permissions.find(
+        (p: any) => p.name === "cms.contentModel"
+      );
+
+      expect(contentModelPerm).toBeDefined();
+      expect(contentModelPerm.models).toEqual(["article"]);
+      expect(Array.isArray(contentModelPerm.models)).toBe(true);
+    });
+
+    it("should transform cms.contentModelGroup groups from IDs to slugs", async () => {
+      database.mockQueryResponse(
+        "T#root#GROUP#67af510eac973600020bb057",
+        "A",
+        v5ContentModelGroup
+      );
+
+      const runner = bootstrapMigrationRunner(config, database);
+
+      const commands = await runner.processRecord(v5SecurityGroup);
+      await executeCommands(commands, { database, storage });
+
+      const migratedRecord = database.batchPutRecords[0];
+      const groupPerm = migratedRecord.data.permissions.find(
+        (p: any) => p.name === "cms.contentModelGroup"
+      );
+
+      expect(groupPerm).toBeDefined();
+      expect(groupPerm.groups).toEqual(["ungrouped"]);
+      expect(Array.isArray(groupPerm.groups)).toBe(true);
     });
   });
 
   describe("File Manager Settings", () => {
     it("should migrate FM settings to KeyValue format", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5FileManagerSettings);
       await executeCommands(commands, { database, storage });
@@ -109,7 +205,7 @@ describe("MigrationRunner", () => {
 
   describe("Mailer Settings", () => {
     it("should migrate mailer settings to KeyValue format", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5MailerSettings);
       await executeCommands(commands, { database, storage });
@@ -138,7 +234,7 @@ describe("MigrationRunner", () => {
 
   describe("CMS Entries", () => {
     it("should transform CMS file entries", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5CmsFileEntry);
       await executeCommands(commands, { database, storage });
@@ -198,7 +294,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should create file metadata record", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5CmsFileEntry);
       await executeCommands(commands, { database, storage });
@@ -222,7 +318,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should remove duplicate #CME# from PK", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme);
       await executeCommands(commands, { database, storage });
@@ -242,7 +338,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should update modelIds in keys and data", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme);
       await executeCommands(commands, { database, storage });
@@ -257,7 +353,7 @@ describe("MigrationRunner", () => {
 
   describe("Folder Records", () => {
     it("should remove #0001 from folder IDs", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5FolderRecord);
       await executeCommands(commands, { database, storage });
@@ -277,7 +373,7 @@ describe("MigrationRunner", () => {
 
   describe("Global Transformations", () => {
     it("should wrap non-reserved attributes in data envelope", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -303,7 +399,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should add GSI_TENANT attribute", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -315,7 +411,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should remove locale from all keys", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -329,7 +425,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should remove webinyVersion attribute", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5SecurityGroup);
       await executeCommands(commands, { database, storage });
@@ -344,7 +440,7 @@ describe("MigrationRunner", () => {
 
   describe("Record Filtering", () => {
     it("should skip records without matching pipeline", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const commands = await runner.processRecord(v5UnknownRecord);
 
@@ -355,7 +451,7 @@ describe("MigrationRunner", () => {
 
   describe("Batch Processing", () => {
     it("should process multiple records", async () => {
-      const runner = bootstrapMigrationRunner(config);
+      const runner = bootstrapMigrationRunner(config, database);
 
       const records = [
         v5SecurityGroup,

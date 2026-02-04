@@ -1,6 +1,7 @@
 import { Transformer } from "./transformer.ts";
 import { MigrationConfig, PipelineResult } from "./types.ts";
 import { createContext } from "./context.ts";
+import { DatabaseClient } from "../database/interface.ts";
 
 // ============================================================================
 // Record Filter
@@ -34,14 +35,15 @@ export class TransformPipeline<TInput extends Record<string, unknown>> {
 
   async run(
     record: TInput,
-    config: MigrationConfig
+    config: MigrationConfig,
+    database: DatabaseClient
   ): Promise<PipelineResult | null> {
     // Skip records that don't pass filters
     if (!this.accepts(record)) {
       return null;
     }
 
-    const ctx = createContext(record, config);
+    const ctx = createContext(record, config, database);
 
     for (const transformer of this.transformers) {
       await transformer.transform(ctx);

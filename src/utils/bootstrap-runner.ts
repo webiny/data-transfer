@@ -1,6 +1,7 @@
 import { MigrationRunner } from "../core/runner.ts";
 import { TransformPipeline } from "../core/pipeline.ts";
 import { MigrationConfig } from "../core/types.ts";
+import { DatabaseClient } from "../database/interface.ts";
 
 // Import transformers
 import { wrapInData } from "../transformers/global/wrap-in-data.ts";
@@ -15,6 +16,8 @@ import { createFileMetadata } from "../transformers/file-manager/create-metadata
 import { updateFileLocation } from "../transformers/file-manager/update-file-location.ts";
 import { migrateMailerSettings } from "../transformers/mailer/migrate-settings.ts";
 import { groupsToRoles } from "../transformers/security/groups-to-roles.ts";
+import { transformPermissions } from "../transformers/security/transform-permissions.ts";
+import { removeTenantAttribute } from "../transformers/security/remove-tenant.ts";
 import { isType } from "../filters/index.ts";
 
 // ============================================================================
@@ -25,9 +28,10 @@ import { isType } from "../filters/index.ts";
  * Bootstraps a MigrationRunner with all registered pipelines
  */
 export function bootstrapMigrationRunner(
-  config: MigrationConfig
+  config: MigrationConfig,
+  database: DatabaseClient
 ): MigrationRunner {
-  const runner = new MigrationRunner(config);
+  const runner = new MigrationRunner(config, database);
 
   // Pipeline for File Manager Settings
   const fmSettingsPipeline = new TransformPipeline()
@@ -42,9 +46,15 @@ export function bootstrapMigrationRunner(
   // Pipeline for Security Groups -> Roles
   const securityGroupsPipeline = new TransformPipeline()
     .filter(isType("security.group"))
+    .filter(record => {
+      const slug = record.slug || record.GSI1_SK;
+      return slug !== "full-access" && slug !== "anonymous";
+    })
     .use(addGsiTenant)
     .use(removeLocale)
     .use(groupsToRoles)
+    .use(transformPermissions)
+    .use(removeTenantAttribute)
     .use(wrapInData);
 
   // Pipeline for CMS Entries (including files)

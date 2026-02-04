@@ -48,6 +48,8 @@ export interface TransformContext<TRecord = Record<string, unknown>> {
   putOsRecord(record: Record<string, unknown>): void;
   /** Copy a file from source to target location in S3 */
   copyFile(sourceKey: string, targetKey: string): void;
+  /** Query a record from the source database */
+  queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
 }
 
 // ============================================================================

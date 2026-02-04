@@ -1,5 +1,6 @@
 import { TransformPipeline } from "./pipeline.ts";
 import { Command, MigrationConfig } from "./types.ts";
+import { DatabaseClient } from "../database/interface.ts";
 
 // ============================================================================
 // Migration Runner
@@ -8,9 +9,11 @@ import { Command, MigrationConfig } from "./types.ts";
 export class MigrationRunner {
   private pipelines: TransformPipeline<any>[] = [];
   private config: MigrationConfig;
+  private database: DatabaseClient;
 
-  constructor(config: MigrationConfig) {
+  constructor(config: MigrationConfig, database: DatabaseClient) {
     this.config = config;
+    this.database = database;
   }
 
   register(pipeline: TransformPipeline<any>): this {
@@ -21,7 +24,7 @@ export class MigrationRunner {
   async processRecord(record: Record<string, unknown>): Promise<Command[]> {
     for (const pipeline of this.pipelines) {
       if (pipeline.accepts(record)) {
-        const result = await pipeline.run(record, this.config);
+        const result = await pipeline.run(record, this.config, this.database);
         return result ? result.commands : [];
       }
     }

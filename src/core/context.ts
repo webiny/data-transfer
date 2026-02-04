@@ -1,8 +1,10 @@
 import { Command, MigrationConfig, TransformContext } from "./types.ts";
+import { DatabaseClient } from "../database/interface.ts";
 
 export function createContext<T extends Record<string, unknown>>(
   record: T,
-  config: MigrationConfig
+  config: MigrationConfig,
+  database: DatabaseClient
 ): TransformContext<T> {
   const commands: Command[] = [];
 
@@ -33,6 +35,10 @@ export function createContext<T extends Record<string, unknown>>(
         targetBucket: config.targetFmBucket,
         targetKey
       });
+    },
+    async queryRecord(pk: string, sk?: string) {
+      const results = await database.query(config.sourcePrimaryTable, pk, sk);
+      return results.length > 0 ? results[0] : null;
     }
   };
 
