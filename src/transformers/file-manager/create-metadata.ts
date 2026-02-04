@@ -1,0 +1,85 @@
+import { Transformer } from "../../core/transformer.ts";
+import { TransformContext } from "../../core/types.ts";
+
+/**
+ * Creates file metadata records in KeyValue format for file entries
+ * and emits S3 copy commands to move files to new location
+ */
+export const createFileMetadata: Transformer = {
+  name: "createFileMetadata",
+  transform(ctx: TransformContext) {
+    const { record } = ctx;
+
+    // Only process CMS entries with modelId = wbyFmFile
+    if (record.data && typeof record.data === "object") {
+      const data = record.data as Record<string, unknown>;
+
+      if (data.modelId !== "wbyFmFile") {
+        return;
+      }
+
+      // Extract file information
+      const values = (data.values || {}) as Record<string, unknown>;
+      let fileId = (data.id || data.entryId) as string;
+      const tenant = data.tenant || "root";
+      const fileName = values["text@name"];
+
+      // Extract metadata from file values
+      const oldKey = values["text@key"] as string;
+      const contentType = values["text@type"];
+      const size = values["number@size"];
+
+      if (!fileId || !fileName) {
+        return;
+      }
+
+      // Strip revision from file ID (e.g., "id#0001" -> "id")
+      fileId = fileId.replace(/#\d+$/, "");
+
+      // Calculate new S3 key (without revision in the ID)
+      const newKey = `tenants/${tenant}/files/${fileId}/${fileName}`;
+
+      // Emit S3 copy command if oldKey exists and differs from newKey
+      if (oldKey && oldKey !== newKey) {
+        // Get bucket names from context or use defaults
+        // These will be injected by the process-segment command
+        const sourceBucket = (ctx as any).sourceFmBucket || "";
+        const targetBucket = (ctx as any).targetFmBucket || "";
+
+        if (sourceBucket && targetBucket) {
+          ctx.emit({
+            type: "S3_COPY",
+            sourceBucket,
+            sourceKey: oldKey,
+            targetBucket,
+            targetKey: newKey
+          });
+        }
+      }
+
+      // Create metadata record with NEW bucketKey
+      const metadataRecord = {
+        PK: `KV#global:FileManager/File/${fileId}/Metadata`,
+        SK: "A",
+        GSI_TENANT: "global",
+        data: {
+          key: `FileManager/File/${fileId}/Metadata`,
+          scope: "global",
+          value: {
+            bucketKey: newKey, // Use the NEW S3 key
+            contentType,
+            id: fileId,
+            size,
+            tenant
+          }
+        },
+        TYPE: "KeyValueStore",
+        _ct: new Date().toISOString(),
+        _et: "KeyValueStore",
+        _md: new Date().toISOString()
+      };
+
+      ctx.putRecord(metadataRecord);
+    }
+  }
+};
