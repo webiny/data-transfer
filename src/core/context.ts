@@ -12,6 +12,7 @@ export function createContext<T extends Record<string, unknown>>(
     record: structuredClone(record),
     original: Object.freeze(structuredClone(record)),
     commands,
+    modelProvider: config.modelProvider,
     replace(newRecord) {
       ctx.record = newRecord;
     },

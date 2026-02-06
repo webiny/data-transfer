@@ -2,7 +2,8 @@ import { Transformer } from "../../core/transformer.ts";
 import { TransformContext } from "../../core/types.ts";
 
 /**
- * Removes #0001 revision from data.id and data.parentId in FLP records
+ * Removes #0001 revision from data.id and data.parentId in FLP records.
+ * Note: FLP records already have data attribute, so wrapInData doesn't wrap them again
  */
 export const updateFlpIds: Transformer = {
   name: "updateFlpIds",

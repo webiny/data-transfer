@@ -41,6 +41,10 @@ yargs(hideBin(process.argv))
           type: "string",
           demandOption: true,
           description: "Target S3 bucket for File Manager"
+        })
+        .option("models", {
+          type: "string",
+          description: "Directory containing model JSON files (optional)"
         });
     },
     async argv => {
@@ -106,6 +110,10 @@ yargs(hideBin(process.argv))
           type: "string",
           demandOption: true,
           description: "Target S3 bucket for File Manager"
+        })
+        .option("models", {
+          type: "string",
+          description: "Directory containing model JSON files (optional)"
         });
     },
     async argv => {
@@ -126,28 +134,30 @@ async function spawnWorker(
 ): Promise<void> {
   const binPath = new URL("../bin.js", import.meta.url).pathname;
 
-  const { exitCode } = await execa(
-    "node",
-    [
-      binPath,
-      "process-segment",
-      "--segment",
-      segment.toString(),
-      "--total",
-      total.toString(),
-      "--sourcePrimaryTable",
-      config.sourcePrimaryTable,
-      "--targetPrimaryTable",
-      config.targetPrimaryTable,
-      "--sourceFmBucket",
-      config.sourceFmBucket,
-      "--targetFmBucket",
-      config.targetFmBucket
-    ],
-    {
-      stdio: "inherit"
-    }
-  );
+  const args = [
+    binPath,
+    "process-segment",
+    "--segment",
+    segment.toString(),
+    "--total",
+    total.toString(),
+    "--sourcePrimaryTable",
+    config.sourcePrimaryTable,
+    "--targetPrimaryTable",
+    config.targetPrimaryTable,
+    "--sourceFmBucket",
+    config.sourceFmBucket,
+    "--targetFmBucket",
+    config.targetFmBucket
+  ];
+
+  if (config.models) {
+    args.push("--models", config.models);
+  }
+
+  const { exitCode } = await execa("node", args, {
+    stdio: "inherit"
+  });
 
   if (exitCode !== 0) {
     throw new Error(

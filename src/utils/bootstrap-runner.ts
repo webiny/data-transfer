@@ -8,6 +8,7 @@ import { wrapInData } from "../transformers/global/wrap-in-data.ts";
 import { addGsiTenant } from "../transformers/global/add-gsi-tenant.ts";
 import { removeLocale } from "../transformers/global/remove-locale.ts";
 import { fixCmePk } from "../transformers/cms/fix-cme-pk.ts";
+import { fixBrokenStorageKeys } from "../transformers/cms/fix-broken-storage-keys.ts";
 import { updateModelIds } from "../transformers/cms/update-model-ids.ts";
 import { removeFolderRevision } from "../transformers/cms/remove-folder-revision.ts";
 import { updateFlpIds } from "../transformers/folders/update-flp-ids.ts";
@@ -57,12 +58,19 @@ export function bootstrapMigrationRunner(
     .use(removeTenantAttribute)
     .use(wrapInData);
 
-  // Pipeline for CMS Entries (including files)
+  // Pipeline for CMS Entries (including files, but excluding FLP)
   const cmsEntriesPipeline = new TransformPipeline()
-    .filter(isType("cms.entry.l"))
+    .filter(record => {
+      const type = record.TYPE as string;
+      // Match cms.entry* but exclude cms.entry.flp (handled by FLP pipeline)
+      return Boolean(
+        type && type.startsWith("cms.entry") && type !== "cms.entry.flp"
+      );
+    })
     .use(addGsiTenant)
     .use(removeLocale)
     .use(fixCmePk)
+    .use(fixBrokenStorageKeys)
     .use(updateModelIds)
     .use(removeFolderRevision)
     .use(wrapInData)

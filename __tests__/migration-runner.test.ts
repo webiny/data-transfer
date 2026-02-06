@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { bootstrapMigrationRunner } from "../src/utils/bootstrap-runner.ts";
 import { executeCommands } from "../src/core/executor.ts";
 import { MigrationConfig } from "../src/core/types.ts";
+import { ModelProvider } from "../src/models/model-provider.ts";
 import { MockDatabaseClient } from "./mocks/database-client.ts";
 import { MockStorageClient } from "./mocks/storage-client.ts";
 import {
@@ -11,6 +12,8 @@ import {
   v5CmsFileEntry,
   v5FolderRecord,
   v5CmsEntryWithDuplicateCme,
+  v5CmsEntryLatest,
+  v5CmsEntryPublished,
   v5UnknownRecord,
   v5ContentModelGroup,
   v5FullAccessGroup,
@@ -21,15 +24,18 @@ describe("MigrationRunner", () => {
   let database: MockDatabaseClient;
   let storage: MockStorageClient;
   let config: MigrationConfig;
+  let modelProvider: ModelProvider;
 
   beforeEach(() => {
     database = new MockDatabaseClient();
     storage = new MockStorageClient();
+    modelProvider = new ModelProvider(database, "source-table");
     config = {
       sourcePrimaryTable: "source-table",
       targetPrimaryTable: "target-table",
       sourceFmBucket: "source-bucket",
-      targetFmBucket: "target-bucket"
+      targetFmBucket: "target-bucket",
+      modelProvider
     };
   });
 
@@ -348,6 +354,60 @@ describe("MigrationRunner", () => {
 
       // Should update modelId in data
       expect(migratedRecord.data.modelId).toBe("wbyAcoFolder");
+    });
+
+    it("should process all CMS entry types (cms.entry, cms.entry.l, cms.entry.p)", async () => {
+      const runner = bootstrapMigrationRunner(config, database);
+
+      // Test cms.entry.l (latest revision)
+      const commandsL = await runner.processRecord(v5CmsFileEntry);
+      await executeCommands(commandsL, { database, storage });
+
+      // Test cms.entry (latest published)
+      const commandsEntry = await runner.processRecord(v5CmsEntryLatest);
+      await executeCommands(commandsEntry, { database, storage });
+
+      // Test cms.entry.p (published revision)
+      const commandsP = await runner.processRecord(v5CmsEntryPublished);
+      await executeCommands(commandsP, { database, storage });
+
+      const migratedRecords = database.batchPutRecords;
+
+      // Should have migrated all entry types
+      const entryLRecord = migratedRecords.find(
+        r => r.TYPE === "cms.entry.l" && r.data.modelId === "wbyFmFile"
+      );
+      const entryRecord = migratedRecords.find(
+        r => r.TYPE === "cms.entry" && r.data.modelId === "blogPost"
+      );
+      const entryPRecord = migratedRecords.find(
+        r => r.TYPE === "cms.entry.p" && r.data.modelId === "blogPost"
+      );
+
+      // All entry types should be processed
+      expect(entryLRecord).toBeDefined();
+      expect(entryRecord).toBeDefined();
+      expect(entryPRecord).toBeDefined();
+
+      // All should have locale removed from PK
+      expect(entryLRecord!.PK).not.toContain("#L#en-US#");
+      expect(entryRecord!.PK).not.toContain("#L#en-US#");
+      expect(entryPRecord!.PK).not.toContain("#L#en-US#");
+
+      // All should have GSI_TENANT
+      expect(entryLRecord!.GSI_TENANT).toBe("root");
+      expect(entryRecord!.GSI_TENANT).toBe("root");
+      expect(entryPRecord!.GSI_TENANT).toBe("root");
+
+      // All should be wrapped in data
+      expect(entryLRecord!.data).toBeDefined();
+      expect(entryRecord!.data).toBeDefined();
+      expect(entryPRecord!.data).toBeDefined();
+
+      // All should have values
+      expect(entryLRecord!.data.values).toBeDefined();
+      expect(entryRecord!.data.values).toBeDefined();
+      expect(entryPRecord!.data.values).toBeDefined();
     });
   });
 

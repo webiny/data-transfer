@@ -381,6 +381,54 @@ export const v5RecordDifferentLocale: DatabaseRecord = {
   locale: "fr-FR"
 };
 
+// CMS Entry (Latest published version - cms.entry)
+export const v5CmsEntryLatest: DatabaseRecord = {
+  PK: "T#root#L#en-US#CMS#CME#CME#67dadc3209fa5e0002e55240",
+  SK: "L",
+  TYPE: "cms.entry",
+  modelId: "blogPost",
+  entryId: "67dadc3209fa5e0002e55240",
+  tenant: "root",
+  locale: "en-US",
+  status: "published",
+  values: {
+    "text@title": "My Blog Post",
+    "rich-text@content": {
+      compression: "gzip",
+      value: "H4sIAAAAAAAAA..."
+    }
+  },
+  version: 2,
+  webinyVersion: "5.0.0",
+  _ct: "2025-03-19T15:01:11.503Z",
+  _et: "CmsEntries",
+  _md: "2025-03-19T15:01:11.503Z"
+};
+
+// CMS Entry (Published revision - cms.entry.p)
+export const v5CmsEntryPublished: DatabaseRecord = {
+  PK: "T#root#L#en-US#CMS#CME#CME#67dadc3209fa5e0002e55240",
+  SK: "P",
+  TYPE: "cms.entry.p",
+  modelId: "blogPost",
+  entryId: "67dadc3209fa5e0002e55240",
+  tenant: "root",
+  locale: "en-US",
+  status: "published",
+  values: {
+    "text@title": "My Blog Post",
+    "rich-text@content": {
+      compression: "gzip",
+      value: "H4sIAAAAAAAAA..."
+    }
+  },
+  version: 1,
+  webinyVersion: "5.0.0",
+  _ct: "2025-03-19T15:01:11.503Z",
+  _et: "CmsEntries",
+  _md: "2025-03-19T15:01:11.503Z"
+};
+
 // Record with no matching pipeline (should be skipped)
 export const v5UnknownRecord: DatabaseRecord = {
   PK: "T#root#UNKNOWN#12345",

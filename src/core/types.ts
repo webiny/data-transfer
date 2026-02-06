@@ -1,3 +1,5 @@
+import { ModelProvider } from "../models/model-provider.ts";
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -7,6 +9,7 @@ export interface MigrationConfig {
   targetPrimaryTable: string;
   sourceFmBucket: string;
   targetFmBucket: string;
+  modelProvider: ModelProvider;
 }
 
 // ============================================================================
@@ -40,6 +43,8 @@ export interface TransformContext<TRecord = Record<string, unknown>> {
   readonly original: Readonly<TRecord>;
   /** Accumulated commands (internal use) */
   readonly commands: Command[];
+  /** Model provider for accessing CMS models */
+  readonly modelProvider: ModelProvider;
   /** Replace the working record entirely (for schema migrations) */
   replace<TNew>(newRecord: TNew): void;
   /** Put a record to the primary DynamoDB table */

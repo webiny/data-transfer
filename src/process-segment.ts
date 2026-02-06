@@ -8,6 +8,7 @@ import {
 } from "./utils/tenants.ts";
 import { bootstrapMigrationRunner } from "./utils/bootstrap-runner.ts";
 import { MigrationConfig } from "./core/types.ts";
+import { ModelProvider } from "./models/model-provider.ts";
 
 // ============================================================================
 // Process Segment Command
@@ -20,6 +21,7 @@ export interface ProcessSegmentOptions {
   targetPrimaryTable: string;
   sourceFmBucket: string;
   targetFmBucket: string;
+  modelsDir?: string;
 }
 
 export async function processSegment(
@@ -45,12 +47,22 @@ export async function processSegment(
   );
   logger.info(`Found ${tenantLocales.size} tenants`);
 
+  // Initialize and preload model provider
+  logger.info("Preloading models...");
+  const modelProvider = new ModelProvider(
+    database,
+    options.sourcePrimaryTable,
+    options.modelsDir
+  );
+  await modelProvider.preloadModels(tenantLocales);
+
   // Create migration config
   const config: MigrationConfig = {
     sourcePrimaryTable: options.sourcePrimaryTable,
     targetPrimaryTable: options.targetPrimaryTable,
     sourceFmBucket: options.sourceFmBucket,
-    targetFmBucket: options.targetFmBucket
+    targetFmBucket: options.targetFmBucket,
+    modelProvider
   };
 
   // Create and bootstrap migration runner

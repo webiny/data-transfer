@@ -1,11 +1,33 @@
 import { RecordFilter } from "../core/pipeline.ts";
+import { minimatch } from "minimatch";
 
 // ============================================================================
 // Filter Helpers
 // ============================================================================
 
-export const isType = (type: string): RecordFilter => record =>
-  record.TYPE === type;
+/**
+ * Matches record TYPE using exact match or glob pattern.
+ *
+ * Examples:
+ *   isType("cms.entry.l")     - exact match
+ *   isType("cms.entry*")      - matches cms.entry, cms.entry.l, cms.entry.p, etc.
+ *   isType("security.*")      - matches security.group, security.team, etc.
+ */
+export const isType = (pattern: string): RecordFilter => {
+  // Check if pattern contains wildcards
+  const hasWildcard = pattern.includes("*") || pattern.includes("?");
+
+  if (hasWildcard) {
+    // Use minimatch for glob patterns
+    return record => {
+      const type = record.TYPE;
+      return typeof type === "string" && minimatch(type, pattern);
+    };
+  } else {
+    // Exact match (fast path)
+    return record => record.TYPE === pattern;
+  }
+};
 
 export const isModel = (modelId: string): RecordFilter => record =>
   record.modelId === modelId;
