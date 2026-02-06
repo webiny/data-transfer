@@ -17,7 +17,10 @@ import {
   v5UnknownRecord,
   v5ContentModelGroup,
   v5FullAccessGroup,
-  v5AnonymousGroup
+  v5AnonymousGroup,
+  v5CmsEntryWithRichText,
+  v5BlogPostModel,
+  v5SecurityTeam
 } from "./fixtures/v5-records.ts";
 
 describe("MigrationRunner", () => {
@@ -42,11 +45,7 @@ describe("MigrationRunner", () => {
   describe("Security Groups to Roles", () => {
     it("should transform security.group to security.role", async () => {
       // Mock group lookup for permission transformation
-      database.mockQueryResponse(
-        "T#root#GROUP#67af510eac973600020bb057",
-        "A",
-        v5ContentModelGroup
-      );
+      database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
       const runner = bootstrapMigrationRunner(config, database);
 
@@ -110,11 +109,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should remove content.i18n permission", async () => {
-      database.mockQueryResponse(
-        "T#root#GROUP#67af510eac973600020bb057",
-        "A",
-        v5ContentModelGroup
-      );
+      database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
       const runner = bootstrapMigrationRunner(config, database);
 
@@ -130,11 +125,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should flatten cms.contentModel models from locale object to array", async () => {
-      database.mockQueryResponse(
-        "T#root#GROUP#67af510eac973600020bb057",
-        "A",
-        v5ContentModelGroup
-      );
+      database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
       const runner = bootstrapMigrationRunner(config, database);
 
@@ -152,11 +143,7 @@ describe("MigrationRunner", () => {
     });
 
     it("should transform cms.contentModelGroup groups from IDs to slugs", async () => {
-      database.mockQueryResponse(
-        "T#root#GROUP#67af510eac973600020bb057",
-        "A",
-        v5ContentModelGroup
-      );
+      database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
       const runner = bootstrapMigrationRunner(config, database);
 
@@ -171,6 +158,46 @@ describe("MigrationRunner", () => {
       expect(groupPerm).toBeDefined();
       expect(groupPerm.groups).toEqual(["ungrouped"]);
       expect(Array.isArray(groupPerm.groups)).toBe(true);
+    });
+  });
+
+  describe("Security Teams", () => {
+    it("should transform security.team records", async () => {
+      const runner = bootstrapMigrationRunner(config, database);
+
+      const commands = await runner.processRecord(v5SecurityTeam);
+      await executeCommands(commands, { database, storage });
+
+      const migratedRecords = database.batchPutRecords;
+      expect(migratedRecords).toHaveLength(1);
+
+      const migratedRecord = migratedRecords[0];
+
+      // Should keep TYPE unchanged
+      expect(migratedRecord.TYPE).toBe("security.team");
+
+      // Should keep _et unchanged
+      expect(migratedRecord._et).toBe("SecurityTeam");
+
+      // Should NOT have locale in keys (teams don't have locale)
+      expect(migratedRecord.PK).toBe("T#root#TEAM#6983017e5119180002ccf5eb");
+      expect(migratedRecord.GSI1_PK).toBe("T#root#TEAMS");
+
+      // Should add GSI_TENANT
+      expect(migratedRecord.GSI_TENANT).toBe("root");
+
+      // Should wrap in data envelope
+      expect(migratedRecord.data).toBeDefined();
+      expect(migratedRecord.data.name).toBe("Team #1");
+      expect(migratedRecord.data.groups).toEqual(["67af50f9ac973600020bb054"]);
+
+      // Should remove tenant attribute (global removal)
+      expect(migratedRecord.tenant).toBeUndefined();
+      expect(migratedRecord.data.tenant).toBeUndefined();
+
+      // Should remove webinyVersion attribute (global removal)
+      expect(migratedRecord.webinyVersion).toBeUndefined();
+      expect(migratedRecord.data.webinyVersion).toBeUndefined();
     });
   });
 
@@ -284,9 +311,7 @@ describe("MigrationRunner", () => {
       expect(migratedEntry!.data.values["object@location"]).toBeUndefined();
 
       // values should have the file metadata
-      expect(migratedEntry!.data.values["text@name"]).toBe(
-        "Numbers Grid 3.png"
-      );
+      expect(migratedEntry!.data.values["text@name"]).toBe("Numbers Grid 3.png");
       // File key should be updated to new S3 path format (without revision in ID)
       expect(migratedEntry!.data.values["text@key"]).toBe(
         "tenants/root/files/67dadc3209fa5e0002e5523f/Numbers Grid 3.png"
@@ -306,9 +331,7 @@ describe("MigrationRunner", () => {
       await executeCommands(commands, { database, storage });
 
       const migratedRecords = database.batchPutRecords;
-      const metadataRecord = migratedRecords.find(
-        r => r.TYPE === "KeyValueStore"
-      );
+      const metadataRecord = migratedRecords.find(r => r.TYPE === "KeyValueStore");
 
       expect(metadataRecord).toBeDefined();
       expect(metadataRecord!.PK).toContain("FileManager/File/");
@@ -408,6 +431,65 @@ describe("MigrationRunner", () => {
       expect(entryLRecord!.data.values).toBeDefined();
       expect(entryRecord!.data.values).toBeDefined();
       expect(entryPRecord!.data.values).toBeDefined();
+    });
+
+    it("should transform rich-text fields recursively", async () => {
+      // Mock the model query response (query without SK returns all models for that PK)
+      database.mockQueryResponse("T#root#L#en-US#CMS#CM", "", v5BlogPostModel);
+
+      // Preload models (simulates segment preloading)
+      await modelProvider.preloadModels(new Map([["root", "en-US"]]));
+
+      const runner = bootstrapMigrationRunner(config, database);
+
+      const commands = await runner.processRecord(v5CmsEntryWithRichText);
+      await executeCommands(commands, { database, storage });
+
+      const migratedRecords = database.batchPutRecords;
+      expect(migratedRecords).toHaveLength(1);
+
+      const migratedRecord = migratedRecords[0];
+      const values = migratedRecord.data.values;
+
+      // Check top-level rich-text field was transformed
+      expect(values["rich-text@8m79z9nx"]).toBeDefined();
+      expect(values["rich-text@8m79z9nx"].compression).toBe("gzip");
+      expect(values["rich-text@8m79z9nx"].value).toBeDefined();
+
+      // Import compression utility
+      const gzipCompression = await import("../src/utils/gzip-compression.ts");
+      const compression = new gzipCompression.GzipCompression();
+
+      // Check rich-text field inside dynamicZone was transformed
+      const dzArray = values["dynamicZone@nfyelol7"];
+      expect(Array.isArray(dzArray)).toBe(true);
+      expect(dzArray[0]["rich-text@xip2xhvz"]).toBeDefined();
+      expect(dzArray[0]["rich-text@xip2xhvz"].compression).toBe("gzip");
+
+      const dzRTE = await compression.decompress(dzArray[0]["rich-text@xip2xhvz"]);
+      expect(dzRTE).toBeDefined();
+      expect(dzRTE.state).toBeDefined();
+      expect(dzRTE.html).toBeDefined();
+      expect(typeof dzRTE.state).toBe("string");
+      expect(typeof dzRTE.html).toBe("string");
+      // Verify state contains Lexical JSON
+      expect(dzRTE.state).toContain('"root"');
+
+      // Check rich-text field inside object->array was transformed
+      const objArray = values["object@f0baxz0w"];
+      expect(Array.isArray(objArray)).toBe(true);
+      expect(objArray[0]["rich-text@5fzaks3u"]).toBeDefined();
+      expect(objArray[0]["rich-text@5fzaks3u"].compression).toBe("gzip");
+
+      const objArrayRTE = await compression.decompress(objArray[0]["rich-text@5fzaks3u"]);
+      expect(objArrayRTE).toBeDefined();
+      expect(objArrayRTE.state).toBeDefined();
+      expect(objArrayRTE.html).toBeDefined();
+      expect(typeof objArrayRTE.state).toBe("string");
+      expect(typeof objArrayRTE.html).toBe("string");
+
+      // Note: Top-level rich-text@8m79z9nx and the nested dynamic zone inside object (text@vc5vikzr)
+      // don't have valid Lexical format (no 'root' key), so the transformer skips them
     });
   });
 
@@ -513,11 +595,7 @@ describe("MigrationRunner", () => {
     it("should process multiple records", async () => {
       const runner = bootstrapMigrationRunner(config, database);
 
-      const records = [
-        v5SecurityGroup,
-        v5FileManagerSettings,
-        v5MailerSettings
-      ];
+      const records = [v5SecurityGroup, v5FileManagerSettings, v5MailerSettings];
 
       const commands = await runner.processAll(records);
       await executeCommands(commands, { database, storage });

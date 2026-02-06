@@ -1,7 +1,7 @@
 import { Transformer } from "../../core/transformer.ts";
 import { TransformContext } from "../../core/types.ts";
-import { ModelField } from "../../models/types.ts";
 import { getCorrectStorageId } from "../../models/field-utils.ts";
+import { visitFields } from "../../utils/field-visitor.ts";
 
 // ============================================================================
 // Fix Broken Storage Keys Transformer
@@ -31,9 +31,7 @@ export const fixBrokenStorageKeys: Transformer = {
 
     const model = ctx.modelProvider.getModel(modelId as string);
     if (!model) {
-      console.warn(
-        `[fixBrokenStorageKeys] Model ${modelId} not found, skipping`
-      );
+      console.warn(`[fixBrokenStorageKeys] Model ${modelId} not found, skipping`);
       return;
     }
 
@@ -42,19 +40,16 @@ export const fixBrokenStorageKeys: Transformer = {
       return; // No values to fix
     }
 
-    // Fix all keys recursively
-    fixAllKeysRecursive(values as Record<string, unknown>, model.fields);
+    // Fix all keys recursively using field visitor
+    await fixAllKeys(values as Record<string, unknown>, model.fields);
   }
 };
 
 /**
  * Recursively fixes storage keys in entry values based on model field definitions
  */
-function fixAllKeysRecursive(
-  values: Record<string, unknown>,
-  modelFields: ModelField[]
-): void {
-  for (const field of modelFields) {
+async function fixAllKeys(values: Record<string, unknown>, modelFields: any[]): Promise<void> {
+  await visitFields(values, modelFields, (values, field, value) => {
     const correctKey = getCorrectStorageId(field);
     const declaredKey = field.storageId; // What model says (may be corrupt)
     const fieldIdKey = field.fieldId; // Another possible wrong key
@@ -87,50 +82,7 @@ function fixAllKeysRecursive(
     if (wrongKeyUsed) {
       values[correctKey] = foundValue;
       delete values[wrongKeyUsed];
-      console.log(
-        `[fixBrokenStorageKeys] Fixed key: ${wrongKeyUsed} → ${correctKey}`
-      );
+      console.log(`[fixBrokenStorageKeys] Fixed key: ${wrongKeyUsed} → ${correctKey}`);
     }
-
-    // Now recurse into nested structures
-    const value = values[correctKey];
-    if (!value) continue;
-
-    if (field.type === "object") {
-      // Object field: recurse into nested fields
-      const nestedFields = field.settings && field.settings.fields;
-      if (!nestedFields) continue;
-
-      if (field.multipleValues && Array.isArray(value)) {
-        // Array of objects
-        for (const item of value) {
-          if (item && typeof item === "object") {
-            fixAllKeysRecursive(item as Record<string, unknown>, nestedFields);
-          }
-        }
-      } else if (typeof value === "object" && value !== null) {
-        // Single object
-        fixAllKeysRecursive(value as Record<string, unknown>, nestedFields);
-      }
-    } else if (field.type === "dynamicZone") {
-      // Dynamic zone: recurse into template fields
-      const templates = field.settings && field.settings.templates;
-      if (!templates) continue;
-
-      const items = Array.isArray(value) ? value : [value];
-
-      for (const item of items) {
-        if (!item || typeof item !== "object") continue;
-
-        const itemObj = item as Record<string, unknown>;
-        const templateId = itemObj._templateId as string;
-        const template = templates.find(t => t.id === templateId);
-
-        if (template) {
-          fixAllKeysRecursive(itemObj, template.fields);
-        }
-      }
-    }
-    // Other field types (text, rich-text, etc.) don't have nested structure
-  }
+  });
 }

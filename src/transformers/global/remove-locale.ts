@@ -10,24 +10,12 @@ export const removeLocale: Transformer = {
     const { record } = ctx;
 
     // Keys that might contain locale codes
-    const keysToClean = [
-      "PK",
-      "SK",
-      "GSI1_PK",
-      "GSI1_SK",
-      "GSI2_PK",
-      "GSI2_SK"
-    ];
+    const keysToClean = ["PK", "SK", "GSI1_PK", "GSI1_SK", "GSI2_PK", "GSI2_SK"];
 
     for (const key of keysToClean) {
       if (typeof record[key] === "string") {
         record[key] = removeLocaleFromKey(record[key] as string);
       }
-    }
-
-    // Also remove webinyVersion if it exists
-    if (record.webinyVersion !== undefined) {
-      delete record.webinyVersion;
     }
   }
 };

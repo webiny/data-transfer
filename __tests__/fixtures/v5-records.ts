@@ -6,7 +6,7 @@ import { DatabaseRecord } from "../../src/database/interface.ts";
 
 // Security Group (should become Role)
 export const v5SecurityGroup: DatabaseRecord = {
-  PK: "T#root#L#en-US#GROUP#6983019b5119180002ccf5ee",
+  PK: "T#root#GROUP#6983019b5119180002ccf5ee",
   SK: "A",
   createdBy: {
     displayName: "Admin User",
@@ -15,7 +15,7 @@ export const v5SecurityGroup: DatabaseRecord = {
   },
   createdOn: "2026-02-04T08:21:47.519Z",
   description: "Test role",
-  GSI1_PK: "T#root#L#en-US#GROUPS",
+  GSI1_PK: "T#root#GROUPS",
   GSI1_SK: "test-role-1",
   id: "6983019b5119180002ccf5ee",
   name: "Test Role #1",
@@ -429,6 +429,32 @@ export const v5CmsEntryPublished: DatabaseRecord = {
   _md: "2025-03-19T15:01:11.503Z"
 };
 
+// Security Team
+export const v5SecurityTeam: DatabaseRecord = {
+  PK: "T#root#TEAM#6983017e5119180002ccf5eb",
+  SK: "A",
+  createdBy: {
+    displayName: "Pavel Denisjuk",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  createdOn: "2026-02-04T08:21:18.446Z",
+  description: "Content editors",
+  groups: ["67af50f9ac973600020bb054"],
+  GSI1_PK: "T#root#TEAMS",
+  GSI1_SK: "team-1",
+  id: "6983017e5119180002ccf5eb",
+  name: "Team #1",
+  slug: "team-1",
+  system: false,
+  tenant: "root",
+  TYPE: "security.team",
+  webinyVersion: "0.0.0",
+  _ct: "2026-02-04T08:21:18.459Z",
+  _et: "SecurityTeam",
+  _md: "2026-02-04T08:21:18.459Z"
+};
+
 // Record with no matching pipeline (should be skipped)
 export const v5UnknownRecord: DatabaseRecord = {
   PK: "T#root#UNKNOWN#12345",
@@ -436,4 +462,208 @@ export const v5UnknownRecord: DatabaseRecord = {
   TYPE: "unknown.type",
   tenant: "root",
   someData: "test"
+};
+
+// CMS Entry with nested rich-text fields (from plan/v5_rte.json)
+export const v5CmsEntryWithRichText: DatabaseRecord = {
+  PK: "T#root#L#en-US#CMS#CME#CME#6985aa1230935400025559ef",
+  SK: "L",
+  TYPE: "cms.entry.l",
+  modelId: "blogPost",
+  entryId: "6985aa1230935400025559ef",
+  tenant: "root",
+  locale: "en-US",
+  status: "draft",
+  values: {
+    "dynamicZone@nfyelol7": [
+      {
+        "rich-text@xip2xhvz": {
+          compression: "gzip",
+          value:
+            "H4sIAAAAAAAAA52QwQrCMAyGX0X+cwV37QMIXrx4FA9lja7QtaULYhl7d2kmdHr0lvwpX750Ro6RoWf0g/M2U4C+/jSW2DgPfVC4xzwalnKMlqARauKhMHHxNYAC04uhcaaJye76GJgC17yk+kLGCk/Kk4sBultuCtZl6ll6eM5ouyrRBVsRde8Hkkw2j2zSsCdP48pvxNXh2Gxre2mGIjvJdVKe7BbZbVxLipIVLLd/POV7v45d3tDYM8d0AQAA"
+        },
+        "text@ggkafqka": "DZ Template title",
+        _templateId: "74m6szwdtcud7unp7zvuy"
+      }
+    ],
+    "object@1reqzcq7": {
+      "text@vc5vikzr": {
+        content: {
+          compression: "gzip",
+          value:
+            "H4sIAAAAAAAAA52QMQvCMBCF/0p5cwq6ZnBSwUlQJ6VDbE4bSZOSHmIp/e+SVGh1dAn33h3vvkuP4D1D9igrY3UgB3n5EZpYGQu5ELj5UCtOZe01QcJFx0Kg5c5GAwJML4bE/vqgkrN8la3P8T2cNrHZNXEszQg8KbTGO8jlUAhoE6jkpGE5YFoYY43T5Mbln5BGBXUPqqlyslTH5jxxBNlOyFEeJ8xE3KYTU7nT88jljLVrfPI6DMU/nOmPv44d3nBz9np5AQAA"
+        },
+        title: "Nested DZ title",
+        _templateId: "guuwad5t0u6c1z9o79ml9"
+      },
+      "text@48t73cke": "Seo description"
+    },
+    "object@f0baxz0w": [
+      {
+        "rich-text@5fzaks3u": {
+          compression: "gzip",
+          value:
+            "H4sIAAAAAAAAA52QzQrCMBCEX0XmHEGveQDBc4/SQ2hWG8gfySKW0neXbIVWj952ZmD2251RUmLoGcPovC0UoW8/whIb56FPCvdUgmEZQ7IEjdgcD4XKk28GFJheDI0uBTrUYaRgmjnlFkum8KRSXYrQ56VXsK7QwKLhuWBb1OpctBTXpZ+SbIp5FJPHI3kKLdw3rgCXDbXJbsMT0iqnyXi1+8rzjnXKSbwJS/8Pp/z269jlDThmbplxAQAA"
+        },
+        "text@ptbb4jbi": "AI Schema"
+      }
+    ],
+    "rich-text@8m79z9nx": {
+      compression: "gzip",
+      value:
+        "H4sIAAAAAAAAA52QwQrCMAyGX0X+cwV37QMIXvUoHsoaXaFrShfEMvbu0k7o9Ogt+QNfvmRGYhboGf3gvE0UoK+/jSUxzkMfFO6cRiO1HNkSNEJJPBQmyb4EUBB6CTTOzLLrOQgFKWmOZV6HCk9Kk+MA3S03BesS9VJ7eElomwrPBVsQZesHEk0yj2TisCdP48pvxNXg2FxLe2l+VXWqt9XyZLfIbuOaI9csY7n941mf+3Xs8gZUNzE2cgEAAA=="
+    },
+    "text@gjpytfvd": "Title #1"
+  },
+  version: 1,
+  webinyVersion: "0.0.0",
+  _ct: "2026-02-06T10:20:42.399Z",
+  _et: "CmsEntries",
+  _md: "2026-02-06T10:20:42.399Z"
+};
+
+// BlogPost model definition (from plan/v5_rte_model.json)
+export const v5BlogPostModel: DatabaseRecord = {
+  PK: "T#root#L#en-US#CMS#CM",
+  SK: "blogPost",
+  TYPE: "cms.model",
+  modelId: "blogPost",
+  tenant: "root",
+  locale: "en-US",
+  fields: [
+    {
+      fieldId: "title",
+      id: "gjpytfvd",
+      label: "Title",
+      storageId: "text@gjpytfvd",
+      type: "text",
+      multipleValues: false
+    },
+    {
+      fieldId: "description",
+      id: "8m79z9nx",
+      label: "Description",
+      storageId: "rich-text@8m79z9nx",
+      type: "rich-text",
+      multipleValues: false
+    },
+    {
+      fieldId: "content",
+      id: "nfyelol7",
+      label: "Content",
+      storageId: "dynamicZone@nfyelol7",
+      type: "dynamicZone",
+      multipleValues: true,
+      settings: {
+        templates: [
+          {
+            id: "74m6szwdtcud7unp7zvuy",
+            name: "RTE Content",
+            fields: [
+              {
+                fieldId: "content",
+                id: "xip2xhvz",
+                label: "Content",
+                storageId: "rich-text@xip2xhvz",
+                type: "rich-text",
+                multipleValues: false
+              },
+              {
+                fieldId: "title",
+                id: "ggkafqka",
+                label: "Title",
+                storageId: "text@ggkafqka",
+                type: "text",
+                multipleValues: false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      fieldId: "seo",
+      id: "1reqzcq7",
+      label: "SEO",
+      storageId: "object@1reqzcq7",
+      type: "object",
+      multipleValues: false,
+      settings: {
+        fields: [
+          {
+            fieldId: "preset",
+            id: "vc5vikzr",
+            label: "Preset",
+            storageId: "text@vc5vikzr",
+            type: "dynamicZone",
+            multipleValues: false,
+            settings: {
+              templates: [
+                {
+                  id: "guuwad5t0u6c1z9o79ml9",
+                  name: "Generic SEO",
+                  fields: [
+                    {
+                      fieldId: "content",
+                      id: "vpn6x3nf",
+                      label: "Content",
+                      storageId: "rich-text@vpn6x3nf",
+                      type: "rich-text",
+                      multipleValues: false
+                    },
+                    {
+                      fieldId: "title",
+                      id: "gb7tffkg",
+                      label: "Title",
+                      storageId: "text@gb7tffkg",
+                      type: "text"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            fieldId: "seoDescription",
+            id: "48t73cke",
+            label: "SEO Description",
+            storageId: "text@48t73cke",
+            type: "text",
+            multipleValues: false
+          }
+        ]
+      }
+    },
+    {
+      fieldId: "schema",
+      id: "f0baxz0w",
+      label: "Schema",
+      storageId: "object@f0baxz0w",
+      type: "object",
+      multipleValues: true,
+      settings: {
+        fields: [
+          {
+            fieldId: "type",
+            id: "ptbb4jbi",
+            label: "Type",
+            storageId: "text@ptbb4jbi",
+            type: "text",
+            multipleValues: false
+          },
+          {
+            fieldId: "schemaContent",
+            id: "5fzaks3u",
+            label: "Schema Content",
+            storageId: "rich-text@5fzaks3u",
+            type: "rich-text",
+            multipleValues: false
+          }
+        ]
+      }
+    }
+  ],
+  _et: "CmsModels",
+  _ct: "2026-02-06T10:20:27.362Z",
+  _md: "2026-02-06T10:20:27.362Z"
 };
