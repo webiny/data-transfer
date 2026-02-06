@@ -1,0 +1,395 @@
+{
+  "PK": "T#root#L#en-US#CMS#CM",
+  "SK": "blogPost",
+  "createdBy": {
+    "displayName": "Pavel Denisjuk",
+    "id": "67af5108ac973600020bb056",
+    "type": "admin"
+  },
+  "createdOn": "2026-02-06T08:43:50.943Z",
+  "fields": [
+    {
+      "fieldId": "title",
+      "helpText": null,
+      "id": "gjpytfvd",
+      "label": "Title",
+      "listValidation": [
+      ],
+      "multipleValues": false,
+      "placeholderText": null,
+      "predefinedValues": {
+        "enabled": false,
+        "values": [
+        ]
+      },
+      "renderer": {
+        "name": "text-input",
+        "settings": {}
+      },
+      "settings": {},
+      "storageId": "text@gjpytfvd",
+      "tags": [
+      ],
+      "type": "text",
+      "validation": [
+      ]
+    },
+    {
+      "fieldId": "description",
+      "helpText": null,
+      "id": "8m79z9nx",
+      "label": "Description",
+      "listValidation": [
+      ],
+      "multipleValues": false,
+      "placeholderText": null,
+      "predefinedValues": {
+        "enabled": false,
+        "values": [
+        ]
+      },
+      "renderer": {
+        "name": "lexical-text-input",
+        "settings": {}
+      },
+      "settings": {},
+      "storageId": "rich-text@8m79z9nx",
+      "tags": [
+      ],
+      "type": "rich-text",
+      "validation": [
+      ]
+    },
+    {
+      "fieldId": "content",
+      "helpText": null,
+      "id": "nfyelol7",
+      "label": "Content",
+      "listValidation": [
+        {
+          "message": "Value is required.",
+          "name": "dynamicZone",
+          "settings": {}
+        }
+      ],
+      "multipleValues": true,
+      "placeholderText": null,
+      "predefinedValues": {
+        "enabled": false,
+        "values": [
+        ]
+      },
+      "renderer": {
+        "name": "dynamicZone",
+        "settings": {
+          "open": false
+        }
+      },
+      "settings": {
+        "templates": [
+          {
+            "description": "RTE Content",
+            "fields": [
+              {
+                "fieldId": "content",
+                "id": "xip2xhvz",
+                "label": "Content",
+                "multipleValues": false,
+                "renderer": {
+                  "name": "lexical-text-input"
+                },
+                "storageId": "rich-text@xip2xhvz",
+                "type": "rich-text",
+                "validation": [
+                ]
+              },
+              {
+                "fieldId": "title",
+                "id": "ggkafqka",
+                "label": "Title",
+                "multipleValues": false,
+                "renderer": {
+                  "name": "text-input"
+                },
+                "storageId": "text@ggkafqka",
+                "type": "text",
+                "validation": [
+                ]
+              }
+            ],
+            "gqlTypeName": "RTEContent",
+            "icon": "fab/yelp",
+            "id": "74m6szwdtcud7unp7zvuy",
+            "layout": [
+              [
+                "ggkafqka"
+              ],
+              [
+                "xip2xhvz"
+              ]
+            ],
+            "name": "RTE Content",
+            "tags": [
+            ]
+          }
+        ]
+      },
+      "storageId": "dynamicZone@nfyelol7",
+      "tags": [
+      ],
+      "type": "dynamicZone",
+      "validation": [
+      ]
+    },
+    {
+      "fieldId": "seo",
+      "helpText": null,
+      "id": "1reqzcq7",
+      "label": "SEO",
+      "listValidation": [
+      ],
+      "multipleValues": false,
+      "placeholderText": null,
+      "predefinedValues": {
+        "enabled": false,
+        "values": [
+        ]
+      },
+      "renderer": {
+        "name": "object",
+        "settings": {}
+      },
+      "settings": {
+        "fields": [
+          {
+            "fieldId": "preset",
+            "id": "vc5vikzr",
+            "label": "Preset",
+            "listValidation": [
+              {
+                "name": "dynamicZone"
+              }
+            ],
+            "multipleValues": false,
+            "renderer": {
+              "name": "dynamicZone",
+              "settings": {
+                "open": false
+              }
+            },
+            "settings": {
+              "templates": [
+                {
+                  "description": "Generic SEO",
+                  "fields": [
+                    {
+                      "fieldId": "content",
+                      "id": "vpn6x3nf",
+                      "label": "Content",
+                      "multipleValues": false,
+                      "renderer": {
+                        "name": "lexical-text-input"
+                      },
+                      "storageId": "rich-text@vpn6x3nf",
+                      "type": "rich-text",
+                      "validation": [
+                      ]
+                    },
+                    {
+                      "fieldId": "title",
+                      "id": "gb7tffkg",
+                      "label": "Title",
+                      "renderer": {
+                        "name": "text-input"
+                      },
+                      "storageId": "text@gb7tffkg",
+                      "type": "text",
+                      "validation": [
+                      ]
+                    }
+                  ],
+                  "gqlTypeName": "GenericSEO",
+                  "icon": "fab/shopware",
+                  "id": "guuwad5t0u6c1z9o79ml9",
+                  "layout": [
+                    [
+                      "gb7tffkg"
+                    ],
+                    [
+                      "vpn6x3nf"
+                    ]
+                  ],
+                  "name": "Generic SEO",
+                  "tags": [
+                  ]
+                }
+              ]
+            },
+            "storageId": "dynamicZone@vc5vikzr",
+            "type": "dynamicZone",
+            "validation": [
+            ]
+          },
+          {
+            "fieldId": "seoDescription",
+            "id": "48t73cke",
+            "label": "SEO Description",
+            "multipleValues": false,
+            "renderer": {
+              "name": "text-input"
+            },
+            "storageId": "text@48t73cke",
+            "type": "text",
+            "validation": [
+            ]
+          }
+        ],
+        "layout": [
+          [
+            "48t73cke"
+          ],
+          [
+            "vc5vikzr"
+          ]
+        ]
+      },
+      "storageId": "object@1reqzcq7",
+      "tags": [
+      ],
+      "type": "object",
+      "validation": [
+      ]
+    },
+    {
+      "fieldId": "schema",
+      "helpText": null,
+      "id": "f0baxz0w",
+      "label": "Schema",
+      "listValidation": [
+      ],
+      "multipleValues": true,
+      "placeholderText": null,
+      "predefinedValues": {
+        "enabled": false,
+        "values": [
+        ]
+      },
+      "renderer": {
+        "name": "objects",
+        "settings": {
+          "multiValue": {
+            "addValueButtonLabel": "Add Schema"
+          }
+        }
+      },
+      "settings": {
+        "fields": [
+          {
+            "fieldId": "type",
+            "id": "ptbb4jbi",
+            "label": "Type",
+            "multipleValues": false,
+            "renderer": {
+              "name": "text-input"
+            },
+            "storageId": "text@ptbb4jbi",
+            "type": "text",
+            "validation": [
+            ]
+          },
+          {
+            "fieldId": "schemaContent",
+            "id": "5fzaks3u",
+            "label": "Schema Content",
+            "multipleValues": false,
+            "renderer": {
+              "name": "lexical-text-input"
+            },
+            "storageId": "rich-text@5fzaks3u",
+            "type": "rich-text",
+            "validation": [
+            ]
+          }
+        ],
+        "layout": [
+          [
+            "ptbb4jbi"
+          ],
+          [
+            "5fzaks3u"
+          ]
+        ]
+      },
+      "storageId": "object@f0baxz0w",
+      "tags": [
+      ],
+      "type": "object",
+      "validation": [
+      ]
+    }
+  ],
+  "group": {
+    "id": "67af510eac973600020bb057",
+    "name": "Ungrouped"
+  },
+  "layout": [
+    [
+      "gjpytfvd"
+    ],
+    [
+      "8m79z9nx"
+    ],
+    [
+      "1reqzcq7"
+    ],
+    [
+      "f0baxz0w"
+    ],
+    [
+      "nfyelol7"
+    ]
+  ],
+  "locale": "en-US",
+  "lockedFields": [
+    {
+      "fieldId": "text@gjpytfvd",
+      "multipleValues": false,
+      "type": "text"
+    },
+    {
+      "fieldId": "rich-text@8m79z9nx",
+      "multipleValues": false,
+      "type": "rich-text"
+    },
+    {
+      "fieldId": "dynamicZone@nfyelol7",
+      "multipleValues": true,
+      "type": "dynamicZone"
+    },
+    {
+      "fieldId": "object@1reqzcq7",
+      "multipleValues": false,
+      "type": "object"
+    },
+    {
+      "fieldId": "object@f0baxz0w",
+      "multipleValues": true,
+      "type": "object"
+    }
+  ],
+  "modelId": "blogPost",
+  "name": "BlogPost",
+  "pluralApiName": "BlogPosts",
+  "savedOn": "2026-02-06T10:20:27.196Z",
+  "singularApiName": "BlogPost",
+  "tags": [
+    "type:model"
+  ],
+  "tenant": "root",
+  "titleFieldId": "title",
+  "TYPE": "cms.model",
+  "webinyVersion": "0.0.0",
+  "_ct": "2026-02-06T10:20:27.362Z",
+  "_et": "CmsModels",
+  "_md": "2026-02-06T10:20:27.362Z"
+}

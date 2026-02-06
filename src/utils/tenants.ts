@@ -89,8 +89,16 @@ export function isDefaultLocaleRecord(
     return true;
   }
 
+
   const parts = pk.split("#");
   if (parts.length < 2) {
+    return true;
+  }
+
+  // Check if PK contains a locale marker
+  const localeMatch = pk.match(/#L#([^#]+)/);
+  if (!localeMatch) {
+    // No locale in PK, allow the record
     return true;
   }
 
@@ -102,12 +110,6 @@ export function isDefaultLocaleRecord(
     return false;
   }
 
-  // Check if PK contains a locale marker
-  const localeMatch = pk.match(/#L#([^#]+)/);
-  if (!localeMatch) {
-    // No locale in PK, allow the record
-    return true;
-  }
 
   const recordLocale = localeMatch[1];
   return recordLocale === defaultLocale;
