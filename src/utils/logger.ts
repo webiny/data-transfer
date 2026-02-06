@@ -1,33 +1,37 @@
+import pino from "pino";
+import pinoPretty from "pino-pretty";
+
 // ============================================================================
-// Simple Logger
+// Pino Logger
 // ============================================================================
 
-export class Logger {
-  private context: string;
-
-  constructor(context: string = "migration") {
-    this.context = context;
-  }
-
-  info(message: string, ...args: any[]) {
-    console.log(`[${this.context}] [INFO] ${message}`, ...args);
-  }
-
-  warn(message: string, ...args: any[]) {
-    console.warn(`[${this.context}] [WARN] ${message}`, ...args);
-  }
-
-  error(message: string, ...args: any[]) {
-    console.error(`[${this.context}] [ERROR] ${message}`, ...args);
-  }
-
-  debug(message: string, ...args: any[]) {
-    if (process.env.DEBUG) {
-      console.debug(`[${this.context}] [DEBUG] ${message}`, ...args);
-    }
-  }
-
-  success(message: string, ...args: any[]) {
-    console.log(`[${this.context}] [SUCCESS] ${message}`, ...args);
-  }
+export interface LoggerOptions {
+  level?: "trace" | "debug" | "info" | "warn" | "error";
+  msgPrefix?: string;
 }
+
+export const createLogger = (options: LoggerOptions = {}) => {
+  const level = options.level || getLogLevel();
+
+  return pino(
+    {
+      level,
+      msgPrefix: options.msgPrefix || ""
+    },
+    pinoPretty({
+      ignore: "pid,hostname",
+      colorize: true,
+      translateTime: "SYS:HH:MM:ss.l"
+    })
+  );
+};
+
+export const getLogLevel = (): string => {
+  const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+  if (envLevel && ["trace", "debug", "info", "warn", "error"].includes(envLevel)) {
+    return envLevel;
+  }
+  return "info";
+};
+
+export type Logger = ReturnType<typeof createLogger>;

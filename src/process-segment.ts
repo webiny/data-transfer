@@ -1,11 +1,8 @@
 import { DynamoDBClient } from "./database/dynamodb-client.ts";
 import { S3Client } from "./storage/s3-client.ts";
 import { executeCommands } from "./core/executor.ts";
-import { Logger } from "./utils/logger.ts";
-import {
-  fetchTenantsWithLocales,
-  isDefaultLocaleRecord
-} from "./utils/tenants.ts";
+import { createLogger } from "./utils/logger.ts";
+import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "./utils/tenants.ts";
 import { bootstrapMigrationRunner } from "./utils/bootstrap-runner.ts";
 import { MigrationConfig } from "./core/types.ts";
 import { ModelProvider } from "./models/model-provider.ts";
@@ -15,6 +12,7 @@ import { ModelProvider } from "./models/model-provider.ts";
 // ============================================================================
 
 export interface ProcessSegmentOptions {
+  runId: string;
   segment: number;
   total: number;
   sourcePrimaryTable: string;
@@ -24,10 +22,10 @@ export interface ProcessSegmentOptions {
   modelsDir?: string;
 }
 
-export async function processSegment(
-  options: ProcessSegmentOptions
-): Promise<void> {
-  const logger = new Logger(`segment-${options.segment}`);
+export async function processSegment(options: ProcessSegmentOptions): Promise<void> {
+  const logger = createLogger({
+    msgPrefix: `[segment #${options.segment}] `
+  });
 
   logger.info(
     `Starting segment ${options.segment} of ${options.total} (${Math.round(
@@ -41,19 +39,12 @@ export async function processSegment(
 
   // Fetch tenants and default locales
   logger.info("Fetching tenants and default locales...");
-  const tenantLocales = await fetchTenantsWithLocales(
-    database,
-    options.sourcePrimaryTable
-  );
+  const tenantLocales = await fetchTenantsWithLocales(database, options.sourcePrimaryTable);
   logger.info(`Found ${tenantLocales.size} tenants`);
 
   // Initialize and preload model provider
   logger.info("Preloading models...");
-  const modelProvider = new ModelProvider(
-    database,
-    options.sourcePrimaryTable,
-    options.modelsDir
-  );
+  const modelProvider = new ModelProvider(database, options.sourcePrimaryTable, options.modelsDir);
   await modelProvider.preloadModels(tenantLocales);
 
   // Create migration config
@@ -125,7 +116,7 @@ export async function processSegment(
     }
   }
 
-  logger.success(
+  logger.info(
     `Segment ${
       options.segment
     } completed: ${processedCount} processed, ${migratedCount} migrated, ${skippedCount} skipped`

@@ -2,7 +2,7 @@ import { readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { DatabaseClient } from "../database/interface.ts";
 import { Model } from "./types.ts";
-import { Logger } from "../utils/logger.ts";
+import { createLogger, Logger } from "../utils/logger.ts";
 
 // ============================================================================
 // Model Provider
@@ -21,7 +21,7 @@ export class ModelProvider {
     private tableName: string,
     private modelsDir?: string
   ) {
-    this.logger = new Logger("ModelProvider");
+    this.logger = createLogger();
   }
 
   /**
@@ -46,10 +46,7 @@ export class ModelProvider {
           }
         }
       } catch (error) {
-        this.logger.warn(
-          `Failed to load models for tenant ${tenantId}:`,
-          error
-        );
+        this.logger.warn({ error }, `Failed to load models for tenant ${tenantId}`);
       }
     }
 
@@ -74,21 +71,16 @@ export class ModelProvider {
               this.logger.warn(`Model file ${file} missing modelId property`);
             }
           } catch (error) {
-            this.logger.warn(`Failed to load model from ${file}:`, error);
+            this.logger.warn({ error }, `Failed to load model from ${file}`);
           }
         }
       } catch (error) {
-        this.logger.warn(
-          `Failed to read models directory ${this.modelsDir}:`,
-          error
-        );
+        this.logger.warn({ error }, `Failed to read models directory ${this.modelsDir}`);
       }
     }
 
     this.logger.info(
-      `Preloaded ${
-        this.models.size
-      } models (${dbCount} from DB, ${jsonCount} from JSON)`
+      `Preloaded ${this.models.size} models (${dbCount} from DB, ${jsonCount} from JSON)`
     );
   }
 

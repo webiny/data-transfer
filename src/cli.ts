@@ -2,10 +2,10 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { execa } from "execa";
-import { Logger } from "./utils/logger.ts";
+import { createLogger } from "./utils/logger.ts";
 import { processSegment, ProcessSegmentOptions } from "./process-segment.ts";
 
-const logger = new Logger("main");
+const logger = createLogger();
 
 // ============================================================================
 // Main CLI
@@ -48,7 +48,11 @@ yargs(hideBin(process.argv))
         });
     },
     async argv => {
+      // Generate unique run ID
+      const runId = String(Date.now());
+
       logger.info("Starting migration with configuration:");
+      logger.info(`  Run ID: ${runId}`);
       logger.info(`  Segments: ${argv.segments}`);
       logger.info(`  Source Table: ${argv.sourcePrimaryTable}`);
       logger.info(`  Target Table: ${argv.targetPrimaryTable}`);
@@ -62,16 +66,16 @@ yargs(hideBin(process.argv))
         const workers: Promise<void>[] = [];
 
         for (let segment = 0; segment < argv.segments; segment++) {
-          workers.push(spawnWorker(segment, argv.segments, argv));
+          workers.push(spawnWorker(segment, argv.segments, runId, argv));
         }
 
         // Wait for all workers to complete
         await Promise.all(workers);
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        logger.success(`Migration completed successfully in ${duration}s`);
+        logger.info(`Migration completed successfully in ${duration}s`);
       } catch (error) {
-        logger.error("Migration failed:", error);
+        logger.error({ error }, "Migration failed");
         process.exit(1);
       }
     }
@@ -81,6 +85,11 @@ yargs(hideBin(process.argv))
     "Process a specific segment (used internally by worker processes)",
     yargs => {
       return yargs
+        .option("runId", {
+          type: "string",
+          demandOption: true,
+          description: "Run ID for this migration"
+        })
         .option("segment", {
           type: "number",
           demandOption: true,
@@ -130,6 +139,7 @@ yargs(hideBin(process.argv))
 async function spawnWorker(
   segment: number,
   total: number,
+  runId: string,
   config: any
 ): Promise<void> {
   const binPath = new URL("../bin.js", import.meta.url).pathname;
@@ -137,6 +147,8 @@ async function spawnWorker(
   const args = [
     binPath,
     "process-segment",
+    "--runId",
+    runId,
     "--segment",
     segment.toString(),
     "--total",
@@ -160,8 +172,6 @@ async function spawnWorker(
   });
 
   if (exitCode !== 0) {
-    throw new Error(
-      `Worker process for segment ${segment} failed with code ${exitCode}`
-    );
+    throw new Error(`Worker process for segment ${segment} failed with code ${exitCode}`);
   }
 }
