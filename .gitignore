@@ -28,3 +28,4 @@ logs.txt
 
 CLAUDE*.md
 .claude/
+.sample/
