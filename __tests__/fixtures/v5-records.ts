@@ -468,12 +468,56 @@ export const v5UnknownRecord: DatabaseRecord = {
 export const v5CmsEntryWithRichText: DatabaseRecord = {
   PK: "T#root#L#en-US#CMS#CME#CME#6985aa1230935400025559ef",
   SK: "L",
-  TYPE: "cms.entry.l",
-  modelId: "blogPost",
+  createdBy: {
+    displayName: "Pavel Denisjuk",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  createdOn: "2026-02-06T08:45:06.580Z",
   entryId: "6985aa1230935400025559ef",
-  tenant: "root",
+  GSI1_PK: "T#root#L#en-US#CMS#CME#M#blogPost#L",
+  GSI1_SK: "6985aa1230935400025559ef#0001",
+  id: "6985aa1230935400025559ef#0001",
   locale: "en-US",
+  location: {
+    folderId: "root"
+  },
+  locked: false,
+  meta: {},
+  modelId: "blogPost",
+  modifiedBy: {
+    displayName: "Pavel Denisjuk",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  modifiedOn: "2026-02-06T10:20:42.359Z",
+  revisionCreatedBy: {
+    displayName: "Pavel Denisjuk",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  revisionCreatedOn: "2026-02-06T08:45:06.580Z",
+  revisionModifiedBy: {
+    displayName: "Pavel Denisjuk",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  revisionModifiedOn: "2026-02-06T10:20:42.359Z",
+  revisionSavedBy: {
+    displayName: "Pavel Denisjuk",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  revisionSavedOn: "2026-02-06T10:20:42.359Z",
+  savedBy: {
+    displayName: "Pavel Denisjuk",
+    id: "67af5108ac973600020bb056",
+    type: "admin"
+  },
+  savedOn: "2026-02-06T10:20:42.359Z",
   status: "draft",
+  tenant: "root",
+  TYPE: "cms.entry.l",
   values: {
     "dynamicZone@nfyelol7": [
       {
@@ -487,7 +531,7 @@ export const v5CmsEntryWithRichText: DatabaseRecord = {
       }
     ],
     "object@1reqzcq7": {
-      "text@vc5vikzr": {
+      "dynamicZone@vc5vikzr": {
         content: {
           compression: "gzip",
           value:
@@ -511,7 +555,7 @@ export const v5CmsEntryWithRichText: DatabaseRecord = {
     "rich-text@8m79z9nx": {
       compression: "gzip",
       value:
-        "H4sIAAAAAAAAA52QwQrCMAyGX0X+cwV37QMIXvUoHsoaXaFrShfEMvbu0k7o9Ogt+QNfvmRGYhboGf3gvE0UoK+/jSUxzkMfFO6cRiO1HNkSNEJJPBQmyb4EUBB6CTTOzLLrOQgFKWmOZV6HCk9Kk+MA3S03BesS9VJ7eElomwrPBVsQZesHEk0yj2TisCdP48pvxNXg2FxLe2l+VXWqt9XyZLfIbuOaI9csY7n941mf+3Xs8gZUNzE2cgEAAA=="
+        "H4sIAAAAAAAAA52QwQrCMAyGX0X+cwV37QMIXvUoHsoaXaFrShfEMvbu0k7o9Ogt+QNfvmRGYhboGf3gvE0UoK8/jSUxzkMfFO6cRiO1HNkSNEJJPBQmyb4EUBB6CTTOzLLrOQgFKWmOZV6HCk9Kk+MA3S03BesS9VJ7eElomwrPBVsQZesHEk0yj2TisCdP48pvxNXg2FxLe2l+VXWqt9XyZLfIbuOaI9csY7n941mf+3Xs8gZUNzE2cgEAAA=="
     },
     "text@gjpytfvd": "Title #1"
   },
