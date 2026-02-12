@@ -18,7 +18,6 @@ import { transformModelGroup } from "./transformers/cms/transform-model-group.ts
 // Import File Manager transformers
 import { migrateFileManagerSettings } from "./transformers/file-manager/migrate-settings.ts";
 import { createFileMetadata } from "./transformers/file-manager/create-metadata.ts";
-import { updateFileLocation } from "./transformers/file-manager/update-file-location.ts";
 
 // Import Folder transformers
 import { updateFlpIds } from "./transformers/folders/update-flp-ids.ts";
@@ -193,8 +192,7 @@ export class FmFilePipeline extends ConfiguredPipeline {
       .use(removeAttributes)
       .use(wrapInData)
       // File Manager-specific transformers
-      .use(createFileMetadata)
-      .use(updateFileLocation);
+      .use(createFileMetadata);
   }
 }
 

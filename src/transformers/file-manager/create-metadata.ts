@@ -10,11 +10,10 @@ export const createFileMetadata: Transformer = {
   transform(ctx: TransformContext) {
     const { record } = ctx;
 
-    // Only process CMS entries with modelId = wbyFmFile
     if (record.data && typeof record.data === "object") {
       const data = record.data as Record<string, unknown>;
 
-      if (data.modelId !== "wbyFmFile") {
+      if (record.TYPE !== "cms.entry.l") {
         return;
       }
 
@@ -24,14 +23,14 @@ export const createFileMetadata: Transformer = {
       const tenant = data.tenant || "root";
       const fileName = values["text@name"];
 
+      if (!fileId || !fileName) {
+        return;
+      }
+
       // Extract metadata from file values
       const oldKey = values["text@key"] as string;
       const contentType = values["text@type"];
       const size = values["number@size"];
-
-      if (!fileId || !fileName) {
-        return;
-      }
 
       // Strip revision from file ID (e.g., "id#0001" -> "id")
       fileId = fileId.replace(/#\d+$/, "");

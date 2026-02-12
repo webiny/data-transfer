@@ -17,7 +17,6 @@ import { transformModelGroup } from "../transformers/cms/transform-model-group.t
 import { updateFlpIds } from "../transformers/folders/update-flp-ids.ts";
 import { migrateFileManagerSettings } from "../transformers/file-manager/migrate-settings.ts";
 import { createFileMetadata } from "../transformers/file-manager/create-metadata.ts";
-import { updateFileLocation } from "../transformers/file-manager/update-file-location.ts";
 import { migrateMailerSettings } from "../transformers/mailer/migrate-settings.ts";
 import { groupsToRoles } from "../transformers/security/groups-to-roles.ts";
 import { transformPermissions } from "../transformers/security/transform-permissions.ts";
@@ -93,8 +92,7 @@ export function bootstrapMigrationRunner(
     .use(removeFolderRevision)
     .use(removeAttributes)
     .use(wrapInData)
-    .use(createFileMetadata)
-    .use(updateFileLocation);
+    .use(createFileMetadata);
 
   // Pipeline for FLP records (folders)
   const flpPipeline = new TransformPipeline()
