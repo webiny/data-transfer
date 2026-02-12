@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootstrapMigrationRunner } from "../src/utils/bootstrap-runner.ts";
+import { createTestRunner } from "../src/utils/test-helpers.ts";
 import { executeCommands } from "../src/core/executor.ts";
 import { MigrationConfig } from "../src/core/types.ts";
 import { ModelProvider } from "../src/models/model-provider.ts";
@@ -27,7 +27,7 @@ describe("Batch Processing", () => {
   });
 
   it("should process multiple records", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const records = [v5SecurityGroup, v5FileManagerSettings, v5MailerSettings];
 

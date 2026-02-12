@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootstrapMigrationRunner } from "../src/utils/bootstrap-runner.ts";
+import { createTestRunner } from "../src/utils/test-helpers.ts";
 import { executeCommands } from "../src/core/executor.ts";
 import { MigrationConfig } from "../src/core/types.ts";
 import { ModelProvider } from "../src/models/model-provider.ts";
@@ -34,7 +34,7 @@ describe("CMS Entries", () => {
   });
 
   it("should transform CMS file entries", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5CmsFileEntry);
     await executeCommands(commands, { database, storage });
@@ -92,7 +92,7 @@ describe("CMS Entries", () => {
   });
 
   it("should create file metadata record", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5CmsFileEntry);
     await executeCommands(commands, { database, storage });
@@ -114,7 +114,7 @@ describe("CMS Entries", () => {
   });
 
   it("should remove duplicate #CME# from PK", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme);
     await executeCommands(commands, { database, storage });
@@ -134,7 +134,7 @@ describe("CMS Entries", () => {
   });
 
   it("should update modelIds in keys and data", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme);
     await executeCommands(commands, { database, storage });
@@ -147,7 +147,7 @@ describe("CMS Entries", () => {
   });
 
   it("should process all CMS entry types (cms.entry, cms.entry.l, cms.entry.p)", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     // Test cms.entry.l (latest revision)
     const commandsL = await runner.processRecord(v5CmsFileEntry);
@@ -207,7 +207,7 @@ describe("CMS Entries", () => {
     // Preload models (simulates segment preloading)
     await modelProvider.preloadModels(new Map([["root", "en-US"]]));
 
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5CmsEntryWithRichText);
     await executeCommands(commands, { database, storage });

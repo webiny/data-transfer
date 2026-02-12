@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootstrapMigrationRunner } from "../src/utils/bootstrap-runner.ts";
+import { createTestRunner } from "../src/utils/test-helpers.ts";
 import { MigrationConfig } from "../src/core/types.ts";
 import { ModelProvider } from "../src/models/model-provider.ts";
 import { MockDatabaseClient } from "./mocks/database-client.ts";
@@ -26,7 +26,7 @@ describe("Record Filtering", () => {
   });
 
   it("should skip records without matching pipeline", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5UnknownRecord);
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootstrapMigrationRunner } from "../src/utils/bootstrap-runner.ts";
+import { createTestRunner } from "../src/utils/test-helpers.ts";
 import { executeCommands } from "../src/core/executor.ts";
 import { MigrationConfig } from "../src/core/types.ts";
 import { ModelProvider } from "../src/models/model-provider.ts";
@@ -35,7 +35,7 @@ describe("Security Groups to Roles", () => {
     // Mock group lookup for permission transformation
     database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5SecurityGroup);
     await executeCommands(commands, { database, storage });
@@ -79,7 +79,7 @@ describe("Security Groups to Roles", () => {
   });
 
   it("should skip full-access role", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5FullAccessGroup);
 
@@ -88,7 +88,7 @@ describe("Security Groups to Roles", () => {
   });
 
   it("should skip anonymous role", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5AnonymousGroup);
 
@@ -99,7 +99,7 @@ describe("Security Groups to Roles", () => {
   it("should remove content.i18n permission", async () => {
     database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5SecurityGroup);
     await executeCommands(commands, { database, storage });
@@ -115,7 +115,7 @@ describe("Security Groups to Roles", () => {
   it("should flatten cms.contentModel models from locale object to array", async () => {
     database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5SecurityGroup);
     await executeCommands(commands, { database, storage });
@@ -133,7 +133,7 @@ describe("Security Groups to Roles", () => {
   it("should transform cms.contentModelGroup groups from IDs to slugs", async () => {
     database.mockQueryResponse("T#root#GROUP#67af510eac973600020bb057", "A", v5ContentModelGroup);
 
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5SecurityGroup);
     await executeCommands(commands, { database, storage });

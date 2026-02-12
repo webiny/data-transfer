@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootstrapMigrationRunner } from "../src/utils/bootstrap-runner.ts";
+import { createTestRunner } from "../src/utils/test-helpers.ts";
 import { executeCommands } from "../src/core/executor.ts";
 import { MigrationConfig } from "../src/core/types.ts";
 import { ModelProvider } from "../src/models/model-provider.ts";
@@ -27,7 +27,7 @@ describe("Mailer Settings", () => {
   });
 
   it("should migrate mailer settings to KeyValue format", async () => {
-    const runner = bootstrapMigrationRunner(config, database);
+    const runner = createTestRunner(config, database);
 
     const commands = await runner.processRecord(v5MailerSettings);
     await executeCommands(commands, { database, storage });
