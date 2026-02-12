@@ -55,6 +55,8 @@ export interface TransformContext<TRecord = Record<string, unknown>> {
   copyFile(sourceKey: string, targetKey: string): void;
   /** Query a record from the source database */
   queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
+  /** Execute a pipeline on multiple records and merge commands into parent context */
+  executePipeline(pipeline: any, records: Record<string, unknown>[]): Promise<Command[]>;
 }
 
 // ============================================================================

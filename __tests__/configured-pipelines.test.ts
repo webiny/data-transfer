@@ -4,7 +4,7 @@ import {
   CmsEntryPipeline,
   FmSettingsPipeline,
   FmFilePipeline,
-  FolderPipeline,
+  FolderPermissionsPipeline,
   SecurityGroupPipeline,
   SecurityTeamPipeline,
   MailerSettingsPipeline
@@ -49,13 +49,6 @@ describe("Pre-configured Pipelines", () => {
       const record = { TYPE: "cms.entry.l", modelId: "blogPost" };
 
       expect(pipeline.accepts(record)).toBe(true);
-    });
-
-    it("should reject cms.entry.flp records (folders)", () => {
-      const pipeline = new CmsEntryPipeline().build();
-      const record = { TYPE: "cms.entry.flp", modelId: "acoFolder" };
-
-      expect(pipeline.accepts(record)).toBe(false);
     });
 
     it("should accept fmFile records (but FmFilePipeline should catch them first)", () => {
@@ -131,14 +124,14 @@ describe("Pre-configured Pipelines", () => {
 
   describe("FolderPipeline", () => {
     it("should accept FLP records", () => {
-      const pipeline = new FolderPipeline().build();
+      const pipeline = new FolderPermissionsPipeline().build();
       const record = { PK: "T#root#L#en-US#FLP#folder1", SK: "A" };
 
       expect(pipeline.accepts(record)).toBe(true);
     });
 
     it("should reject non-FLP records", () => {
-      const pipeline = new FolderPipeline().build();
+      const pipeline = new FolderPermissionsPipeline().build();
       const record = { PK: "T#root#L#en-US#CME#entry1", SK: "A" };
 
       expect(pipeline.accepts(record)).toBe(false);

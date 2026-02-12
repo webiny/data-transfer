@@ -9,7 +9,7 @@ import {
   CmsEntryPipeline,
   FmSettingsPipeline,
   FmFilePipeline,
-  FolderPipeline,
+  FolderPermissionsPipeline,
   SecurityGroupPipeline,
   SecurityTeamPipeline,
   MailerSettingsPipeline
@@ -47,8 +47,8 @@ export const fullPreset: MigrationPreset = {
       .register(new SecurityGroupPipeline().build())
       .register(new SecurityTeamPipeline().build())
       .register(new CmsModelPipeline().build())
-      .register(new CmsEntryPipeline().build()) // Catches remaining CMS entries
-      .register(new FolderPipeline().build());
+      .register(new FolderPermissionsPipeline().build())
+      .register(new CmsEntryPipeline().build()); // Catches remaining CMS entries
   }
 };
 

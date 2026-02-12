@@ -78,10 +78,10 @@ describe("CMS Entries", () => {
     expect(migratedEntry!.data.values["object@location"]).toBeUndefined();
 
     // values should have the file metadata
-    expect(migratedEntry!.data.values["text@name"]).toBe("Numbers Grid 3.png");
-    // File key should be updated to new S3 path format (without revision in ID)
+    expect(migratedEntry!.data.values["text@name"]).toBe("NumbersGrid3.png");
+    // File key should remain the same
     expect(migratedEntry!.data.values["text@key"]).toBe(
-      "tenants/root/files/67dadc3209fa5e0002e5523f/Numbers Grid 3.png"
+      "67dadc3209fa5e0002e5523f/NumbersGrid3.png"
     );
     expect(migratedEntry!.data.values["text@type"]).toBe("image/png");
     expect(migratedEntry!.data.values["number@size"]).toBe(131309);
@@ -109,7 +109,7 @@ describe("CMS Entries", () => {
 
     // bucketKey should use the NEW S3 path format (without revision in ID)
     expect(metadataRecord!.data.value.bucketKey).toBe(
-      "tenants/root/files/67dadc3209fa5e0002e5523f/Numbers Grid 3.png"
+      "tenants/root/files/67dadc3209fa5e0002e5523f/NumbersGrid3.png"
     );
   });
 

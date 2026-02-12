@@ -201,7 +201,7 @@ export const v5CmsFileEntry: DatabaseRecord = {
     },
     "text@aliases": [],
     "text@key": "67dadc3209fa5e0002e5523f/NumbersGrid3.png",
-    "text@name": "Numbers Grid 3.png",
+    "text@name": "NumbersGrid3.png",
     "text@tags": [],
     "text@type": "image/png"
   },

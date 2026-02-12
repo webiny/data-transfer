@@ -123,8 +123,7 @@ export class CmsEntryPipeline extends ConfiguredPipeline {
     this.pipeline
       .filter(record => {
         const type = record.TYPE as string;
-        // Match cms.entry* but exclude cms.entry.flp (handled by FolderPipeline)
-        return Boolean(type && type.startsWith("cms.entry") && type !== "cms.entry.flp");
+        return Boolean(type && type.startsWith("cms.entry"));
       })
       .use(addGsiTenant)
       .use(removeLocale)
@@ -203,7 +202,7 @@ export class FmFilePipeline extends ConfiguredPipeline {
  * Default filters: PK contains "#FLP#"
  * Core transformers: addGsiTenant, removeLocale, removeAttributes, wrapInData, updateFlpIds
  */
-export class FolderPipeline extends ConfiguredPipeline {
+export class FolderPermissionsPipeline extends ConfiguredPipeline {
   protected configureDefaults(): void {
     this.pipeline
       .filter(record => typeof record.PK === "string" && record.PK.includes("#FLP#"))

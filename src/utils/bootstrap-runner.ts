@@ -110,8 +110,8 @@ export function bootstrapMigrationRunner(
     .register(securityGroupsPipeline)
     .register(securityTeamsPipeline)
     .register(cmsModelsPipeline)
-    .register(cmsEntriesPipeline)
-    .register(flpPipeline);
+    .register(flpPipeline)
+    .register(cmsEntriesPipeline);
 
   return runner;
 }

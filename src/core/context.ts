@@ -40,6 +40,20 @@ export function createContext<T extends Record<string, unknown>>(
     async queryRecord(pk: string, sk?: string) {
       const results = await database.query(config.sourcePrimaryTable, pk, sk);
       return results.length > 0 ? results[0] : null;
+    },
+    async executePipeline(pipeline: any, records: Record<string, unknown>[]) {
+      const allCommands: Command[] = [];
+
+      for (const record of records) {
+        const result = await pipeline.run(record, config, database);
+        if (result) {
+          allCommands.push(...result.commands);
+        }
+      }
+
+      // Merge all commands into parent context
+      commands.push(...allCommands);
+      return allCommands;
     }
   };
 
