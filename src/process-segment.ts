@@ -3,9 +3,10 @@ import { S3Client } from "./storage/s3-client.ts";
 import { executeCommands } from "./core/executor.ts";
 import { createLogger } from "./utils/logger.ts";
 import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "./utils/tenants.ts";
-import { bootstrapMigrationRunner } from "./utils/bootstrap-runner.ts";
 import { MigrationConfig } from "./core/types.ts";
 import { ModelProvider } from "./models/model-provider.ts";
+import { MigrationRunner } from "./core/runner.ts";
+import { loadPreset } from "./presets/loader.ts";
 
 // ============================================================================
 // Process Segment Command
@@ -20,6 +21,7 @@ export interface ProcessSegmentOptions {
   sourceFmBucket: string;
   targetFmBucket: string;
   modelsDir?: string;
+  preset: string;
 }
 
 export async function processSegment(options: ProcessSegmentOptions): Promise<void> {
@@ -56,8 +58,14 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
     modelProvider
   };
 
-  // Create and bootstrap migration runner
-  const runner = bootstrapMigrationRunner(config, database);
+  // Load and configure preset
+  logger.info(`Loading preset: ${options.preset}`);
+  const preset = await loadPreset(options.preset);
+  logger.info(`Loaded preset: "${preset.name}" - ${preset.description}`);
+
+  // Create migration runner and configure with preset
+  const runner = new MigrationRunner(config, database);
+  preset.configure(runner, config, database);
 
   // Process records
   let processedCount = 0;

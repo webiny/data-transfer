@@ -2,6 +2,8 @@
 
 ## Usage
 
+### Full Migration (Default)
+
 ```bash
 npx github:webiny/v5-to-v6 \
   --segments=4 \
@@ -11,6 +13,67 @@ npx github:webiny/v5-to-v6 \
   --targetFmBucket=webiny-v6-files \
   --models=./path/to/models/directory
 ```
+
+### Custom Preset Migration
+
+You can use the `--preset` flag to specify a custom migration preset:
+
+```bash
+# Using a built-in preset
+npx github:webiny/v5-to-v6 \
+  --preset=full \
+  --sourcePrimaryTable=webiny-v5-table \
+  --targetPrimaryTable=webiny-v6-table \
+  --sourceFmBucket=webiny-v5-files \
+  --targetFmBucket=webiny-v6-files
+
+# Using a custom preset file
+npx github:webiny/v5-to-v6 \
+  --preset=./my-custom-preset.ts \
+  --sourcePrimaryTable=webiny-v5-table \
+  --targetPrimaryTable=webiny-v6-table \
+  --sourceFmBucket=webiny-v5-files \
+  --targetFmBucket=webiny-v6-files
+```
+
+### Migration Presets
+
+**Built-in Presets:**
+- `full` (default) - Migrates all Webiny v5 data to v6 format
+
+**Example Presets:** (see `examples/`)
+- `cms-only` - Only CMS models and entries
+
+### Creating Custom Presets
+
+Custom presets use **pre-configured pipelines** that handle all core transformations automatically. You only need to add custom filters or transformers for your specific use case:
+
+```typescript
+import { MigrationPreset } from "@/src/presets/types";
+import { CmsModelPipeline, CmsEntryPipeline } from "@/src/pipelines";
+
+export const publishedOnlyPreset: MigrationPreset = {
+  name: "published-only",
+  description: "Migrate only published CMS entries",
+  configure(runner, config, database) {
+    runner
+      .register(new CmsModelPipeline().build())
+      .register(
+        new CmsEntryPipeline()
+          .filter(record => record.status === "published")
+          .build()
+      );
+  }
+};
+```
+
+**Available Pre-configured Pipelines:**
+- `CmsModelPipeline`, `CmsEntryPipeline` - CMS data (entries exclude File Manager files)
+- `FmSettingsPipeline`, `FmFilePipeline`, `FolderPipeline` - File Manager data
+- `SecurityGroupPipeline`, `SecurityTeamPipeline` - Security data
+- `MailerSettingsPipeline` - Mailer settings
+
+Each pipeline includes all necessary filters and transformers in the correct order.
 
 ## Transformations
 

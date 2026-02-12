@@ -45,6 +45,11 @@ yargs(hideBin(process.argv))
         .option("models", {
           type: "string",
           description: "Directory containing model JSON files (optional)"
+        })
+        .option("preset", {
+          type: "string",
+          default: "full",
+          description: 'Migration preset to use (default: "full", or path to custom preset file)'
         });
     },
     async argv => {
@@ -53,6 +58,7 @@ yargs(hideBin(process.argv))
 
       logger.info("Starting migration with configuration:");
       logger.info(`  Run ID: ${runId}`);
+      logger.info(`  Preset: ${argv.preset}`);
       logger.info(`  Segments: ${argv.segments}`);
       logger.info(`  Source Table: ${argv.sourcePrimaryTable}`);
       logger.info(`  Target Table: ${argv.targetPrimaryTable}`);
@@ -123,6 +129,11 @@ yargs(hideBin(process.argv))
         .option("models", {
           type: "string",
           description: "Directory containing model JSON files (optional)"
+        })
+        .option("preset", {
+          type: "string",
+          demandOption: true,
+          description: "Migration preset to use"
         });
     },
     async argv => {
@@ -165,6 +176,10 @@ async function spawnWorker(
 
   if (config.models) {
     args.push("--models", config.models);
+  }
+
+  if (config.preset) {
+    args.push("--preset", config.preset);
   }
 
   const { exitCode } = await execa("node", args, {
