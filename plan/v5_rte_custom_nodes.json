@@ -1,0 +1,78 @@
+{
+  "PK": "T#root#L#en-US#CMS#CME#CME#6989d73ea791f5000242f77a",
+  "SK": "L",
+  "createdBy": {
+    "displayName": "Pavel Denisjuk",
+    "id": "67af5108ac973600020bb056",
+    "type": "admin"
+  },
+  "createdOn": "2026-02-09T12:46:54.261Z",
+  "entryId": "6989d73ea791f5000242f77a",
+  "GSI1_PK": "T#root#L#en-US#CMS#CME#M#article#L",
+  "GSI1_SK": "6989d73ea791f5000242f77a#0001",
+  "id": "6989d73ea791f5000242f77a#0001",
+  "locale": "en-US",
+  "location": {
+    "folderId": "root"
+  },
+  "locked": false,
+  "meta": {},
+  "modelId": "article",
+  "modifiedBy": {
+    "displayName": "Pavel Denisjuk",
+    "id": "67af5108ac973600020bb056",
+    "type": "admin"
+  },
+  "modifiedOn": "2026-02-09T13:41:26.116Z",
+  "revisionCreatedBy": {
+    "displayName": "Pavel Denisjuk",
+    "id": "67af5108ac973600020bb056",
+    "type": "admin"
+  },
+  "revisionCreatedOn": "2026-02-09T12:46:54.261Z",
+  "revisionModifiedBy": {
+    "displayName": "Pavel Denisjuk",
+    "id": "67af5108ac973600020bb056",
+    "type": "admin"
+  },
+  "revisionModifiedOn": "2026-02-09T13:41:26.116Z",
+  "revisionSavedBy": {
+    "displayName": "Pavel Denisjuk",
+    "id": "67af5108ac973600020bb056",
+    "type": "admin"
+  },
+  "revisionSavedOn": "2026-02-09T13:41:26.116Z",
+  "savedBy": {
+    "displayName": "Pavel Denisjuk",
+    "id": "67af5108ac973600020bb056",
+    "type": "admin"
+  },
+  "savedOn": "2026-02-09T13:41:26.116Z",
+  "status": "draft",
+  "tenant": "root",
+  "TYPE": "cms.entry.l",
+  "values": {
+    "file@2iru70xg": null,
+    "long-text@ta8sm4lu": {
+      "compression": "gzip",
+      "value": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+    },
+    "object@95j7tjx2": {
+      "text@u8u5ipm2": null
+    },
+    "object@mq17sxdn": null,
+    "object@p6i97zdl": null,
+    "ref@78t9knco": null,
+    "rich-text@l35gwbmc": {
+      "compression": "gzip",
+      "value": "H4sIAAAAAAAAA+2XMWrEMBBFr2J+rYVsqwMsbL3pggthzcYKsmRGIsQshhwjXa6YIwRpQ2yndGUFd5oZ8+fJ3zPgG9j7CHlD0xqrmRzk059AU1TGQj4IXD13KuZj5zVBwqWMhUCIg00JCER6i5A4GQ6x6hWrZ1Z9mwpDnx7JdYFX4mC8gzyOtYA2TE3MMWxkTM2SpHGa3L3xj8iv7oEsdak4V7xDnCbcFF4mxEwb8vXy8aznkscZ69D7nBsw1qNYvJoyqdcb+vX58T71oM6/mKWNolDtMo0sk3q9jRdqvNP7Qtka9XaHvgpKX6t9ZW3mUymTer2Nj63hf72xCp2efTLrNZz5X2Fx2fEbq6rhmUEMAAA="
+    },
+    "text@qunp3hnb": null,
+    "text@yt5jqhfk": null
+  },
+  "version": 1,
+  "webinyVersion": "0.0.0",
+  "_ct": "2026-02-09T13:41:26.145Z",
+  "_et": "CmsEntries",
+  "_md": "2026-02-09T13:41:26.145Z"
+}
