@@ -59,8 +59,10 @@ const config: MigrationConfiguration = {
   // Migration Settings
   // ============================================================================
   migration: {
-    // Use built-in "full" preset or path to custom preset file
-    preset: "full", // or "./my-custom-preset.ts"
+    // Built-in presets:
+    //   - "v5-to-v6": Webiny v5 to v6 migration with all transformations
+    // Or provide path to custom preset file: "./my-custom-preset.ts"
+    preset: "v5-to-v6", // REQUIRED - no default value
 
     // Number of parallel segments for faster processing (optional, default: 1)
     // More segments = faster migration, but more AWS API calls

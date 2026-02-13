@@ -1,4 +1,6 @@
+import { DatabaseClient } from "../database/interface.ts";
 import { ModelProvider } from "../models/model-provider.ts";
+import { MigrationRunner } from "./runner.ts";
 
 // ============================================================================
 // Configuration
@@ -65,4 +67,23 @@ export interface TransformContext<TRecord = Record<string, unknown>> {
 
 export interface PipelineResult {
   commands: Command[];
+}
+
+/**
+ * A migration preset defines a collection of transformation pipelines
+ * that should be applied during migration.
+ */
+export interface MigrationPreset {
+  /** Unique name for the preset */
+  name: string;
+
+  /** Human-readable description of what this preset does */
+  description: string;
+
+  /**
+   * Configure the migration runner with pipelines.
+   * This is where you register all the transformation pipelines
+   * that should be applied for this preset.
+   */
+  configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient): void;
 }

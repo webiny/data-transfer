@@ -1,10 +1,10 @@
 import { MigrationRunner } from "../core/runner.ts";
 import { MigrationConfig } from "../core/types.ts";
 import { DatabaseClient } from "../database/interface.ts";
-import { fullPreset } from "../presets/full.ts";
+import { v5ToV6Preset } from "../presets/v5-to-v6.ts";
 
 /**
- * Helper function for tests to create a MigrationRunner with the full preset.
+ * Helper function for tests to create a MigrationRunner with the v5-to-v6 preset.
  * This replaces the old bootstrapMigrationRunner function.
  */
 export function createTestRunner(
@@ -12,6 +12,6 @@ export function createTestRunner(
   database: DatabaseClient
 ): MigrationRunner {
   const runner = new MigrationRunner(config, database);
-  fullPreset.configure(runner, config, database);
+  v5ToV6Preset.configure(runner, config, database);
   return runner;
 }

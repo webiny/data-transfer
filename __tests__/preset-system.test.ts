@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { loadPreset } from "../src/presets/loader";
-import { fullPreset } from "../src/presets/full";
+import { loadPreset } from "../src/core/preset-loader";
+import { v5ToV6Preset } from "../src/presets/v5-to-v6";
 import { MigrationRunner } from "../src/core/runner";
 import { MigrationConfig } from "../src/core/types";
 import { DatabaseClient } from "../src/database/interface";
 
 describe("Preset System", () => {
   describe("loadPreset", () => {
-    it("should load built-in 'full' preset", async () => {
-      const preset = await loadPreset("full");
+    it("should load built-in 'v5-to-v6' preset", async () => {
+      const preset = await loadPreset("v5-to-v6");
 
       expect(preset).toBeDefined();
-      expect(preset.name).toBe("full");
+      expect(preset.name).toBe("v5-to-v6");
       expect(preset.description).toBeTruthy();
       expect(typeof preset.configure).toBe("function");
     });
@@ -25,11 +25,11 @@ describe("Preset System", () => {
     });
   });
 
-  describe("Full Preset", () => {
+  describe("v5-to-v6 Preset", () => {
     it("should have correct structure", () => {
-      expect(fullPreset.name).toBe("full");
-      expect(fullPreset.description).toBeTruthy();
-      expect(typeof fullPreset.configure).toBe("function");
+      expect(v5ToV6Preset.name).toBe("v5-to-v6");
+      expect(v5ToV6Preset.description).toBeTruthy();
+      expect(typeof v5ToV6Preset.configure).toBe("function");
     });
 
     it("should configure runner with pipelines", () => {
@@ -46,7 +46,7 @@ describe("Preset System", () => {
 
       // Create runner and configure with preset
       const runner = new MigrationRunner(mockConfig, mockDatabase);
-      fullPreset.configure(runner, mockConfig, mockDatabase);
+      v5ToV6Preset.configure(runner, mockConfig, mockDatabase);
 
       // Runner should have pipelines registered
       // We can't directly access pipelines, but we can verify it doesn't throw

@@ -1,6 +1,5 @@
-import { MigrationPreset } from "./types.ts";
 import { MigrationRunner } from "../core/runner.ts";
-import { MigrationConfig } from "../core/types.ts";
+import { MigrationConfig, MigrationPreset } from "../core/types.ts";
 import { DatabaseClient } from "../database/interface.ts";
 
 // Import pre-configured pipelines
@@ -16,11 +15,11 @@ import {
 } from "../pipelines.ts";
 
 // ============================================================================
-// Full Migration Preset
+// Webiny v5 to v6 Migration Preset
 // ============================================================================
 
 /**
- * The default "full" preset that migrates all Webiny v5 data to v6.
+ * Preset for migrating all Webiny v5 data to v6 format.
  * This includes:
  * - File Manager settings and files
  * - Mailer settings
@@ -32,9 +31,9 @@ import {
  *
  * Uses pre-configured pipelines for consistent, well-tested transformations.
  */
-export const fullPreset: MigrationPreset = {
-  name: "full",
-  description: "Full migration of all Webiny v5 data to v6 format",
+export const v5ToV6Preset: MigrationPreset = {
+  name: "v5-to-v6",
+  description: "Webiny v5 to v6 migration with all necessary transformations",
   configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient): void {
     // Register all pre-configured pipelines
     // IMPORTANT: Order matters! FmFilePipeline must be registered before CmsEntryPipeline
@@ -53,4 +52,4 @@ export const fullPreset: MigrationPreset = {
 };
 
 // Export as default for easier importing
-export default fullPreset;
+export default v5ToV6Preset;

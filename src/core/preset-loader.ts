@@ -8,14 +8,14 @@ import { existsSync } from "node:fs";
 // ============================================================================
 
 const BUILT_IN_PRESETS = new Map<string, string>([
-  ["full", new URL("./full.ts", import.meta.url).pathname]
+  ["v5-to-v6", new URL("../presets/v5-to-v6.ts", import.meta.url).pathname]
 ]);
 
 /**
  * Load a migration preset by name or file path.
  *
  * Supports:
- * - Built-in preset names: "full"
+ * - Built-in preset names: "v5-to-v6"
  * - Relative paths: "./my-preset.ts"
  * - Absolute paths: "/path/to/preset.ts"
  *
@@ -35,7 +35,9 @@ export async function loadPreset(
   // Check if it's a file path
   else if (presetNameOrPath.endsWith(".ts") || presetNameOrPath.endsWith(".js")) {
     // Resolve relative paths against cwd
-    presetPath = isAbsolute(presetNameOrPath) ? presetNameOrPath : resolve(cwd, presetNameOrPath);
+    presetPath = isAbsolute(presetNameOrPath)
+      ? presetNameOrPath
+      : resolve(cwd, "..", presetNameOrPath);
 
     // Verify the file exists
     if (!existsSync(presetPath)) {
