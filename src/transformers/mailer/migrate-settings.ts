@@ -2,20 +2,27 @@ import { Transformer } from "../../core/transformer.ts";
 import { TransformContext } from "../../core/types.ts";
 
 /**
- * Migrates Mailer settings from old format to KeyValue format
+ * Migrates Mailer settings from old format to KeyValue format.
+ * NOTE: This transformer expects wrapInData to run FIRST, so values is in record.data.values.
  */
 export const migrateMailerSettings: Transformer = {
   name: "migrateMailerSettings",
   transform(ctx: TransformContext) {
-    const { original } = ctx;
+    const { record, original } = ctx;
 
     // Only process mailer settings records (identified by SK: "L" and modelId: "mailerSettings")
     if (original.SK !== "L" || original.modelId !== "mailerSettings") {
       return;
     }
 
-    const values = original.values as Record<string, unknown>;
-    const tenant = original.tenant || "root";
+    // Extract data envelope (wrapInData already ran)
+    const dataEnvelope = record.data as Record<string, unknown> | undefined;
+    if (!dataEnvelope) {
+      return; // No data envelope
+    }
+
+    const values = dataEnvelope.values as Record<string, unknown>;
+    const tenant = dataEnvelope.tenant || "root";
 
     // Replace with new KeyValue format
     ctx.replace({

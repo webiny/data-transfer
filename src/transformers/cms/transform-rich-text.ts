@@ -14,6 +14,7 @@ const lexicalRenderer = new LexicalRenderer();
 
 /**
  * Transforms rich-text fields from Lexical format to new format with state + HTML.
+ * NOTE: This transformer expects wrapInData to run FIRST, so values is in data.values.
  *
  * Process:
  * 1. Recursively finds all rich-text fields
@@ -29,7 +30,13 @@ export const transformRichText: Transformer = {
       return; // Model provider required
     }
 
-    const modelId = ctx.record.modelId;
+    // Extract modelId from data envelope
+    const data = ctx.record.data as Record<string, unknown> | undefined;
+    if (!data) {
+      return; // No data envelope
+    }
+
+    const modelId = data.modelId;
     if (!modelId) {
       return; // No model ID
     }
@@ -39,7 +46,7 @@ export const transformRichText: Transformer = {
       return; // Model not found
     }
 
-    const values = ctx.record.values;
+    const values = data.values;
     if (!values || typeof values !== "object") {
       return; // No values to transform
     }

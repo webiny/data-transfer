@@ -11,7 +11,8 @@ const MODEL_ID_MAP: Record<string, string> = {
 };
 
 /**
- * Updates modelIds in keys and data.modelId attribute
+ * Updates modelIds in keys and data.modelId attribute.
+ * NOTE: This transformer expects wrapInData to run FIRST, so modelId is in data.modelId.
  */
 export const updateModelIds: Transformer = {
   name: "updateModelIds",
@@ -19,14 +20,7 @@ export const updateModelIds: Transformer = {
     const { record } = ctx;
 
     // Update modelId in keys (PK, SK, GSI keys)
-    const keysToUpdate = [
-      "PK",
-      "SK",
-      "GSI1_PK",
-      "GSI1_SK",
-      "GSI2_PK",
-      "GSI2_SK"
-    ];
+    const keysToUpdate = ["PK", "SK", "GSI1_PK", "GSI1_SK", "GSI2_PK", "GSI2_SK"];
 
     for (const key of keysToUpdate) {
       if (typeof record[key] === "string") {
@@ -34,17 +28,12 @@ export const updateModelIds: Transformer = {
       }
     }
 
-    // Update modelId attribute in data
+    // Update modelId attribute in data envelope
     if (record.data && typeof record.data === "object") {
       const data = record.data as Record<string, unknown>;
       if (typeof data.modelId === "string" && MODEL_ID_MAP[data.modelId]) {
         data.modelId = MODEL_ID_MAP[data.modelId];
       }
-    }
-
-    // Also check if modelId exists at root level (before data wrapping)
-    if (typeof record.modelId === "string" && MODEL_ID_MAP[record.modelId]) {
-      record.modelId = MODEL_ID_MAP[record.modelId];
     }
   }
 };

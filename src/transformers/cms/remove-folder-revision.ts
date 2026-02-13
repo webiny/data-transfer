@@ -3,8 +3,9 @@ import { TransformContext } from "../../core/types.ts";
 
 /**
  * Handles folder location transformations:
- * 1. Moves location from root level to data.location (if it exists at root)
- * 2. Removes location from values["object@location"] if it exists there
+ * NOTE: This transformer expects wrapInData to run FIRST.
+ * 1. Processes location from data.location
+ * 2. Removes location from data.values["object@location"] if it exists there
  * 3. Removes revision number #0001 from folderId
  */
 export const removeFolderRevision: Transformer = {
@@ -12,10 +13,15 @@ export const removeFolderRevision: Transformer = {
   transform(ctx: TransformContext) {
     const { record } = ctx;
 
-    // Handle root-level location (before wrapping)
-    // This will be wrapped into data.location by wrapInData transformer
-    if (record.location && typeof record.location === "object") {
-      const location = record.location as Record<string, unknown>;
+    // Extract data envelope
+    const data = record.data as Record<string, unknown> | undefined;
+    if (!data) {
+      return; // No data envelope
+    }
+
+    // Handle data.location
+    if (data.location && typeof data.location === "object") {
+      const location = data.location as Record<string, unknown>;
 
       // Remove #0001 from folderId
       if (typeof location.folderId === "string") {
@@ -23,9 +29,9 @@ export const removeFolderRevision: Transformer = {
       }
     }
 
-    // Remove location from values if it exists there (it should be at root level)
-    if (record.values && typeof record.values === "object") {
-      const values = record.values as Record<string, unknown>;
+    // Remove location from values if it exists there (it should be at data.location)
+    if (data.values && typeof data.values === "object") {
+      const values = data.values as Record<string, unknown>;
 
       // Remove object@location from values
       if (values["object@location"]) {

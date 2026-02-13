@@ -2,7 +2,8 @@ import { Transformer } from "../../core/transformer.ts";
 import { TransformContext } from "../../core/types.ts";
 
 /**
- * Adds GSI_TENANT attribute by extracting tenant ID from PK or data.tenant
+ * Adds GSI_TENANT attribute by extracting tenant ID from PK or data.tenant.
+ * NOTE: This transformer expects wrapInData to run FIRST, so tenant is in data.tenant.
  */
 export const addGsiTenant: Transformer = {
   name: "addGsiTenant",
@@ -23,18 +24,13 @@ export const addGsiTenant: Transformer = {
       }
     }
 
-    // Try to extract from data.tenant
+    // Try to extract from data.tenant (wrapInData already ran)
     if (record.data && typeof record.data === "object") {
       const data = record.data as Record<string, unknown>;
       if (typeof data.tenant === "string") {
         record.GSI_TENANT = data.tenant;
         return;
       }
-    }
-
-    // Fallback: try record.tenant (before wrapping in data)
-    if (typeof record.tenant === "string") {
-      record.GSI_TENANT = record.tenant;
     }
   }
 };

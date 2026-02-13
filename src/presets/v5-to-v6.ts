@@ -66,6 +66,7 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     const fmSettings = new PipelineBuilder()
       .filter(byType("fm.settings"))
+      .use(wrapInData)
       .use(migrateFileManagerSettings)
       .use(removeAttributes)
       .build();
@@ -76,6 +77,7 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     const fmFiles = new PipelineBuilder()
       .filter(isFmFile)
+      .use(wrapInData)
       // Standard CMS entry transformers
       .use(addGsiTenant)
       .use(removeLocale)
@@ -84,7 +86,6 @@ export const v5ToV6Preset: MigrationPreset = {
       .use(updateModelIds)
       .use(removeFolderRevision)
       .use(removeAttributes)
-      .use(wrapInData)
       // File Manager-specific
       .use(createFileMetadata)
       .build();
@@ -96,6 +97,7 @@ export const v5ToV6Preset: MigrationPreset = {
       .filter(record => {
         return record.SK === "L" && record.modelId === "mailerSettings";
       })
+      .use(wrapInData)
       .use(migrateMailerSettings)
       .use(removeAttributes)
       .build();
@@ -105,11 +107,11 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     const securityGroups = new PipelineBuilder()
       .filter(r => r.TYPE === "security.group" && !isBuiltInSecurityRole(r))
+      .use(wrapInData)
       .use(addGsiTenant)
       .use(groupsToRoles)
       .use(transformPermissions)
       .use(removeAttributes)
-      .use(wrapInData)
       .build();
 
     // ========================================================================
@@ -117,9 +119,9 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     const securityTeams = new PipelineBuilder()
       .filter(isSecurityTeam)
+      .use(wrapInData)
       .use(addGsiTenant)
       .use(removeAttributes)
-      .use(wrapInData)
       .build();
 
     // ========================================================================
@@ -127,11 +129,11 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     const cmsModels = new PipelineBuilder()
       .filter(isCmsModel)
+      .use(wrapInData)
       .use(addGsiTenant)
       .use(removeLocale)
       .use(transformModelGroup)
       .use(removeAttributes)
-      .use(wrapInData)
       .build();
 
     // ========================================================================
@@ -139,10 +141,10 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     const folderPermissions = new PipelineBuilder()
       .filter(isFlpRecord)
+      .use(wrapInData)
       .use(addGsiTenant)
       .use(removeLocale)
       .use(removeAttributes)
-      .use(wrapInData)
       .use(updateFlpIds)
       .build();
 
@@ -152,6 +154,7 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     const cmsEntries = new PipelineBuilder()
       .filter(isCmsEntry)
+      .use(wrapInData)
       .use(addGsiTenant)
       .use(removeLocale)
       .use(fixCmePk)
@@ -160,7 +163,6 @@ export const v5ToV6Preset: MigrationPreset = {
       .use(updateModelIds)
       .use(removeFolderRevision)
       .use(removeAttributes)
-      .use(wrapInData)
       .build();
 
     // ========================================================================

@@ -2,7 +2,8 @@ import { Transformer } from "../../core/transformer.ts";
 import { TransformContext } from "../../core/types.ts";
 
 /**
- * Migrates File Manager settings from old format to KeyValue format
+ * Migrates File Manager settings from old format to KeyValue format.
+ * NOTE: This transformer expects wrapInData to run FIRST, so the original data is in record.data.
  */
 export const migrateFileManagerSettings: Transformer = {
   name: "migrateFileManagerSettings",
@@ -14,11 +15,16 @@ export const migrateFileManagerSettings: Transformer = {
       return;
     }
 
-    const data = original.data as Record<string, unknown>;
-    const tenant = data.tenant || "root";
+    // Extract data envelope (wrapInData already ran)
+    const dataEnvelope = record.data as Record<string, unknown> | undefined;
+    if (!dataEnvelope) {
+      return; // No data envelope
+    }
+
+    const tenant = dataEnvelope.tenant || "root";
 
     // Extract settings (everything except tenant)
-    const { tenant: _tenant, ...settingsValue } = data;
+    const { tenant: _tenant, ...settingsValue } = dataEnvelope;
 
     // Replace with new KeyValue format
     ctx.replace({

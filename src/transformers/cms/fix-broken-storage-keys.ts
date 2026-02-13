@@ -9,6 +9,7 @@ import { visitFields } from "../../utils/field-visitor.ts";
 
 /**
  * Fixes broken storage keys in CMS entry values.
+ * NOTE: This transformer expects wrapInData to run FIRST, so values is in data.values.
  *
  * Issues fixed:
  * 1. Corrupt storageId prefix (e.g., "text@foo" when type is "dynamicZone")
@@ -24,7 +25,13 @@ export const fixBrokenStorageKeys: Transformer = {
       throw new Error("ModelProvider is required for fixBrokenStorageKeys");
     }
 
-    const modelId = ctx.record.modelId;
+    // Extract data envelope
+    const data = ctx.record.data as Record<string, unknown> | undefined;
+    if (!data) {
+      return; // No data envelope
+    }
+
+    const modelId = data.modelId;
     if (!modelId) {
       return; // No model ID, skip
     }
@@ -35,7 +42,7 @@ export const fixBrokenStorageKeys: Transformer = {
       return;
     }
 
-    const values = ctx.record.values;
+    const values = data.values;
     if (!values || typeof values !== "object") {
       return; // No values to fix
     }
