@@ -1,14 +1,6 @@
 import { MigrationRunner } from "../core/runner.ts";
-import { MigrationConfig, MigrationPreset } from "../core/types.ts";
-import { DatabaseClient } from "../database/interface.ts";
-import {
-  PipelineBuilder,
-  isCmsModel,
-  isCmsEntry,
-  isFmFile,
-  isFlpRecord,
-  isSecurityTeam
-} from "../core/pipelines.ts";
+import { MigrationPreset } from "../core/types.ts";
+import { PipelineBuilder, isFlpRecord, isSecurityTeam } from "../core/pipelines.ts";
 
 // Import global transformers
 import { wrapInData } from "../transformers/global/wrap-in-data.ts";
@@ -16,17 +8,8 @@ import { addGsiTenant } from "../transformers/global/add-gsi-tenant.ts";
 import { removeLocale } from "../transformers/global/remove-locale.ts";
 import { removeAttributes } from "../transformers/global/remove-attributes.ts";
 
-// Import CMS transformers
-import { fixCmePk } from "../transformers/cms/fix-cme-pk.ts";
-import { fixBrokenStorageKeys } from "../transformers/cms/fix-broken-storage-keys.ts";
-import { transformRichText } from "../transformers/cms/transform-rich-text.ts";
-import { updateModelIds } from "../transformers/cms/update-model-ids.ts";
-import { removeFolderRevision } from "../transformers/cms/remove-folder-revision.ts";
-import { transformModelGroup } from "../transformers/cms/transform-model-group.ts";
-
 // Import File Manager transformers
 import { migrateFileManagerSettings } from "../transformers/file-manager/migrate-settings.ts";
-import { createFileMetadata } from "../transformers/file-manager/create-metadata.ts";
 
 // Import Folder transformers
 import { updateFlpIds } from "../transformers/folders/update-flp-ids.ts";
@@ -39,6 +22,9 @@ import { groupsToRoles } from "../transformers/security/groups-to-roles.ts";
 import { transformPermissions } from "../transformers/security/transform-permissions.ts";
 import { isBuiltInSecurityRole } from "../core/pipelines.ts";
 import { byType } from "../core/pipelines.ts";
+import { CmsEntryPipeline } from "./v5-to-v6/CmsEntryPipeline.ts";
+import { CmsModelPipeline } from "./v5-to-v6/CmsModelPipeline.ts";
+import { FmFilePipeline } from "./v5-to-v6/FmFilePipeline.ts";
 
 // ============================================================================
 // Webiny v5 to v6 Migration Preset
@@ -52,15 +38,15 @@ import { byType } from "../core/pipelines.ts";
  * - Security groups → roles
  * - Security teams
  * - CMS models
- * - CMS entries (excluding files - handled separately)
- * - Folders (FLP records)
+ * - CMS entries
+ * - FLP records
  *
  * Uses pre-configured pipelines for consistent, well-tested transformations.
  */
 export const v5ToV6Preset: MigrationPreset = {
   name: "v5-to-v6",
   description: "Webiny v5 to v6 migration with all necessary transformations",
-  configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient): void {
+  configure(runner: MigrationRunner): void {
     // ========================================================================
     // File Manager Settings
     // ========================================================================
@@ -75,20 +61,7 @@ export const v5ToV6Preset: MigrationPreset = {
     // File Manager Files
     // IMPORTANT: Must be registered BEFORE CmsEntryPipeline due to first-match-wins
     // ========================================================================
-    const fmFiles = new PipelineBuilder()
-      .filter(isFmFile)
-      .use(wrapInData)
-      // Standard CMS entry transformers
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(fixCmePk)
-      .use(fixBrokenStorageKeys)
-      .use(updateModelIds)
-      .use(removeFolderRevision)
-      .use(removeAttributes)
-      // File Manager-specific
-      .use(createFileMetadata)
-      .build();
+    const fmFiles = new FmFilePipeline().build();
 
     // ========================================================================
     // Mailer Settings
@@ -127,14 +100,7 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     // CMS Models
     // ========================================================================
-    const cmsModels = new PipelineBuilder()
-      .filter(isCmsModel)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(transformModelGroup)
-      .use(removeAttributes)
-      .build();
+    const cmsModels = new CmsModelPipeline().build();
 
     // ========================================================================
     // Folder Permissions (FLP records)
@@ -152,18 +118,7 @@ export const v5ToV6Preset: MigrationPreset = {
     // CMS Entries (catch-all for remaining CMS entries)
     // IMPORTANT: Must be registered AFTER FmFilePipeline
     // ========================================================================
-    const cmsEntries = new PipelineBuilder()
-      .filter(isCmsEntry)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(fixCmePk)
-      .use(fixBrokenStorageKeys)
-      .use(transformRichText)
-      .use(updateModelIds)
-      .use(removeFolderRevision)
-      .use(removeAttributes)
-      .build();
+    const cmsEntries = new CmsEntryPipeline().build();
 
     // ========================================================================
     // Register pipelines with runner

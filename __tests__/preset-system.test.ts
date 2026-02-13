@@ -54,10 +54,10 @@ describe("Preset System", () => {
     });
   });
 
-  // TODO: Update example presets to use new PipelineBuilder architecture
-  describe.skip("Example Presets", () => {
+  describe("Example Presets", () => {
     it("should load cms-only preset", async () => {
-      const preset = await loadPreset("./examples/preset-cms-only.ts", process.cwd());
+      // Note: loadPreset resolves relative to cwd + ".." so we need to pass __dirname
+      const preset = await loadPreset("./examples/preset-cms-only.ts", __dirname);
 
       expect(preset).toBeDefined();
       expect(preset.name).toBe("cms-only");

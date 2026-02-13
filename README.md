@@ -2,78 +2,117 @@
 
 ## Usage
 
-### Full Migration (Default)
+### Configuration File Approach
 
-```bash
-npx github:webiny/v5-to-v6 \
-  --segments=4 \
-  --sourcePrimaryTable=webiny-v5-table \
-  --targetPrimaryTable=webiny-v6-table \
-  --sourceFmBucket=webiny-v5-files \
-  --targetFmBucket=webiny-v6-files \
-  --models=./path/to/models/directory
+Create a migration configuration file (e.g., `migration.config.ts`):
+
+```typescript
+import { MigrationConfiguration } from "./src/config/types";
+
+const config: MigrationConfiguration = {
+  source: {
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
+    },
+    dynamodb: { tableName: "webiny-v5-table" },
+    s3: { bucket: "webiny-v5-files" }
+  },
+  target: {
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: process.env.TARGET_AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.TARGET_AWS_SECRET_ACCESS_KEY!
+    },
+    dynamodb: { tableName: "webiny-v6-table" },
+    s3: { bucket: "webiny-v6-files" }
+  },
+  migration: {
+    preset: "v5-to-v6", // REQUIRED - use built-in preset or path to custom
+    segments: 4,
+    modelsDir: "./path/to/models"
+  }
+};
+
+export default config;
 ```
 
-### Custom Preset Migration
-
-You can use the `--preset` flag to specify a custom migration preset:
+Then run:
 
 ```bash
-# Using a built-in preset
-npx github:webiny/v5-to-v6 \
-  --preset=full \
-  --sourcePrimaryTable=webiny-v5-table \
-  --targetPrimaryTable=webiny-v6-table \
-  --sourceFmBucket=webiny-v5-files \
-  --targetFmBucket=webiny-v6-files
-
-# Using a custom preset file
-npx github:webiny/v5-to-v6 \
-  --preset=./my-custom-preset.ts \
-  --sourcePrimaryTable=webiny-v5-table \
-  --targetPrimaryTable=webiny-v6-table \
-  --sourceFmBucket=webiny-v5-files \
-  --targetFmBucket=webiny-v6-files
+npx github:webiny/v5-to-v6 --config=./migration.config.ts
 ```
 
 ### Migration Presets
 
 **Built-in Presets:**
-- `full` (default) - Migrates all Webiny v5 data to v6 format
+- `v5-to-v6` - Migrates all Webiny v5 data to v6 format
 
 **Example Presets:** (see `examples/`)
 - `cms-only` - Only CMS models and entries
+- `cms-model-with-files` - Specific model with referenced files
 
 ### Creating Custom Presets
 
-Custom presets use **pre-configured pipelines** that handle all core transformations automatically. You only need to add custom filters or transformers for your specific use case:
+Custom presets use **PipelineBuilder** to configure filters and transformers. This approach separates "what to process" (filters) from "how to transform" (transformers):
 
 ```typescript
-import { MigrationPreset } from "@/src/presets/types";
-import { CmsModelPipeline, CmsEntryPipeline } from "@/src/pipelines";
+import type { MigrationPreset, MigrationConfig } from "@/src/core/types";
+import { MigrationRunner } from "@/src/core/runner";
+import { DatabaseClient } from "@/src/database/interface";
+import { PipelineBuilder, isCmsModel, isCmsEntry } from "@/src/core/pipelines";
+
+// Import transformers you need
+import { wrapInData } from "@/src/transformers/global/wrap-in-data";
+import { addGsiTenant } from "@/src/transformers/global/add-gsi-tenant";
+import { removeLocale } from "@/src/transformers/global/remove-locale";
+import { removeAttributes } from "@/src/transformers/global/remove-attributes";
 
 export const publishedOnlyPreset: MigrationPreset = {
   name: "published-only",
   description: "Migrate only published CMS entries",
-  configure(runner, config, database) {
-    runner
-      .register(new CmsModelPipeline().build())
-      .register(
-        new CmsEntryPipeline()
-          .filter(record => record.status === "published")
-          .build()
-      );
+  configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient) {
+    // Models pipeline
+    const models = new PipelineBuilder()
+      .filter(isCmsModel)
+      .use(wrapInData)
+      .use(addGsiTenant)
+      .use(removeLocale)
+      .use(removeAttributes)
+      .build();
+
+    // Published entries only
+    const entries = new PipelineBuilder()
+      .filter(isCmsEntry)
+      .filter(record => record.status === "published")
+      .use(wrapInData)
+      .use(addGsiTenant)
+      .use(removeLocale)
+      .use(removeAttributes)
+      .build();
+
+    runner.register(models).register(entries);
   }
 };
 ```
 
-**Available Pre-configured Pipelines:**
-- `CmsModelPipeline`, `CmsEntryPipeline` - CMS data (entries exclude File Manager files)
-- `FmSettingsPipeline`, `FmFilePipeline`, `FolderPipeline` - File Manager data
-- `SecurityGroupPipeline`, `SecurityTeamPipeline` - Security data
-- `MailerSettingsPipeline` - Mailer settings
+**Available Filters:**
+- `isCmsModel`, `isCmsEntry` - CMS records
+- `isFmFile`, `isFmSettings` - File Manager
+- `isSecurityTeam`, `isCustomSecurityGroup` - Security
+- `isFlpRecord` - Folder permissions
+- `isMailerSettings` - Mailer
+- `byType(type)`, `byTypePrefix(prefix)` - Generic filters
 
-Each pipeline includes all necessary filters and transformers in the correct order.
+**Key Transformers:**
+- `wrapInData` - MUST be first - wraps attributes in data envelope
+- `addGsiTenant`, `removeLocale`, `removeAttributes` - Global transformations
+- `fixCmePk`, `fixBrokenStorageKeys`, `transformRichText` - CMS-specific
+- `groupsToRoles`, `transformPermissions` - Security
+- `migrateFileManagerSettings`, `migrateMailerSettings` - Settings
+
+See `src/presets/v5-to-v6.ts` for a complete example.
 
 ## Transformations
 
