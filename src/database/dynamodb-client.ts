@@ -3,28 +3,29 @@ import {
   ScanCommand,
   QueryCommand
 } from "@aws-sdk/client-dynamodb";
-import {
-  DynamoDBDocumentClient,
-  PutCommand,
-  BatchWriteCommand
-} from "@aws-sdk/lib-dynamodb";
-import {
-  DatabaseClient,
-  DatabaseRecord,
-  ScanOptions,
-  QueryOptions
-} from "./interface.ts";
+import { DynamoDBDocumentClient, PutCommand, BatchWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { DatabaseClient, DatabaseRecord, ScanOptions, QueryOptions } from "./interface.ts";
 
 const BATCH_SIZE = 25; // DynamoDB batch write limit
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 100;
 
+export interface DynamoDBClientOptions {
+  region?: string;
+  credentials?: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
+}
+
 export class DynamoDBClient implements DatabaseClient {
   private client: DynamoDBDocumentClient;
 
-  constructor(region?: string) {
+  constructor(options?: DynamoDBClientOptions) {
     const awsClient = new AWSDynamoDBClient({
-      region: region || process.env.AWS_REGION || "us-east-1"
+      region: options?.region || process.env.AWS_REGION || "us-east-1",
+      ...(options?.credentials && { credentials: options.credentials })
     });
     this.client = DynamoDBDocumentClient.from(awsClient, {
       marshallOptions: {
@@ -33,10 +34,7 @@ export class DynamoDBClient implements DatabaseClient {
     });
   }
 
-  async *scan(
-    tableName: string,
-    options?: ScanOptions
-  ): AsyncIterable<DatabaseRecord> {
+  async *scan(tableName: string, options?: ScanOptions): AsyncIterable<DatabaseRecord> {
     let lastEvaluatedKey: Record<string, any> | undefined;
 
     do {
@@ -99,9 +97,7 @@ export class DynamoDBClient implements DatabaseClient {
       return result;
     });
 
-    return (response.Items || []).map(
-      item => this.unmarshall(item) as DatabaseRecord
-    );
+    return (response.Items || []).map(item => this.unmarshall(item) as DatabaseRecord);
   }
 
   async put(tableName: string, record: DatabaseRecord): Promise<void> {
@@ -136,10 +132,7 @@ export class DynamoDBClient implements DatabaseClient {
         const response = await this.client.send(command);
 
         // Handle unprocessed items
-        if (
-          response.UnprocessedItems &&
-          Object.keys(response.UnprocessedItems).length > 0
-        ) {
+        if (response.UnprocessedItems && Object.keys(response.UnprocessedItems).length > 0) {
           const unprocessedItems = response.UnprocessedItems[tableName];
           if (unprocessedItems) {
             const unprocessedRecords = unprocessedItems.map(

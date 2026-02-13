@@ -5,12 +5,22 @@ const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 100;
 const CONCURRENCY_LIMIT = 10;
 
+export interface S3ClientOptions {
+  region?: string;
+  credentials?: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
+}
+
 export class S3Client implements StorageClient {
   private client: AWSS3Client;
 
-  constructor(region?: string) {
+  constructor(options?: S3ClientOptions) {
     this.client = new AWSS3Client({
-      region: region || process.env.AWS_REGION || "us-east-1"
+      region: options?.region || process.env.AWS_REGION || "us-east-1",
+      ...(options?.credentials && { credentials: options.credentials })
     });
   }
 

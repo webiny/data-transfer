@@ -4,6 +4,7 @@ import { executeCommands } from "./core/executor.ts";
 import { createLogger } from "./utils/logger.ts";
 import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "./utils/tenants.ts";
 import { MigrationConfig } from "./core/types.ts";
+import { MigrationConfiguration } from "./config/types.ts";
 import { ModelProvider } from "./models/model-provider.ts";
 import { MigrationRunner } from "./core/runner.ts";
 import { loadPreset } from "./presets/loader.ts";
@@ -16,12 +17,7 @@ export interface ProcessSegmentOptions {
   runId: string;
   segment: number;
   total: number;
-  sourcePrimaryTable: string;
-  targetPrimaryTable: string;
-  sourceFmBucket: string;
-  targetFmBucket: string;
-  modelsDir?: string;
-  preset: string;
+  config: MigrationConfiguration;
 }
 
 export async function processSegment(options: ProcessSegmentOptions): Promise<void> {
@@ -35,37 +31,57 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
     )}%)`
   );
 
-  // Initialize clients
-  const database = new DynamoDBClient();
-  const storage = new S3Client();
+  // Initialize source clients (for reading)
+  const sourceDatabase = new DynamoDBClient({
+    region: options.config.source.region,
+    credentials: options.config.source.credentials
+  });
+
+  // Initialize target clients (for writing)
+  const targetDatabase = new DynamoDBClient({
+    region: options.config.target.region,
+    credentials: options.config.target.credentials
+  });
+
+  const targetStorage = new S3Client({
+    region: options.config.target.region,
+    credentials: options.config.target.credentials
+  });
 
   // Fetch tenants and default locales
   logger.info("Fetching tenants and default locales...");
-  const tenantLocales = await fetchTenantsWithLocales(database, options.sourcePrimaryTable);
+  const tenantLocales = await fetchTenantsWithLocales(
+    sourceDatabase,
+    options.config.source.dynamodb.tableName
+  );
   logger.info(`Found ${tenantLocales.size} tenants`);
 
   // Initialize and preload model provider
   logger.info("Preloading models...");
-  const modelProvider = new ModelProvider(database, options.sourcePrimaryTable, options.modelsDir);
+  const modelProvider = new ModelProvider(
+    sourceDatabase,
+    options.config.source.dynamodb.tableName,
+    options.config.migration.modelsDir
+  );
   await modelProvider.preloadModels(tenantLocales);
 
   // Create migration config
-  const config: MigrationConfig = {
-    sourcePrimaryTable: options.sourcePrimaryTable,
-    targetPrimaryTable: options.targetPrimaryTable,
-    sourceFmBucket: options.sourceFmBucket,
-    targetFmBucket: options.targetFmBucket,
+  const migrationConfig: MigrationConfig = {
+    sourcePrimaryTable: options.config.source.dynamodb.tableName,
+    targetPrimaryTable: options.config.target.dynamodb.tableName,
+    sourceFmBucket: options.config.source.s3.bucket,
+    targetFmBucket: options.config.target.s3.bucket,
     modelProvider
   };
 
   // Load and configure preset
-  logger.info(`Loading preset: ${options.preset}`);
-  const preset = await loadPreset(options.preset);
+  logger.info(`Loading preset: ${options.config.migration.preset}`);
+  const preset = await loadPreset(options.config.migration.preset);
   logger.info(`Loaded preset: "${preset.name}" - ${preset.description}`);
 
   // Create migration runner and configure with preset
-  const runner = new MigrationRunner(config, database);
-  preset.configure(runner, config, database);
+  const runner = new MigrationRunner(migrationConfig, sourceDatabase);
+  preset.configure(runner, migrationConfig, sourceDatabase);
 
   // Process records
   let processedCount = 0;
@@ -76,7 +92,7 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
 
   logger.info("Scanning table segment...");
 
-  for await (const record of database.scan(options.sourcePrimaryTable, {
+  for await (const record of sourceDatabase.scan(options.config.source.dynamodb.tableName, {
     segment: options.segment,
     totalSegments: options.total
   })) {
@@ -95,7 +111,7 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
       const commands = await runner.processAll(recordBatch);
 
       if (commands.length > 0) {
-        await executeCommands(commands, { database, storage });
+        await executeCommands(commands, { database: targetDatabase, storage: targetStorage });
         migratedCount += recordBatch.length;
       } else {
         skippedCount += recordBatch.length;
@@ -117,7 +133,7 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
     const commands = await runner.processAll(recordBatch);
 
     if (commands.length > 0) {
-      await executeCommands(commands, { database, storage });
+      await executeCommands(commands, { database: targetDatabase, storage: targetStorage });
       migratedCount += recordBatch.length;
     } else {
       skippedCount += recordBatch.length;

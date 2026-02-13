@@ -4,6 +4,8 @@ import { hideBin } from "yargs/helpers";
 import { execa } from "execa";
 import { createLogger } from "./utils/logger.ts";
 import { processSegment, ProcessSegmentOptions } from "./process-segment.ts";
+import { loadConfig } from "./config/loader.ts";
+import { MigrationConfiguration } from "./config/types.ts";
 
 const logger = createLogger();
 
@@ -14,56 +16,35 @@ const logger = createLogger();
 yargs(hideBin(process.argv))
   .command(
     "$0",
-    "Migrate Webiny v5 data to v6",
+    "Migrate Webiny v5 data to v6 using a configuration file",
     yargs => {
-      return yargs
-        .option("segments", {
-          type: "number",
-          default: 1,
-          description: "Number of parallel segments to process"
-        })
-        .option("sourcePrimaryTable", {
-          type: "string",
-          demandOption: true,
-          description: "Source DynamoDB table name"
-        })
-        .option("targetPrimaryTable", {
-          type: "string",
-          demandOption: true,
-          description: "Target DynamoDB table name"
-        })
-        .option("sourceFmBucket", {
-          type: "string",
-          demandOption: true,
-          description: "Source S3 bucket for File Manager"
-        })
-        .option("targetFmBucket", {
-          type: "string",
-          demandOption: true,
-          description: "Target S3 bucket for File Manager"
-        })
-        .option("models", {
-          type: "string",
-          description: "Directory containing model JSON files (optional)"
-        })
-        .option("preset", {
-          type: "string",
-          default: "full",
-          description: 'Migration preset to use (default: "full", or path to custom preset file)'
-        });
+      return yargs.option("config", {
+        type: "string",
+        demandOption: true,
+        description: "Path to migration configuration file (e.g., migration.config.ts)"
+      });
     },
     async argv => {
+      // Load configuration
+      logger.info(`Loading configuration from: ${argv.config}`);
+      const config = await loadConfig(argv.config);
+
       // Generate unique run ID
       const runId = String(Date.now());
 
+      // Get segments from config or use default
+      const segments = config.migration.segments || 1;
+
       logger.info("Starting migration with configuration:");
       logger.info(`  Run ID: ${runId}`);
-      logger.info(`  Preset: ${argv.preset}`);
-      logger.info(`  Segments: ${argv.segments}`);
-      logger.info(`  Source Table: ${argv.sourcePrimaryTable}`);
-      logger.info(`  Target Table: ${argv.targetPrimaryTable}`);
-      logger.info(`  Source FM Bucket: ${argv.sourceFmBucket}`);
-      logger.info(`  Target FM Bucket: ${argv.targetFmBucket}`);
+      logger.info(`  Preset: ${config.migration.preset}`);
+      logger.info(`  Segments: ${segments}`);
+      logger.info(`  Source Region: ${config.source.region}`);
+      logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
+      logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
+      logger.info(`  Target Region: ${config.target.region}`);
+      logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
+      logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
 
       const startTime = Date.now();
 
@@ -71,8 +52,8 @@ yargs(hideBin(process.argv))
         // Spawn worker processes
         const workers: Promise<void>[] = [];
 
-        for (let segment = 0; segment < argv.segments; segment++) {
-          workers.push(spawnWorker(segment, argv.segments, runId, argv));
+        for (let segment = 0; segment < segments; segment++) {
+          workers.push(spawnWorker(segment, segments, runId, argv.config));
         }
 
         // Wait for all workers to complete
@@ -106,38 +87,20 @@ yargs(hideBin(process.argv))
           demandOption: true,
           description: "Total number of segments"
         })
-        .option("sourcePrimaryTable", {
+        .option("config", {
           type: "string",
           demandOption: true,
-          description: "Source DynamoDB table name"
-        })
-        .option("targetPrimaryTable", {
-          type: "string",
-          demandOption: true,
-          description: "Target DynamoDB table name"
-        })
-        .option("sourceFmBucket", {
-          type: "string",
-          demandOption: true,
-          description: "Source S3 bucket for File Manager"
-        })
-        .option("targetFmBucket", {
-          type: "string",
-          demandOption: true,
-          description: "Target S3 bucket for File Manager"
-        })
-        .option("models", {
-          type: "string",
-          description: "Directory containing model JSON files (optional)"
-        })
-        .option("preset", {
-          type: "string",
-          demandOption: true,
-          description: "Migration preset to use"
+          description: "Path to migration configuration file"
         });
     },
     async argv => {
-      await processSegment(argv as ProcessSegmentOptions);
+      const config = await loadConfig(argv.config);
+      await processSegment({
+        runId: argv.runId,
+        segment: argv.segment,
+        total: argv.total,
+        config
+      });
     }
   )
   .help()
@@ -151,7 +114,7 @@ async function spawnWorker(
   segment: number,
   total: number,
   runId: string,
-  config: any
+  configPath: string
 ): Promise<void> {
   const binPath = new URL("../bin.js", import.meta.url).pathname;
 
@@ -164,23 +127,9 @@ async function spawnWorker(
     segment.toString(),
     "--total",
     total.toString(),
-    "--sourcePrimaryTable",
-    config.sourcePrimaryTable,
-    "--targetPrimaryTable",
-    config.targetPrimaryTable,
-    "--sourceFmBucket",
-    config.sourceFmBucket,
-    "--targetFmBucket",
-    config.targetFmBucket
+    "--config",
+    configPath
   ];
-
-  if (config.models) {
-    args.push("--models", config.models);
-  }
-
-  if (config.preset) {
-    args.push("--preset", config.preset);
-  }
 
   const { exitCode } = await execa("node", args, {
     stdio: "inherit"
