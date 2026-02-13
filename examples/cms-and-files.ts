@@ -1,4 +1,4 @@
-import type { MigrationPreset } from "@/src/presets/types.js";
+import type { MigrationPreset } from "@/src/core/types.js";
 import { CmsModelPipeline, CmsEntryPipeline } from "@/src/pipelines.ts";
 import { MigrationRunner } from "@/src/core/runner.ts";
 import { Transformer } from "@/src/core/transformer.js";

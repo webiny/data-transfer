@@ -7,7 +7,7 @@ import { MigrationConfig } from "./core/types.ts";
 import { MigrationConfiguration } from "./config/types.ts";
 import { ModelProvider } from "./models/model-provider.ts";
 import { MigrationRunner } from "./core/runner.ts";
-import { loadPreset } from "./presets/loader.ts";
+import { loadPreset } from "./core/preset-loader.ts";
 
 // ============================================================================
 // Process Segment Command
