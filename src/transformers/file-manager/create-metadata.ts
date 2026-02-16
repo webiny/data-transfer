@@ -35,8 +35,8 @@ export const createFileMetadata: Transformer = {
       // Strip revision from file ID (e.g., "id#0001" -> "id")
       fileId = fileId.replace(/#\d+$/, "");
 
-      // Calculate new S3 key (without revision in the ID)
-      const newKey = `tenants/${tenant}/files/${fileId}/${fileName}`;
+      // Calculate new S3 key
+      const newKey = `tenants/${tenant}/files/${oldKey}`;
 
       // Copy file to new S3 location if needed
       if (oldKey && oldKey !== newKey) {
