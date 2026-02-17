@@ -66,4 +66,12 @@ function renameAttributes(field: ModelField): void {
     }
     delete fieldAny.placeholderText;
   }
+
+  // multipleValues → list
+  if ("multipleValues" in fieldAny) {
+    if (!("list" in fieldAny)) {
+      fieldAny.list = fieldAny.multipleValues;
+    }
+    delete fieldAny.multipleValues;
+  }
 }

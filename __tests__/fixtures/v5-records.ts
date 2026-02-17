@@ -321,7 +321,12 @@ export const v5CmsEntryWithDuplicateCme: DatabaseRecord = {
   tenant: "root",
   entryId: "acoFolder123",
   values: {
-    "text@title": "Test Folder"
+    "text@path": "root/product-screenshots/file-manager",
+    "text@title": "File Manager",
+    "text@slug": "file-manager",
+    "object@permissions": null,
+    "text@type": "FmFile",
+    "text@parentId": "696f439b9b76ee0002969341#0001"
   },
   webinyVersion: "5.0.0"
 };

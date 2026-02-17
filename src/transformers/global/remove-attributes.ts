@@ -16,11 +16,6 @@ export const removeAttributes: Transformer = {
     if (record.data && typeof record.data === "object") {
       const data = record.data as Record<string, unknown>;
 
-      // Remove tenant attribute if it exists
-      if (data.tenant !== undefined) {
-        delete data.tenant;
-      }
-
       // Remove webinyVersion if it exists
       if (data.webinyVersion !== undefined) {
         delete data.webinyVersion;

@@ -37,6 +37,12 @@ export const removeFolderRevision: Transformer = {
       if (values["object@location"]) {
         delete values["object@location"];
       }
+
+      // Remove revision from parentId for folder entries only
+      const modelId = data.modelId as string | undefined;
+      if (modelId === "wbyAcoFolder" && typeof values["text@parentId"] === "string") {
+        values["text@parentId"] = (values["text@parentId"] as string).replace(/#\d+$/, "");
+      }
     }
   }
 };

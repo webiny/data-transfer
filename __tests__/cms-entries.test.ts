@@ -144,6 +144,9 @@ describe("CMS Entries", () => {
 
     // Should update modelId in data
     expect(migratedRecord.data.modelId).toBe("wbyAcoFolder");
+
+    // Should strip revision from text@parentId
+    expect(migratedRecord.data.values["text@parentId"]).toBe("696f439b9b76ee0002969341");
   });
 
   it("should process all CMS entry types (cms.entry, cms.entry.l, cms.entry.p)", async () => {
