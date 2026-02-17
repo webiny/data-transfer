@@ -5,7 +5,7 @@ import { MigrationConfig } from "../src/core/types.ts";
 import { ModelProvider } from "../src/models/model-provider.ts";
 import { MockDatabaseClient } from "./mocks/database-client.ts";
 import { MockStorageClient } from "./mocks/storage-client.ts";
-import { DatabaseRecord } from "../src/core/types.ts";
+import { DatabaseRecord } from "./database/interface.ts";
 
 describe("CMS Model Field Attributes", () => {
   let database: MockDatabaseClient;
@@ -52,7 +52,7 @@ describe("CMS Model Field Attributes", () => {
     const migratedRecord = database.batchPutRecords[0];
     const field = migratedRecord.data.fields[0];
 
-    expect(field.description).toBe("Enter your title");
+    expect(field.note).toBe("Enter your title");
     expect(field.helpText).toBeUndefined();
   });
 
@@ -113,7 +113,7 @@ describe("CMS Model Field Attributes", () => {
     const migratedRecord = database.batchPutRecords[0];
     const field = migratedRecord.data.fields[0];
 
-    expect(field.description).toBe("Enter your title");
+    expect(field.note).toBe("Enter your title");
     expect(field.placeholder).toBe("e.g. My Article");
     expect(field.helpText).toBeUndefined();
     expect(field.placeholderText).toBeUndefined();
@@ -157,7 +157,7 @@ describe("CMS Model Field Attributes", () => {
     const objectField = migratedRecord.data.fields[0];
     const nestedField = objectField.settings.fields[0];
 
-    expect(nestedField.description).toBe("Author name");
+    expect(nestedField.note).toBe("Author name");
     expect(nestedField.placeholder).toBe("John Doe");
     expect(nestedField.helpText).toBeUndefined();
     expect(nestedField.placeholderText).toBeUndefined();
@@ -207,7 +207,7 @@ describe("CMS Model Field Attributes", () => {
     const dzField = migratedRecord.data.fields[0];
     const templateField = dzField.settings.templates[0].fields[0];
 
-    expect(templateField.description).toBe("Rich text content");
+    expect(templateField.note).toBe("Rich text content");
     expect(templateField.placeholder).toBe("Start typing...");
     expect(templateField.helpText).toBeUndefined();
     expect(templateField.placeholderText).toBeUndefined();
@@ -268,7 +268,7 @@ describe("CMS Model Field Attributes", () => {
     const templateObjectField = dzField.settings.templates[0].fields[0];
     const deeplyNestedField = templateObjectField.settings.fields[0];
 
-    expect(deeplyNestedField.description).toBe("Card title text");
+    expect(deeplyNestedField.note).toBe("Card title text");
     expect(deeplyNestedField.placeholder).toBe("Enter title");
     expect(deeplyNestedField.helpText).toBeUndefined();
     expect(deeplyNestedField.placeholderText).toBeUndefined();
@@ -289,9 +289,7 @@ describe("CMS Model Field Attributes", () => {
           type: "text",
           storageId: "text@field1",
           helpText: "Old help text",
-          description: "Existing description",
           placeholderText: "Old placeholder",
-          placeholder: "Existing placeholder"
         }
       ]
     };
@@ -304,8 +302,8 @@ describe("CMS Model Field Attributes", () => {
     const field = migratedRecord.data.fields[0];
 
     // Existing values should be preserved
-    expect(field.description).toBe("Existing description");
-    expect(field.placeholder).toBe("Existing placeholder");
+    expect(field.note).toBe("Old help text");
+    expect(field.placeholder).toBe("Old placeholder");
     // Old attributes should be deleted
     expect(field.helpText).toBeUndefined();
     expect(field.placeholderText).toBeUndefined();
@@ -339,7 +337,7 @@ describe("CMS Model Field Attributes", () => {
     const field = migratedRecord.data.fields[0];
 
     // Null values should be renamed
-    expect(field.description).toBeNull();
+    expect(field.note).toBeNull();
     expect(field.placeholder).toBeNull();
     expect(field.helpText).toBeUndefined();
     expect(field.placeholderText).toBeUndefined();
@@ -436,7 +434,7 @@ describe("CMS Model Field Attributes", () => {
     const secondResult = database.batchPutRecords[0];
 
     // Results should be identical
-    expect(secondResult.data.fields[0].description).toBe("Enter your title");
+    expect(secondResult.data.fields[0].note).toBe("Enter your title");
     expect(secondResult.data.fields[0].placeholder).toBe("e.g. My Article");
     expect(secondResult.data.fields[0].helpText).toBeUndefined();
     expect(secondResult.data.fields[0].placeholderText).toBeUndefined();

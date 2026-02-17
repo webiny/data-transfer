@@ -53,8 +53,8 @@ function renameAttributes(field: ModelField): void {
 
   // helpText → description
   if ("helpText" in fieldAny) {
-    if (!("description" in fieldAny)) {
-      fieldAny.description = fieldAny.helpText;
+    if (!("note" in fieldAny)) {
+      fieldAny.note = fieldAny.helpText;
     }
     delete fieldAny.helpText;
   }

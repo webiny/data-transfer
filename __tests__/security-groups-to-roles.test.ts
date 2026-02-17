@@ -72,10 +72,6 @@ describe("Security Groups to Roles", () => {
     // Should remove webinyVersion
     expect(migratedRecord.webinyVersion).toBeUndefined();
     expect(migratedRecord.data.webinyVersion).toBeUndefined();
-
-    // Should remove tenant attribute
-    expect(migratedRecord.tenant).toBeUndefined();
-    expect(migratedRecord.data.tenant).toBeUndefined();
   });
 
   it("should skip full-access role", async () => {

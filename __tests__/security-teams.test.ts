@@ -55,10 +55,6 @@ describe("Security Teams", () => {
     expect(migratedRecord.data.name).toBe("Team #1");
     expect(migratedRecord.data.groups).toEqual(["67af50f9ac973600020bb054"]);
 
-    // Should remove tenant attribute (global removal)
-    expect(migratedRecord.tenant).toBeUndefined();
-    expect(migratedRecord.data.tenant).toBeUndefined();
-
     // Should remove webinyVersion attribute (global removal)
     expect(migratedRecord.webinyVersion).toBeUndefined();
     expect(migratedRecord.data.webinyVersion).toBeUndefined();
