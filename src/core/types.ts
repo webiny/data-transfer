@@ -1,4 +1,5 @@
 import { DatabaseClient } from "../database/interface.ts";
+import { StorageClient } from "../storage/interface.ts";
 import { ModelProvider } from "../models/model-provider.ts";
 import { MigrationRunner } from "./runner.ts";
 
@@ -12,6 +13,7 @@ export interface MigrationConfig {
   sourceFmBucket: string;
   targetFmBucket: string;
   modelProvider: ModelProvider;
+  sourceStorage?: StorageClient;
 }
 
 // ============================================================================
@@ -59,6 +61,10 @@ export interface TransformContext<TRecord = Record<string, unknown>> {
   queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
   /** Execute a pipeline on multiple records and merge commands into parent context */
   executePipeline(pipeline: any, records: Record<string, unknown>[]): Promise<Command[]>;
+  /** Get a file from the source S3 bucket. Returns null if no storage is configured. */
+  getFile(key: string): Promise<Buffer | null>;
+  /** Shared cache that persists across records within a migration run */
+  readonly cache: Map<string, unknown>;
 }
 
 // ============================================================================

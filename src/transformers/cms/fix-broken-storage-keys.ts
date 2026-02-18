@@ -38,7 +38,7 @@ export const fixBrokenStorageKeys: Transformer = {
 
     const model = ctx.modelProvider.getModel(modelId as string);
     if (!model) {
-      console.warn(`[fixBrokenStorageKeys] Model ${modelId} not found, skipping`);
+      // console.warn(`[fixBrokenStorageKeys] Model ${modelId} not found, skipping`);
       return;
     }
 

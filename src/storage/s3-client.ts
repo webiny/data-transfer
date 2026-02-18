@@ -1,4 +1,4 @@
-import { S3Client as AWSS3Client, CopyObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client as AWSS3Client, CopyObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { StorageClient, CopyOptions } from "./interface.ts";
 
 const MAX_RETRIES = 3;
@@ -33,6 +33,16 @@ export class S3Client implements StorageClient {
 
     await this.executeWithRetry(async () => {
       await this.client.send(command);
+    });
+  }
+
+  async getObject(bucket: string, key: string): Promise<Buffer> {
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+
+    return this.executeWithRetry(async () => {
+      const response = await this.client.send(command);
+      const bytes = await response.Body!.transformToByteArray();
+      return Buffer.from(bytes);
     });
   }
 

@@ -4,7 +4,8 @@ import { DatabaseClient } from "../database/interface.ts";
 export function createContext<T extends Record<string, unknown>>(
   record: T,
   config: MigrationConfig,
-  database: DatabaseClient
+  database: DatabaseClient,
+  cache?: Map<string, unknown>
 ): TransformContext<T> {
   const commands: Command[] = [];
 
@@ -13,6 +14,7 @@ export function createContext<T extends Record<string, unknown>>(
     original: Object.freeze(structuredClone(record)),
     commands,
     modelProvider: config.modelProvider,
+    cache: cache ?? new Map(),
     replace(newRecord) {
       ctx.record = newRecord;
     },
@@ -54,6 +56,12 @@ export function createContext<T extends Record<string, unknown>>(
       // Merge all commands into parent context
       commands.push(...allCommands);
       return allCommands;
+    },
+    async getFile(key: string) {
+      if (!config.sourceStorage) {
+        return null;
+      }
+      return config.sourceStorage.getObject(config.sourceFmBucket, key);
     }
   };
 

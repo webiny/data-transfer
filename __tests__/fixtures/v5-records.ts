@@ -213,43 +213,43 @@ export const v5CmsFileEntry: DatabaseRecord = {
 };
 
 const v6CmsFileEntry: DatabaseRecord = {
-  PK: "T#root#CMS#CME#698255e9a099180002913d56",
+  PK: "T#root#CMS#CME#6994322809f4a46e4a6e1bf0",
   SK: "L",
   data: {
     createdBy: {
-      displayName: "Admin User",
+      displayName: "Pavel Denisjuk",
       id: "697fa558f0f6060002d6c10a",
       type: "admin"
     },
-    createdOn: "2026-02-03T20:09:14.160Z",
+    createdOn: "2026-02-17T09:17:30.170Z",
     deletedBy: null,
     deletedOn: null,
-    entryId: "698255e9a099180002913d56",
+    entryId: "6994322809f4a46e4a6e1bf0",
     firstPublishedBy: null,
     firstPublishedOn: null,
-    id: "698255e9a099180002913d56#0001",
+    id: "6994322809f4a46e4a6e1bf0#0001",
     lastPublishedBy: null,
     lastPublishedOn: null,
     location: {
-      folderId: "698390c69d0ef4000264a05b"
+      folderId: "root"
     },
     locked: false,
     meta: {},
     modelId: "wbyFmFile",
     modifiedBy: {
-      displayName: "Admin User",
-      id: "697fa558f0f6060002d6c10a",
-      type: "admin"
+      displayName: "Anonymous",
+      id: "anonymous",
+      type: "anonymous"
     },
-    modifiedOn: "2026-02-04T19:06:59.197Z",
+    modifiedOn: "2026-02-17T09:17:39.917Z",
     restoredBy: null,
     restoredOn: null,
     revisionCreatedBy: {
-      displayName: "Admin User",
+      displayName: "Pavel Denisjuk",
       id: "697fa558f0f6060002d6c10a",
       type: "admin"
     },
-    revisionCreatedOn: "2026-02-03T20:09:14.160Z",
+    revisionCreatedOn: "2026-02-17T09:17:30.170Z",
     revisionDeletedBy: null,
     revisionDeletedOn: null,
     revisionFirstPublishedBy: null,
@@ -257,44 +257,69 @@ const v6CmsFileEntry: DatabaseRecord = {
     revisionLastPublishedBy: null,
     revisionLastPublishedOn: null,
     revisionModifiedBy: {
-      displayName: "Admin User",
-      id: "697fa558f0f6060002d6c10a",
-      type: "admin"
+      displayName: "Anonymous",
+      id: "anonymous",
+      type: "anonymous"
     },
-    revisionModifiedOn: "2026-02-04T19:06:59.197Z",
+    revisionModifiedOn: "2026-02-17T09:17:39.917Z",
     revisionRestoredBy: null,
     revisionRestoredOn: null,
     revisionSavedBy: {
-      displayName: "Admin User",
-      id: "697fa558f0f6060002d6c10a",
-      type: "admin"
+      displayName: "Anonymous",
+      id: "anonymous",
+      type: "anonymous"
     },
-    revisionSavedOn: "2026-02-04T19:06:59.197Z",
+    revisionSavedOn: "2026-02-17T09:17:39.917Z",
     savedBy: {
-      displayName: "Admin User",
-      id: "697fa558f0f6060002d6c10a",
-      type: "admin"
+      displayName: "Anonymous",
+      id: "anonymous",
+      type: "anonymous"
     },
-    savedOn: "2026-02-04T19:06:59.197Z",
+    savedOn: "2026-02-17T09:17:39.917Z",
     status: "draft",
     tenant: "root",
     values: {
-      "number@size": 271223,
-      "object@meta": {},
-      "text@key": "698255e9a099180002913d56/image-2.jpg",
-      "text@name": "image-2.jpg",
+      "number@size": 92648,
+      "object@accessControl": {
+        "text@type": "public"
+      },
+      "object@metadata": {
+        "object@image": {
+          "number@height": 1080,
+          "number@orientation": 1,
+          "number@width": 1920,
+          "text@format": "jpeg"
+        },
+        "searchable-json@exif": {
+          ColorSpace: "Uncalibrated",
+          ComponentsConfiguration: null,
+          "Exif IFD Pointer": 102,
+          ExifVersion: "0210",
+          FlashpixVersion: "0100",
+          Orientation: "top-left",
+          PixelXDimension: 1920,
+          PixelYDimension: 1080,
+          ResolutionUnit: "inches",
+          UserComment: "Picsum ID: 949",
+          XResolution: "72",
+          YCbCrPositioning: "centered",
+          YResolution: "72"
+        }
+      },
+      "text@key": "6994322809f4a46e4a6e1bf0/image-19.jpg",
+      "text@name": "image-19.jpg",
       "text@tags": [],
       "text@type": "image/jpeg"
     },
     version: 1
   },
   GSI1_PK: "T#root#CMS#CME#M#wbyFmFile#L",
-  GSI1_SK: "698255e9a099180002913d56#0001",
+  GSI1_SK: "6994322809f4a46e4a6e1bf0#0001",
   GSI_TENANT: "root",
   TYPE: "cms.entry.l",
-  _ct: "2026-02-04T19:06:59.287Z",
+  _ct: "2026-02-17T09:17:39.951Z",
   _et: "CmsEntries",
-  _md: "2026-02-04T19:06:59.287Z"
+  _md: "2026-02-17T09:17:39.951Z"
 };
 
 // Folder (FLP) Record

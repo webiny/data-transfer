@@ -10,6 +10,7 @@ export class MigrationRunner {
   private pipelines: TransformPipeline<any>[] = [];
   private config: MigrationConfig;
   private database: DatabaseClient;
+  readonly cache = new Map<string, unknown>();
 
   constructor(config: MigrationConfig, database: DatabaseClient) {
     this.config = config;
@@ -24,7 +25,7 @@ export class MigrationRunner {
   async processRecord(record: Record<string, unknown>): Promise<Command[]> {
     for (const pipeline of this.pipelines) {
       if (pipeline.accepts(record)) {
-        const result = await pipeline.run(record, this.config, this.database);
+        const result = await pipeline.run(record, this.config, this.database, this.cache);
         return result ? result.commands : [];
       }
     }

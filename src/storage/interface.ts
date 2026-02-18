@@ -15,4 +15,7 @@ export interface StorageClient {
 
   /** Batch copy with concurrency control */
   batchCopy(operations: CopyOptions[]): Promise<void>;
+
+  /** Get object contents from S3 */
+  getObject(bucket: string, key: string): Promise<Buffer>;
 }

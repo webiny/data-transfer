@@ -38,9 +38,7 @@ describe("Full Table Migration", () => {
     const commands = await runner.processAll(inputRecords);
     await executeCommands(commands, { database, storage });
 
-    const migratedRecords = database.batchPutRecords.filter(
-      r => r.TYPE.startsWith("cms") && r.data.modelId === "wbyWbPage"
-    ) as any[];
+    const migratedRecords = database.batchPutRecords;
 
     // Write migrated output
     const outputPath = join(__dirname, "fixtures/full-table-migrated.json");

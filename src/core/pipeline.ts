@@ -36,14 +36,15 @@ export class TransformPipeline<TInput extends Record<string, unknown>> {
   async run(
     record: TInput,
     config: MigrationConfig,
-    database: DatabaseClient
+    database: DatabaseClient,
+    cache?: Map<string, unknown>
   ): Promise<PipelineResult | null> {
     // Skip records that don't pass filters
     if (!this.accepts(record)) {
       return null;
     }
 
-    const ctx = createContext(record, config, database);
+    const ctx = createContext(record, config, database, cache);
 
     for (const transformer of this.transformers) {
       await transformer.transform(ctx);

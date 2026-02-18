@@ -75,7 +75,9 @@ export const isCmsEntry = byTypePrefix("cms.entry");
  * Filter for File Manager files (by modelId)
  */
 export const isFmFile = (record: Record<string, unknown>) => {
-  const modelId = record.modelId as string;
+  const modelId =
+    (record.modelId as string) ||
+    ((record.data as Record<string, unknown> | undefined)?.modelId as string);
   return modelId === "fmFile" || modelId === "wbyFmFile";
 };
 

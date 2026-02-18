@@ -48,6 +48,11 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
     credentials: options.config.target.credentials
   });
 
+  const sourceStorage = new S3Client({
+    region: options.config.source.region,
+    credentials: options.config.source.credentials
+  });
+
   // Fetch tenants and default locales
   logger.info("Fetching tenants and default locales...");
   const tenantLocales = await fetchTenantsWithLocales(
@@ -71,7 +76,8 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
     targetPrimaryTable: options.config.target.dynamodb.tableName,
     sourceFmBucket: options.config.source.s3.bucket,
     targetFmBucket: options.config.target.s3.bucket,
-    modelProvider
+    modelProvider,
+    sourceStorage
   };
 
   // Load and configure preset
