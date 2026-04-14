@@ -32,6 +32,7 @@ let dynalitePort: number;
 let sourceDb: DynamoDBClient;
 let targetDb: DynamoDBClient;
 let osClient: Client;
+const createdIndexes = new Set<string>();
 
 beforeAll(async () => {
   await startDb();
@@ -56,18 +57,13 @@ beforeAll(async () => {
 }, 30000);
 
 afterAll(async () => {
-  // Clean up OS indexes
-  try {
-    const { body: indexes } = await osClient.cat.indices({ format: "json" });
-    if (indexes && indexes.length > 0) {
-      for (const idx of indexes) {
-        if (idx.index && !idx.index.startsWith(".")) {
-          await osClient.indices.delete({ index: idx.index });
-        }
-      }
+  // Only delete indexes that were created during tests
+  for (const indexName of createdIndexes) {
+    try {
+      await osClient.indices.delete({ index: indexName });
+    } catch {
+      // Index may not exist or OS might not be running
     }
-  } catch {
-    // OS might not be running
   }
 
   await stopDb();
@@ -142,6 +138,9 @@ describe("OS migration integration", () => {
       knownIndexes,
       retrySchedule: [100, 100]
     });
+
+    // Track created indexes for cleanup
+    for (const idx of knownIndexes) createdIndexes.add(idx);
 
     // Verify target table has gzipped records
     const targetRecords: any[] = [];
@@ -220,6 +219,9 @@ describe("OS migration integration", () => {
       knownIndexes,
       retrySchedule: [100, 100]
     });
+
+    // Track created indexes for cleanup
+    for (const idx of knownIndexes) createdIndexes.add(idx);
 
     // Verify indexes were created in OS
     const { body: indexes } = await osClient.cat.indices({ format: "json" });
