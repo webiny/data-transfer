@@ -2,7 +2,8 @@ import { Transformer } from "../../core/transformer.ts";
 import { TransformContext } from "../../core/types.ts";
 
 /**
- * Removes locale codes (e.g., L#en-US#) from PK, SK, and GSI keys
+ * Removes locale codes (e.g., L#en-US#) from PK, SK, and GSI keys,
+ * and removes the locale field from the record.
  */
 export const removeLocale: Transformer = {
   name: "removeLocale",
@@ -16,6 +17,12 @@ export const removeLocale: Transformer = {
       if (typeof record[key] === "string") {
         record[key] = removeLocaleFromKey(record[key] as string);
       }
+    }
+
+    // Remove locale field
+    delete record.locale;
+    if (record.data && typeof record.data === "object") {
+      delete (record.data as Record<string, unknown>).locale;
     }
   }
 };

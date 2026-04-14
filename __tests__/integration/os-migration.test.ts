@@ -60,7 +60,7 @@ afterAll(async () => {
   // Only delete indexes that were created during tests
   for (const indexName of createdIndexes) {
     try {
-      // await osClient.indices.delete({ index: indexName });
+      await osClient.indices.delete({ index: indexName });
     } catch {
       // Index may not exist or OS might not be running
     }
@@ -377,7 +377,7 @@ describe("OS migration integration", () => {
       const firstDoc = searchResult.hits.hits[0]._source;
       expect(firstDoc).toHaveProperty("modelId");
       expect(firstDoc).toHaveProperty("entryId");
-      expect(firstDoc).toHaveProperty("locale");
+      expect(firstDoc).not.toHaveProperty("locale");
     }
 
     vi.restoreAllMocks();
