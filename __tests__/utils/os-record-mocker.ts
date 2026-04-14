@@ -22,6 +22,7 @@ export interface OsMockerOptions {
 }
 
 interface GeneratedOsRecord {
+  [key: string]: unknown;
   PK: string;
   SK: string;
   data: { compression: string; value: string };
