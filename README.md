@@ -10,6 +10,7 @@ Create a migration configuration file (e.g., `migration.config.ts`):
 import { MigrationConfiguration } from "./src/config/types";
 
 const config: MigrationConfiguration = {
+  storage: "ddb", // "ddb" or "ddb-os"
   source: {
     region: "us-east-1",
     credentials: {
@@ -43,6 +44,59 @@ Then run:
 ```bash
 npx github:webiny/v5-to-v6 --config=./migration.config.ts
 ```
+
+### Storage Modes
+
+The `storage` field determines how data is written to the target environment:
+
+- **`ddb`** — DynamoDB only. Records are written to the target DynamoDB table.
+- **`ddb-os`** — DynamoDB + OpenSearch. Records are written to both the target DynamoDB table and the OpenSearch DynamoDB table (which triggers a Lambda that syncs data into OpenSearch/Elasticsearch).
+
+### DynamoDB + OpenSearch (`ddb-os`) Configuration
+
+When using `ddb-os` storage, the `target.opensearch` section is **required**:
+
+```typescript
+const config: MigrationConfiguration = {
+  storage: "ddb-os",
+  source: {
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
+    },
+    dynamodb: { tableName: "webiny-v5-table" },
+    s3: { bucket: "webiny-v5-files" }
+  },
+  target: {
+    region: "us-east-1",
+    credentials: {
+      accessKeyId: process.env.TARGET_AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.TARGET_AWS_SECRET_ACCESS_KEY!
+    },
+    dynamodb: { tableName: "webiny-v6-table" },
+    s3: { bucket: "webiny-v6-files" },
+    opensearch: {
+      endpoint: "https://search-xxx.us-east-1.es.amazonaws.com",
+      targetTableName: "webiny-v6-es-table",
+      sourceTableName: "webiny-v5-es-table",
+      service: "opensearch" // or "opensearch-serverless" for OpenSearch Serverless
+    }
+  },
+  migration: {
+    preset: "v5-to-v6",
+    segments: 4
+  }
+};
+```
+
+The OpenSearch client uses the target account's `credentials` and `region` for AWS SigV4 signing. The `service` field defaults to `"opensearch"` (managed OpenSearch) — set it to `"opensearch-serverless"` for OpenSearch Serverless.
+
+**Lifecycle hooks:** When running in `ddb-os` mode, the tool automatically:
+1. Disables `refresh_interval` on all target OpenSearch indexes before migration starts
+2. Re-enables `refresh_interval` (`1s`) on all indexes after migration completes
+
+This prevents excessive indexing overhead during bulk data transfer.
 
 ### Migration Presets
 
@@ -113,6 +167,19 @@ export const publishedOnlyPreset: MigrationPreset = {
 - `migrateFileManagerSettings`, `migrateMailerSettings` - Settings
 
 See `src/presets/v5-to-v6.ts` for a complete example.
+
+### Transform Context Methods
+
+Transformers receive a `TransformContext` with these methods for emitting commands:
+
+- `ctx.putPrimaryRecord(record)` — write a record to the target DynamoDB table
+- `ctx.putOsRecord(record)` — write a record to the OpenSearch DynamoDB table (requires `ddb-os` storage mode)
+- `ctx.copyFile(sourceKey, targetKey)` — copy a file between S3 buckets
+- `ctx.queryRecord(pk, sk?)` — query a record from the source DynamoDB table
+- `ctx.getFile(key)` — read a file from the source S3 bucket
+- `ctx.replace(newRecord)` — replace the working record entirely
+- `ctx.modelProvider` — access CMS model definitions
+- `ctx.cache` — shared `Map` that persists across records within a migration run
 
 ## Transformations
 

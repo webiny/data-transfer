@@ -61,11 +61,13 @@ yargs(hideBin(process.argv))
 
       // Create OS client once if ddb-os mode
       const osClient =
-        config.storage === "ddb-os"
-          ? createOpenSearchClient(
-              config.target.opensearch.endpoint,
-              config.target.opensearch.auth
-            )
+        config.storage === "ddb-os" && config.target.credentials
+          ? createOpenSearchClient({
+              endpoint: config.target.opensearch.endpoint,
+              region: config.target.region,
+              service: config.target.opensearch.service,
+              credentials: config.target.credentials
+            })
           : null;
 
       try {

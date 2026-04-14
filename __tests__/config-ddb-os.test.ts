@@ -41,7 +41,70 @@ describe("config validation", () => {
     expect(config.storage).toBe("ddb");
   });
 
-  it("should accept valid ddb-os config with basic auth", async () => {
+  it("should accept valid ddb-os config", async () => {
+    const configPath = writeConfig({
+      storage: "ddb-os",
+      source: {
+        region: "eu-central-1",
+        dynamodb: { tableName: "src" },
+        s3: { bucket: "src-bucket" }
+      },
+      target: {
+        region: "eu-central-1",
+        credentials: {
+          accessKeyId: "AKIA...",
+          secretAccessKey: "secret"
+        },
+        dynamodb: { tableName: "tgt" },
+        s3: { bucket: "tgt-bucket" },
+        opensearch: {
+          endpoint: "https://search-xxx.eu-central-1.es.amazonaws.com",
+          targetTableName: "tgt-es",
+          sourceTableName: "src-es",
+          service: "opensearch"
+        }
+      },
+      migration: { preset: "v5-to-v6" }
+    });
+
+    const config = await loadConfig(configPath);
+    expect(config.storage).toBe("ddb-os");
+  });
+
+  it("should accept ddb-os config with opensearch-serverless service", async () => {
+    const configPath = writeConfig({
+      storage: "ddb-os",
+      source: {
+        region: "eu-central-1",
+        dynamodb: { tableName: "src" },
+        s3: { bucket: "src-bucket" }
+      },
+      target: {
+        region: "eu-central-1",
+        credentials: {
+          accessKeyId: "AKIA...",
+          secretAccessKey: "secret"
+        },
+        dynamodb: { tableName: "tgt" },
+        s3: { bucket: "tgt-bucket" },
+        opensearch: {
+          endpoint: "https://search-xxx.eu-central-1.aoss.amazonaws.com",
+          targetTableName: "tgt-es",
+          sourceTableName: "src-es",
+          service: "opensearch-serverless"
+        }
+      },
+      migration: { preset: "v5-to-v6" }
+    });
+
+    const config = await loadConfig(configPath);
+    expect(config.storage).toBe("ddb-os");
+    if (config.storage === "ddb-os") {
+      expect(config.target.opensearch.service).toBe("opensearch-serverless");
+    }
+  });
+
+  it("should reject ddb-os with missing opensearch.service", async () => {
     const configPath = writeConfig({
       storage: "ddb-os",
       source: {
@@ -56,47 +119,13 @@ describe("config validation", () => {
         opensearch: {
           endpoint: "https://es.example.com",
           targetTableName: "tgt-es",
-          sourceTableName: "src-es",
-          auth: { type: "basic", username: "admin", password: "admin" }
+          sourceTableName: "src-es"
         }
       },
       migration: { preset: "v5-to-v6" }
     });
 
-    const config = await loadConfig(configPath);
-    expect(config.storage).toBe("ddb-os");
-  });
-
-  it("should accept valid ddb-os config with AWS auth", async () => {
-    const configPath = writeConfig({
-      storage: "ddb-os",
-      source: {
-        region: "eu-central-1",
-        dynamodb: { tableName: "src" },
-        s3: { bucket: "src-bucket" }
-      },
-      target: {
-        region: "eu-central-1",
-        dynamodb: { tableName: "tgt" },
-        s3: { bucket: "tgt-bucket" },
-        opensearch: {
-          endpoint: "https://search-xxx.eu-central-1.es.amazonaws.com",
-          targetTableName: "tgt-es",
-          sourceTableName: "src-es",
-          auth: {
-            type: "aws",
-            region: "eu-central-1",
-            service: "opensearch",
-            accessKeyId: "AKIA...",
-            secretAccessKey: "secret"
-          }
-        }
-      },
-      migration: { preset: "v5-to-v6" }
-    });
-
-    const config = await loadConfig(configPath);
-    expect(config.storage).toBe("ddb-os");
+    await expect(loadConfig(configPath)).rejects.toThrow();
   });
 
   it("should reject missing storage field", async () => {
@@ -169,8 +198,7 @@ describe("config validation", () => {
         s3: { bucket: "tgt-bucket" },
         opensearch: {
           targetTableName: "tgt-es",
-          sourceTableName: "src-es",
-          auth: { type: "basic", username: "admin", password: "admin" }
+          sourceTableName: "src-es"
         }
       },
       migration: { preset: "v5-to-v6" }
@@ -179,7 +207,7 @@ describe("config validation", () => {
     await expect(loadConfig(configPath)).rejects.toThrow();
   });
 
-  it("should reject ddb-os with missing opensearch.auth", async () => {
+  it("should reject ddb-os with missing opensearch.targetTableName", async () => {
     const configPath = writeConfig({
       storage: "ddb-os",
       source: {
@@ -193,7 +221,7 @@ describe("config validation", () => {
         s3: { bucket: "tgt-bucket" },
         opensearch: {
           endpoint: "https://es.example.com",
-          tableName: "tgt-es"
+          sourceTableName: "src-es"
         }
       },
       migration: { preset: "v5-to-v6" }

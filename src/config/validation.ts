@@ -1,30 +1,6 @@
 import { z } from "zod";
 
 // ============================================================================
-// Auth Schemas
-// ============================================================================
-
-const basicAuthSchema = z.object({
-  type: z.literal("basic"),
-  username: z.string(),
-  password: z.string()
-});
-
-const awsAuthSchema = z.object({
-  type: z.literal("aws"),
-  region: z.string(),
-  service: z.enum(["opensearch", "opensearch-serverless"]),
-  accessKeyId: z.string(),
-  secretAccessKey: z.string(),
-  sessionToken: z.string().optional()
-});
-
-const opensearchAuthSchema = z.discriminatedUnion("type", [
-  basicAuthSchema,
-  awsAuthSchema
-]);
-
-// ============================================================================
 // Shared Schemas
 // ============================================================================
 
@@ -45,7 +21,7 @@ const opensearchTargetConfigSchema = z.object({
   endpoint: z.url(),
   targetTableName: z.string(),
   sourceTableName: z.string(),
-  auth: opensearchAuthSchema
+  service: z.enum(["opensearch", "opensearch-serverless"])
 });
 
 const targetAccountConfigSchema = accountConfigSchema.extend({

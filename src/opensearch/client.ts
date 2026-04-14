@@ -4,52 +4,35 @@ import { AwsSigv4Signer } from "@opensearch-project/opensearch/aws";
 export type { Client };
 
 // ============================================================================
-// Auth Types
+// Types
 // ============================================================================
 
-export interface OpenSearchBasicAuth {
-  type: "basic";
-  username: string;
-  password: string;
-}
-
-export interface OpenSearchAwsAuth {
-  type: "aws";
+export interface OpenSearchClientConfig {
+  endpoint: string;
   region: string;
-  /** "opensearch" for managed OpenSearch, "opensearch-serverless" for OpenSearch Serverless */
   service: "opensearch" | "opensearch-serverless";
-  accessKeyId: string;
-  secretAccessKey: string;
-  sessionToken?: string;
+  credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
 }
-
-export type OpenSearchAuth = OpenSearchBasicAuth | OpenSearchAwsAuth;
 
 // ============================================================================
 // Client Factory
 // ============================================================================
 
-export function createOpenSearchClient(endpoint: string, auth: OpenSearchAuth): Client {
-  if (auth.type === "basic") {
-    return new Client({
-      node: endpoint,
-      auth: {
-        username: auth.username,
-        password: auth.password
-      }
-    });
-  }
-
+export function createOpenSearchClient(config: OpenSearchClientConfig): Client {
   return new Client({
     ...AwsSigv4Signer({
-      region: auth.region,
-      service: auth.service === "opensearch-serverless" ? "aoss" : "es",
+      region: config.region,
+      service: config.service === "opensearch-serverless" ? "aoss" : "es",
       getCredentials: async () => ({
-        accessKeyId: auth.accessKeyId,
-        secretAccessKey: auth.secretAccessKey,
-        sessionToken: auth.sessionToken
+        accessKeyId: config.credentials.accessKeyId,
+        secretAccessKey: config.credentials.secretAccessKey,
+        sessionToken: config.credentials.sessionToken
       })
     }),
-    node: endpoint
+    node: config.endpoint
   });
 }
