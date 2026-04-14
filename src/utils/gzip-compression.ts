@@ -51,7 +51,7 @@ export class GzipCompression {
     if (!data) {
       return data;
     } else if (!data.value) {
-      return null;c
+      return null;
     }
     try {
       const buf = await decompress(convertToBuffer(data.value));
