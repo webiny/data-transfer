@@ -1,10 +1,11 @@
+import { DynamoDBClient as AWSDynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
-  DynamoDBClient as AWSDynamoDBClient,
+  DynamoDBDocumentClient,
   ScanCommand,
-  QueryCommand
-} from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, BatchWriteCommand } from "@aws-sdk/lib-dynamodb";
-import { unmarshall } from "@aws-sdk/util-dynamodb";
+  QueryCommand,
+  PutCommand,
+  BatchWriteCommand
+} from "@aws-sdk/lib-dynamodb";
 import { DatabaseClient, DatabaseRecord, ScanOptions, QueryOptions } from "./interface.ts";
 
 const BATCH_SIZE = 25; // DynamoDB batch write limit
@@ -56,7 +57,7 @@ export class DynamoDBClient implements DatabaseClient {
 
       if (response.Items) {
         for (const item of response.Items) {
-          yield unmarshall(item) as DatabaseRecord;
+          yield item as DatabaseRecord;
         }
       }
 
@@ -72,7 +73,7 @@ export class DynamoDBClient implements DatabaseClient {
   ): Promise<DatabaseRecord[]> {
     let keyConditionExpression = "PK = :pk";
     const expressionAttributeValues: Record<string, any> = {
-      ":pk": { S: pk }
+      ":pk": pk
     };
 
     if (sk) {
@@ -85,7 +86,7 @@ export class DynamoDBClient implements DatabaseClient {
       } else {
         keyConditionExpression += " AND SK = :sk";
       }
-      expressionAttributeValues[":sk"] = { S: sk };
+      expressionAttributeValues[":sk"] = sk;
     }
 
     const command = new QueryCommand({
@@ -101,7 +102,7 @@ export class DynamoDBClient implements DatabaseClient {
       return result;
     });
 
-    return (response.Items || []).map(item => unmarshall(item) as DatabaseRecord);
+    return (response.Items || []) as DatabaseRecord[];
   }
 
   async put(tableName: string, record: DatabaseRecord): Promise<void> {
