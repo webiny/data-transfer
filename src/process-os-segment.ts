@@ -8,6 +8,7 @@ import { MigrationRunner } from "./core/runner.ts";
 import { loadPreset } from "./core/preset-loader.ts";
 import { decompressOsRecord } from "./opensearch/decompress-record.ts";
 import { executeOsCommands, type OsCommandItem } from "./opensearch/executor.ts";
+import { createOpenSearchClient, type Client } from "./opensearch/client.ts";
 
 // ============================================================================
 // Process OS Segment Command
@@ -42,6 +43,19 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
     region: options.config.target.region,
     credentials: options.config.target.credentials
   });
+
+  // OS client — for index creation. Created once per segment.
+  const osClient = options.config.target.credentials
+    ? createOpenSearchClient({
+        endpoint: options.config.target.opensearch.endpoint,
+        region: options.config.target.region,
+        service: options.config.target.opensearch.service,
+        credentials: options.config.target.credentials
+      })
+    : undefined;
+
+  // Cache of known indexes — persists across batches within this segment
+  const knownIndexes = new Set<string>();
 
   // Fetch tenants and default locales from source primary table
   logger.info("Fetching tenants and default locales...");
@@ -123,7 +137,7 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
 
     // Process in batches
     if (batch.length >= batchSize) {
-      await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName);
+      await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
       migratedCount += batch.length;
       batch.length = 0;
 
@@ -137,7 +151,7 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
 
   // Process remaining
   if (batch.length > 0) {
-    await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName);
+    await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
     migratedCount += batch.length;
   }
 
@@ -158,7 +172,9 @@ async function processOsBatch(
   batch: Array<{ record: Record<string, unknown>; metadata: { index: string; _ct: string; _md: string }; locale: string }>,
   runner: MigrationRunner,
   targetDatabase: DynamoDBClient,
-  targetTable: string
+  targetTable: string,
+  osClient?: Client,
+  knownIndexes?: Set<string>
 ): Promise<void> {
   const osItems: OsCommandItem[] = [];
 
@@ -178,7 +194,9 @@ async function processOsBatch(
 
   await executeOsCommands(osItems, {
     database: targetDatabase,
-    targetTable
+    targetTable,
+    osClient,
+    knownIndexes
   });
 }
 
