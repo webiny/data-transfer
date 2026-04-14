@@ -54,6 +54,8 @@ export async function decompressOsRecord(
   return {
     record: {
       ...inner,
+      PK: osRecord.PK as string,
+      SK: osRecord.SK as string,
       TYPE: type
     },
     metadata: {

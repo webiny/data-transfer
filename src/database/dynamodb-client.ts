@@ -17,6 +17,8 @@ export interface DynamoDBClientOptions {
     secretAccessKey: string;
     sessionToken?: string;
   };
+  /** Override endpoint (for local testing with dynalite) */
+  endpoint?: string;
 }
 
 export class DynamoDBClient implements DatabaseClient {
@@ -25,7 +27,8 @@ export class DynamoDBClient implements DatabaseClient {
   constructor(options?: DynamoDBClientOptions) {
     const awsClient = new AWSDynamoDBClient({
       region: options?.region || process.env.AWS_REGION || "us-east-1",
-      ...(options?.credentials && { credentials: options.credentials })
+      ...(options?.credentials && { credentials: options.credentials }),
+      ...(options?.endpoint && { endpoint: options.endpoint })
     });
     this.client = DynamoDBDocumentClient.from(awsClient, {
       marshallOptions: {
