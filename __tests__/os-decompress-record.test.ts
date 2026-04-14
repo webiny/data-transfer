@@ -106,22 +106,24 @@ describe("decompressOsRecord", () => {
 
 describe("stripLocaleFromIndex", () => {
   it("should remove locale from cms index", () => {
-    expect(stripLocaleFromIndex("root-headless-cms-en-us-category", "en-US"))
-      .toBe("root-headless-cms-category");
+    expect(stripLocaleFromIndex("root-headless-cms-en-us-category", "en-US")).toBe(
+      "root-headless-cms-category"
+    );
   });
 
   it("should remove locale from different position", () => {
-    expect(stripLocaleFromIndex("root-en-us-page-builder", "en-US"))
-      .toBe("root-page-builder");
+    expect(stripLocaleFromIndex("root-en-us-page-builder", "en-US")).toBe("root-page-builder");
   });
 
   it("should handle de-DE locale", () => {
-    expect(stripLocaleFromIndex("root-headless-cms-de-de-category", "de-DE"))
-      .toBe("root-headless-cms-category");
+    expect(stripLocaleFromIndex("root-headless-cms-de-de-category", "de-DE")).toBe(
+      "root-headless-cms-category"
+    );
   });
 
   it("should return index unchanged if locale not found", () => {
-    expect(stripLocaleFromIndex("root-headless-cms-category", "en-US"))
-      .toBe("root-headless-cms-category");
+    expect(stripLocaleFromIndex("root-headless-cms-category", "en-US")).toBe(
+      "root-headless-cms-category"
+    );
   });
 });

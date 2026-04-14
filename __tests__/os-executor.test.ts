@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { executeOsCommands, type OsCommandItem, type OsExecutorDependencies } from "../src/opensearch/executor.ts";
+import {
+  executeOsCommands,
+  type OsCommandItem,
+  type OsExecutorDependencies
+} from "../src/opensearch/executor.ts";
 import { GzipCompression } from "../src/utils/gzip-compression.ts";
 import { MockDatabaseClient } from "./mocks/database-client.ts";
 
@@ -78,7 +82,11 @@ describe("executeOsCommands", () => {
           GSI_TENANT: "root",
           data: { modelId: "category", values: { title: "A" } }
         },
-        metadata: { index: "root-headless-cms-en-us-category", _ct: "2026-01-01T00:00:00Z", _md: "2026-01-01T00:00:00Z" },
+        metadata: {
+          index: "root-headless-cms-en-us-category",
+          _ct: "2026-01-01T00:00:00Z",
+          _md: "2026-01-01T00:00:00Z"
+        },
         locale: "en-US"
       },
       {
@@ -89,7 +97,11 @@ describe("executeOsCommands", () => {
           GSI_TENANT: "root",
           data: { modelId: "article", values: { title: "B" } }
         },
-        metadata: { index: "root-headless-cms-en-us-article", _ct: "2026-01-02T00:00:00Z", _md: "2026-01-02T00:00:00Z" },
+        metadata: {
+          index: "root-headless-cms-en-us-article",
+          _ct: "2026-01-02T00:00:00Z",
+          _md: "2026-01-02T00:00:00Z"
+        },
         locale: "en-US"
       }
     ];
@@ -131,7 +143,13 @@ describe("index creation", () => {
   });
 
   function makeDeps(): OsExecutorDependencies {
-    return { database, targetTable: "target-os-table", osClient, knownIndexes, retrySchedule: [10, 10] };
+    return {
+      database,
+      targetTable: "target-os-table",
+      osClient,
+      knownIndexes,
+      retrySchedule: [10, 10]
+    };
   }
 
   function makeItem(index: string): OsCommandItem {
@@ -210,10 +228,7 @@ describe("index creation", () => {
     osClient.indices.create.mockResolvedValue({ body: {} });
 
     await executeOsCommands(
-      [
-        makeItem("root-headless-cms-en-us-category"),
-        makeItem("root-headless-cms-en-us-article")
-      ],
+      [makeItem("root-headless-cms-en-us-category"), makeItem("root-headless-cms-en-us-article")],
       makeDeps()
     );
 

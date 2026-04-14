@@ -167,7 +167,9 @@ function generateId(): string {
  * // Generate 100 CMS entries (200 records: L + P each) + 10 files + 5 pages
  * const records = await generateOsRecords({ entries: 100, files: 10, pages: 5 });
  */
-export async function generateOsRecords(options: OsMockerOptions = {}): Promise<GeneratedOsRecord[]> {
+export async function generateOsRecords(
+  options: OsMockerOptions = {}
+): Promise<GeneratedOsRecord[]> {
   const {
     entries = 10,
     files = 0,

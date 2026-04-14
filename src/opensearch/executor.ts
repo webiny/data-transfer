@@ -97,37 +97,41 @@ async function ensureIndex(
   if (knownIndexes.has(indexName)) return;
 
   try {
-    await withRetry(async () => {
-      const { body: exists } = await client.indices.exists({ index: indexName });
-      if (exists) {
-        knownIndexes.add(indexName);
-        return;
-      }
-
-      try {
-        const baseConfig = getBaseConfiguration();
-        await client.indices.create({
-          index: indexName,
-          body: {
-            mappings: baseConfig.mappings,
-            settings: {
-              index: {
-                refresh_interval: "-1"
-              }
-            }
-          } as any
-        });
-        logger.info(`Created index: ${indexName}`);
-      } catch (createError: any) {
-        if (isAlreadyExistsError(createError)) {
-          logger.info(`Index already exists (race condition): ${indexName}`);
-        } else {
-          throw createError;
+    await withRetry(
+      async () => {
+        const { body: exists } = await client.indices.exists({ index: indexName });
+        if (exists) {
+          knownIndexes.add(indexName);
+          return;
         }
-      }
 
-      knownIndexes.add(indexName);
-    }, `ensureIndex("${indexName}")`, schedule);
+        try {
+          const baseConfig = getBaseConfiguration();
+          await client.indices.create({
+            index: indexName,
+            body: {
+              mappings: baseConfig.mappings,
+              settings: {
+                index: {
+                  refresh_interval: "-1"
+                }
+              }
+            } as any
+          });
+          logger.info(`Created index: ${indexName}`);
+        } catch (createError: any) {
+          if (isAlreadyExistsError(createError)) {
+            logger.info(`Index already exists (race condition): ${indexName}`);
+          } else {
+            throw createError;
+          }
+        }
+
+        knownIndexes.add(indexName);
+      },
+      `ensureIndex("${indexName}")`,
+      schedule
+    );
   } catch (error) {
     logger.error(
       { error },

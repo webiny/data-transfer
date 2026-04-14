@@ -4,7 +4,10 @@ import { Client } from "@opensearch-project/opensearch";
 import { DynamoDBClient } from "../../src/database/dynamodb-client.ts";
 import { generateOsRecords } from "../utils/os-record-mocker.ts";
 import { executeOsCommands, type OsCommandItem } from "../../src/opensearch/executor.ts";
-import { decompressOsRecord, stripLocaleFromIndex } from "../../src/opensearch/decompress-record.ts";
+import {
+  decompressOsRecord,
+  stripLocaleFromIndex
+} from "../../src/opensearch/decompress-record.ts";
 import { isTransformedRecord } from "../../src/utils/record-guards.ts";
 import { MigrationRunner } from "../../src/core/runner.ts";
 import { MigrationConfig, PutRecordCommand } from "../../src/core/types.ts";
@@ -261,7 +264,7 @@ describe("OS migration integration", () => {
       }
     }
 
-    expect(cmsCount).toBe(4);  // 2 entries * 2 (L + P)
+    expect(cmsCount).toBe(4); // 2 entries * 2 (L + P)
     expect(skippedCount).toBe(6); // 3 pages * 2 (L + P)
   });
 

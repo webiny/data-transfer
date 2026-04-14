@@ -59,7 +59,7 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
   } else {
     logger.warn(
       "Target credentials not provided. OS index creation and lifecycle hooks will be skipped. " +
-      "Indexes must already exist in the target OpenSearch cluster."
+        "Indexes must already exist in the target OpenSearch cluster."
     );
   }
 
@@ -146,7 +146,14 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
 
     // Process in batches
     if (batch.length >= batchSize) {
-      const migrated = await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
+      const migrated = await processOsBatch(
+        batch,
+        runner,
+        targetDatabase,
+        options.config.target.opensearch.tableName,
+        osClient,
+        knownIndexes
+      );
       migratedCount += migrated;
       skippedCount += batch.length - migrated;
       batch.length = 0;
@@ -161,7 +168,14 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
 
   // Process remaining
   if (batch.length > 0) {
-    const migrated = await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
+    const migrated = await processOsBatch(
+      batch,
+      runner,
+      targetDatabase,
+      options.config.target.opensearch.tableName,
+      osClient,
+      knownIndexes
+    );
     migratedCount += migrated;
     skippedCount += batch.length - migrated;
   }
@@ -180,7 +194,11 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
  * the transformed records to the OS executor for parallel gzip + write.
  */
 async function processOsBatch(
-  batch: Array<{ record: Record<string, unknown>; metadata: { index: string; _ct: string; _md: string }; locale: string }>,
+  batch: Array<{
+    record: Record<string, unknown>;
+    metadata: { index: string; _ct: string; _md: string };
+    locale: string;
+  }>,
   runner: MigrationRunner,
   targetDatabase: DynamoDBClient,
   targetTable: string,
@@ -196,7 +214,9 @@ async function processOsBatch(
       if (cmd.type === "PUT_RECORD") {
         const record = (cmd as PutRecordCommand).record;
         if (!isTransformedRecord(record)) {
-          logger.warn(`Skipping record with invalid shape after pipeline: PK=${record.PK}, SK=${record.SK}`);
+          logger.warn(
+            `Skipping record with invalid shape after pipeline: PK=${record.PK}, SK=${record.SK}`
+          );
           continue;
         }
         osItems.push({

@@ -24,10 +24,7 @@ describe("OpenSearchBeforeMigration", () => {
 
   it("should disable refresh on all existing indexes", async () => {
     client.cat.indices.mockResolvedValue({
-      body: [
-        { index: "root-en-us-cms-entries" },
-        { index: "root-en-us-fm-files" }
-      ]
+      body: [{ index: "root-en-us-cms-entries" }, { index: "root-en-us-fm-files" }]
     });
 
     client.indices.putSettings.mockResolvedValue({ body: {} });
@@ -80,10 +77,7 @@ describe("OpenSearchBeforeMigration", () => {
 
   it("should continue if putSettings fails on one index", async () => {
     client.cat.indices.mockResolvedValue({
-      body: [
-        { index: "root-en-us-cms-entries" },
-        { index: "root-en-us-fm-files" }
-      ]
+      body: [{ index: "root-en-us-cms-entries" }, { index: "root-en-us-fm-files" }]
     });
 
     client.indices.putSettings
@@ -106,10 +100,7 @@ describe("OpenSearchAfterMigration", () => {
 
   it("should enable refresh on all indexes", async () => {
     client.cat.indices.mockResolvedValue({
-      body: [
-        { index: "root-en-us-cms-entries" },
-        { index: "root-en-us-fm-files" }
-      ]
+      body: [{ index: "root-en-us-cms-entries" }, { index: "root-en-us-fm-files" }]
     });
 
     client.indices.putSettings.mockResolvedValue({ body: {} });
@@ -141,10 +132,7 @@ describe("OpenSearchAfterMigration", () => {
 
   it("should skip system indexes", async () => {
     client.cat.indices.mockResolvedValue({
-      body: [
-        { index: ".kibana" },
-        { index: "root-en-us-cms-entries" }
-      ]
+      body: [{ index: ".kibana" }, { index: "root-en-us-cms-entries" }]
     });
 
     client.indices.putSettings.mockResolvedValue({ body: {} });

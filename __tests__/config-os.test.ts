@@ -122,7 +122,11 @@ describe("config validation", () => {
       source: { region: "eu-central-1", dynamodb: { tableName: "src" } },
       target: {
         region: "eu-central-1",
-        opensearch: { endpoint: "https://es.example.com", tableName: "tgt-es", service: "opensearch" }
+        opensearch: {
+          endpoint: "https://es.example.com",
+          tableName: "tgt-es",
+          service: "opensearch"
+        }
       },
       migration: { preset: "v5-to-v6-os" }
     });
@@ -135,7 +139,11 @@ describe("config validation", () => {
       source: { region: "eu-central-1", opensearch: { tableName: "src-es" } },
       target: {
         region: "eu-central-1",
-        opensearch: { endpoint: "https://es.example.com", tableName: "tgt-es", service: "opensearch" }
+        opensearch: {
+          endpoint: "https://es.example.com",
+          tableName: "tgt-es",
+          service: "opensearch"
+        }
       },
       migration: { preset: "v5-to-v6-os" }
     });

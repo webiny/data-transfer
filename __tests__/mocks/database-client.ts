@@ -28,10 +28,7 @@ export class MockDatabaseClient implements DatabaseClient {
     this.queryResponses.set(key, record);
   }
 
-  async *scan(
-    tableName: string,
-    options?: ScanOptions
-  ): AsyncIterable<DatabaseRecord> {
+  async *scan(tableName: string, options?: ScanOptions): AsyncIterable<DatabaseRecord> {
     const records = this.records.get(tableName) || [];
 
     // If segmented scan, filter by segment

@@ -8,10 +8,7 @@ import { processSegment } from "./process-segment.ts";
 import { processOsSegment } from "./process-os-segment.ts";
 import { loadConfig } from "./config/loader.ts";
 import { createOpenSearchClient } from "./opensearch/client.ts";
-import {
-  OpenSearchBeforeMigration,
-  OpenSearchAfterMigration
-} from "./opensearch/lifecycle.ts";
+import { OpenSearchBeforeMigration, OpenSearchAfterMigration } from "./opensearch/lifecycle.ts";
 
 const logger = createLogger();
 

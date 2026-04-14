@@ -89,7 +89,6 @@ export function isDefaultLocaleRecord(
     return true;
   }
 
-
   const parts = pk.split("#");
   if (parts.length < 2) {
     return true;
@@ -109,7 +108,6 @@ export function isDefaultLocaleRecord(
     // Unknown tenant, skip
     return false;
   }
-
 
   const recordLocale = localeMatch[1];
   return recordLocale === defaultLocale;
