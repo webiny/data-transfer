@@ -14,6 +14,31 @@ function getIndexNames(indexes: Array<{ index?: string }>): string[] {
     .filter((name): name is string => !!name && !name.startsWith("."));
 }
 
+async function forEachUserIndex(
+  client: Client,
+  callback: (indexName: string) => Promise<void>
+): Promise<void> {
+  const { body: indexes } = await client.cat.indices({ format: "json" });
+
+  if (!indexes || indexes.length === 0) {
+    logger.info("No indexes found in target OpenSearch cluster.");
+    return;
+  }
+
+  const indexNames = getIndexNames(indexes);
+
+  if (indexNames.length === 0) {
+    logger.info("No user indexes found (only system indexes).");
+    return;
+  }
+
+  logger.info(`Found ${indexNames.length} indexes: ${indexNames.join(", ")}`);
+
+  for (const indexName of indexNames) {
+    await callback(indexName);
+  }
+}
+
 export class OpenSearchBeforeMigration implements MigrationLifecycleHook {
   readonly name = "opensearch:before";
   private client: Client;
@@ -23,23 +48,7 @@ export class OpenSearchBeforeMigration implements MigrationLifecycleHook {
   }
 
   async execute(): Promise<void> {
-    const { body: indexes } = await this.client.cat.indices({ format: "json" });
-
-    if (!indexes || indexes.length === 0) {
-      logger.info("No indexes found in target OpenSearch cluster.");
-      return;
-    }
-
-    const indexNames = getIndexNames(indexes);
-
-    if (indexNames.length === 0) {
-      logger.info("No user indexes found (only system indexes).");
-      return;
-    }
-
-    logger.info(`Found ${indexNames.length} indexes: ${indexNames.join(", ")}`);
-
-    for (const indexName of indexNames) {
+    await forEachUserIndex(this.client, async indexName => {
       try {
         logger.info(`Disabling refresh on index: ${indexName}`);
         await this.client.indices.putSettings({
@@ -49,7 +58,7 @@ export class OpenSearchBeforeMigration implements MigrationLifecycleHook {
       } catch (error) {
         logger.warn({ error }, `Failed to disable refresh on index: ${indexName}. Skipping.`);
       }
-    }
+    });
 
     logger.info("Indexing disabled on all target indexes.");
   }
@@ -64,21 +73,7 @@ export class OpenSearchAfterMigration implements MigrationLifecycleHook {
   }
 
   async execute(): Promise<void> {
-    const { body: indexes } = await this.client.cat.indices({ format: "json" });
-
-    if (!indexes || indexes.length === 0) {
-      logger.info("No indexes found in target OpenSearch cluster.");
-      return;
-    }
-
-    const indexNames = getIndexNames(indexes);
-
-    if (indexNames.length === 0) {
-      logger.info("No user indexes found (only system indexes).");
-      return;
-    }
-
-    for (const indexName of indexNames) {
+    await forEachUserIndex(this.client, async indexName => {
       try {
         logger.info(`Enabling refresh on index: ${indexName}`);
         await this.client.indices.putSettings({
@@ -88,7 +83,7 @@ export class OpenSearchAfterMigration implements MigrationLifecycleHook {
       } catch (error) {
         logger.warn({ error }, `Failed to enable refresh on index: ${indexName}. Skipping.`);
       }
-    }
+    });
 
     logger.info("Indexing restored on all target indexes.");
   }
