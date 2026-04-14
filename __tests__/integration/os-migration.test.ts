@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { setup, startDb, stopDb, createTables, deleteTables } from "jest-dynalite";
 import { Client } from "@opensearch-project/opensearch";
 import { DynamoDBClient } from "../../src/database/dynamodb-client.ts";
@@ -60,7 +60,7 @@ afterAll(async () => {
   // Only delete indexes that were created during tests
   for (const indexName of createdIndexes) {
     try {
-      await osClient.indices.delete({ index: indexName });
+      // await osClient.indices.delete({ index: indexName });
     } catch {
       // Index may not exist or OS might not be running
     }
@@ -264,4 +264,122 @@ describe("OS migration integration", () => {
     expect(cmsCount).toBe(4);  // 2 entries * 2 (L + P)
     expect(skippedCount).toBe(6); // 3 pages * 2 (L + P)
   });
+
+  it("should produce valid OS documents verifiable via Lambda simulation", async () => {
+    const mockRecords = await generateOsRecords({
+      entries: 2,
+      modelIds: ["category", "article"]
+    });
+
+    // Seed source OS table
+    for (const record of mockRecords) {
+      await sourceDb.put("source-os", record as any);
+    }
+
+    const sourceRecords: any[] = [];
+    for await (const record of sourceDb.scan("source-os")) {
+      sourceRecords.push(record);
+    }
+
+    // Setup pipeline
+    const modelProvider = new ModelProvider(sourceDb, "source-primary");
+    const migrationConfig: MigrationConfig = {
+      sourcePrimaryTable: "source-primary",
+      targetPrimaryTable: "target-os",
+      sourceFmBucket: "",
+      targetFmBucket: "",
+      modelProvider
+    };
+
+    const preset = await loadPreset("v5-to-v6-os");
+    const runner = new MigrationRunner(migrationConfig, sourceDb);
+    preset.configure(runner, migrationConfig, sourceDb);
+
+    const knownIndexes = new Set<string>();
+    const osItems: OsCommandItem[] = [];
+
+    for (const record of sourceRecords) {
+      const decompressed = await decompressOsRecord(record);
+      if (!decompressed) {
+        continue;
+      }
+
+      const locale = (decompressed.record.locale as string) || "en-US";
+      const commands = await runner.processRecord(decompressed.record);
+
+      for (const cmd of commands) {
+        if (cmd.type === "PUT_RECORD") {
+          const rec = (cmd as PutRecordCommand).record;
+          if (isTransformedRecord(rec)) {
+            osItems.push({ record: rec, metadata: decompressed.metadata, locale });
+          }
+        }
+      }
+    }
+
+    // Spy on batchPut to simulate what the DDB-to-OS Lambda does:
+    // decompress data.value and index into OpenSearch
+    const originalBatchPut = targetDb.batchPut.bind(targetDb);
+    const indexedDocuments: Array<{ index: string; body: any }> = [];
+
+    vi.spyOn(targetDb, "batchPut").mockImplementation(async (table, records) => {
+      // Write to DDB normally
+      await originalBatchPut(table, records);
+
+      // Simulate Lambda: decompress and index into OS
+      for (const record of records) {
+        const data = record.data as { compression?: string; value?: string };
+        if (!data || !data.compression) {
+          continue;
+        }
+
+        const inner = await gzip.decompress(data as any);
+        if (!inner) {
+          continue;
+        }
+
+        const indexName = record.index as string;
+        await osClient.index({
+          index: indexName,
+          body: inner,
+          refresh: "true" // Make immediately searchable
+        });
+        indexedDocuments.push({ index: indexName, body: inner });
+      }
+    });
+
+    await executeOsCommands(osItems, {
+      database: targetDb,
+      targetTable: "target-os",
+      osClient,
+      knownIndexes,
+      retrySchedule: [100, 100]
+    });
+
+    // Track created indexes for cleanup
+    for (const idx of knownIndexes) {
+      createdIndexes.add(idx);
+    }
+
+    // Verify documents were indexed
+    expect(indexedDocuments.length).toBeGreaterThan(0);
+
+    // Query OS to verify documents exist in each index
+    for (const indexName of knownIndexes) {
+      const { body: searchResult } = await osClient.search({
+        index: indexName,
+        body: { query: { match_all: {} } }
+      });
+
+      expect(searchResult.hits.total.value).toBeGreaterThan(0);
+
+      // Verify document structure
+      const firstDoc = searchResult.hits.hits[0]._source;
+      expect(firstDoc).toHaveProperty("modelId");
+      expect(firstDoc).toHaveProperty("entryId");
+      expect(firstDoc).toHaveProperty("locale");
+    }
+
+    vi.restoreAllMocks();
+  }, 30000);
 });
