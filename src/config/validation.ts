@@ -10,28 +10,42 @@ const awsCredentialsSchema = z.object({
   sessionToken: z.string().optional()
 });
 
-const accountConfigSchema = z.object({
+const migrationSettingsSchema = z.object({
+  preset: z.string(),
+  segments: z.number().int().positive().optional(),
+  modelsDir: z.string().optional()
+});
+
+// ============================================================================
+// DDB Account Schema
+// ============================================================================
+
+const ddbAccountConfigSchema = z.object({
   region: z.string(),
   credentials: awsCredentialsSchema.optional(),
   dynamodb: z.object({ tableName: z.string() }),
   s3: z.object({ bucket: z.string() })
 });
 
-const opensearchTargetConfigSchema = z.object({
-  endpoint: z.url(),
-  targetTableName: z.string(),
-  sourceTableName: z.string(),
-  service: z.enum(["opensearch", "opensearch-serverless"])
+// ============================================================================
+// OS Account Schemas
+// ============================================================================
+
+const osSourceAccountConfigSchema = z.object({
+  region: z.string(),
+  credentials: awsCredentialsSchema.optional(),
+  dynamodb: z.object({ tableName: z.string() }),
+  opensearch: z.object({ tableName: z.string() })
 });
 
-const targetAccountConfigSchema = accountConfigSchema.extend({
-  opensearch: opensearchTargetConfigSchema
-});
-
-const migrationSettingsSchema = z.object({
-  preset: z.string(),
-  segments: z.number().int().positive().optional(),
-  modelsDir: z.string().optional()
+const osTargetAccountConfigSchema = z.object({
+  region: z.string(),
+  credentials: awsCredentialsSchema.optional(),
+  opensearch: z.object({
+    endpoint: z.url(),
+    tableName: z.string(),
+    service: z.enum(["opensearch", "opensearch-serverless"])
+  })
 });
 
 // ============================================================================
@@ -40,21 +54,21 @@ const migrationSettingsSchema = z.object({
 
 const ddbConfigSchema = z.object({
   storage: z.literal("ddb"),
-  source: accountConfigSchema,
-  target: accountConfigSchema,
+  source: ddbAccountConfigSchema,
+  target: ddbAccountConfigSchema,
   migration: migrationSettingsSchema
 });
 
-const ddbOsConfigSchema = z.object({
-  storage: z.literal("ddb-os"),
-  source: accountConfigSchema,
-  target: targetAccountConfigSchema,
+const osConfigSchema = z.object({
+  storage: z.literal("os"),
+  source: osSourceAccountConfigSchema,
+  target: osTargetAccountConfigSchema,
   migration: migrationSettingsSchema
 });
 
 export const migrationConfigSchema = z.discriminatedUnion("storage", [
   ddbConfigSchema,
-  ddbOsConfigSchema
+  osConfigSchema
 ]);
 
 // ============================================================================
@@ -63,8 +77,8 @@ export const migrationConfigSchema = z.discriminatedUnion("storage", [
 
 export type MigrationConfiguration = z.infer<typeof migrationConfigSchema>;
 export type DdbMigrationConfiguration = z.infer<typeof ddbConfigSchema>;
-export type DdbOsMigrationConfiguration = z.infer<typeof ddbOsConfigSchema>;
-export type AccountConfiguration = z.infer<typeof accountConfigSchema>;
-export type TargetAccountConfiguration = z.infer<typeof targetAccountConfigSchema>;
+export type OsMigrationConfiguration = z.infer<typeof osConfigSchema>;
+export type DdbAccountConfiguration = z.infer<typeof ddbAccountConfigSchema>;
+export type OsSourceAccountConfiguration = z.infer<typeof osSourceAccountConfigSchema>;
+export type OsTargetAccountConfiguration = z.infer<typeof osTargetAccountConfigSchema>;
 export type StorageType = MigrationConfiguration["storage"];
-export type OpenSearchTargetConfig = z.infer<typeof opensearchTargetConfigSchema>;

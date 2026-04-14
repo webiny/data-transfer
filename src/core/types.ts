@@ -14,7 +14,7 @@ export interface MigrationConfig {
   targetFmBucket: string;
   modelProvider: ModelProvider;
   sourceStorage?: StorageClient;
-  /** OpenSearch config. Present when running in ddb-os mode. */
+  /** OpenSearch config. Present when running in os mode. */
   opensearch?: {
     endpoint: string;
     targetTable: string;

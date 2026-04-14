@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { hideBin } from "yargs/helpers";
 import { execa } from "execa";
 import { createLogger } from "./utils/logger.ts";
-import { processSegment, ProcessSegmentOptions } from "./process-segment.ts";
+import { processSegment } from "./process-segment.ts";
 import { loadConfig } from "./config/loader.ts";
 import { createOpenSearchClient } from "./opensearch/client.ts";
 import {
@@ -30,14 +30,8 @@ yargs(hideBin(process.argv))
       });
     },
     async argv => {
-      // Load configuration
-      logger.info(`Loading configuration from: ${argv.config}`);
       const config = await loadConfig(argv.config);
-
-      // Generate unique run ID
       const runId = String(Date.now());
-
-      // Get segments from config or use default
       const segments = config.migration.segments || 1;
 
       logger.info("Starting migration with configuration:");
@@ -45,23 +39,28 @@ yargs(hideBin(process.argv))
       logger.info(`  Storage: ${config.storage}`);
       logger.info(`  Preset: ${config.migration.preset}`);
       logger.info(`  Segments: ${segments}`);
-      logger.info(`  Source Region: ${config.source.region}`);
-      logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
-      logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
-      logger.info(`  Target Region: ${config.target.region}`);
-      logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
-      logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
-      if (config.storage === "ddb-os") {
+
+      if (config.storage === "ddb") {
+        logger.info(`  Source Region: ${config.source.region}`);
+        logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
+        logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
+        logger.info(`  Target Region: ${config.target.region}`);
+        logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
+        logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
+      } else {
+        logger.info(`  Source Region: ${config.source.region}`);
+        logger.info(`  Source Primary Table: ${config.source.dynamodb.tableName}`);
+        logger.info(`  Source OS Table: ${config.source.opensearch.tableName}`);
+        logger.info(`  Target Region: ${config.target.region}`);
+        logger.info(`  Target OS Table: ${config.target.opensearch.tableName}`);
         logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
-        logger.info(`  OS Target Table: ${config.target.opensearch.targetTableName}`);
-        logger.info(`  OS Source Table: ${config.target.opensearch.sourceTableName}`);
       }
 
       const startTime = Date.now();
 
-      // Create OS client once if ddb-os mode
+      // OS lifecycle hooks
       const osClient =
-        config.storage === "ddb-os" && config.target.credentials
+        config.storage === "os" && config.target.credentials
           ? createOpenSearchClient({
               endpoint: config.target.opensearch.endpoint,
               region: config.target.region,
@@ -71,7 +70,6 @@ yargs(hideBin(process.argv))
           : null;
 
       try {
-        // Run before-migration hook (ddb-os only)
         if (osClient) {
           const beforeHook = new OpenSearchBeforeMigration(osClient);
           logger.info("Running OpenSearch before-migration hook...");
@@ -85,10 +83,8 @@ yargs(hideBin(process.argv))
           workers.push(spawnWorker(segment, segments, runId, argv.config));
         }
 
-        // Wait for all workers to complete
         await Promise.all(workers);
 
-        // Run after-migration hook (ddb-os only)
         if (osClient) {
           try {
             const afterHook = new OpenSearchAfterMigration(osClient);
@@ -138,6 +134,9 @@ yargs(hideBin(process.argv))
     },
     async argv => {
       const config = await loadConfig(argv.config);
+      if (config.storage !== "ddb") {
+        throw new Error(`process-segment requires storage: "ddb". Got: "${config.storage}"`);
+      }
       await processSegment({
         runId: argv.runId,
         segment: argv.segment,

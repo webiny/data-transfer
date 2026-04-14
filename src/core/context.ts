@@ -28,7 +28,7 @@ export function createContext<T extends Record<string, unknown>>(
     putOsRecord(record: Record<string, unknown>) {
       if (!config.opensearch) {
         throw new Error(
-          'putOsRecord requires opensearch to be configured. Use storage "ddb-os" with target.opensearch in your config.'
+          'putOsRecord requires opensearch to be configured. Use storage "os" with target.opensearch in your config.'
         );
       }
       commands.push({
