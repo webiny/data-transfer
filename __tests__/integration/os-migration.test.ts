@@ -342,8 +342,10 @@ describe("OS migration integration", () => {
         }
 
         const indexName = record.index as string;
+        const docId = `${record.PK}:${record.SK}`;
         await osClient.index({
           index: indexName,
+          id: docId,
           body: inner,
           refresh: "true" // Make immediately searchable
         });
@@ -377,10 +379,11 @@ describe("OS migration integration", () => {
       expect(searchResult.hits.total.value).toBeGreaterThan(0);
 
       // Verify document structure
-      const firstDoc = searchResult.hits.hits[0]._source;
-      expect(firstDoc).toHaveProperty("modelId");
-      expect(firstDoc).toHaveProperty("entryId");
-      expect(firstDoc).not.toHaveProperty("locale");
+      const firstHit = searchResult.hits.hits[0];
+      expect(firstHit._id).toContain(":");
+      expect(firstHit._source).toHaveProperty("modelId");
+      expect(firstHit._source).toHaveProperty("entryId");
+      expect(firstHit._source).not.toHaveProperty("locale");
     }
 
     vi.restoreAllMocks();
