@@ -5,6 +5,7 @@ import { hideBin } from "yargs/helpers";
 import { execa } from "execa";
 import { createLogger } from "./utils/logger.ts";
 import { processSegment } from "./process-segment.ts";
+import { processOsSegment } from "./process-os-segment.ts";
 import { loadConfig } from "./config/loader.ts";
 import { createOpenSearchClient } from "./opensearch/client.ts";
 import {
@@ -77,10 +78,11 @@ yargs(hideBin(process.argv))
         }
 
         // Spawn worker processes
+        const workerCommand = config.storage === "os" ? "process-os-segment" : "process-segment";
         const workers: Promise<void>[] = [];
 
         for (let segment = 0; segment < segments; segment++) {
-          workers.push(spawnWorker(segment, segments, runId, argv.config));
+          workers.push(spawnWorker(segment, segments, runId, argv.config, workerCommand));
         }
 
         await Promise.all(workers);
@@ -145,6 +147,29 @@ yargs(hideBin(process.argv))
       });
     }
   )
+  .command(
+    "process-os-segment",
+    "Process a specific OS table segment (used internally by worker processes)",
+    yargs => {
+      return yargs
+        .option("runId", { type: "string", demandOption: true, description: "Run ID" })
+        .option("segment", { type: "number", demandOption: true, description: "Segment number" })
+        .option("total", { type: "number", demandOption: true, description: "Total segments" })
+        .option("config", { type: "string", demandOption: true, description: "Config file path" });
+    },
+    async argv => {
+      const config = await loadConfig(argv.config);
+      if (config.storage !== "os") {
+        throw new Error(`process-os-segment requires storage: "os". Got: "${config.storage}"`);
+      }
+      await processOsSegment({
+        runId: argv.runId,
+        segment: argv.segment,
+        total: argv.total,
+        config
+      });
+    }
+  )
   .help()
   .parse();
 
@@ -156,13 +181,14 @@ async function spawnWorker(
   segment: number,
   total: number,
   runId: string,
-  configPath: string
+  configPath: string,
+  command: string = "process-segment"
 ): Promise<void> {
   const binPath = fileURLToPath(new URL("../bin.js", import.meta.url));
 
   const args = [
     binPath,
-    "process-segment",
+    command,
     "--runId",
     runId,
     "--segment",

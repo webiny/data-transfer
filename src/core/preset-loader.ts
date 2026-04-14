@@ -8,7 +8,8 @@ import { existsSync } from "node:fs";
 // ============================================================================
 
 const BUILT_IN_PRESETS = new Map<string, string>([
-  ["v5-to-v6", new URL("../presets/v5-to-v6.ts", import.meta.url).pathname]
+  ["v5-to-v6", new URL("../presets/v5-to-v6.ts", import.meta.url).pathname],
+  ["v5-to-v6-os", new URL("../presets/v5-to-v6-os.ts", import.meta.url).pathname]
 ]);
 
 /**
