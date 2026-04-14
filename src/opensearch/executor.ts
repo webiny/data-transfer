@@ -3,6 +3,7 @@ import { stripLocaleFromIndex } from "./decompress-record.ts";
 import { DatabaseClient } from "../database/interface.ts";
 import type { OsRecordMetadata } from "./decompress-record.ts";
 import type { Client } from "./client.ts";
+import type { TransformedRecord } from "../utils/record-guards.ts";
 import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration";
 import { createLogger } from "../utils/logger.ts";
 
@@ -16,8 +17,8 @@ const RETRY_SCHEDULE = [5000, 10000, 20000, 30000, 30000];
 // ============================================================================
 
 export interface OsCommandItem {
-  /** The transformed record from the pipeline (has PK, SK, TYPE, GSI_TENANT, data envelope) */
-  record: Record<string, unknown>;
+  /** The transformed record from the pipeline (validated via isTransformedRecord) */
+  record: TransformedRecord;
   /** Outer metadata from the source OS DynamoDB record */
   metadata: OsRecordMetadata;
   /** Locale extracted from the original PK (for index stripping) */
@@ -56,12 +57,12 @@ export async function executeOsCommands(
       const index = stripLocaleFromIndex(metadata.index, locale);
 
       return {
-        PK: record.PK as string,
-        SK: record.SK as string,
+        PK: record.PK,
+        SK: record.SK,
         data: compressed,
         index,
-        TYPE: record.TYPE as string,
-        GSI_TENANT: record.GSI_TENANT as string,
+        TYPE: record.TYPE,
+        GSI_TENANT: record.GSI_TENANT,
         _et: "CmsEntriesElasticsearch",
         _ct: metadata._ct,
         _md: metadata._md
@@ -71,7 +72,7 @@ export async function executeOsCommands(
 
   // Ensure all target indexes exist (sequential)
   if (deps.osClient && deps.knownIndexes) {
-    const uniqueIndexes = new Set(osRecords.map(r => r.index as string));
+    const uniqueIndexes = new Set(osRecords.map(r => r.index));
     const schedule = deps.retrySchedule || RETRY_SCHEDULE;
     for (const indexName of uniqueIndexes) {
       await ensureIndex(indexName, deps.osClient, deps.knownIndexes, schedule);

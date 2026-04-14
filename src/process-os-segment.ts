@@ -9,6 +9,9 @@ import { loadPreset } from "./core/preset-loader.ts";
 import { decompressOsRecord } from "./opensearch/decompress-record.ts";
 import { executeOsCommands, type OsCommandItem } from "./opensearch/executor.ts";
 import { createOpenSearchClient, type Client } from "./opensearch/client.ts";
+import { isTransformedRecord } from "./utils/record-guards.ts";
+
+const logger = createLogger();
 
 // ============================================================================
 // Process OS Segment Command
@@ -191,8 +194,13 @@ async function processOsBatch(
 
     for (const cmd of commands) {
       if (cmd.type === "PUT_RECORD") {
+        const record = (cmd as PutRecordCommand).record;
+        if (!isTransformedRecord(record)) {
+          logger.warn(`Skipping record with invalid shape after pipeline: PK=${record.PK}, SK=${record.SK}`);
+          continue;
+        }
         osItems.push({
-          record: (cmd as PutRecordCommand).record,
+          record,
           metadata: item.metadata,
           locale: item.locale
         });
