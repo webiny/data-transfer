@@ -9,7 +9,8 @@
     "ts-check": "yarn tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.include=\"src/**/**\"",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prettier:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\""
   },
   "keywords": [
     "webiny",
