@@ -60,15 +60,21 @@ yargs(hideBin(process.argv))
       const startTime = Date.now();
 
       // OS lifecycle hooks
-      const osClient =
-        config.storage === "os" && config.target.credentials
-          ? createOpenSearchClient({
-              endpoint: config.target.opensearch.endpoint,
-              region: config.target.region,
-              service: config.target.opensearch.service,
-              credentials: config.target.credentials
-            })
-          : null;
+      let osClient: import("./opensearch/client.ts").Client | null = null;
+      if (config.storage === "os") {
+        if (config.target.credentials) {
+          osClient = createOpenSearchClient({
+            endpoint: config.target.opensearch.endpoint,
+            region: config.target.region,
+            service: config.target.opensearch.service,
+            credentials: config.target.credentials
+          });
+        } else {
+          logger.warn(
+            "Target credentials not provided. Lifecycle hooks (disable/enable refresh) will be skipped."
+          );
+        }
+      }
 
       try {
         if (osClient) {

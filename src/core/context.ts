@@ -25,18 +25,6 @@ export function createContext<T extends Record<string, unknown>>(
         record
       });
     },
-    putOsRecord(record: Record<string, unknown>) {
-      if (!config.opensearch) {
-        throw new Error(
-          'putOsRecord requires opensearch to be configured. Use storage "os" with target.opensearch in your config.'
-        );
-      }
-      commands.push({
-        type: "PUT_RECORD",
-        table: config.opensearch.targetTable,
-        record
-      });
-    },
     copyFile(sourceKey: string, targetKey: string) {
       commands.push({
         type: "S3_COPY",

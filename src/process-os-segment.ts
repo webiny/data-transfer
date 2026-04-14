@@ -45,14 +45,20 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
   });
 
   // OS client — for index creation. Created once per segment.
-  const osClient = options.config.target.credentials
-    ? createOpenSearchClient({
-        endpoint: options.config.target.opensearch.endpoint,
-        region: options.config.target.region,
-        service: options.config.target.opensearch.service,
-        credentials: options.config.target.credentials
-      })
-    : undefined;
+  let osClient: import("./opensearch/client.ts").Client | undefined;
+  if (options.config.target.credentials) {
+    osClient = createOpenSearchClient({
+      endpoint: options.config.target.opensearch.endpoint,
+      region: options.config.target.region,
+      service: options.config.target.opensearch.service,
+      credentials: options.config.target.credentials
+    });
+  } else {
+    logger.warn(
+      "Target credentials not provided. OS index creation and lifecycle hooks will be skipped. " +
+      "Indexes must already exist in the target OpenSearch cluster."
+    );
+  }
 
   // Cache of known indexes — persists across batches within this segment
   const knownIndexes = new Set<string>();
@@ -137,8 +143,9 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
 
     // Process in batches
     if (batch.length >= batchSize) {
-      await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
-      migratedCount += batch.length;
+      const migrated = await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
+      migratedCount += migrated;
+      skippedCount += batch.length - migrated;
       batch.length = 0;
 
       if (processedCount % 1000 === 0) {
@@ -151,8 +158,9 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
 
   // Process remaining
   if (batch.length > 0) {
-    await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
-    migratedCount += batch.length;
+    const migrated = await processOsBatch(batch, runner, targetDatabase, options.config.target.opensearch.tableName, osClient, knownIndexes);
+    migratedCount += migrated;
+    skippedCount += batch.length - migrated;
   }
 
   logger.info(
@@ -175,7 +183,7 @@ async function processOsBatch(
   targetTable: string,
   osClient?: Client,
   knownIndexes?: Set<string>
-): Promise<void> {
+): Promise<number> {
   const osItems: OsCommandItem[] = [];
 
   for (const item of batch) {
@@ -198,6 +206,8 @@ async function processOsBatch(
     osClient,
     knownIndexes
   });
+
+  return osItems.length;
 }
 
 function extractLocaleFromPk(pk: string): string | null {

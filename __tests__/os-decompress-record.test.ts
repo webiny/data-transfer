@@ -70,6 +70,24 @@ describe("decompressOsRecord", () => {
     expect(result).toBeNull();
   });
 
+  it("should return null for unexpected SK values", async () => {
+    const innerData = { PK: "T#root#L#en-US#CMS#CME#abc123", SK: "REV#0001", modelId: "category" };
+    const compressed = await gzip.compress(innerData);
+
+    const osRecord = {
+      PK: "T#root#L#en-US#CMS#CME#abc123",
+      SK: "REV#0001",
+      data: compressed,
+      index: "root-headless-cms-en-us-category",
+      _et: "CmsEntriesElasticsearch",
+      _ct: "2026-04-13T09:00:00.000Z",
+      _md: "2026-04-13T09:00:00.000Z"
+    };
+
+    const result = await decompressOsRecord(osRecord);
+    expect(result).toBeNull();
+  });
+
   it("should return null if decompression fails", async () => {
     const osRecord = {
       PK: "T#root#L#en-US#CMS#CME#abc123",

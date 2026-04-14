@@ -14,12 +14,6 @@ export interface MigrationConfig {
   targetFmBucket: string;
   modelProvider: ModelProvider;
   sourceStorage?: StorageClient;
-  /** OpenSearch config. Present when running in os mode. */
-  opensearch?: {
-    endpoint: string;
-    targetTable: string;
-    sourceTable: string;
-  };
 }
 
 // ============================================================================
@@ -59,8 +53,6 @@ export interface TransformContext<TRecord = Record<string, unknown>> {
   replace<TNew>(newRecord: TNew): void;
   /** Put a record to the primary DynamoDB table */
   putPrimaryRecord(record: Record<string, unknown>): void;
-  /** Put a record to the OpenSearch/Elasticsearch index (future) */
-  putOsRecord(record: Record<string, unknown>): void;
   /** Copy a file from source to target location in S3 */
   copyFile(sourceKey: string, targetKey: string): void;
   /** Query a record from the source database */

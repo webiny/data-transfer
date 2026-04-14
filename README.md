@@ -171,7 +171,6 @@ See `src/presets/v5-to-v6.ts` for a complete example.
 Transformers receive a `TransformContext` with these methods for emitting commands:
 
 - `ctx.putPrimaryRecord(record)` — write a record to the target DynamoDB table
-- `ctx.putOsRecord(record)` — write a record to the OpenSearch DynamoDB table (requires `os` storage mode)
 - `ctx.copyFile(sourceKey, targetKey)` — copy a file between S3 buckets
 - `ctx.queryRecord(pk, sk?)` — query a record from the source DynamoDB table
 - `ctx.getFile(key)` — read a file from the source S3 bucket

@@ -1,6 +1,8 @@
 import { GzipCompression } from "../utils/gzip-compression.ts";
+import { createLogger } from "../utils/logger.ts";
 
 const gzip = new GzipCompression();
+const logger = createLogger();
 
 export interface OsRecordMetadata {
   index: string;
@@ -16,7 +18,7 @@ export interface DecompressedOsRecord {
 /**
  * Decompress a CmsEntriesElasticsearch OS DynamoDB record.
  * Returns the inner CMS entry with a derived TYPE field, plus outer metadata.
- * Returns null for non-CMS records or if decompression fails.
+ * Returns null for non-CMS records, unexpected SK values, or if decompression fails.
  */
 export async function decompressOsRecord(
   osRecord: Record<string, unknown>
@@ -32,15 +34,27 @@ export async function decompressOsRecord(
 
   const inner = await gzip.decompress(data as any);
   if (!inner) {
+    logger.warn(
+      `Failed to decompress OS record PK=${osRecord.PK} SK=${osRecord.SK}. Data may be corrupt.`
+    );
     return null;
   }
 
   const sk = osRecord.SK as string;
+  let type: string;
+  if (sk === "L") {
+    type = "cms.entry.l";
+  } else if (sk === "P") {
+    type = "cms.entry.p";
+  } else {
+    logger.warn(`Unexpected SK value "${sk}" for OS record PK=${osRecord.PK}. Skipping.`);
+    return null;
+  }
 
   return {
     record: {
       ...inner,
-      TYPE: sk === "L" ? "cms.entry.l" : "cms.entry.p"
+      TYPE: type
     },
     metadata: {
       index: osRecord.index as string,
