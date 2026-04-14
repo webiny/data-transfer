@@ -115,7 +115,9 @@ export class DynamoDBClient implements DatabaseClient {
   }
 
   async batchPut(tableName: string, records: DatabaseRecord[]): Promise<void> {
-    if (records.length === 0) return;
+    if (records.length === 0) {
+      return;
+    }
 
     // Split into batches of 25
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
@@ -185,16 +187,25 @@ export class DynamoDBClient implements DatabaseClient {
     const result: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(item)) {
-      if (value.S !== undefined) result[key] = value.S;
-      else if (value.N !== undefined) result[key] = Number(value.N);
-      else if (value.BOOL !== undefined) result[key] = value.BOOL;
-      else if (value.NULL !== undefined) result[key] = null;
-      else if (value.M !== undefined) result[key] = this.unmarshall(value.M);
-      else if (value.L !== undefined)
+      if (value.S !== undefined) {
+        result[key] = value.S;
+      } else if (value.N !== undefined) {
+        result[key] = Number(value.N);
+      } else if (value.BOOL !== undefined) {
+        result[key] = value.BOOL;
+      } else if (value.NULL !== undefined) {
+        result[key] = null;
+      } else if (value.M !== undefined) {
+        result[key] = this.unmarshall(value.M);
+      } else if (value.L !== undefined) {
         result[key] = value.L.map((v: any) => this.unmarshall({ v }).v);
-      else if (value.SS !== undefined) result[key] = value.SS;
-      else if (value.NS !== undefined) result[key] = value.NS.map(Number);
-      else if (value.BS !== undefined) result[key] = value.BS;
+      } else if (value.SS !== undefined) {
+        result[key] = value.SS;
+      } else if (value.NS !== undefined) {
+        result[key] = value.NS.map(Number);
+      } else if (value.BS !== undefined) {
+        result[key] = value.BS;
+      }
     }
 
     return result;
