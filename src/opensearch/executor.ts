@@ -48,7 +48,9 @@ export async function executeOsCommands(
   items: OsCommandItem[],
   deps: OsExecutorDependencies
 ): Promise<void> {
-  if (items.length === 0) return;
+  if (items.length === 0) {
+    return;
+  }
 
   // Build the OS records (gzip in parallel, strip locale from index)
   const osRecords = await Promise.all(

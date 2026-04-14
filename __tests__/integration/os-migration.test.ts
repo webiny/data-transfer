@@ -114,7 +114,9 @@ describe("OS migration integration", () => {
 
     for (const record of sourceRecords) {
       const decompressed = await decompressOsRecord(record);
-      if (!decompressed) continue;
+      if (!decompressed) {
+        continue;
+      }
 
       const locale = (decompressed.record.locale as string) || "en-US";
       const commands = await runner.processRecord(decompressed.record);
@@ -140,7 +142,9 @@ describe("OS migration integration", () => {
     });
 
     // Track created indexes for cleanup
-    for (const idx of knownIndexes) createdIndexes.add(idx);
+    for (const idx of knownIndexes) {
+      createdIndexes.add(idx);
+    }
 
     // Verify target table has gzipped records
     const targetRecords: any[] = [];
@@ -195,7 +199,9 @@ describe("OS migration integration", () => {
 
     for (const record of mockRecords) {
       const decompressed = await decompressOsRecord(record);
-      if (!decompressed) continue;
+      if (!decompressed) {
+        continue;
+      }
 
       const locale = (decompressed.record.locale as string) || "en-US";
       const commands = await runner.processRecord(decompressed.record);
@@ -221,7 +227,9 @@ describe("OS migration integration", () => {
     });
 
     // Track created indexes for cleanup
-    for (const idx of knownIndexes) createdIndexes.add(idx);
+    for (const idx of knownIndexes) {
+      createdIndexes.add(idx);
+    }
 
     // Verify indexes were created in OS
     const { body: indexes } = await osClient.cat.indices({ format: "json" });
