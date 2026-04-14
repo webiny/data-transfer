@@ -55,7 +55,8 @@ describe("config validation", () => {
         s3: { bucket: "tgt-bucket" },
         opensearch: {
           endpoint: "https://es.example.com",
-          tableName: "tgt-es",
+          targetTableName: "tgt-es",
+          sourceTableName: "src-es",
           auth: { type: "basic", username: "admin", password: "admin" }
         }
       },
@@ -80,7 +81,8 @@ describe("config validation", () => {
         s3: { bucket: "tgt-bucket" },
         opensearch: {
           endpoint: "https://search-xxx.eu-central-1.es.amazonaws.com",
-          tableName: "tgt-es",
+          targetTableName: "tgt-es",
+          sourceTableName: "src-es",
           auth: {
             type: "aws",
             region: "eu-central-1",
@@ -166,7 +168,8 @@ describe("config validation", () => {
         dynamodb: { tableName: "tgt" },
         s3: { bucket: "tgt-bucket" },
         opensearch: {
-          tableName: "tgt-es",
+          targetTableName: "tgt-es",
+          sourceTableName: "src-es",
           auth: { type: "basic", username: "admin", password: "admin" }
         }
       },

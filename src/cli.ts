@@ -53,7 +53,8 @@ yargs(hideBin(process.argv))
       logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
       if (config.storage === "ddb-os") {
         logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
-        logger.info(`  OS Table: ${config.target.opensearch.tableName}`);
+        logger.info(`  OS Target Table: ${config.target.opensearch.targetTableName}`);
+        logger.info(`  OS Source Table: ${config.target.opensearch.sourceTableName}`);
       }
 
       const startTime = Date.now();

@@ -42,8 +42,9 @@ const accountConfigSchema = z.object({
 });
 
 const opensearchTargetConfigSchema = z.object({
-  endpoint: z.string().url(),
-  tableName: z.string(),
+  endpoint: z.url(),
+  targetTableName: z.string(),
+  sourceTableName: z.string(),
   auth: opensearchAuthSchema
 });
 

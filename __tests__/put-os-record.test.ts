@@ -17,7 +17,8 @@ describe("putOsRecord", () => {
       modelProvider,
       opensearch: {
         endpoint: "https://es.example.com",
-        targetTable: "target-os-table"
+        targetTable: "target-os-table",
+        sourceTable: "source-os-table"
       }
     };
 
@@ -58,7 +59,8 @@ describe("putOsRecord", () => {
       modelProvider,
       opensearch: {
         endpoint: "https://es.example.com",
-        targetTable: "target-os-table"
+        targetTable: "target-os-table",
+        sourceTable: "source-os-table"
       }
     };
 

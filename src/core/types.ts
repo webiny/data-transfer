@@ -18,6 +18,7 @@ export interface MigrationConfig {
   opensearch?: {
     endpoint: string;
     targetTable: string;
+    sourceTable: string;
   };
 }
 

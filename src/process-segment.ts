@@ -81,7 +81,8 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
     ...(options.config.storage === "ddb-os" && {
       opensearch: {
         endpoint: options.config.target.opensearch.endpoint,
-        targetTable: options.config.target.opensearch.tableName
+        targetTable: options.config.target.opensearch.targetTableName,
+        sourceTable: options.config.target.opensearch.sourceTableName
       }
     })
   };
