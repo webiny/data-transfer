@@ -77,7 +77,13 @@ export async function processSegment(options: ProcessSegmentOptions): Promise<vo
     sourceFmBucket: options.config.source.s3.bucket,
     targetFmBucket: options.config.target.s3.bucket,
     modelProvider,
-    sourceStorage
+    sourceStorage,
+    ...(options.config.storage === "ddb-os" && {
+      opensearch: {
+        endpoint: options.config.target.opensearch.endpoint,
+        targetTable: options.config.target.opensearch.tableName
+      }
+    })
   };
 
   // Load and configure preset

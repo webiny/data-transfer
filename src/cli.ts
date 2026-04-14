@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 import yargs from "yargs";
+import { fileURLToPath } from "node:url";
 import { hideBin } from "yargs/helpers";
 import { execa } from "execa";
 import { createLogger } from "./utils/logger.ts";
 import { processSegment, ProcessSegmentOptions } from "./process-segment.ts";
 import { loadConfig } from "./config/loader.ts";
-import { MigrationConfiguration } from "./config/types.ts";
+import { createOpenSearchClient } from "./opensearch/client.ts";
+import {
+  OpenSearchBeforeMigration,
+  OpenSearchAfterMigration
+} from "./opensearch/lifecycle.ts";
 
 const logger = createLogger();
 
@@ -37,6 +42,7 @@ yargs(hideBin(process.argv))
 
       logger.info("Starting migration with configuration:");
       logger.info(`  Run ID: ${runId}`);
+      logger.info(`  Storage: ${config.storage}`);
       logger.info(`  Preset: ${config.migration.preset}`);
       logger.info(`  Segments: ${segments}`);
       logger.info(`  Source Region: ${config.source.region}`);
@@ -45,10 +51,30 @@ yargs(hideBin(process.argv))
       logger.info(`  Target Region: ${config.target.region}`);
       logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
       logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
+      if (config.storage === "ddb-os") {
+        logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
+        logger.info(`  OS Table: ${config.target.opensearch.tableName}`);
+      }
 
       const startTime = Date.now();
 
+      // Create OS client once if ddb-os mode
+      const osClient =
+        config.storage === "ddb-os"
+          ? createOpenSearchClient(
+              config.target.opensearch.endpoint,
+              config.target.opensearch.auth
+            )
+          : null;
+
       try {
+        // Run before-migration hook (ddb-os only)
+        if (osClient) {
+          const beforeHook = new OpenSearchBeforeMigration(osClient);
+          logger.info("Running OpenSearch before-migration hook...");
+          await beforeHook.execute();
+        }
+
         // Spawn worker processes
         const workers: Promise<void>[] = [];
 
@@ -58,6 +84,20 @@ yargs(hideBin(process.argv))
 
         // Wait for all workers to complete
         await Promise.all(workers);
+
+        // Run after-migration hook (ddb-os only)
+        if (osClient) {
+          try {
+            const afterHook = new OpenSearchAfterMigration(osClient);
+            logger.info("Running OpenSearch after-migration hook...");
+            await afterHook.execute();
+          } catch (error) {
+            logger.error(
+              { error },
+              "Failed to re-enable indexing. Data migration succeeded, but refresh_interval must be restored manually."
+            );
+          }
+        }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         logger.info(`Migration completed successfully in ${duration}s`);
@@ -116,7 +156,7 @@ async function spawnWorker(
   runId: string,
   configPath: string
 ): Promise<void> {
-  const binPath = new URL("../bin.js", import.meta.url).pathname;
+  const binPath = fileURLToPath(new URL("../bin.js", import.meta.url));
 
   const args = [
     binPath,

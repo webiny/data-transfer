@@ -26,9 +26,16 @@ export function createContext<T extends Record<string, unknown>>(
       });
     },
     putOsRecord(record: Record<string, unknown>) {
-      // Future implementation for OpenSearch/Elasticsearch
-      // For now, we can throw or use a placeholder table name
-      throw new Error("OpenSearch/Elasticsearch support not yet implemented");
+      if (!config.opensearch) {
+        throw new Error(
+          'putOsRecord requires opensearch to be configured. Use storage "ddb-os" with target.opensearch in your config.'
+        );
+      }
+      commands.push({
+        type: "PUT_RECORD",
+        table: config.opensearch.targetTable,
+        record
+      });
     },
     copyFile(sourceKey: string, targetKey: string) {
       commands.push({
