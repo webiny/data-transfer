@@ -1,0 +1,499 @@
+[
+  {
+    "PK": "T#root#CMS#CME#69dcb84ac20c9b000232f578",
+    "SK": "L",
+    "data": {
+      "modelId": "category",
+      "revisionCreatedOn": "2026-04-13T09:32:58.817Z",
+      "status": "published",
+      "revisionCreatedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "createdBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "entryId": "69dcb84ac20c9b000232f578",
+      "id": "69dcb84ac20c9b000232f578#0001",
+      "savedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "version": 1,
+      "location": {
+        "folderId": "root"
+      },
+      "revisionSavedOn": "2026-04-13T09:33:03.063Z",
+      "savedOn": "2026-04-13T09:33:03.063Z",
+      "values": {
+        "text@04yettnj": "Space",
+        "long-text@2w5g7opq": "space"
+      },
+      "revisionSavedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "tenant": "root",
+      "createdOn": "2026-04-13T09:32:58.817Z",
+      "locked": true,
+      "revisionModifiedOn": "2026-04-13T09:33:03.063Z",
+      "revisionFirstPublishedOn": "2026-04-13T09:33:03.063Z",
+      "revisionLastPublishedOn": "2026-04-13T09:33:03.063Z",
+      "revisionModifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionFirstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionLastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "modifiedOn": "2026-04-13T09:33:03.063Z",
+      "firstPublishedOn": "2026-04-13T09:33:03.063Z",
+      "lastPublishedOn": "2026-04-13T09:33:03.063Z",
+      "modifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "firstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "lastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "meta": {},
+      "rawValues": {
+        "file@k2jd0qfe": null
+      },
+      "latest": true,
+      "__type": "cms.entry.l"
+    },
+    "index": "root-headless-cms-category",
+    "TYPE": "cms.entry.l",
+    "GSI_TENANT": "root",
+    "_et": "CmsEntriesElasticsearch",
+    "_ct": "2026-04-13T09:33:03.097Z",
+    "_md": "2026-04-13T09:33:03.097Z"
+  },
+  {
+    "PK": "T#root#CMS#CME#69dcb84ac20c9b000232f578",
+    "SK": "P",
+    "data": {
+      "modelId": "category",
+      "revisionCreatedOn": "2026-04-13T09:32:58.817Z",
+      "status": "published",
+      "revisionCreatedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "createdBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "entryId": "69dcb84ac20c9b000232f578",
+      "id": "69dcb84ac20c9b000232f578#0001",
+      "savedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "version": 1,
+      "location": {
+        "folderId": "root"
+      },
+      "revisionSavedOn": "2026-04-13T09:33:03.063Z",
+      "savedOn": "2026-04-13T09:33:03.063Z",
+      "values": {
+        "text@04yettnj": "Space",
+        "long-text@2w5g7opq": "space"
+      },
+      "revisionSavedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "tenant": "root",
+      "createdOn": "2026-04-13T09:32:58.817Z",
+      "locked": true,
+      "meta": {},
+      "revisionModifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionModifiedOn": "2026-04-13T09:33:03.063Z",
+      "modifiedOn": "2026-04-13T09:33:03.063Z",
+      "modifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "firstPublishedOn": "2026-04-13T09:33:03.063Z",
+      "lastPublishedOn": "2026-04-13T09:33:03.063Z",
+      "firstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "lastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionFirstPublishedOn": "2026-04-13T09:33:03.063Z",
+      "revisionLastPublishedOn": "2026-04-13T09:33:03.063Z",
+      "revisionFirstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionLastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "rawValues": {
+        "file@k2jd0qfe": null
+      },
+      "published": true,
+      "__type": "cms.entry.p"
+    },
+    "index": "root-headless-cms-category",
+    "TYPE": "cms.entry.p",
+    "GSI_TENANT": "root",
+    "_et": "CmsEntriesElasticsearch",
+    "_ct": "2026-04-13T09:33:03.093Z",
+    "_md": "2026-04-13T09:33:03.093Z"
+  },
+  {
+    "PK": "T#root#CMS#CME#69dcd9db67fcfd0002778afe",
+    "SK": "L",
+    "data": {
+      "modelId": "smartFragmentModel",
+      "revisionCreatedOn": "2026-04-13T11:56:11.950Z",
+      "status": "published",
+      "revisionCreatedBy": {
+        "id": "69dccddf374f2a0002f2f897",
+        "displayName": "Mocker",
+        "type": "api-key"
+      },
+      "createdBy": {
+        "id": "69dccddf374f2a0002f2f897",
+        "displayName": "Mocker",
+        "type": "api-key"
+      },
+      "entryId": "69dcd9db67fcfd0002778afe",
+      "id": "69dcd9db67fcfd0002778afe#0001",
+      "savedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "version": 1,
+      "location": {
+        "folderId": "root"
+      },
+      "revisionSavedOn": "2026-04-13T11:56:46.377Z",
+      "savedOn": "2026-04-13T11:56:46.377Z",
+      "values": {
+        "text@fragmentTitle": "callide accusator deleniti tero alienus adeptio nobis venia incidunt compono quaerat harum caveo creator tabesco ocer vulgaris amo vinitor abduco conqueror approbo impedit creo deleniti caveo demitto bene non facilis casso cubitum unde cohibeo aperiam agg",
+        "text@fragmentType": "pauci comes vae denuncio valetudo ustilo nulla accendo capillus dolorem abscido patria doloribus cae",
+        "text@fragmentKeywords": [
+          "omnis tristis testimonium creber campana acies aperte repudiandae adversus magni suscipio termes ver",
+          "bellicus desidero vester coruscus vis degenero sub carus conforto minus volva vomica speciosus tunc "
+        ]
+      },
+      "revisionSavedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "tenant": "root",
+      "createdOn": "2026-04-13T11:56:11.950Z",
+      "locked": true,
+      "revisionModifiedOn": "2026-04-13T11:56:46.377Z",
+      "revisionFirstPublishedOn": "2026-04-13T11:56:46.377Z",
+      "revisionLastPublishedOn": "2026-04-13T11:56:46.377Z",
+      "revisionModifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionFirstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionLastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "modifiedOn": "2026-04-13T11:56:46.377Z",
+      "firstPublishedOn": "2026-04-13T11:56:46.377Z",
+      "lastPublishedOn": "2026-04-13T11:56:46.377Z",
+      "modifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "firstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "lastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "meta": {},
+      "rawValues": {
+        "rich-text@fragmentDescription": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA5WPMQrDMAxF7/JnF5LVByh07lgymFhpDI5tZLXUBN+9xCklHbv9L8HT0wqOUaBXjLPzlilA337KoGAd0yguBujw8F5hirwYgQYUXLAUBLpTkJIIGsmwubNJ84k8LdtS4UmcG6BXEHrJ+UPo9nqV4mnn5S3mZtHixR6RPb5npKTYZgV1qP9rtsePZrW+AWFpCgMOAQAA"
+        },
+        "dynamicZone@fragmentTemplate": {
+          "_templateId": "formTemplate",
+          "object@formTitle": {
+            "text@formTitleTitle": "dolorem acquiro certe auctor acerbitas exercitationem thema amissio ustilo vis accommodo absque clib",
+            "text@formTitleHeadingRank": "h4"
+          },
+          "text@formType": "eloqua",
+          "text@formSubtitle": "terreo repellat civis damnatio vetus comptus appono aspernatur vigor ceno vociferor deprecator repudiandae taedium atrox balbus votum aegrus caput alv",
+          "text@formId": "succurro vorax cena praesentium clementia totus arcesso clam aeneus cognomen dolores aeger demergo a",
+          "text@formInternalComment": {
+            "compression": "gzip",
+            "value": "H4sIAAAAAAAAAytILUpLLUrNS8ksVkhJLS5ILEosKS1WKM4HAG/9qnEZAAAA"
+          },
+          "text@formUuid": "odio decerno aspernatur tenuis demonstro absconditus admoveo verbum torrens adstringo carpo aliquid "
+        }
+      },
+      "latest": true,
+      "__type": "cms.entry.l"
+    },
+    "index": "root-headless-cms-smartfragmentmodel",
+    "TYPE": "cms.entry.l",
+    "GSI_TENANT": "root",
+    "_et": "CmsEntriesElasticsearch",
+    "_ct": "2026-04-13T11:56:46.403Z",
+    "_md": "2026-04-13T11:56:46.403Z"
+  },
+  {
+    "PK": "T#root#CMS#CME#69dcd9db67fcfd0002778afe",
+    "SK": "P",
+    "data": {
+      "modelId": "smartFragmentModel",
+      "revisionCreatedOn": "2026-04-13T11:56:11.950Z",
+      "status": "published",
+      "revisionCreatedBy": {
+        "id": "69dccddf374f2a0002f2f897",
+        "displayName": "Mocker",
+        "type": "api-key"
+      },
+      "createdBy": {
+        "id": "69dccddf374f2a0002f2f897",
+        "displayName": "Mocker",
+        "type": "api-key"
+      },
+      "entryId": "69dcd9db67fcfd0002778afe",
+      "id": "69dcd9db67fcfd0002778afe#0001",
+      "savedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "version": 1,
+      "location": {
+        "folderId": "root"
+      },
+      "revisionSavedOn": "2026-04-13T11:56:46.377Z",
+      "savedOn": "2026-04-13T11:56:46.377Z",
+      "values": {
+        "text@fragmentTitle": "callide accusator deleniti tero alienus adeptio nobis venia incidunt compono quaerat harum caveo creator tabesco ocer vulgaris amo vinitor abduco conqueror approbo impedit creo deleniti caveo demitto bene non facilis casso cubitum unde cohibeo aperiam agg",
+        "text@fragmentType": "pauci comes vae denuncio valetudo ustilo nulla accendo capillus dolorem abscido patria doloribus cae",
+        "text@fragmentKeywords": [
+          "omnis tristis testimonium creber campana acies aperte repudiandae adversus magni suscipio termes ver",
+          "bellicus desidero vester coruscus vis degenero sub carus conforto minus volva vomica speciosus tunc "
+        ]
+      },
+      "revisionSavedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "tenant": "root",
+      "createdOn": "2026-04-13T11:56:11.950Z",
+      "locked": true,
+      "meta": {},
+      "revisionModifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionModifiedOn": "2026-04-13T11:56:46.377Z",
+      "modifiedOn": "2026-04-13T11:56:46.377Z",
+      "modifiedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "firstPublishedOn": "2026-04-13T11:56:46.377Z",
+      "lastPublishedOn": "2026-04-13T11:56:46.377Z",
+      "firstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "lastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionFirstPublishedOn": "2026-04-13T11:56:46.377Z",
+      "revisionLastPublishedOn": "2026-04-13T11:56:46.377Z",
+      "revisionFirstPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionLastPublishedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "rawValues": {
+        "rich-text@fragmentDescription": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA5WPMQrDMAxF7/JnF5LVByh07lgymFhpDI5tZLXUBN+9xCklHbv9L8HT0wqOUaBXjLPzlilA337KoGAd0yguBujw8F5hirwYgQYUXLAUBLpTkJIIGsmwubNJ84k8LdtS4UmcG6BXEHrJ+UPo9nqV4mnn5S3mZtHixR6RPb5npKTYZgV1qP9rtsePZrW+AWFpCgMOAQAA"
+        },
+        "dynamicZone@fragmentTemplate": {
+          "_templateId": "formTemplate",
+          "object@formTitle": {
+            "text@formTitleTitle": "dolorem acquiro certe auctor acerbitas exercitationem thema amissio ustilo vis accommodo absque clib",
+            "text@formTitleHeadingRank": "h4"
+          },
+          "text@formType": "eloqua",
+          "text@formSubtitle": "terreo repellat civis damnatio vetus comptus appono aspernatur vigor ceno vociferor deprecator repudiandae taedium atrox balbus votum aegrus caput alv",
+          "text@formId": "succurro vorax cena praesentium clementia totus arcesso clam aeneus cognomen dolores aeger demergo a",
+          "text@formInternalComment": {
+            "compression": "gzip",
+            "value": "H4sIAAAAAAAAAytILUpLLUrNS8ksVkhJLS5ILEosKS1WKM4HAG/9qnEZAAAA"
+          },
+          "text@formUuid": "odio decerno aspernatur tenuis demonstro absconditus admoveo verbum torrens adstringo carpo aliquid "
+        }
+      },
+      "published": true,
+      "__type": "cms.entry.p"
+    },
+    "index": "root-headless-cms-smartfragmentmodel",
+    "TYPE": "cms.entry.p",
+    "GSI_TENANT": "root",
+    "_et": "CmsEntriesElasticsearch",
+    "_ct": "2026-04-13T11:56:46.402Z",
+    "_md": "2026-04-13T11:56:46.402Z"
+  },
+  {
+    "PK": "T#root#CMS#CME#69de2d71a55a70000201b74c",
+    "SK": "L",
+    "data": {
+      "tenant": "root",
+      "entryId": "69de2d71a55a70000201b74c",
+      "id": "69de2d71a55a70000201b74c#0001",
+      "modelId": "wbyFmFile",
+      "createdOn": "2026-04-14T12:05:06.482Z",
+      "modifiedOn": null,
+      "savedOn": "2026-04-14T12:05:06.482Z",
+      "deletedOn": null,
+      "restoredOn": null,
+      "createdBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "modifiedBy": null,
+      "savedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "deletedBy": null,
+      "restoredBy": null,
+      "firstPublishedOn": null,
+      "lastPublishedOn": null,
+      "firstPublishedBy": null,
+      "lastPublishedBy": null,
+      "revisionCreatedOn": "2026-04-14T12:05:06.494Z",
+      "revisionModifiedOn": null,
+      "revisionSavedOn": "2026-04-14T12:05:06.494Z",
+      "revisionDeletedOn": null,
+      "revisionRestoredOn": null,
+      "revisionCreatedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionModifiedBy": null,
+      "revisionSavedBy": {
+        "id": "69dcb27cf7f4e6000243708a",
+        "displayName": "Bruno Zorić",
+        "type": "admin"
+      },
+      "revisionDeletedBy": null,
+      "revisionRestoredBy": null,
+      "revisionFirstPublishedOn": null,
+      "revisionLastPublishedOn": null,
+      "revisionFirstPublishedBy": null,
+      "revisionLastPublishedBy": null,
+      "version": 1,
+      "status": "draft",
+      "locked": false,
+      "values": {
+        "text@name": "claude-visual-summary.jpeg",
+        "text@key": "69de2d71a55a70000201b74c/claude-visual-summary.jpeg",
+        "text@type": "image/jpeg",
+        "number@size": 158339,
+        "object@meta": {
+          "boolean@private": false
+        },
+        "text@tags": [
+          "threatScanInProgress"
+        ],
+        "text@aliases": []
+      },
+      "location": {
+        "folderId": "root"
+      },
+      "rawValues": {
+        "object@location": {},
+        "object@meta": {}
+      },
+      "latest": true,
+      "__type": "cms.entry.l"
+    },
+    "index": "root-headless-cms-fmfile",
+    "TYPE": "cms.entry.l",
+    "GSI_TENANT": "root",
+    "_et": "CmsEntriesElasticsearch",
+    "_ct": "2026-04-14T12:05:06.548Z",
+    "_md": "2026-04-14T12:05:06.548Z"
+  }
+]
