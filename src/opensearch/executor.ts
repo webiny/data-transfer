@@ -56,12 +56,12 @@ export async function executeOsCommands(
       const index = stripLocaleFromIndex(metadata.index, locale);
 
       return {
-        PK: record.PK,
-        SK: record.SK,
+        PK: record.PK as string,
+        SK: record.SK as string,
         data: compressed,
         index,
-        TYPE: record.TYPE,
-        GSI_TENANT: record.GSI_TENANT,
+        TYPE: record.TYPE as string,
+        GSI_TENANT: record.GSI_TENANT as string,
         _et: "CmsEntriesElasticsearch",
         _ct: metadata._ct,
         _md: metadata._md
@@ -106,15 +106,13 @@ async function ensureIndex(
         await client.indices.create({
           index: indexName,
           body: {
-            ...baseConfig,
+            mappings: baseConfig.mappings,
             settings: {
-              ...baseConfig.settings,
               index: {
-                ...baseConfig.settings?.index,
                 refresh_interval: "-1"
               }
             }
-          }
+          } as any
         });
         logger.info(`Created index: ${indexName}`);
       } catch (createError: any) {
