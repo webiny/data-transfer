@@ -376,7 +376,8 @@ describe("OS migration integration", () => {
         body: { query: { match_all: {} } }
       });
 
-      expect(searchResult.hits.total.value).toBeGreaterThan(0);
+      const total = searchResult.hits.total as { value: number };
+      expect(total.value).toBeGreaterThan(0);
 
       // Verify document structure
       const firstHit = searchResult.hits.hits[0];
