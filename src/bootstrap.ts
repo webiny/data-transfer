@@ -33,29 +33,16 @@ export function bootstrap(options: BootstrapOptions): Container {
   GzipCompressionFeature.register(container);
 
   // DynamoDB clients
-  if (config.storage === "ddb") {
-    container.registerInstance(DynamoDbClientConfig, {
-      source: {
-        region: config.source.region,
-        credentials: config.source.credentials
-      },
-      target: {
-        region: config.target.region,
-        credentials: config.target.credentials
-      }
-    });
-  } else {
-    container.registerInstance(DynamoDbClientConfig, {
-      source: {
-        region: config.source.region,
-        credentials: config.source.credentials
-      },
-      target: {
-        region: config.target.region,
-        credentials: config.target.credentials
-      }
-    });
-  }
+  container.registerInstance(DynamoDbClientConfig, {
+    source: {
+      region: config.source.region,
+      credentials: config.source.credentials
+    },
+    target: {
+      region: config.target.region,
+      credentials: config.target.credentials
+    }
+  });
   DynamoDbClientFeature.register(container);
 
   // OpenSearch client (os mode only)
