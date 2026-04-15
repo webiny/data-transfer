@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import { migrationConfigSchema } from "@/src/config/validation.ts";
+import { migrationConfigSchema } from "./validation.ts";
 import { MigrationConfig } from "./abstractions/MigrationConfig.ts";
 
 /**

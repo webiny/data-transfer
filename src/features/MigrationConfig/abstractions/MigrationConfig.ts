@@ -1,5 +1,5 @@
 import { createAbstraction } from "@/src/base/index.ts";
-import type { MigrationConfiguration } from "@/src/config/validation.ts";
+import type { MigrationConfiguration } from "../validation.ts";
 
 export const MigrationConfig = createAbstraction<MigrationConfiguration>("Core/MigrationConfig");
 
