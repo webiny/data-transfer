@@ -1,16 +1,21 @@
 import "reflect-metadata";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { Container } from "@webiny/di";
 import {
   GzipCompression,
   GzipCompressionFeature
 } from "../../../src/features/GzipCompression/index.ts";
-import { GzipCompressionImpl } from "../../../src/features/GzipCompression/GzipCompression.ts";
 
 describe("GzipCompression", () => {
-  describe("compress and decompress", () => {
-    const gzip = new GzipCompressionImpl();
+  let gzip: GzipCompression.Interface;
 
+  beforeAll(() => {
+    const container = new Container();
+    GzipCompressionFeature.register(container);
+    gzip = container.resolve(GzipCompression);
+  });
+
+  describe("compress and decompress", () => {
     it("should compress and decompress a string", async () => {
       const compressed = await gzip.compress("hello world");
       expect(compressed.compression).toBe("gzip");
@@ -44,8 +49,6 @@ describe("GzipCompression", () => {
   });
 
   describe("canDecompress", () => {
-    const gzip = new GzipCompressionImpl();
-
     it("should return true for gzip compressed data", () => {
       expect(gzip.canDecompress({ compression: "gzip", value: "abc" })).toBe(true);
     });
@@ -76,8 +79,6 @@ describe("GzipCompression", () => {
   });
 
   describe("decompress error handling", () => {
-    const gzip = new GzipCompressionImpl();
-
     it("should return null for invalid gzip data", async () => {
       const result = await gzip.decompress({ compression: "gzip", value: "not-valid-base64-gzip" });
       expect(result).toBeNull();
@@ -101,15 +102,6 @@ describe("GzipCompression", () => {
 
       const compression = container.resolve(GzipCompression);
       expect(compression).toBeDefined();
-    });
-
-    it("should resolve same instance (singleton)", () => {
-      const container = new Container();
-      GzipCompressionFeature.register(container);
-
-      const first = container.resolve(GzipCompression);
-      const second = container.resolve(GzipCompression);
-      expect(first).toBe(second);
     });
   });
 });

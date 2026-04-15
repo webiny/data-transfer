@@ -1,12 +1,12 @@
 import zlib from "zlib";
-import { GzipCompression } from "./abstractions/GzipCompression.ts";
+import { GzipCompression as GzipCompressionAbstraction } from "./abstractions/GzipCompression.ts";
 
 const GZIP = "gzip";
 const TO_STORAGE_ENCODING = "base64";
 const FROM_STORAGE_ENCODING = "utf8";
 
-export class GzipCompressionImpl implements GzipCompression.Interface {
-  async compress<T>(data: T): Promise<GzipCompression.Compressed> {
+class GzipCompressionImpl implements GzipCompressionAbstraction.Interface {
+  async compress<T>(data: T): Promise<GzipCompressionAbstraction.Compressed> {
     const json = JSON.stringify(data);
     const buffer = await gzip(Buffer.from(json));
 
@@ -24,7 +24,7 @@ export class GzipCompressionImpl implements GzipCompression.Interface {
     return typeof record.compression === "string" && record.compression.toLowerCase() === GZIP;
   }
 
-  async decompress<T>(data: GzipCompression.Compressed): Promise<T | null> {
+  async decompress<T>(data: GzipCompressionAbstraction.Compressed): Promise<T | null> {
     if (!data || !data.value) {
       return null;
     }
@@ -63,3 +63,8 @@ function gunzip(input: zlib.InputType): Promise<Buffer> {
     });
   });
 }
+
+export const GzipCompression = GzipCompressionAbstraction.createImplementation({
+  implementation: GzipCompressionImpl,
+  dependencies: []
+});
