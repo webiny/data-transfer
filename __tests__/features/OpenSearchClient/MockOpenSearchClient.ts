@@ -1,19 +1,16 @@
-import type {
-  IOpenSearchClient,
-  IndexSettings,
-  IndexInfo,
-  IndexCreateBody
-} from "../../../src/features/OpenSearchClient/abstractions/OpenSearchClient.ts";
+import { OpenSearchClient } from "../../../src/features/OpenSearchClient/abstractions/OpenSearchClient.ts";
 
-export class MockOpenSearchClient implements IOpenSearchClient {
-  private indexes: Map<string, { settings: Record<string, unknown>; body?: IndexCreateBody }> =
-    new Map();
+export class MockOpenSearchClient implements OpenSearchClient.Interface {
+  private indexes: Map<
+    string,
+    { settings: Record<string, unknown>; body?: OpenSearchClient.CreateBody }
+  > = new Map();
 
   async indexExists(index: string): Promise<boolean> {
     return this.indexes.has(index);
   }
 
-  async createIndex(index: string, body?: IndexCreateBody): Promise<void> {
+  async createIndex(index: string, body?: OpenSearchClient.CreateBody): Promise<void> {
     if (this.indexes.has(index)) {
       const error = new Error("resource_already_exists_exception");
       (error as any).meta = {
@@ -24,11 +21,11 @@ export class MockOpenSearchClient implements IOpenSearchClient {
     this.indexes.set(index, { settings: {}, body });
   }
 
-  async listIndexes(): Promise<IndexInfo[]> {
+  async listIndexes(): Promise<OpenSearchClient.Info[]> {
     return Array.from(this.indexes.keys()).map(index => ({ index }));
   }
 
-  async putIndexSettings(index: string, settings: IndexSettings): Promise<void> {
+  async putIndexSettings(index: string, settings: OpenSearchClient.Settings): Promise<void> {
     const existing = this.indexes.get(index);
     if (!existing) {
       throw new Error(`index_not_found: ${index}`);

@@ -24,10 +24,6 @@ export interface QueryOptions {
   };
 }
 
-// ============================================================================
-// Interface
-// ============================================================================
-
 export interface IDynamoDbClient {
   scan<T extends DatabaseRecord>(tableName: string, options?: ScanOptions): AsyncIterable<T>;
   query<T extends DatabaseRecord>(
@@ -48,8 +44,14 @@ export const TargetDynamoDbClient = createAbstraction<IDynamoDbClient>("Core/Tar
 
 export namespace SourceDynamoDbClient {
   export type Interface = IDynamoDbClient;
+  export type Record = DatabaseRecord;
+  export type Scan = ScanOptions;
+  export type Query = QueryOptions;
 }
 
 export namespace TargetDynamoDbClient {
   export type Interface = IDynamoDbClient;
+  export type Record = DatabaseRecord;
+  export type Scan = ScanOptions;
+  export type Query = QueryOptions;
 }

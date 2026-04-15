@@ -1,26 +1,21 @@
-import type {
-  IDynamoDbClient,
-  DatabaseRecord,
-  ScanOptions,
-  QueryOptions
-} from "../../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { SourceDynamoDbClient } from "../../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
 
 /**
  * Mock implementation of IDynamoDbClient for testing.
  */
-export class MockDynamoDbClient implements IDynamoDbClient {
-  private records: Map<string, DatabaseRecord[]> = new Map();
-  public batchPutRecords: DatabaseRecord[] = [];
+export class MockDynamoDbClient implements SourceDynamoDbClient.Interface {
+  private records: Map<string, SourceDynamoDbClient.Record[]> = new Map();
+  public batchPutRecords: SourceDynamoDbClient.Record[] = [];
 
-  constructor(initialRecords: Record<string, DatabaseRecord[]> = {}) {
+  constructor(initialRecords: Record<string, SourceDynamoDbClient.Record[]> = {}) {
     for (const [table, records] of Object.entries(initialRecords)) {
       this.records.set(table, records);
     }
   }
 
-  async *scan<T extends DatabaseRecord>(
+  async *scan<T extends SourceDynamoDbClient.Record>(
     tableName: string,
-    options?: ScanOptions
+    options?: SourceDynamoDbClient.Scan
   ): AsyncIterable<T> {
     const records = this.records.get(tableName) || [];
 
@@ -37,11 +32,11 @@ export class MockDynamoDbClient implements IDynamoDbClient {
     }
   }
 
-  async query<T extends DatabaseRecord>(
+  async query<T extends SourceDynamoDbClient.Record>(
     tableName: string,
     pk: string,
     sk?: string,
-    _options?: QueryOptions
+    _options?: SourceDynamoDbClient.Query
   ): Promise<T[]> {
     const records = this.records.get(tableName) || [];
 
@@ -56,7 +51,10 @@ export class MockDynamoDbClient implements IDynamoDbClient {
     }) as T[];
   }
 
-  async batchPut<T extends DatabaseRecord>(tableName: string, records: T[]): Promise<void> {
+  async batchPut<T extends SourceDynamoDbClient.Record>(
+    tableName: string,
+    records: T[]
+  ): Promise<void> {
     this.batchPutRecords.push(...records);
 
     const tableRecords = this.records.get(tableName) || [];
@@ -65,7 +63,7 @@ export class MockDynamoDbClient implements IDynamoDbClient {
   }
 
   // Test helpers
-  getRecordsForTable(tableName: string): DatabaseRecord[] {
+  getRecordsForTable(tableName: string): SourceDynamoDbClient.Record[] {
     return this.records.get(tableName) || [];
   }
 

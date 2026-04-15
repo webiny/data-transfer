@@ -20,21 +20,10 @@ export interface IndexCreateBody {
   settings?: Record<string, unknown>;
 }
 
-// ============================================================================
-// Interface
-// ============================================================================
-
 export interface IOpenSearchClient {
-  /** Check if an index exists */
   indexExists(index: string): Promise<boolean>;
-
-  /** Create an index with optional body (mappings, settings) */
   createIndex(index: string, body?: IndexCreateBody): Promise<void>;
-
-  /** List all indexes */
   listIndexes(): Promise<IndexInfo[]>;
-
-  /** Update settings on an index */
   putIndexSettings(index: string, settings: IndexSettings): Promise<void>;
 }
 
@@ -46,4 +35,7 @@ export const OpenSearchClient = createAbstraction<IOpenSearchClient>("Core/OpenS
 
 export namespace OpenSearchClient {
   export type Interface = IOpenSearchClient;
+  export type Settings = IndexSettings;
+  export type Info = IndexInfo;
+  export type CreateBody = IndexCreateBody;
 }

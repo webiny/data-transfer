@@ -5,22 +5,17 @@ import {
   QueryCommand,
   BatchWriteCommand
 } from "@aws-sdk/lib-dynamodb";
-import type {
-  IDynamoDbClient,
-  DatabaseRecord,
-  ScanOptions,
-  QueryOptions
-} from "./abstractions/DynamoDbClient.ts";
-import type { DynamoDbConnectionConfig } from "./abstractions/DynamoDbClientConfig.ts";
+import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
+import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
 
 const BATCH_SIZE = 25;
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 100;
 
-export class DynamoDbClientImpl implements IDynamoDbClient {
+export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
   private client: DynamoDBDocumentClient;
 
-  constructor(config: DynamoDbConnectionConfig) {
+  constructor(config: DynamoDbClientConfig.Connection) {
     const awsClient = new AWSDynamoDBClient({
       region: config.region,
       ...(config.credentials && { credentials: config.credentials }),
@@ -33,9 +28,9 @@ export class DynamoDbClientImpl implements IDynamoDbClient {
     });
   }
 
-  async *scan<T extends DatabaseRecord>(
+  async *scan<T extends SourceDynamoDbClient.Record>(
     tableName: string,
-    options?: ScanOptions
+    options?: SourceDynamoDbClient.Scan
   ): AsyncIterable<T> {
     let lastEvaluatedKey: Record<string, unknown> | undefined;
 
@@ -61,11 +56,11 @@ export class DynamoDbClientImpl implements IDynamoDbClient {
     } while (lastEvaluatedKey);
   }
 
-  async query<T extends DatabaseRecord>(
+  async query<T extends SourceDynamoDbClient.Record>(
     tableName: string,
     pk: string,
     sk?: string,
-    options?: QueryOptions
+    options?: SourceDynamoDbClient.Query
   ): Promise<T[]> {
     let keyConditionExpression = "PK = :pk";
     const expressionAttributeValues: Record<string, unknown> = {
@@ -100,7 +95,10 @@ export class DynamoDbClientImpl implements IDynamoDbClient {
     return (response.Items || []) as T[];
   }
 
-  async batchPut<T extends DatabaseRecord>(tableName: string, records: T[]): Promise<void> {
+  async batchPut<T extends SourceDynamoDbClient.Record>(
+    tableName: string,
+    records: T[]
+  ): Promise<void> {
     if (records.length === 0) {
       return;
     }

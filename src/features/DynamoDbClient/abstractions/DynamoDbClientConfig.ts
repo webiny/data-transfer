@@ -32,4 +32,6 @@ export const DynamoDbClientConfig = createAbstraction<IDynamoDbClientConfig>(
 
 export namespace DynamoDbClientConfig {
   export type Interface = IDynamoDbClientConfig;
+  export type Connection = DynamoDbConnectionConfig;
+  export type Credentials = AwsCredentials;
 }

@@ -7,7 +7,6 @@ import {
   DynamoDbClientConfig,
   DynamoDbClientFeature
 } from "../../../src/features/DynamoDbClient/index.ts";
-import type { DatabaseRecord } from "../../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "./MockDynamoDbClient.ts";
 
 describe("DynamoDbClient Feature", () => {
@@ -50,7 +49,7 @@ describe("DynamoDbClient Feature", () => {
   describe("MockDynamoDbClient", () => {
     let client: MockDynamoDbClient;
 
-    const testRecords: DatabaseRecord[] = [
+    const testRecords: SourceDynamoDbClient.Record[] = [
       { PK: "T#root#CMS#CME#aaa", SK: "L", TYPE: "cms.entry.l" },
       { PK: "T#root#CMS#CME#aaa", SK: "P", TYPE: "cms.entry.p" },
       { PK: "T#root#CMS#CME#bbb", SK: "L", TYPE: "cms.entry.l" }
@@ -63,7 +62,7 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should scan all records from a table", async () => {
-      const results: DatabaseRecord[] = [];
+      const results: SourceDynamoDbClient.Record[] = [];
       for await (const record of client.scan("test-table")) {
         results.push(record);
       }
@@ -72,12 +71,12 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should scan with segment filtering", async () => {
-      const segment0: DatabaseRecord[] = [];
+      const segment0: SourceDynamoDbClient.Record[] = [];
       for await (const record of client.scan("test-table", { segment: 0, totalSegments: 2 })) {
         segment0.push(record);
       }
 
-      const segment1: DatabaseRecord[] = [];
+      const segment1: SourceDynamoDbClient.Record[] = [];
       for await (const record of client.scan("test-table", { segment: 1, totalSegments: 2 })) {
         segment1.push(record);
       }
@@ -86,7 +85,7 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should return empty for non-existent table", async () => {
-      const results: DatabaseRecord[] = [];
+      const results: SourceDynamoDbClient.Record[] = [];
       for await (const record of client.scan("nonexistent")) {
         results.push(record);
       }
@@ -116,7 +115,7 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should batchPut records and make them scannable", async () => {
-      const newRecords: DatabaseRecord[] = [
+      const newRecords: SourceDynamoDbClient.Record[] = [
         { PK: "T#root#CMS#CME#ccc", SK: "L", TYPE: "cms.entry.l" },
         { PK: "T#root#CMS#CME#ddd", SK: "L", TYPE: "cms.entry.l" }
       ];
@@ -125,7 +124,7 @@ describe("DynamoDbClient Feature", () => {
 
       expect(client.batchPutRecords).toHaveLength(2);
 
-      const allRecords: DatabaseRecord[] = [];
+      const allRecords: SourceDynamoDbClient.Record[] = [];
       for await (const record of client.scan("test-table")) {
         allRecords.push(record);
       }
@@ -134,7 +133,9 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should batchPut to a new table", async () => {
-      const records: DatabaseRecord[] = [{ PK: "T#root#OS#abc", SK: "L", TYPE: "cms.entry.l" }];
+      const records: SourceDynamoDbClient.Record[] = [
+        { PK: "T#root#OS#abc", SK: "L", TYPE: "cms.entry.l" }
+      ];
 
       await client.batchPut("new-table", records);
 
@@ -150,7 +151,7 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should support generic type narrowing on scan", async () => {
-      interface CmsRecord extends DatabaseRecord {
+      interface CmsRecord extends SourceDynamoDbClient.Record {
         TYPE: string;
       }
 
@@ -163,7 +164,7 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should support generic type narrowing on query", async () => {
-      interface CmsRecord extends DatabaseRecord {
+      interface CmsRecord extends SourceDynamoDbClient.Record {
         TYPE: string;
       }
 
