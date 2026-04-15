@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.include=\"src/**/**\"",
     "test:watch": "vitest",
-    "prettier:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\""
+    "prettier:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\" --list-different"
   },
   "keywords": [
     "webiny",
