@@ -26,7 +26,7 @@ logs.txt
 .pnp.*
 
 
-CLAUDE*.md
+CLAUDE.*.md
 .claude/
 .sample/
 coverage/
