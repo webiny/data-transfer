@@ -15,7 +15,7 @@ const INITIAL_BACKOFF = 100;
 export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
   private client: DynamoDBDocumentClient;
 
-  constructor(config: DynamoDbClientConfig.Connection) {
+  public constructor(config: DynamoDbClientConfig.Connection) {
     const awsClient = new AWSDynamoDBClient({
       region: config.region,
       ...(config.credentials && { credentials: config.credentials }),
@@ -28,7 +28,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
     });
   }
 
-  async *scan<T extends SourceDynamoDbClient.Record>(
+  public async *scan<T extends SourceDynamoDbClient.Record>(
     tableName: string,
     options?: SourceDynamoDbClient.Scan
   ): AsyncIterable<T> {
@@ -56,7 +56,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
     } while (lastEvaluatedKey);
   }
 
-  async query<T extends SourceDynamoDbClient.Record>(
+  public async query<T extends SourceDynamoDbClient.Record>(
     tableName: string,
     pk: string,
     sk?: string,
@@ -95,7 +95,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
     return (response.Items || []) as T[];
   }
 
-  async batchPut<T extends SourceDynamoDbClient.Record>(
+  public async batchPut<T extends SourceDynamoDbClient.Record>(
     tableName: string,
     records: T[]
   ): Promise<void> {

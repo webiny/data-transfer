@@ -2,14 +2,15 @@ import "reflect-metadata";
 import { describe, it, expect, beforeEach } from "vitest";
 import { Container } from "@webiny/di";
 import { Cache, CacheFeature } from "../../../src/features/Cache/index.ts";
-import { InMemoryCache } from "../../../src/features/Cache/InMemoryCache.ts";
 
 describe("Cache", () => {
   describe("InMemoryCache", () => {
-    let cache: InMemoryCache;
+    let cache: Cache.Interface;
 
     beforeEach(() => {
-      cache = new InMemoryCache();
+      const container = new Container();
+      CacheFeature.register(container);
+      cache = container.resolve(Cache);
     });
 
     it("should set and get a value", () => {

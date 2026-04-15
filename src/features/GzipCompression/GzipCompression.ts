@@ -6,7 +6,7 @@ const TO_STORAGE_ENCODING = "base64";
 const FROM_STORAGE_ENCODING = "utf8";
 
 class GzipCompressionImpl implements GzipCompressionAbstraction.Interface {
-  async compress<T>(data: T): Promise<GzipCompressionAbstraction.Compressed> {
+  public async compress<T>(data: T): Promise<GzipCompressionAbstraction.Compressed> {
     const json = JSON.stringify(data);
     const buffer = await gzip(Buffer.from(json));
 
@@ -16,7 +16,7 @@ class GzipCompressionImpl implements GzipCompressionAbstraction.Interface {
     };
   }
 
-  canDecompress(data: unknown): boolean {
+  public canDecompress(data: unknown): boolean {
     if (!data || typeof data !== "object") {
       return false;
     }
@@ -24,7 +24,7 @@ class GzipCompressionImpl implements GzipCompressionAbstraction.Interface {
     return typeof record.compression === "string" && record.compression.toLowerCase() === GZIP;
   }
 
-  async decompress<T>(data: GzipCompressionAbstraction.Compressed): Promise<T | null> {
+  public async decompress<T>(data: GzipCompressionAbstraction.Compressed): Promise<T | null> {
     if (!data || !data.value) {
       return null;
     }

@@ -5,13 +5,13 @@ import { TenantLocales } from "./abstractions/TenantLocales.ts";
 export class TenantLocalesImpl implements TenantLocales.Interface {
   private tenantLocales: Map<string, string> = new Map();
 
-  constructor(
+  public constructor(
     private database: SourceDynamoDbClient.Interface,
     private logger: Logger.Interface,
     private tableName: string
   ) {}
 
-  async preload(): Promise<void> {
+  public async preload(): Promise<void> {
     const tenants = await this.fetchTenants();
     this.tenantLocales = new Map();
 
@@ -28,11 +28,11 @@ export class TenantLocalesImpl implements TenantLocales.Interface {
     this.logger.info(`Found ${this.tenantLocales.size} tenants`);
   }
 
-  getMap(): Map<string, string> {
+  public getMap(): Map<string, string> {
     return this.tenantLocales;
   }
 
-  isDefaultLocaleRecord(record: Record<string, unknown>): boolean {
+  public isDefaultLocaleRecord(record: Record<string, unknown>): boolean {
     const pk = record.PK as string;
     if (!pk || !pk.startsWith("T#")) {
       return true;

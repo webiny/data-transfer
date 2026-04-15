@@ -20,6 +20,10 @@ All steps must pass and all changes must be included in the commit.
 - Always wrap `if`/`for`/`while` bodies in curly braces, even for single statements
 - Use `yarn` for package management, never `npm`
 - File extensions in imports: use `.ts` in source files
+- Always use `public`/`private`/`protected` on class methods and properties
+- Abstractions index files only export const tokens (no type exports) — use namespaces for types
+- Use `createImplementation` + `container.register` for stateless services (no constructor config)
+- Use `registerInstance` only when runtime config is needed to construct the instance
 
 ## DI Architecture Patterns (`@webiny/di`)
 

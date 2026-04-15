@@ -1,29 +1,34 @@
-import { Cache } from "./abstractions/Cache.ts";
+import { Cache as CacheAbstraction } from "./abstractions/Cache.ts";
 
-export class InMemoryCache implements Cache.Interface {
+class InMemoryCacheImpl implements CacheAbstraction.Interface {
   private store: Map<string, unknown> = new Map();
 
-  get<T>(key: string): T | undefined {
+  public get<T>(key: string): T | undefined {
     return this.store.get(key) as T | undefined;
   }
 
-  set<T>(key: string, value: T): void {
+  public set<T>(key: string, value: T): void {
     this.store.set(key, value);
   }
 
-  has(key: string): boolean {
+  public has(key: string): boolean {
     return this.store.has(key);
   }
 
-  delete(key: string): boolean {
+  public delete(key: string): boolean {
     return this.store.delete(key);
   }
 
-  clear(): void {
+  public clear(): void {
     this.store.clear();
   }
 
-  size(): number {
+  public size(): number {
     return this.store.size;
   }
 }
+
+export const InMemoryCache = CacheAbstraction.createImplementation({
+  implementation: InMemoryCacheImpl,
+  dependencies: []
+});

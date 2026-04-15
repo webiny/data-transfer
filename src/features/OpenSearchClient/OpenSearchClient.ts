@@ -21,24 +21,24 @@ export class OpenSearchClientImpl implements OpenSearchClient.Interface {
     });
   }
 
-  async indexExists(index: string): Promise<boolean> {
+  public async indexExists(index: string): Promise<boolean> {
     const { body } = await this.client.indices.exists({ index });
     return Boolean(body);
   }
 
-  async createIndex(index: string, body?: OpenSearchClient.CreateBody): Promise<void> {
+  public async createIndex(index: string, body?: OpenSearchClient.CreateBody): Promise<void> {
     await this.client.indices.create({
       index,
       body: body as any
     });
   }
 
-  async listIndexes(): Promise<OpenSearchClient.Info[]> {
+  public async listIndexes(): Promise<OpenSearchClient.Info[]> {
     const { body } = await this.client.cat.indices({ format: "json" });
     return (body || []) as OpenSearchClient.Info[];
   }
 
-  async putIndexSettings(index: string, settings: OpenSearchClient.Settings): Promise<void> {
+  public async putIndexSettings(index: string, settings: OpenSearchClient.Settings): Promise<void> {
     await this.client.indices.putSettings({
       index,
       body: settings

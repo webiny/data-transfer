@@ -7,14 +7,14 @@ import { ModelProvider } from "./abstractions/ModelProvider.ts";
 export class ModelProviderImpl implements ModelProvider.Interface {
   private models: Map<string, ModelProvider.ModelType> = new Map();
 
-  constructor(
+  public constructor(
     private database: SourceDynamoDbClient.Interface,
     private logger: Logger.Interface,
     private tableName: string,
     private modelsDir?: string
   ) {}
 
-  async preloadModels(tenantLocales: Map<string, string>): Promise<void> {
+  public async preloadModels(tenantLocales: Map<string, string>): Promise<void> {
     let dbCount = 0;
     let jsonCount = 0;
 
@@ -70,11 +70,11 @@ export class ModelProviderImpl implements ModelProvider.Interface {
     );
   }
 
-  getModel(modelId: string): ModelProvider.ModelType | undefined {
+  public getModel(modelId: string): ModelProvider.ModelType | undefined {
     return this.models.get(modelId);
   }
 
-  getModelIds(): string[] {
+  public getModelIds(): string[] {
     return Array.from(this.models.keys());
   }
 }
