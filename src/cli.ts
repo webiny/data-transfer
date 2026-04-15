@@ -6,7 +6,7 @@ import { execa } from "execa";
 import { bootstrap } from "./bootstrap.ts";
 import { loadConfig } from "./features/MigrationConfig/loadConfig.ts";
 import { Logger } from "./features/Logger/index.ts";
-import { OpenSearchClient } from "./features/OpenSearchClient/index.ts";
+import { BeforeTransferHook, AfterTransferHook } from "./features/TransferLifecycle/index.ts";
 import { MigrationConfig } from "./features/MigrationConfig/index.ts";
 import { processSegment } from "./process-segment.ts";
 import { processOsSegment } from "./process-os-segment.ts";
@@ -18,12 +18,12 @@ import { processOsSegment } from "./process-os-segment.ts";
 yargs(hideBin(process.argv))
   .command(
     "$0",
-    "Migrate Webiny v5 data to v6 using a configuration file",
+    "Transfer Webiny data using a configuration file",
     yargs => {
       return yargs.option("config", {
         type: "string",
         demandOption: true,
-        description: "Path to migration configuration file"
+        description: "Path to configuration file"
       });
     },
     async argv => {
@@ -39,12 +39,10 @@ yargs(hideBin(process.argv))
       const startTime = Date.now();
 
       try {
-        // Before-migration: disable refresh on OS indexes
-        if (config.storage === "os") {
-          const osClient = container.resolve(OpenSearchClient);
-          logger.info("Disabling refresh on target OpenSearch indexes...");
-          await disableRefresh(osClient, logger);
-        }
+        // Before-transfer hooks (e.g., disable OS refresh)
+        const beforeHook = container.resolve(BeforeTransferHook);
+        logger.info("Running before-transfer hooks...");
+        await beforeHook.execute();
 
         // Spawn worker processes
         const workerCommand = config.storage === "os" ? "process-os-segment" : "process-segment";
@@ -56,23 +54,21 @@ yargs(hideBin(process.argv))
 
         await Promise.all(workers);
 
-        // After-migration: re-enable refresh on OS indexes
-        if (config.storage === "os") {
-          try {
-            const osClient = container.resolve(OpenSearchClient);
-            logger.info("Re-enabling refresh on target OpenSearch indexes...");
-            await enableRefresh(osClient, logger);
-          } catch (error) {
-            logger.error(
-              `Failed to re-enable indexing. Data migration succeeded, but refresh_interval must be restored manually. Error: ${error}`
-            );
-          }
+        // After-transfer hooks (e.g., re-enable OS refresh)
+        try {
+          const afterHook = container.resolve(AfterTransferHook);
+          logger.info("Running after-transfer hooks...");
+          await afterHook.execute();
+        } catch (error) {
+          logger.error(
+            `After-transfer hooks failed. Data transfer succeeded, but post-transfer actions may need manual intervention. Error: ${error}`
+          );
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        logger.info(`Migration completed successfully in ${duration}s`);
+        logger.info(`Transfer completed successfully in ${duration}s`);
       } catch (error) {
-        logger.error(`Migration failed: ${error}`);
+        logger.error(`Transfer failed: ${error}`);
         process.exit(1);
       }
     }
@@ -136,7 +132,7 @@ function logConfig(
   runId: string,
   segments: number
 ): void {
-  logger.info("Starting migration with configuration:");
+  logger.info("Starting transfer with configuration:");
   logger.info(`  Run ID: ${runId}`);
   logger.info(`  Storage: ${config.storage}`);
   logger.info(`  Preset: ${config.migration.preset}`);
@@ -157,60 +153,6 @@ function logConfig(
     logger.info(`  Target OS Table: ${config.target.opensearch.tableName}`);
     logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
   }
-}
-
-async function disableRefresh(
-  osClient: OpenSearchClient.Interface,
-  logger: Logger.Interface
-): Promise<void> {
-  const indexes = await osClient.listIndexes();
-  const userIndexes = indexes.filter(idx => idx.index && !idx.index.startsWith("."));
-
-  if (userIndexes.length === 0) {
-    logger.info("No user indexes found in target OpenSearch cluster.");
-    return;
-  }
-
-  logger.info(`Found ${userIndexes.length} indexes`);
-
-  for (const idx of userIndexes) {
-    if (!idx.index) {
-      continue;
-    }
-    try {
-      await osClient.putIndexSettings(idx.index, { index: { refresh_interval: "-1" } });
-    } catch (error) {
-      logger.warn(`Failed to disable refresh on index: ${idx.index}. Skipping. Error: ${error}`);
-    }
-  }
-
-  logger.info("Indexing disabled on all target indexes.");
-}
-
-async function enableRefresh(
-  osClient: OpenSearchClient.Interface,
-  logger: Logger.Interface
-): Promise<void> {
-  const indexes = await osClient.listIndexes();
-  const userIndexes = indexes.filter(idx => idx.index && !idx.index.startsWith("."));
-
-  if (userIndexes.length === 0) {
-    logger.info("No user indexes found in target OpenSearch cluster.");
-    return;
-  }
-
-  for (const idx of userIndexes) {
-    if (!idx.index) {
-      continue;
-    }
-    try {
-      await osClient.putIndexSettings(idx.index, { index: { refresh_interval: "1s" } });
-    } catch (error) {
-      logger.warn(`Failed to enable refresh on index: ${idx.index}. Skipping. Error: ${error}`);
-    }
-  }
-
-  logger.info("Indexing restored on all target indexes.");
 }
 
 async function spawnWorker(

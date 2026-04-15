@@ -12,6 +12,7 @@ import {
   OpenSearchClientConfig,
   OpenSearchClientFeature
 } from "./features/OpenSearchClient/index.ts";
+import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
 
 export interface BootstrapOptions {
   config: MigrationConfig.Interface;
@@ -55,6 +56,9 @@ export function bootstrap(options: BootstrapOptions): Container {
     });
     OpenSearchClientFeature.register(container);
   }
+
+  // Transfer lifecycle hooks (composite — collects all registered hooks)
+  TransferLifecycleFeature.register(container);
 
   // Model provider + tenant locales
   ModelProviderFeature.register(container);
