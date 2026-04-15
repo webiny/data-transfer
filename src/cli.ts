@@ -3,14 +3,13 @@ import yargs from "yargs";
 import { fileURLToPath } from "node:url";
 import { hideBin } from "yargs/helpers";
 import { execa } from "execa";
-import { createLogger } from "./utils/logger.ts";
+import { bootstrap } from "./bootstrap.ts";
+import { loadConfig } from "./features/MigrationConfig/loadConfig.ts";
+import { Logger } from "./features/Logger/index.ts";
+import { OpenSearchClient } from "./features/OpenSearchClient/index.ts";
+import { MigrationConfig } from "./features/MigrationConfig/index.ts";
 import { processSegment } from "./process-segment.ts";
 import { processOsSegment } from "./process-os-segment.ts";
-import { loadConfig } from "./config/loader.ts";
-import { createOpenSearchClient } from "./opensearch/client.ts";
-import { OpenSearchBeforeMigration, OpenSearchAfterMigration } from "./opensearch/lifecycle.ts";
-
-const logger = createLogger();
 
 // ============================================================================
 // Main CLI
@@ -24,54 +23,27 @@ yargs(hideBin(process.argv))
       return yargs.option("config", {
         type: "string",
         demandOption: true,
-        description: "Path to migration configuration file (e.g., migration.config.ts)"
+        description: "Path to migration configuration file"
       });
     },
     async argv => {
       const config = await loadConfig(argv.config);
+      const container = bootstrap({ config });
+      const logger = container.resolve(Logger);
+
       const runId = String(Date.now());
       const segments = config.migration.segments || 1;
 
-      logger.info("Starting migration with configuration:");
-      logger.info(`  Run ID: ${runId}`);
-      logger.info(`  Storage: ${config.storage}`);
-      logger.info(`  Preset: ${config.migration.preset}`);
-      logger.info(`  Segments: ${segments}`);
-
-      if (config.storage === "ddb") {
-        logger.info(`  Source Region: ${config.source.region}`);
-        logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
-        logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
-        logger.info(`  Target Region: ${config.target.region}`);
-        logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
-        logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
-      } else {
-        logger.info(`  Source Region: ${config.source.region}`);
-        logger.info(`  Source Primary Table: ${config.source.dynamodb.tableName}`);
-        logger.info(`  Source OS Table: ${config.source.opensearch.tableName}`);
-        logger.info(`  Target Region: ${config.target.region}`);
-        logger.info(`  Target OS Table: ${config.target.opensearch.tableName}`);
-        logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
-      }
+      logConfig(logger, config, runId, segments);
 
       const startTime = Date.now();
 
-      // OS lifecycle hooks
-      const osClient =
-        config.storage === "os"
-          ? createOpenSearchClient({
-              endpoint: config.target.opensearch.endpoint,
-              region: config.target.region,
-              service: config.target.opensearch.service,
-              credentials: config.target.credentials
-            })
-          : null;
-
       try {
-        if (osClient) {
-          const beforeHook = new OpenSearchBeforeMigration(osClient);
-          logger.info("Running OpenSearch before-migration hook...");
-          await beforeHook.execute();
+        // Before-migration: disable refresh on OS indexes
+        if (config.storage === "os") {
+          const osClient = container.resolve(OpenSearchClient);
+          logger.info("Disabling refresh on target OpenSearch indexes...");
+          await disableRefresh(osClient, logger);
         }
 
         // Spawn worker processes
@@ -84,15 +56,15 @@ yargs(hideBin(process.argv))
 
         await Promise.all(workers);
 
-        if (osClient) {
+        // After-migration: re-enable refresh on OS indexes
+        if (config.storage === "os") {
           try {
-            const afterHook = new OpenSearchAfterMigration(osClient);
-            logger.info("Running OpenSearch after-migration hook...");
-            await afterHook.execute();
+            const osClient = container.resolve(OpenSearchClient);
+            logger.info("Re-enabling refresh on target OpenSearch indexes...");
+            await enableRefresh(osClient, logger);
           } catch (error) {
             logger.error(
-              { error },
-              "Failed to re-enable indexing. Data migration succeeded, but refresh_interval must be restored manually."
+              `Failed to re-enable indexing. Data migration succeeded, but refresh_interval must be restored manually. Error: ${error}`
             );
           }
         }
@@ -100,36 +72,20 @@ yargs(hideBin(process.argv))
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         logger.info(`Migration completed successfully in ${duration}s`);
       } catch (error) {
-        logger.error({ error }, "Migration failed");
+        logger.error(`Migration failed: ${error}`);
         process.exit(1);
       }
     }
   )
   .command(
     "process-segment",
-    "Process a specific segment (used internally by worker processes)",
+    "Process a specific DDB segment (used internally by worker processes)",
     yargs => {
       return yargs
-        .option("runId", {
-          type: "string",
-          demandOption: true,
-          description: "Run ID for this migration"
-        })
-        .option("segment", {
-          type: "number",
-          demandOption: true,
-          description: "Segment number to process"
-        })
-        .option("total", {
-          type: "number",
-          demandOption: true,
-          description: "Total number of segments"
-        })
-        .option("config", {
-          type: "string",
-          demandOption: true,
-          description: "Path to migration configuration file"
-        });
+        .option("runId", { type: "string", demandOption: true, description: "Run ID" })
+        .option("segment", { type: "number", demandOption: true, description: "Segment number" })
+        .option("total", { type: "number", demandOption: true, description: "Total segments" })
+        .option("config", { type: "string", demandOption: true, description: "Config file path" });
     },
     async argv => {
       const config = await loadConfig(argv.config);
@@ -171,8 +127,91 @@ yargs(hideBin(process.argv))
   .parse();
 
 // ============================================================================
-// Worker Spawning
+// Helpers
 // ============================================================================
+
+function logConfig(
+  logger: Logger.Interface,
+  config: MigrationConfig.Interface,
+  runId: string,
+  segments: number
+): void {
+  logger.info("Starting migration with configuration:");
+  logger.info(`  Run ID: ${runId}`);
+  logger.info(`  Storage: ${config.storage}`);
+  logger.info(`  Preset: ${config.migration.preset}`);
+  logger.info(`  Segments: ${segments}`);
+
+  if (config.storage === "ddb") {
+    logger.info(`  Source Region: ${config.source.region}`);
+    logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
+    logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
+    logger.info(`  Target Region: ${config.target.region}`);
+    logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
+    logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
+  } else {
+    logger.info(`  Source Region: ${config.source.region}`);
+    logger.info(`  Source Primary Table: ${config.source.dynamodb.tableName}`);
+    logger.info(`  Source OS Table: ${config.source.opensearch.tableName}`);
+    logger.info(`  Target Region: ${config.target.region}`);
+    logger.info(`  Target OS Table: ${config.target.opensearch.tableName}`);
+    logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
+  }
+}
+
+async function disableRefresh(
+  osClient: OpenSearchClient.Interface,
+  logger: Logger.Interface
+): Promise<void> {
+  const indexes = await osClient.listIndexes();
+  const userIndexes = indexes.filter(idx => idx.index && !idx.index.startsWith("."));
+
+  if (userIndexes.length === 0) {
+    logger.info("No user indexes found in target OpenSearch cluster.");
+    return;
+  }
+
+  logger.info(`Found ${userIndexes.length} indexes`);
+
+  for (const idx of userIndexes) {
+    if (!idx.index) {
+      continue;
+    }
+    try {
+      await osClient.putIndexSettings(idx.index, { index: { refresh_interval: "-1" } });
+    } catch (error) {
+      logger.warn(`Failed to disable refresh on index: ${idx.index}. Skipping. Error: ${error}`);
+    }
+  }
+
+  logger.info("Indexing disabled on all target indexes.");
+}
+
+async function enableRefresh(
+  osClient: OpenSearchClient.Interface,
+  logger: Logger.Interface
+): Promise<void> {
+  const indexes = await osClient.listIndexes();
+  const userIndexes = indexes.filter(idx => idx.index && !idx.index.startsWith("."));
+
+  if (userIndexes.length === 0) {
+    logger.info("No user indexes found in target OpenSearch cluster.");
+    return;
+  }
+
+  for (const idx of userIndexes) {
+    if (!idx.index) {
+      continue;
+    }
+    try {
+      await osClient.putIndexSettings(idx.index, { index: { refresh_interval: "1s" } });
+    } catch (error) {
+      logger.warn(`Failed to enable refresh on index: ${idx.index}. Skipping. Error: ${error}`);
+    }
+  }
+
+  logger.info("Indexing restored on all target indexes.");
+}
 
 async function spawnWorker(
   segment: number,
