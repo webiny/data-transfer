@@ -4,6 +4,16 @@ This document is read by AI agents (Claude Code, Copilot, Codex, etc.) when work
 
 **This document is updated as the codebase evolves.**
 
+## Verification Steps
+
+After completing any task, **always run these in order before committing**:
+
+1. `yarn prettier:fix` — format all source and test files
+2. `yarn ts-check` — verify TypeScript compiles with no errors
+3. `yarn test:coverage` — run full test suite with coverage
+
+All three must pass before committing.
+
 ## Code Style
 
 - Always wrap `if`/`for`/`while` bodies in curly braces, even for single statements

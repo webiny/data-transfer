@@ -5,9 +5,9 @@ import {
   SourceDynamoDbClient,
   TargetDynamoDbClient,
   DynamoDbClientConfig,
-  DynamoDbClientFeature,
-  type DatabaseRecord
+  DynamoDbClientFeature
 } from "../../../src/features/DynamoDbClient/index.ts";
+import type { DatabaseRecord } from "../../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "./MockDynamoDbClient.ts";
 
 describe("DynamoDbClient Feature", () => {
@@ -134,9 +134,7 @@ describe("DynamoDbClient Feature", () => {
     });
 
     it("should batchPut to a new table", async () => {
-      const records: DatabaseRecord[] = [
-        { PK: "T#root#OS#abc", SK: "L", TYPE: "cms.entry.l" }
-      ];
+      const records: DatabaseRecord[] = [{ PK: "T#root#OS#abc", SK: "L", TYPE: "cms.entry.l" }];
 
       await client.batchPut("new-table", records);
 

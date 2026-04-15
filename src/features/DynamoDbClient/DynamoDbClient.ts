@@ -124,9 +124,7 @@ export class DynamoDbClientImpl implements IDynamoDbClient {
         if (response.UnprocessedItems && Object.keys(response.UnprocessedItems).length > 0) {
           const unprocessedItems = response.UnprocessedItems[tableName];
           if (unprocessedItems) {
-            const unprocessedRecords = unprocessedItems.map(
-              item => item.PutRequest!.Item as T
-            );
+            const unprocessedRecords = unprocessedItems.map(item => item.PutRequest!.Item as T);
             if (unprocessedRecords.length > 0) {
               await this.batchPut(tableName, unprocessedRecords);
             }
