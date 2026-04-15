@@ -1,6 +1,6 @@
 import jsdom from "jsdom";
-import type { SerializedEditorState } from "@webiny/lexical-converter";
-import { createLexicalStateTransformer } from "@webiny/lexical-converter";
+import type { SerializedEditorState } from "@webiny/lexical-converter/index.js";
+import { createLexicalStateTransformer } from "@webiny/lexical-converter/index.js";
 
 export class LexicalRenderer {
   constructor() {
