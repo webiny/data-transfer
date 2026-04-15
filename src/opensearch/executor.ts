@@ -34,6 +34,8 @@ export interface OsExecutorDependencies {
   knownIndexes?: Set<string>;
   /** Custom retry schedule in ms. Defaults to [5000, 10000, 20000, 30000, 30000]. */
   retrySchedule?: number[];
+  /** Optional filter to determine which indexes to manage. When not set, all indexes are managed. */
+  filterIndex?: (params: { index: string }) => boolean;
 }
 
 // ============================================================================
@@ -72,11 +74,14 @@ export async function executeOsCommands(
     })
   );
 
-  // Ensure all target indexes exist (sequential)
+  // Ensure all target indexes exist and have indexing disabled (sequential)
   if (deps.osClient && deps.knownIndexes) {
     const uniqueIndexes = new Set(osRecords.map(r => r.index));
     const schedule = deps.retrySchedule || RETRY_SCHEDULE;
     for (const indexName of uniqueIndexes) {
+      if (deps.filterIndex && !deps.filterIndex({ index: indexName })) {
+        continue;
+      }
       await ensureIndex(indexName, deps.osClient, deps.knownIndexes, schedule);
     }
   }
@@ -101,6 +106,18 @@ async function ensureIndex(
       async () => {
         const { body: exists } = await client.indices.exists({ index: indexName });
         if (exists) {
+          // Disable refresh on existing index
+          try {
+            await client.indices.putSettings({
+              index: indexName,
+              body: { index: { refresh_interval: "-1" } }
+            });
+            logger.info(`Disabled refresh on existing index: ${indexName}`);
+          } catch (settingsError) {
+            logger.warn(
+              `Failed to disable refresh on index: ${indexName}. Continuing. Error: ${settingsError}`
+            );
+          }
           knownIndexes.add(indexName);
           return;
         }

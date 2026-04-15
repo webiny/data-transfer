@@ -2,7 +2,6 @@ import { createFeature } from "@/src/base/index.ts";
 import { OpenSearchClientImpl } from "./OpenSearchClient.ts";
 import { OpenSearchClient } from "./abstractions/OpenSearchClient.ts";
 import { OpenSearchClientConfig } from "./abstractions/OpenSearchClientConfig.ts";
-import { DisableRefreshHook } from "./hooks/DisableRefreshHook.ts";
 import { EnableRefreshHook } from "./hooks/EnableRefreshHook.ts";
 
 export const OpenSearchClientFeature = createFeature({
@@ -12,8 +11,8 @@ export const OpenSearchClientFeature = createFeature({
     const client = new OpenSearchClientImpl(config);
     container.registerInstance(OpenSearchClient, client);
 
-    // Register lifecycle hooks
-    container.register(DisableRefreshHook);
+    // Register after-transfer hook to re-enable refresh
+    // Before-transfer is handled just-in-time by the OS executor
     container.register(EnableRefreshHook);
   }
 });
