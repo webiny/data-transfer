@@ -164,7 +164,7 @@ export const publishedOnlyPreset: MigrationPreset = {
 - `groupsToRoles`, `transformPermissions` - Security
 - `migrateFileManagerSettings`, `migrateMailerSettings` - Settings
 
-See `src/presets/v5-to-v6.ts` for a complete example.
+See `src/presets/v5-to-v6-ddb.ts` for a complete example.
 
 ### Transform Context Methods
 

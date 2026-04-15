@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadPreset } from "../src/core/preset-loader";
-import { v5ToV6Preset } from "../src/presets/v5-to-v6";
+import { v5ToV6Preset } from "../src/presets/v5-to-v6-ddb";
 import { MigrationRunner } from "../src/core/runner";
 import { MigrationConfig } from "../src/core/types";
 import { DatabaseClient } from "../src/database/interface";
