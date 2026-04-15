@@ -58,15 +58,13 @@ export async function executeCommands(
   }
 
   // Execute all PUT commands
-  const putPromises = Array.from(recordsByTable.entries()).map(
-    ([table, records]) => deps.database.batchPut(table, records as any[])
+  const putPromises = Array.from(recordsByTable.entries()).map(([table, records]) =>
+    deps.database.batchPut(table, records as any[])
   );
 
   // Execute all S3 copy commands
   const copyPromise =
-    s3CopyCommands.length > 0
-      ? deps.storage.batchCopy(s3CopyCommands)
-      : Promise.resolve();
+    s3CopyCommands.length > 0 ? deps.storage.batchCopy(s3CopyCommands) : Promise.resolve();
 
   // Wait for all operations to complete
   await Promise.all([...putPromises, copyPromise]);

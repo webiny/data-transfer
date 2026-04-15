@@ -1,9 +1,11 @@
+import { DynamoDBClient as AWSDynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
-  DynamoDBClient as AWSDynamoDBClient,
+  DynamoDBDocumentClient,
   ScanCommand,
-  QueryCommand
-} from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, BatchWriteCommand } from "@aws-sdk/lib-dynamodb";
+  QueryCommand,
+  PutCommand,
+  BatchWriteCommand
+} from "@aws-sdk/lib-dynamodb";
 import { DatabaseClient, DatabaseRecord, ScanOptions, QueryOptions } from "./interface.ts";
 
 const BATCH_SIZE = 25; // DynamoDB batch write limit
@@ -17,6 +19,8 @@ export interface DynamoDBClientOptions {
     secretAccessKey: string;
     sessionToken?: string;
   };
+  /** Override endpoint (for local testing with dynalite) */
+  endpoint?: string;
 }
 
 export class DynamoDBClient implements DatabaseClient {
@@ -25,7 +29,8 @@ export class DynamoDBClient implements DatabaseClient {
   constructor(options?: DynamoDBClientOptions) {
     const awsClient = new AWSDynamoDBClient({
       region: options?.region || process.env.AWS_REGION || "us-east-1",
-      ...(options?.credentials && { credentials: options.credentials })
+      ...(options?.credentials && { credentials: options.credentials }),
+      ...(options?.endpoint && { endpoint: options.endpoint })
     });
     this.client = DynamoDBDocumentClient.from(awsClient, {
       marshallOptions: {
@@ -52,7 +57,7 @@ export class DynamoDBClient implements DatabaseClient {
 
       if (response.Items) {
         for (const item of response.Items) {
-          yield this.unmarshall(item) as DatabaseRecord;
+          yield item as DatabaseRecord;
         }
       }
 
@@ -68,7 +73,7 @@ export class DynamoDBClient implements DatabaseClient {
   ): Promise<DatabaseRecord[]> {
     let keyConditionExpression = "PK = :pk";
     const expressionAttributeValues: Record<string, any> = {
-      ":pk": { S: pk }
+      ":pk": pk
     };
 
     if (sk) {
@@ -81,7 +86,7 @@ export class DynamoDBClient implements DatabaseClient {
       } else {
         keyConditionExpression += " AND SK = :sk";
       }
-      expressionAttributeValues[":sk"] = { S: sk };
+      expressionAttributeValues[":sk"] = sk;
     }
 
     const command = new QueryCommand({
@@ -97,7 +102,7 @@ export class DynamoDBClient implements DatabaseClient {
       return result;
     });
 
-    return (response.Items || []).map(item => this.unmarshall(item) as DatabaseRecord);
+    return (response.Items || []) as DatabaseRecord[];
   }
 
   async put(tableName: string, record: DatabaseRecord): Promise<void> {
@@ -112,7 +117,9 @@ export class DynamoDBClient implements DatabaseClient {
   }
 
   async batchPut(tableName: string, records: DatabaseRecord[]): Promise<void> {
-    if (records.length === 0) return;
+    if (records.length === 0) {
+      return;
+    }
 
     // Split into batches of 25
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
@@ -175,25 +182,5 @@ export class DynamoDBClient implements DatabaseClient {
     }
 
     throw lastError;
-  }
-
-  private unmarshall(item: Record<string, any>): Record<string, any> {
-    // Convert DynamoDB format to plain object
-    const result: Record<string, any> = {};
-
-    for (const [key, value] of Object.entries(item)) {
-      if (value.S !== undefined) result[key] = value.S;
-      else if (value.N !== undefined) result[key] = Number(value.N);
-      else if (value.BOOL !== undefined) result[key] = value.BOOL;
-      else if (value.NULL !== undefined) result[key] = null;
-      else if (value.M !== undefined) result[key] = this.unmarshall(value.M);
-      else if (value.L !== undefined)
-        result[key] = value.L.map((v: any) => this.unmarshall({ v }).v);
-      else if (value.SS !== undefined) result[key] = value.SS;
-      else if (value.NS !== undefined) result[key] = value.NS.map(Number);
-      else if (value.BS !== undefined) result[key] = value.BS;
-    }
-
-    return result;
   }
 }

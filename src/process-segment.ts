@@ -4,7 +4,7 @@ import { executeCommands } from "./core/executor.ts";
 import { createLogger } from "./utils/logger.ts";
 import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "./utils/tenants.ts";
 import { MigrationConfig } from "./core/types.ts";
-import { MigrationConfiguration } from "./config/types.ts";
+import { DdbMigrationConfiguration } from "./config/types.ts";
 import { ModelProvider } from "./models/model-provider.ts";
 import { MigrationRunner } from "./core/runner.ts";
 import { loadPreset } from "./core/preset-loader.ts";
@@ -17,7 +17,7 @@ export interface ProcessSegmentOptions {
   runId: string;
   segment: number;
   total: number;
-  config: MigrationConfiguration;
+  config: DdbMigrationConfiguration;
 }
 
 export async function processSegment(options: ProcessSegmentOptions): Promise<void> {

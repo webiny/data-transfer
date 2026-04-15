@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 import yargs from "yargs";
+import { fileURLToPath } from "node:url";
 import { hideBin } from "yargs/helpers";
 import { execa } from "execa";
 import { createLogger } from "./utils/logger.ts";
-import { processSegment, ProcessSegmentOptions } from "./process-segment.ts";
+import { processSegment } from "./process-segment.ts";
+import { processOsSegment } from "./process-os-segment.ts";
 import { loadConfig } from "./config/loader.ts";
-import { MigrationConfiguration } from "./config/types.ts";
+import { createOpenSearchClient } from "./opensearch/client.ts";
+import { OpenSearchBeforeMigration, OpenSearchAfterMigration } from "./opensearch/lifecycle.ts";
 
 const logger = createLogger();
 
@@ -25,39 +28,80 @@ yargs(hideBin(process.argv))
       });
     },
     async argv => {
-      // Load configuration
-      logger.info(`Loading configuration from: ${argv.config}`);
       const config = await loadConfig(argv.config);
-
-      // Generate unique run ID
       const runId = String(Date.now());
-
-      // Get segments from config or use default
       const segments = config.migration.segments || 1;
 
       logger.info("Starting migration with configuration:");
       logger.info(`  Run ID: ${runId}`);
+      logger.info(`  Storage: ${config.storage}`);
       logger.info(`  Preset: ${config.migration.preset}`);
       logger.info(`  Segments: ${segments}`);
-      logger.info(`  Source Region: ${config.source.region}`);
-      logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
-      logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
-      logger.info(`  Target Region: ${config.target.region}`);
-      logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
-      logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
+
+      if (config.storage === "ddb") {
+        logger.info(`  Source Region: ${config.source.region}`);
+        logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
+        logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
+        logger.info(`  Target Region: ${config.target.region}`);
+        logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
+        logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
+      } else {
+        logger.info(`  Source Region: ${config.source.region}`);
+        logger.info(`  Source Primary Table: ${config.source.dynamodb.tableName}`);
+        logger.info(`  Source OS Table: ${config.source.opensearch.tableName}`);
+        logger.info(`  Target Region: ${config.target.region}`);
+        logger.info(`  Target OS Table: ${config.target.opensearch.tableName}`);
+        logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
+      }
 
       const startTime = Date.now();
 
+      // OS lifecycle hooks
+      let osClient: import("./opensearch/client.ts").Client | null = null;
+      if (config.storage === "os") {
+        if (config.target.credentials) {
+          osClient = createOpenSearchClient({
+            endpoint: config.target.opensearch.endpoint,
+            region: config.target.region,
+            service: config.target.opensearch.service,
+            credentials: config.target.credentials
+          });
+        } else {
+          logger.warn(
+            "Target credentials not provided. Lifecycle hooks (disable/enable refresh) will be skipped."
+          );
+        }
+      }
+
       try {
+        if (osClient) {
+          const beforeHook = new OpenSearchBeforeMigration(osClient);
+          logger.info("Running OpenSearch before-migration hook...");
+          await beforeHook.execute();
+        }
+
         // Spawn worker processes
+        const workerCommand = config.storage === "os" ? "process-os-segment" : "process-segment";
         const workers: Promise<void>[] = [];
 
         for (let segment = 0; segment < segments; segment++) {
-          workers.push(spawnWorker(segment, segments, runId, argv.config));
+          workers.push(spawnWorker(segment, segments, runId, argv.config, workerCommand));
         }
 
-        // Wait for all workers to complete
         await Promise.all(workers);
+
+        if (osClient) {
+          try {
+            const afterHook = new OpenSearchAfterMigration(osClient);
+            logger.info("Running OpenSearch after-migration hook...");
+            await afterHook.execute();
+          } catch (error) {
+            logger.error(
+              { error },
+              "Failed to re-enable indexing. Data migration succeeded, but refresh_interval must be restored manually."
+            );
+          }
+        }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         logger.info(`Migration completed successfully in ${duration}s`);
@@ -95,7 +139,33 @@ yargs(hideBin(process.argv))
     },
     async argv => {
       const config = await loadConfig(argv.config);
+      if (config.storage !== "ddb") {
+        throw new Error(`process-segment requires storage: "ddb". Got: "${config.storage}"`);
+      }
       await processSegment({
+        runId: argv.runId,
+        segment: argv.segment,
+        total: argv.total,
+        config
+      });
+    }
+  )
+  .command(
+    "process-os-segment",
+    "Process a specific OS table segment (used internally by worker processes)",
+    yargs => {
+      return yargs
+        .option("runId", { type: "string", demandOption: true, description: "Run ID" })
+        .option("segment", { type: "number", demandOption: true, description: "Segment number" })
+        .option("total", { type: "number", demandOption: true, description: "Total segments" })
+        .option("config", { type: "string", demandOption: true, description: "Config file path" });
+    },
+    async argv => {
+      const config = await loadConfig(argv.config);
+      if (config.storage !== "os") {
+        throw new Error(`process-os-segment requires storage: "os". Got: "${config.storage}"`);
+      }
+      await processOsSegment({
         runId: argv.runId,
         segment: argv.segment,
         total: argv.total,
@@ -114,13 +184,14 @@ async function spawnWorker(
   segment: number,
   total: number,
   runId: string,
-  configPath: string
+  configPath: string,
+  command: string = "process-segment"
 ): Promise<void> {
-  const binPath = new URL("../bin.js", import.meta.url).pathname;
+  const binPath = fileURLToPath(new URL("../bin.js", import.meta.url));
 
   const args = [
     binPath,
-    "process-segment",
+    command,
     "--runId",
     runId,
     "--segment",

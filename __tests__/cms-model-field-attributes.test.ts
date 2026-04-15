@@ -289,7 +289,7 @@ describe("CMS Model Field Attributes", () => {
           type: "text",
           storageId: "text@field1",
           helpText: "Old help text",
-          placeholderText: "Old placeholder",
+          placeholderText: "Old placeholder"
         }
       ]
     };

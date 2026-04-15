@@ -25,14 +25,7 @@ export const groupsToRoles: Transformer = {
     }
 
     // Update keys: GROUP -> ROLE, GROUPS -> ROLES
-    const keysToUpdate = [
-      "PK",
-      "SK",
-      "GSI1_PK",
-      "GSI1_SK",
-      "GSI2_PK",
-      "GSI2_SK"
-    ];
+    const keysToUpdate = ["PK", "SK", "GSI1_PK", "GSI1_SK", "GSI2_PK", "GSI2_SK"];
 
     for (const key of keysToUpdate) {
       if (typeof record[key] === "string") {

@@ -117,7 +117,7 @@ export const v5ToV6Preset: MigrationPreset = {
     // ========================================================================
     // CMS Entries (catch-all for remaining CMS entries)
     // IMPORTANT: Must be registered AFTER FmFilePipeline
-    // ========================================================================
+    // ==================================================v5-to-v6.ts======================
     const cmsEntries = new CmsEntryPipeline().build();
 
     // ========================================================================

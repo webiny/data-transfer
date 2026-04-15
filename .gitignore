@@ -29,3 +29,8 @@ logs.txt
 CLAUDE*.md
 .claude/
 .sample/
+coverage/
+
+__tests__/fixtures/full-table-migrated.json
+__tests__/fixtures/es-table-migrated.json
+__tests__/fixtures/os-table-migrated.json
