@@ -11,8 +11,9 @@ After completing any task, **always run these in order before committing**:
 1. `yarn prettier:fix` — format all source and test files
 2. `yarn ts-check` — verify TypeScript compiles with no errors
 3. `yarn test:coverage` — run full test suite with coverage
+4. `git status` — check for ALL modified files (including prettier changes) and stage them all
 
-All three must pass before committing.
+All steps must pass and all changes must be included in the commit.
 
 ## Code Style
 
