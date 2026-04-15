@@ -3855,7 +3855,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@webiny/di@npm:0.2.3":
+"@webiny/di@npm:0.2.3, @webiny/di@npm:^0.2.3":
   version: 0.2.3
   resolution: "@webiny/di@npm:0.2.3"
   dependencies:
@@ -3961,6 +3961,7 @@ __metadata:
     "@types/yargs": "npm:^17.0.35"
     "@vitest/coverage-v8": "npm:4.1.4"
     "@webiny/api-opensearch": "npm:^6.1.0"
+    "@webiny/di": "npm:^0.2.3"
     "@webiny/lexical-converter": "npm:^6.1.0"
     dynalite: "npm:^4.0.0"
     execa: "npm:^9.6.1"
