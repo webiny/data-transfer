@@ -48,20 +48,12 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
   });
 
   // OS client — for index creation. Created once per segment.
-  let osClient: import("./opensearch/client.ts").Client | undefined;
-  if (options.config.target.credentials) {
-    osClient = createOpenSearchClient({
-      endpoint: options.config.target.opensearch.endpoint,
-      region: options.config.target.region,
-      service: options.config.target.opensearch.service,
-      credentials: options.config.target.credentials
-    });
-  } else {
-    logger.warn(
-      "Target credentials not provided. OS index creation and lifecycle hooks will be skipped. " +
-        "Indexes must already exist in the target OpenSearch cluster."
-    );
-  }
+  const osClient = createOpenSearchClient({
+    endpoint: options.config.target.opensearch.endpoint,
+    region: options.config.target.region,
+    service: options.config.target.opensearch.service,
+    credentials: options.config.target.credentials
+  });
 
   // Cache of known indexes — persists across batches within this segment
   const knownIndexes = new Set<string>();

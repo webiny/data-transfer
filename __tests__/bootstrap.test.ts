@@ -92,20 +92,6 @@ describe("bootstrap", () => {
       expect(container.resolve(TenantLocales)).toBeDefined();
       expect(container.resolve(OpenSearchClient)).toBeDefined();
     });
-
-    it("should skip OpenSearchClient when credentials missing", () => {
-      const configWithoutCreds = {
-        ...osConfig,
-        target: {
-          ...osConfig.target,
-          credentials: undefined
-        }
-      } as MigrationConfig.Interface;
-
-      const container = bootstrap({ config: configWithoutCreds });
-
-      expect(() => container.resolve(OpenSearchClient)).toThrow();
-    });
   });
 
   describe("singleton behavior", () => {

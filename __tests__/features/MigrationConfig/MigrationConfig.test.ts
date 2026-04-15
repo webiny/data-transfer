@@ -27,17 +27,21 @@ describe("MigrationConfig Feature", () => {
     return filePath;
   }
 
+  const creds = { accessKeyId: "AKIA", secretAccessKey: "secret" };
+
   describe("loadConfig", () => {
     it("should load and validate a ddb config", async () => {
       const configPath = writeConfig({
         storage: "ddb",
         source: {
           region: "eu-central-1",
+          credentials: creds,
           dynamodb: { tableName: "src" },
           s3: { bucket: "src-bucket" }
         },
         target: {
           region: "eu-central-1",
+          credentials: creds,
           dynamodb: { tableName: "tgt" },
           s3: { bucket: "tgt-bucket" }
         },
@@ -53,11 +57,13 @@ describe("MigrationConfig Feature", () => {
         storage: "os",
         source: {
           region: "eu-central-1",
+          credentials: creds,
           dynamodb: { tableName: "src" },
           opensearch: { tableName: "src-es" }
         },
         target: {
           region: "eu-central-1",
+          credentials: creds,
           opensearch: {
             endpoint: "https://es.example.com",
             tableName: "tgt-es",
@@ -83,11 +89,13 @@ describe("MigrationConfig Feature", () => {
         storage: "ddb",
         source: {
           region: "eu-central-1",
+          credentials: creds,
           dynamodb: { tableName: "src" },
           s3: { bucket: "src-bucket" }
         },
         target: {
           region: "eu-central-1",
+          credentials: creds,
           dynamodb: { tableName: "tgt" },
           s3: { bucket: "tgt-bucket" }
         },
@@ -108,11 +116,13 @@ describe("MigrationConfig Feature", () => {
         storage: "ddb",
         source: {
           region: "eu-central-1",
+          credentials: creds,
           dynamodb: { tableName: "src" },
           s3: { bucket: "src-bucket" }
         },
         target: {
           region: "eu-central-1",
+          credentials: creds,
           dynamodb: { tableName: "tgt" },
           s3: { bucket: "tgt-bucket" }
         },

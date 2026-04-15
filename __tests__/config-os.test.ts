@@ -21,6 +21,8 @@ describe("config validation", () => {
     return filePath;
   }
 
+  const creds = { accessKeyId: "AKIA", secretAccessKey: "secret" };
+
   // ---- DDB config ----
 
   it("should accept valid ddb config", async () => {
@@ -28,11 +30,13 @@ describe("config validation", () => {
       storage: "ddb",
       source: {
         region: "eu-central-1",
+        credentials: creds,
         dynamodb: { tableName: "src" },
         s3: { bucket: "src-bucket" }
       },
       target: {
         region: "eu-central-1",
+        credentials: creds,
         dynamodb: { tableName: "tgt" },
         s3: { bucket: "tgt-bucket" }
       },
@@ -75,11 +79,13 @@ describe("config validation", () => {
       storage: "os",
       source: {
         region: "eu-central-1",
+        credentials: creds,
         dynamodb: { tableName: "src-primary" },
         opensearch: { tableName: "src-es" }
       },
       target: {
         region: "eu-central-1",
+        credentials: creds,
         opensearch: {
           endpoint: "https://xxx.eu-central-1.aoss.amazonaws.com",
           tableName: "tgt-es",

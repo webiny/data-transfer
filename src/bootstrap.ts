@@ -46,7 +46,7 @@ export function bootstrap(options: BootstrapOptions): Container {
   DynamoDbClientFeature.register(container);
 
   // OpenSearch client (os mode only)
-  if (config.storage === "os" && config.target.credentials) {
+  if (config.storage === "os") {
     container.registerInstance(OpenSearchClientConfig, {
       endpoint: config.target.opensearch.endpoint,
       region: config.target.region,

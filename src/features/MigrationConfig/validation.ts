@@ -22,7 +22,7 @@ const migrationSettingsSchema = z.object({
 
 const ddbAccountConfigSchema = z.object({
   region: z.string(),
-  credentials: awsCredentialsSchema.optional(),
+  credentials: awsCredentialsSchema,
   dynamodb: z.object({ tableName: z.string() }),
   s3: z.object({ bucket: z.string() })
 });
@@ -33,14 +33,14 @@ const ddbAccountConfigSchema = z.object({
 
 const osSourceAccountConfigSchema = z.object({
   region: z.string(),
-  credentials: awsCredentialsSchema.optional(),
+  credentials: awsCredentialsSchema,
   dynamodb: z.object({ tableName: z.string() }),
   opensearch: z.object({ tableName: z.string() })
 });
 
 const osTargetAccountConfigSchema = z.object({
   region: z.string(),
-  credentials: awsCredentialsSchema.optional(),
+  credentials: awsCredentialsSchema,
   opensearch: z.object({
     endpoint: z.url(),
     tableName: z.string(),
