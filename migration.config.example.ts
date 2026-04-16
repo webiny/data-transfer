@@ -1,4 +1,4 @@
-import { createDdbTransfer } from "./src/index.ts";
+import { createDdbTransfer } from "@webiny/v5-to-v6";
 
 /**
  * Example DynamoDB Transfer Configuration

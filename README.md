@@ -7,10 +7,9 @@
 Create a migration configuration file (e.g., `migration.config.ts`):
 
 ```typescript
-import { MigrationConfiguration } from "./src/features/MigrationConfig/validation";
+import { createDdbTransfer } from "@webiny/v5-to-v6";
 
-const config: MigrationConfiguration = {
-  storage: "ddb", // "ddb" or "os"
+export default createDdbTransfer({
   source: {
     region: "us-east-1",
     credentials: {
@@ -30,19 +29,23 @@ const config: MigrationConfiguration = {
     s3: { bucket: "webiny-v6-files" }
   },
   migration: {
-    preset: "v5-to-v6", // REQUIRED - use built-in preset or path to custom
+    preset: "v5-to-v6",
     segments: 4,
     modelsDir: "./path/to/models"
   }
-};
+});
+```
 
-export default config;
+Install the tool as a dev dependency:
+
+```bash
+yarn add -D @webiny/v5-to-v6@github:webiny/v5-to-v6
 ```
 
 Then run:
 
 ```bash
-npx github:webiny/v5-to-v6 --config=./migration.config.ts
+yarn webiny-v5-to-v6 --config=./migration.config.ts
 ```
 
 ### Storage Modes
@@ -55,8 +58,9 @@ The `storage` field determines which data source to migrate. Run DDB migration f
 ### OpenSearch (`os`) Configuration
 
 ```typescript
-const config: MigrationConfiguration = {
-  storage: "os",
+import { createOsTransfer } from "@webiny/v5-to-v6";
+
+export default createOsTransfer({
   source: {
     region: "us-east-1",
     credentials: {
@@ -75,14 +79,14 @@ const config: MigrationConfiguration = {
     opensearch: {
       endpoint: "https://search-xxx.us-east-1.es.amazonaws.com",
       tableName: "webiny-v6-es-table",
-      service: "opensearch" // "opensearch" or "opensearch-serverless"
+      service: "opensearch"
     }
   },
   migration: {
     preset: "v5-to-v6-os",
     segments: 4
   }
-};
+});
 ```
 
 The `source.dynamodb.tableName` is the primary DynamoDB table — needed to load CMS models and tenant/locale info. The `source.opensearch.tableName` is the OS DynamoDB table to scan.

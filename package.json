@@ -4,6 +4,9 @@
   "description": "Webiny v5 to v6 DynamoDB migration tool",
   "type": "module",
   "bin": "./bin.js",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "ts-check": "yarn tsc --noEmit",

@@ -8,6 +8,25 @@ This document is read by AI agents (Claude Code, Copilot, Codex, etc.) when work
 
 This tool transfers Webiny data between environments. Current use case is v5-to-v6 migration, but it will also support production-to-dev data transfer for testing/development. Name things generically ("transfer" not "migration") where possible.
 
+**Package name:** `@webiny/v5-to-v6`
+
+**User installation:** `yarn add -D @webiny/v5-to-v6@github:webiny/v5-to-v6` (not published to npm)
+
+**User config files** import builder functions from the package:
+```typescript
+import { createDdbTransfer } from "@webiny/v5-to-v6";
+export default createDdbTransfer({ source: {...}, target: {...}, migration: {...} });
+```
+
+**Running:** `yarn webiny-v5-to-v6 --config=./migration.config.ts`
+
+**Config builder functions** (`createDdbTransfer`, `createOsTransfer`):
+- Live in `src/features/MigrationConfig/`
+- Exported from `src/index.ts` (mapped via `package.json` `exports` field)
+- Validate input with Zod at creation time
+- Add `storage: "ddb"` or `storage: "os"` internally
+- User never sets `storage` manually
+
 ## Verification Steps
 
 After completing any task, **always run these in order before committing**:
@@ -250,8 +269,31 @@ These files contain old code still used by command handlers (not yet migrated to
 
 ## Next Steps (for future agents)
 
-1. **Rewrite command handlers to use DI** — `processSegment/handler.ts` and `processOsSegment/handler.ts` still use legacy imports. They should bootstrap the container and resolve features instead of creating instances manually.
-2. **Delete legacy code** — once handlers are migrated, remove the files listed above.
-3. **Extract WorkerSpawner** — the `spawnWorker` function in `run/handler.ts` could be a feature for testability.
-4. **Extract PresetLoader as feature** — `src/core/preset-loader.ts` could become a DI feature.
-5. **Migrate core pipeline to DI** — `src/core/` (pipeline, runner, context, executor) could use DI abstractions.
+### Priority 1: Migrate command handlers to DI
+- `src/commands/processSegment/handler.ts` and `src/commands/processOsSegment/handler.ts` still use legacy imports (old DynamoDBClient, old logger, old tenants util, etc.)
+- They should call `bootstrap({ config })` and resolve features from the container instead of creating instances manually
+- Once migrated, delete all files listed in "Files to Delete" above
+
+### Priority 2: Extract remaining concerns as features
+- **WorkerSpawner** — `spawnWorker()` in `run/handler.ts` could be a feature for testability
+- **PresetLoader** — `src/core/preset-loader.ts` could become a DI feature
+- **S3Client** — `src/storage/s3-client.ts` needs a feature (similar to DynamoDbClient pattern)
+
+### Priority 3: Migrate core pipeline to DI
+- `src/core/` (pipeline, runner, context, executor) could use DI abstractions
+- The `TransformContext` currently receives a `MigrationConfig` object — could resolve dependencies from container instead
+- The `MigrationRunner` could become a feature with the `Cache` injected
+
+### Priority 4: Production-to-dev data transfer
+- Extend the tool to support production-to-dev data transfer (not just v5-to-v6 migration)
+- May need new presets, new config options, possibly new storage modes
+- The DI architecture makes this extensible — add features, register hooks, create new presets
+
+### Important conventions to follow
+- Read the full AGENTS.md before starting work
+- Always run verification steps before committing (prettier:fix, ts-check, test:coverage, git status)
+- Use yarn, never npm
+- Use namespaces for types, never export interfaces directly
+- Use `public`/`private`/`protected` on all class members
+- Always wrap if/for/while in curly braces
+- Config builder functions (`createDdbTransfer`, `createOsTransfer`) are the user-facing API — keep them simple and well-documented
