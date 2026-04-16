@@ -5,6 +5,6 @@ import { TransformContext } from "./types.ts";
 // ============================================================================
 
 export interface Transformer<T = Record<string, unknown>> {
-  name: string;
-  transform(ctx: TransformContext<T>): void | Promise<void>;
+    name: string;
+    transform(ctx: TransformContext<T>): void | Promise<void>;
 }

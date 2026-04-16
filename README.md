@@ -1,18 +1,36 @@
-# Webiny v5 to v6 Migration Tool
+# Webiny Data Transfer Tool
 
-## Usage
+## Quick Start
 
-### Configuration File Approach
+```bash
+npx @webiny/data-transfer init my-transfer
+cd my-transfer
+yarn install
+cp projects/example/.env.example projects/example/.env
+# Edit projects/example/.env with your AWS credentials
+yarn transfer --config=./projects/example/ddb.transfer.config.ts
+```
 
-Create a migration configuration file (e.g., `migration.config.ts`):
+The `init` command scaffolds a project with config templates, `.env` files, and directories for custom transformers, presets, and features.
+
+## Manual Setup
+
+Install the tool:
+
+```bash
+yarn add @webiny/data-transfer
+```
+
+Create a config file:
 
 ```typescript
-import { MigrationConfiguration } from "./src/config/types";
+import { loadEnv, createDdbTransfer } from "@webiny/data-transfer";
 
-const config: MigrationConfiguration = {
-  storage: "ddb", // "ddb" or "os"
+loadEnv(import.meta.url);
+
+export default createDdbTransfer({
   source: {
-    region: "us-east-1",
+    region: process.env.SOURCE_REGION!,
     credentials: {
       accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
@@ -21,7 +39,7 @@ const config: MigrationConfiguration = {
     s3: { bucket: "webiny-v5-files" }
   },
   target: {
-    region: "us-east-1",
+    region: process.env.TARGET_REGION!,
     credentials: {
       accessKeyId: process.env.TARGET_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.TARGET_AWS_SECRET_ACCESS_KEY!
@@ -29,20 +47,18 @@ const config: MigrationConfiguration = {
     dynamodb: { tableName: "webiny-v6-table" },
     s3: { bucket: "webiny-v6-files" }
   },
-  migration: {
-    preset: "v5-to-v6", // REQUIRED - use built-in preset or path to custom
+  pipeline: {
+    preset: "v5-to-v6",
     segments: 4,
     modelsDir: "./path/to/models"
   }
-};
-
-export default config;
+});
 ```
 
 Then run:
 
 ```bash
-npx github:webiny/v5-to-v6 --config=./migration.config.ts
+yarn webiny-data-transfer --config=./my-config.ts
 ```
 
 ### Storage Modes
@@ -55,16 +71,19 @@ The `storage` field determines which data source to migrate. Run DDB migration f
 ### OpenSearch (`os`) Configuration
 
 ```typescript
-const config: MigrationConfiguration = {
-  storage: "os",
+import { loadEnv, createOsTransfer } from "@webiny/data-transfer";
+
+loadEnv(import.meta.url);
+
+export default createOsTransfer({
   source: {
     region: "us-east-1",
     credentials: {
       accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
     },
-    dynamodb: { tableName: "webiny-v5-table" },     // for models + tenant queries
-    opensearch: { tableName: "webiny-v5-es-table" }  // OS DDB table to scan
+    dynamodb: { tableName: "webiny-v5-table" }, // for models + tenant queries
+    opensearch: { tableName: "webiny-v5-es-table" } // OS DDB table to scan
   },
   target: {
     region: "us-east-1",
@@ -75,33 +94,37 @@ const config: MigrationConfiguration = {
     opensearch: {
       endpoint: "https://search-xxx.us-east-1.es.amazonaws.com",
       tableName: "webiny-v6-es-table",
-      service: "opensearch" // "opensearch" or "opensearch-serverless"
+      service: "opensearch"
     }
   },
-  migration: {
+  pipeline: {
     preset: "v5-to-v6-os",
     segments: 4
   }
-};
+});
 ```
 
 The `source.dynamodb.tableName` is the primary DynamoDB table — needed to load CMS models and tenant/locale info. The `source.opensearch.tableName` is the OS DynamoDB table to scan.
 
 The OpenSearch client uses the target account's `credentials` and `region` for AWS SigV4 signing. The `service` field must be `"opensearch"` (managed) or `"opensearch-serverless"`.
 
-**Lifecycle hooks:** When running in `os` mode, the tool automatically:
-1. Disables `refresh_interval` on all target OpenSearch indexes before migration starts
-2. Re-enables `refresh_interval` (`1s`) on all indexes after migration completes
+**Index management:** When running in `os` mode, the tool automatically:
 
-This prevents excessive indexing overhead during bulk data transfer.
+1. Disables `refresh_interval` on each index just before writing to it (just-in-time, not upfront)
+2. Creates missing indexes with the Webiny base mapping and `refresh_interval: "-1"`
+3. After transfer completes, restores each index to its **original** `refresh_interval` value
+
+Only indexes that were actually written to are affected — safe for shared OpenSearch clusters.
 
 ### Migration Presets
 
 **Built-in Presets:**
+
 - `v5-to-v6` - Migrates all Webiny v5 DynamoDB data to v6 format
 - `v5-to-v6-os` - Migrates CMS entries from the OpenSearch DynamoDB table
 
 **Example Presets:** (see `examples/`)
+
 - `cms-only` - Only CMS models and entries
 - `cms-model-with-files` - Specific model with referenced files
 
@@ -150,6 +173,7 @@ export const publishedOnlyPreset: MigrationPreset = {
 ```
 
 **Available Filters:**
+
 - `isCmsModel`, `isCmsEntry` - CMS records
 - `isFmFile`, `isFmSettings` - File Manager
 - `isSecurityTeam`, `isCustomSecurityGroup` - Security
@@ -158,6 +182,7 @@ export const publishedOnlyPreset: MigrationPreset = {
 - `byType(type)`, `byTypePrefix(prefix)` - Generic filters
 
 **Key Transformers:**
+
 - `wrapInData` - MUST be first - wraps attributes in data envelope
 - `addGsiTenant`, `removeLocale`, `removeAttributes` - Global transformations
 - `fixCmePk`, `fixBrokenStorageKeys`, `transformRichText` - CMS-specific

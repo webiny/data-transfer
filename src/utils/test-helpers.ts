@@ -8,10 +8,10 @@ import { v5ToV6Preset } from "../presets/v5-to-v6-ddb.ts";
  * This replaces the old bootstrapMigrationRunner function.
  */
 export function createTestRunner(
-  config: MigrationConfig,
-  database: DatabaseClient
+    config: MigrationConfig,
+    database: DatabaseClient
 ): MigrationRunner {
-  const runner = new MigrationRunner(config, database);
-  v5ToV6Preset.configure(runner, config, database);
-  return runner;
+    const runner = new MigrationRunner(config, database);
+    v5ToV6Preset.configure(runner, config, database);
+    return runner;
 }

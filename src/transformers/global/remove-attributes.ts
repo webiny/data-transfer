@@ -8,18 +8,18 @@ import { TransformContext } from "../../core/types.ts";
  * - webinyVersion: No longer needed in v6
  */
 export const removeAttributes: Transformer = {
-  name: "removeAttributes",
-  transform(ctx: TransformContext) {
-    const { record } = ctx;
+    name: "removeAttributes",
+    transform(ctx: TransformContext) {
+        const { record } = ctx;
 
-    // Remove from data envelope
-    if (record.data && typeof record.data === "object") {
-      const data = record.data as Record<string, unknown>;
+        // Remove from data envelope
+        if (record.data && typeof record.data === "object") {
+            const data = record.data as Record<string, unknown>;
 
-      // Remove webinyVersion if it exists
-      if (data.webinyVersion !== undefined) {
-        delete data.webinyVersion;
-      }
+            // Remove webinyVersion if it exists
+            if (data.webinyVersion !== undefined) {
+                delete data.webinyVersion;
+            }
+        }
     }
-  }
 };

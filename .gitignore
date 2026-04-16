@@ -26,9 +26,10 @@ logs.txt
 .pnp.*
 
 
-CLAUDE*.md
+CLAUDE.*.md
 .claude/
 .sample/
+.transfer/
 coverage/
 
 __tests__/fixtures/full-table-migrated.json

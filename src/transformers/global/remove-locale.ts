@@ -6,29 +6,29 @@ import { TransformContext } from "../../core/types.ts";
  * and removes the locale field from the record.
  */
 export const removeLocale: Transformer = {
-  name: "removeLocale",
-  transform(ctx: TransformContext) {
-    const { record } = ctx;
+    name: "removeLocale",
+    transform(ctx: TransformContext) {
+        const { record } = ctx;
 
-    // Keys that might contain locale codes
-    const keysToClean = ["PK", "SK", "GSI1_PK", "GSI1_SK", "GSI2_PK", "GSI2_SK"];
+        // Keys that might contain locale codes
+        const keysToClean = ["PK", "SK", "GSI1_PK", "GSI1_SK", "GSI2_PK", "GSI2_SK"];
 
-    for (const key of keysToClean) {
-      if (typeof record[key] === "string") {
-        record[key] = removeLocaleFromKey(record[key] as string);
-      }
+        for (const key of keysToClean) {
+            if (typeof record[key] === "string") {
+                record[key] = removeLocaleFromKey(record[key] as string);
+            }
+        }
+
+        // Remove locale field
+        delete record.locale;
+        if (record.data && typeof record.data === "object") {
+            delete (record.data as Record<string, unknown>).locale;
+        }
     }
-
-    // Remove locale field
-    delete record.locale;
-    if (record.data && typeof record.data === "object") {
-      delete (record.data as Record<string, unknown>).locale;
-    }
-  }
 };
 
 function removeLocaleFromKey(key: string): string {
-  // Remove patterns like #L#en-US# from keys
-  // Match: #L#{locale}# (must have # before L and after locale code)
-  return key.replace(/#L#[^#]+#/g, "#");
+    // Remove patterns like #L#en-US# from keys
+    // Match: #L#{locale}# (must have # before L and after locale code)
+    return key.replace(/#L#[^#]+#/g, "#");
 }

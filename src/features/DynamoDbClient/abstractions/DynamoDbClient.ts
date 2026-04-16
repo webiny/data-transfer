@@ -1,45 +1,57 @@
-import { createAbstraction } from "@/src/base/index.js";
-import type { Result } from "@/src/base/index.js";
+import { createAbstraction } from "@/src/base/index.ts";
 
-/**
- * Refactor to be proper interfaces.
- */
-export interface IQueryParams {
-  unknown: any;
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface DatabaseRecord {
+    PK: string;
+    SK: string;
+    [key: string]: unknown;
 }
 
-/**
- * Error can be some generic one if its not easy to find proper ones.
- * The point is for user to know which kind of errors can be expected when using the abstraction.
- */
-export interface IQueryErrorsRecord {
-  someError: Error;
-  // fix
-  dynamoConnectionError: SomeDynamoConnectionError;
+export interface ScanOptions {
+    segment?: number;
+    totalSegments?: number;
 }
 
-type IQueryErrors = IQueryErrorsRecord[keyof IQueryErrorsRecord];
-
-// proper response
-export interface IQueryResult<T> {
-  items: T[];
-  // there does need to be next?
-  next?: () => Promise<IQueryResult<T>>;
+export interface QueryOptions {
+    indexName?: string;
+    limit?: number;
+    sortKeyCondition?: {
+        operator: "beginsWith" | "equals";
+        value: string;
+    };
 }
 
 export interface IDynamoDbClient {
-  scan<T>(params: IScanParams): Promise<Result<IScanResult<T>>, IScanErrors>;
-  query<T>(params: IQueryParams): Promise<Result<IQueryResult<T>, IQueryErrors>>;
-  get(...args: any[]): Promise<any>;
-  put(...args: any[]): Promise<any>;
-  delete(...args: any[]): Promise<any>;
-  update(...args: any[]): Promise<any>;
+    scan<T extends DatabaseRecord>(tableName: string, options?: ScanOptions): AsyncIterable<T>;
+    query<T extends DatabaseRecord>(
+        tableName: string,
+        pk: string,
+        sk?: string,
+        options?: QueryOptions
+    ): Promise<T[]>;
+    batchPut<T extends DatabaseRecord>(tableName: string, records: T[]): Promise<void>;
 }
 
-export const DynamoDbClient = createAbstraction<IDynamoDbClient>("Core/DynamoDbClient");
+// ============================================================================
+// Abstractions
+// ============================================================================
 
+export const SourceDynamoDbClient = createAbstraction<IDynamoDbClient>("Core/SourceDynamoDbClient");
+export const TargetDynamoDbClient = createAbstraction<IDynamoDbClient>("Core/TargetDynamoDbClient");
 
-export namespace DynamoDbClient {
-  export type Interface = IDynamoDbClient;
-  export type QueryErrors = IQueryErrors;
+export namespace SourceDynamoDbClient {
+    export type Interface = IDynamoDbClient;
+    export type Record = DatabaseRecord;
+    export type Scan = ScanOptions;
+    export type Query = QueryOptions;
+}
+
+export namespace TargetDynamoDbClient {
+    export type Interface = IDynamoDbClient;
+    export type Record = DatabaseRecord;
+    export type Scan = ScanOptions;
+    export type Query = QueryOptions;
 }

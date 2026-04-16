@@ -6,38 +6,38 @@ import { TransformContext } from "../../core/types.ts";
  * NOTE: This transformer expects wrapInData to run FIRST, so values is in record.data.values.
  */
 export const migrateMailerSettings: Transformer = {
-  name: "migrateMailerSettings",
-  transform(ctx: TransformContext) {
-    const { record, original } = ctx;
+    name: "migrateMailerSettings",
+    transform(ctx: TransformContext) {
+        const { record, original } = ctx;
 
-    // Only process mailer settings records (identified by SK: "L" and modelId: "mailerSettings")
-    if (original.SK !== "L" || original.modelId !== "mailerSettings") {
-      return;
+        // Only process mailer settings records (identified by SK: "L" and modelId: "mailerSettings")
+        if (original.SK !== "L" || original.modelId !== "mailerSettings") {
+            return;
+        }
+
+        // Extract data envelope (wrapInData already ran)
+        const dataEnvelope = record.data as Record<string, unknown> | undefined;
+        if (!dataEnvelope) {
+            return; // No data envelope
+        }
+
+        const values = dataEnvelope.values as Record<string, unknown>;
+        const tenant = dataEnvelope.tenant || "root";
+
+        // Replace with new KeyValue format
+        ctx.replace({
+            PK: `KV#${tenant}:Mailer/Settings/Transport`,
+            SK: "A",
+            data: {
+                key: "Mailer/Settings/Transport",
+                scope: tenant,
+                value: values
+            },
+            TYPE: "KeyValueStore",
+            GSI_TENANT: tenant as string,
+            _ct: new Date().toISOString(),
+            _et: "KeyValueStore",
+            _md: new Date().toISOString()
+        });
     }
-
-    // Extract data envelope (wrapInData already ran)
-    const dataEnvelope = record.data as Record<string, unknown> | undefined;
-    if (!dataEnvelope) {
-      return; // No data envelope
-    }
-
-    const values = dataEnvelope.values as Record<string, unknown>;
-    const tenant = dataEnvelope.tenant || "root";
-
-    // Replace with new KeyValue format
-    ctx.replace({
-      PK: `KV#${tenant}:Mailer/Settings/Transport`,
-      SK: "A",
-      data: {
-        key: "Mailer/Settings/Transport",
-        scope: tenant,
-        value: values
-      },
-      TYPE: "KeyValueStore",
-      GSI_TENANT: tenant as string,
-      _ct: new Date().toISOString(),
-      _et: "KeyValueStore",
-      _md: new Date().toISOString()
-    });
-  }
 };

@@ -44,96 +44,96 @@ import { FmFilePipeline } from "./v5-to-v6/FmFilePipeline.ts";
  * Uses pre-configured pipelines for consistent, well-tested transformations.
  */
 export const v5ToV6Preset: MigrationPreset = {
-  name: "v5-to-v6",
-  description: "Webiny v5 to v6 migration with all necessary transformations",
-  configure(runner: MigrationRunner): void {
-    // ========================================================================
-    // File Manager Settings
-    // ========================================================================
-    const fmSettings = new PipelineBuilder()
-      .filter(byType("fm.settings"))
-      .use(wrapInData)
-      .use(migrateFileManagerSettings)
-      .use(removeAttributes)
-      .build();
+    name: "v5-to-v6",
+    description: "Webiny v5 to v6 migration with all necessary transformations",
+    configure(runner: MigrationRunner): void {
+        // ========================================================================
+        // File Manager Settings
+        // ========================================================================
+        const fmSettings = new PipelineBuilder()
+            .filter(byType("fm.settings"))
+            .use(wrapInData)
+            .use(migrateFileManagerSettings)
+            .use(removeAttributes)
+            .build();
 
-    // ========================================================================
-    // File Manager Files
-    // IMPORTANT: Must be registered BEFORE CmsEntryPipeline due to first-match-wins
-    // ========================================================================
-    const fmFiles = new FmFilePipeline().build();
+        // ========================================================================
+        // File Manager Files
+        // IMPORTANT: Must be registered BEFORE CmsEntryPipeline due to first-match-wins
+        // ========================================================================
+        const fmFiles = new FmFilePipeline().build();
 
-    // ========================================================================
-    // Mailer Settings
-    // ========================================================================
-    const mailerSettings = new PipelineBuilder()
-      .filter(record => {
-        return record.SK === "L" && record.modelId === "mailerSettings";
-      })
-      .use(wrapInData)
-      .use(migrateMailerSettings)
-      .use(removeAttributes)
-      .build();
+        // ========================================================================
+        // Mailer Settings
+        // ========================================================================
+        const mailerSettings = new PipelineBuilder()
+            .filter(record => {
+                return record.SK === "L" && record.modelId === "mailerSettings";
+            })
+            .use(wrapInData)
+            .use(migrateMailerSettings)
+            .use(removeAttributes)
+            .build();
 
-    // ========================================================================
-    // Security Groups → Roles
-    // ========================================================================
-    const securityGroups = new PipelineBuilder()
-      .filter(r => r.TYPE === "security.group" && !isBuiltInSecurityRole(r))
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(groupsToRoles)
-      .use(transformPermissions)
-      .use(removeAttributes)
-      .build();
+        // ========================================================================
+        // Security Groups → Roles
+        // ========================================================================
+        const securityGroups = new PipelineBuilder()
+            .filter(r => r.TYPE === "security.group" && !isBuiltInSecurityRole(r))
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(groupsToRoles)
+            .use(transformPermissions)
+            .use(removeAttributes)
+            .build();
 
-    // ========================================================================
-    // Security Teams
-    // ========================================================================
-    const securityTeams = new PipelineBuilder()
-      .filter(isSecurityTeam)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeAttributes)
-      .build();
+        // ========================================================================
+        // Security Teams
+        // ========================================================================
+        const securityTeams = new PipelineBuilder()
+            .filter(isSecurityTeam)
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeAttributes)
+            .build();
 
-    // ========================================================================
-    // CMS Models
-    // ========================================================================
-    const cmsModels = new CmsModelPipeline().build();
+        // ========================================================================
+        // CMS Models
+        // ========================================================================
+        const cmsModels = new CmsModelPipeline().build();
 
-    // ========================================================================
-    // Folder Permissions (FLP records)
-    // ========================================================================
-    const folderPermissions = new PipelineBuilder()
-      .filter(isFlpRecord)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(removeAttributes)
-      .use(updateFlpIds)
-      .build();
+        // ========================================================================
+        // Folder Permissions (FLP records)
+        // ========================================================================
+        const folderPermissions = new PipelineBuilder()
+            .filter(isFlpRecord)
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(removeAttributes)
+            .use(updateFlpIds)
+            .build();
 
-    // ========================================================================
-    // CMS Entries (catch-all for remaining CMS entries)
-    // IMPORTANT: Must be registered AFTER FmFilePipeline
-    // ==================================================v5-to-v6.ts======================
-    const cmsEntries = new CmsEntryPipeline().build();
+        // ========================================================================
+        // CMS Entries (catch-all for remaining CMS entries)
+        // IMPORTANT: Must be registered AFTER FmFilePipeline
+        // ==================================================v5-to-v6.ts======================
+        const cmsEntries = new CmsEntryPipeline().build();
 
-    // ========================================================================
-    // Register pipelines with runner
-    // IMPORTANT: Order matters due to first-match-wins behavior
-    // ========================================================================
-    runner
-      .register(fmSettings)
-      .register(fmFiles) // Before cmsEntries
-      .register(mailerSettings)
-      .register(securityGroups)
-      .register(securityTeams)
-      .register(cmsModels)
-      .register(folderPermissions)
-      .register(cmsEntries); // After fmFiles
-  }
+        // ========================================================================
+        // Register pipelines with runner
+        // IMPORTANT: Order matters due to first-match-wins behavior
+        // ========================================================================
+        runner
+            .register(fmSettings)
+            .register(fmFiles) // Before cmsEntries
+            .register(mailerSettings)
+            .register(securityGroups)
+            .register(securityTeams)
+            .register(cmsModels)
+            .register(folderPermissions)
+            .register(cmsEntries); // After fmFiles
+    }
 };
 
 // Export as default for easier importing
