@@ -41,7 +41,8 @@
         "templates/**/*.{js,ts,json}",
         "bin.js",
         "jest-dynalite.config.js",
-        ".adiorc.js"
+        "tsconfig.json",
+        "vitest.config.ts"
       ],
       "options": {
         "tabWidth": 4
