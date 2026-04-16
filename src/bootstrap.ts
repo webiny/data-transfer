@@ -17,6 +17,7 @@ import {
 import { PresetLoaderFeature } from "./features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "./features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
+import { TransformContextFeature } from "./features/TransformContext/index.ts";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -86,6 +87,9 @@ export function bootstrap(options: BootstrapOptions): Container {
     WorkerSpawnerFeature.register(container);
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
+
+    // Transform context factory (mode-specific)
+    TransformContextFeature.register(container);
 
     return container;
 }

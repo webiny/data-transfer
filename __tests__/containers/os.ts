@@ -16,6 +16,7 @@ import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts"
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts";
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
+import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockOpenSearchClient } from "../features/OpenSearchClient/MockOpenSearchClient.ts";
 
@@ -78,6 +79,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
+    TransformContextFeature.register(container);
 
     return container;
 }
