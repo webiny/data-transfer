@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "trailingComma": "none",
+  "tabWidth": 2,
+  "arrowParens": "avoid",
+  "endOfLine": "lf",
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "jsxSingleQuote": false,
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "proseWrap": "preserve",
+  "htmlWhitespaceSensitivity": "css",
+  "vueIndentScriptAndStyle": false,
+  "singleAttributePerLine": false,
+  "embeddedLanguageFormatting": "auto",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "insertPragma": false,
+  "rangeStart": 0,
+  "rangeEnd": null,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    ".agents",
+    ".claude",
+    ".yarn",
+    "coverage",
+    "docs",
+    "node_modules",
+    "plan",
+    ".transfer"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "__tests__/**/*.{js,ts,json}",
+        "examples/**/*.{js,ts,json}",
+        "src/**/*.{js,ts,json}",
+        "templates/**/*.{js,ts,json}",
+        "bin.js",
+        "jest-dynalite.config.js"
+      ],
+      "options": {
+        "tabWidth": 4
+      }
+    }
+  ]
+}

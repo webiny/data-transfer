@@ -82,8 +82,8 @@ export default createOsTransfer({
       accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
     },
-    dynamodb: { tableName: "webiny-v5-table" },     // for models + tenant queries
-    opensearch: { tableName: "webiny-v5-es-table" }  // OS DDB table to scan
+    dynamodb: { tableName: "webiny-v5-table" }, // for models + tenant queries
+    opensearch: { tableName: "webiny-v5-es-table" } // OS DDB table to scan
   },
   target: {
     region: "us-east-1",
@@ -109,6 +109,7 @@ The `source.dynamodb.tableName` is the primary DynamoDB table — needed to load
 The OpenSearch client uses the target account's `credentials` and `region` for AWS SigV4 signing. The `service` field must be `"opensearch"` (managed) or `"opensearch-serverless"`.
 
 **Index management:** When running in `os` mode, the tool automatically:
+
 1. Disables `refresh_interval` on each index just before writing to it (just-in-time, not upfront)
 2. Creates missing indexes with the Webiny base mapping and `refresh_interval: "-1"`
 3. After transfer completes, restores each index to its **original** `refresh_interval` value
@@ -118,10 +119,12 @@ Only indexes that were actually written to are affected — safe for shared Open
 ### Migration Presets
 
 **Built-in Presets:**
+
 - `v5-to-v6` - Migrates all Webiny v5 DynamoDB data to v6 format
 - `v5-to-v6-os` - Migrates CMS entries from the OpenSearch DynamoDB table
 
 **Example Presets:** (see `examples/`)
+
 - `cms-only` - Only CMS models and entries
 - `cms-model-with-files` - Specific model with referenced files
 
@@ -170,6 +173,7 @@ export const publishedOnlyPreset: MigrationPreset = {
 ```
 
 **Available Filters:**
+
 - `isCmsModel`, `isCmsEntry` - CMS records
 - `isFmFile`, `isFmSettings` - File Manager
 - `isSecurityTeam`, `isCustomSecurityGroup` - Security
@@ -178,6 +182,7 @@ export const publishedOnlyPreset: MigrationPreset = {
 - `byType(type)`, `byTypePrefix(prefix)` - Generic filters
 
 **Key Transformers:**
+
 - `wrapInData` - MUST be first - wraps attributes in data envelope
 - `addGsiTenant`, `removeLocale`, `removeAttributes` - Global transformations
 - `fixCmePk`, `fixBrokenStorageKeys`, `transformRichText` - CMS-specific

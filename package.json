@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.include=\"src/**/**\"",
     "test:watch": "vitest",
-    "prettier:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\" --config .prettierrc.js --list-different"
+    "format": "oxfmt",
+    "format:fix": "oxfmt"
   },
   "keywords": [
     "webiny",
@@ -55,7 +56,7 @@
     "@vitest/coverage-v8": "4.1.4",
     "dynalite": "^4.0.0",
     "jest-dynalite": "^3.6.1",
-    "prettier": "^3.8.2",
+    "oxfmt": "^0.45.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.4"
   },

@@ -13,6 +13,7 @@ This tool transfers Webiny data between environments. Current use case is v5-to-
 **User installation:** `npm install @webiny/data-transfer` (published to npm)
 
 **User config files** import builder functions from the package:
+
 ```typescript
 import { createDdbTransfer } from "@webiny/data-transfer";
 export default createDdbTransfer({ source: {...}, target: {...}, pipeline: {...} });
@@ -23,11 +24,13 @@ export default createDdbTransfer({ source: {...}, target: {...}, pipeline: {...}
 **Running:** `yarn transfer --config=./projects/example/ddb.transfer.config.ts`
 
 **Public API** (exported from `src/index.ts` via `package.json` `exports` field):
+
 - `createDdbTransfer(input)` — validates with Zod, returns config with `storage: "ddb"`
 - `createOsTransfer(input)` — validates with Zod, returns config with `storage: "os"`
 - `loadEnv(import.meta.url)` — loads `.env` from the calling file's directory (cross-platform)
 
 **Config builder functions** (`createDdbTransfer`, `createOsTransfer`):
+
 - Live in `src/features/MigrationConfig/`
 - Validate input with Zod at creation time
 - Add `storage: "ddb"` or `storage: "os"` internally
@@ -119,6 +122,7 @@ src/commands/commandName/
 ```
 
 **Adding a new command:**
+
 1. Create folder in `src/commands/`
 2. Add `handler.ts` with the logic
 3. Add `register.ts` with `registerXCommand(yargs: Argv): Argv`
@@ -184,6 +188,7 @@ export namespace FeatureName {
 ```
 
 **Key rules:**
+
 - All types accessible only via namespace (`FeatureName.Interface`, `FeatureName.Record`, etc.)
 - Never export interfaces directly from abstraction index files
 - Abstraction name uses domain prefix (`"Core/"`, `"Transfer/"`, `"Base/"`)
@@ -241,20 +246,20 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 
 ## Registered Features
 
-| Feature | Abstraction(s) | Scope | Notes |
-|---------|----------------|-------|-------|
-| Logger | `Logger` | Singleton (instance) | PinoLogger with pretty/json transport |
-| Cache | `Cache` | Singleton | InMemoryCache via createImplementation |
-| GzipCompression | `GzipCompression` | Transient | Via createImplementation |
-| DynamoDbClient | `SourceDynamoDbClient`, `TargetDynamoDbClient` | Singleton (instance) | Separate clients per region/credentials |
-| DynamoDbClientConfig | `DynamoDbClientConfig` | Instance | Source + target connection details |
-| OpenSearchClient | `OpenSearchClient` | Singleton (instance) | OS mode only. Also registers after-transfer hook |
-| OpenSearchClientConfig | `OpenSearchClientConfig` | Instance | OS mode only |
-| MigrationConfig | `MigrationConfig` | Instance | Loaded async, registered before bootstrap |
-| ModelProvider | `ModelProvider` | Singleton (instance) | Loads from DDB + JSON files |
-| TenantLocales | `TenantLocales` | Singleton (instance) | Preloads tenant/locale map |
-| TransferLifecycle | `BeforeTransferHook`, `AfterTransferHook` | Composite | Collects all registered hooks |
-| TransferContext | `TransferContext` | Instance | Holds runId, registered by CLI before hooks |
+| Feature                | Abstraction(s)                                 | Scope                | Notes                                            |
+| ---------------------- | ---------------------------------------------- | -------------------- | ------------------------------------------------ |
+| Logger                 | `Logger`                                       | Singleton (instance) | PinoLogger with pretty/json transport            |
+| Cache                  | `Cache`                                        | Singleton            | InMemoryCache via createImplementation           |
+| GzipCompression        | `GzipCompression`                              | Transient            | Via createImplementation                         |
+| DynamoDbClient         | `SourceDynamoDbClient`, `TargetDynamoDbClient` | Singleton (instance) | Separate clients per region/credentials          |
+| DynamoDbClientConfig   | `DynamoDbClientConfig`                         | Instance             | Source + target connection details               |
+| OpenSearchClient       | `OpenSearchClient`                             | Singleton (instance) | OS mode only. Also registers after-transfer hook |
+| OpenSearchClientConfig | `OpenSearchClientConfig`                       | Instance             | OS mode only                                     |
+| MigrationConfig        | `MigrationConfig`                              | Instance             | Loaded async, registered before bootstrap        |
+| ModelProvider          | `ModelProvider`                                | Singleton (instance) | Loads from DDB + JSON files                      |
+| TenantLocales          | `TenantLocales`                                | Singleton (instance) | Preloads tenant/locale map                       |
+| TransferLifecycle      | `BeforeTransferHook`, `AfterTransferHook`      | Composite            | Collects all registered hooks                    |
+| TransferContext        | `TransferContext`                              | Instance             | Holds runId, registered by CLI before hooks      |
 
 ## Architecture Decisions
 
@@ -298,26 +303,31 @@ These files contain old code still used by command handlers (not yet migrated to
 ## Next Steps (for future agents)
 
 ### Priority 1: Migrate command handlers to DI
+
 - `src/commands/processSegment/handler.ts` and `src/commands/processOsSegment/handler.ts` still use legacy imports (old DynamoDBClient, old logger, old tenants util, etc.)
 - They should call `bootstrap({ config })` and resolve features from the container instead of creating instances manually
 - Once migrated, delete all files listed in "Files to Delete" above
 
 ### Priority 2: Extract remaining concerns as features
+
 - **WorkerSpawner** — `spawnWorker()` in `run/handler.ts` could be a feature for testability
 - **PresetLoader** — `src/core/preset-loader.ts` could become a DI feature
 - **S3Client** — `src/storage/s3-client.ts` needs a feature (similar to DynamoDbClient pattern)
 
 ### Priority 3: Migrate core pipeline to DI
+
 - `src/core/` (pipeline, runner, context, executor) could use DI abstractions
 - The `TransformContext` currently receives a `MigrationConfig` object — could resolve dependencies from container instead
 - The `MigrationRunner` could become a feature with the `Cache` injected
 
 ### Priority 4: Production-to-dev data transfer
+
 - Extend the tool to support production-to-dev data transfer (not just v5-to-v6 migration)
 - May need new presets, new config options, possibly new storage modes
 - The DI architecture makes this extensible — add features, register hooks, create new presets
 
 ### Important conventions to follow
+
 - Read the full AGENTS.md before starting work
 - Always run verification steps before committing (prettier:fix, ts-check, test:coverage, git status)
 - Use yarn, never npm

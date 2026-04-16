@@ -20,34 +20,34 @@ import { transformModelGroup } from "@/src/transformers/cms/transform-model-grou
 // ============================================================================
 
 export const preset: MigrationPreset = {
-  name: "cms-only",
-  description: "Migrate only CMS models and entries",
-  configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient): void {
-    // CMS Models pipeline
-    const cmsModels = new PipelineBuilder()
-      .filter(isCmsModel)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(transformModelGroup)
-      .use(removeAttributes)
-      .build();
+    name: "cms-only",
+    description: "Migrate only CMS models and entries",
+    configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient): void {
+        // CMS Models pipeline
+        const cmsModels = new PipelineBuilder()
+            .filter(isCmsModel)
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(transformModelGroup)
+            .use(removeAttributes)
+            .build();
 
-    // CMS Entries pipeline
-    const cmsEntries = new PipelineBuilder()
-      .filter(isCmsEntry)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(fixCmePk)
-      .use(fixBrokenStorageKeys)
-      .use(transformRichText)
-      .use(updateModelIds)
-      .use(removeFolderRevision)
-      .use(removeAttributes)
-      .build();
+        // CMS Entries pipeline
+        const cmsEntries = new PipelineBuilder()
+            .filter(isCmsEntry)
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(fixCmePk)
+            .use(fixBrokenStorageKeys)
+            .use(transformRichText)
+            .use(updateModelIds)
+            .use(removeFolderRevision)
+            .use(removeAttributes)
+            .build();
 
-    // Register pipelines
-    runner.register(cmsModels).register(cmsEntries);
-  }
+        // Register pipelines
+        runner.register(cmsModels).register(cmsEntries);
+    }
 };

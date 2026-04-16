@@ -1,4 +1,4 @@
-const createTable = (tableName) => ({
+const createTable = tableName => ({
   TableName: tableName,
   KeySchema: [
     { AttributeName: "PK", KeyType: "HASH" },
@@ -12,10 +12,6 @@ const createTable = (tableName) => ({
 });
 
 module.exports = {
-  tables: [
-    createTable("source-primary"),
-    createTable("source-os"),
-    createTable("target-os")
-  ],
+  tables: [createTable("source-primary"), createTable("source-os"), createTable("target-os")],
   basePort: 8000
 };
