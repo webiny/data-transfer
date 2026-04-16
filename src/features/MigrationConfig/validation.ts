@@ -5,15 +5,15 @@ import { z } from "zod";
 // ============================================================================
 
 const awsCredentialsSchema = z.object({
-  accessKeyId: z.string(),
-  secretAccessKey: z.string(),
-  sessionToken: z.string().optional()
+    accessKeyId: z.string(),
+    secretAccessKey: z.string(),
+    sessionToken: z.string().optional()
 });
 
 const migrationSettingsSchema = z.object({
-  preset: z.string(),
-  segments: z.number().int().positive().optional(),
-  modelsDir: z.string().optional()
+    preset: z.string(),
+    segments: z.number().int().positive().optional(),
+    modelsDir: z.string().optional()
 });
 
 // ============================================================================
@@ -21,10 +21,10 @@ const migrationSettingsSchema = z.object({
 // ============================================================================
 
 const ddbAccountConfigSchema = z.object({
-  region: z.string(),
-  credentials: awsCredentialsSchema,
-  dynamodb: z.object({ tableName: z.string() }),
-  s3: z.object({ bucket: z.string() })
+    region: z.string(),
+    credentials: awsCredentialsSchema,
+    dynamodb: z.object({ tableName: z.string() }),
+    s3: z.object({ bucket: z.string() })
 });
 
 // ============================================================================
@@ -32,20 +32,20 @@ const ddbAccountConfigSchema = z.object({
 // ============================================================================
 
 const osSourceAccountConfigSchema = z.object({
-  region: z.string(),
-  credentials: awsCredentialsSchema,
-  dynamodb: z.object({ tableName: z.string() }),
-  opensearch: z.object({ tableName: z.string() })
+    region: z.string(),
+    credentials: awsCredentialsSchema,
+    dynamodb: z.object({ tableName: z.string() }),
+    opensearch: z.object({ tableName: z.string() })
 });
 
 const osTargetAccountConfigSchema = z.object({
-  region: z.string(),
-  credentials: awsCredentialsSchema,
-  opensearch: z.object({
-    endpoint: z.url(),
-    tableName: z.string(),
-    service: z.enum(["opensearch", "opensearch-serverless"])
-  })
+    region: z.string(),
+    credentials: awsCredentialsSchema,
+    opensearch: z.object({
+        endpoint: z.url(),
+        tableName: z.string(),
+        service: z.enum(["opensearch", "opensearch-serverless"])
+    })
 });
 
 // ============================================================================
@@ -53,22 +53,22 @@ const osTargetAccountConfigSchema = z.object({
 // ============================================================================
 
 const ddbConfigSchema = z.object({
-  storage: z.literal("ddb"),
-  source: ddbAccountConfigSchema,
-  target: ddbAccountConfigSchema,
-  migration: migrationSettingsSchema
+    storage: z.literal("ddb"),
+    source: ddbAccountConfigSchema,
+    target: ddbAccountConfigSchema,
+    migration: migrationSettingsSchema
 });
 
 const osConfigSchema = z.object({
-  storage: z.literal("os"),
-  source: osSourceAccountConfigSchema,
-  target: osTargetAccountConfigSchema,
-  migration: migrationSettingsSchema
+    storage: z.literal("os"),
+    source: osSourceAccountConfigSchema,
+    target: osTargetAccountConfigSchema,
+    migration: migrationSettingsSchema
 });
 
 export const migrationConfigSchema = z.discriminatedUnion("storage", [
-  ddbConfigSchema,
-  osConfigSchema
+    ddbConfigSchema,
+    osConfigSchema
 ]);
 
 // ============================================================================

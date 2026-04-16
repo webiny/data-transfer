@@ -5,21 +5,21 @@ import { createAbstraction } from "@/src/base/index.ts";
 // ============================================================================
 
 export interface AwsCredentials {
-  accessKeyId: string;
-  secretAccessKey: string;
-  sessionToken?: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
 }
 
 export interface DynamoDbConnectionConfig {
-  region: string;
-  credentials?: AwsCredentials;
-  /** Override endpoint (for local testing with dynalite) */
-  endpoint?: string;
+    region: string;
+    credentials?: AwsCredentials;
+    /** Override endpoint (for local testing with dynalite) */
+    endpoint?: string;
 }
 
 export interface IDynamoDbClientConfig {
-  source: DynamoDbConnectionConfig;
-  target: DynamoDbConnectionConfig;
+    source: DynamoDbConnectionConfig;
+    target: DynamoDbConnectionConfig;
 }
 
 // ============================================================================
@@ -27,11 +27,11 @@ export interface IDynamoDbClientConfig {
 // ============================================================================
 
 export const DynamoDbClientConfig = createAbstraction<IDynamoDbClientConfig>(
-  "Core/DynamoDbClientConfig"
+    "Core/DynamoDbClientConfig"
 );
 
 export namespace DynamoDbClientConfig {
-  export type Interface = IDynamoDbClientConfig;
-  export type Connection = DynamoDbConnectionConfig;
-  export type Credentials = AwsCredentials;
+    export type Interface = IDynamoDbClientConfig;
+    export type Connection = DynamoDbConnectionConfig;
+    export type Credentials = AwsCredentials;
 }

@@ -5,14 +5,14 @@ import { createAbstraction } from "@/src/base/index.ts";
 // ============================================================================
 
 export interface IOpenSearchClientConfig {
-  endpoint: string;
-  region: string;
-  service: "opensearch" | "opensearch-serverless";
-  credentials: {
-    accessKeyId: string;
-    secretAccessKey: string;
-    sessionToken?: string;
-  };
+    endpoint: string;
+    region: string;
+    service: "opensearch" | "opensearch-serverless";
+    credentials: {
+        accessKeyId: string;
+        secretAccessKey: string;
+        sessionToken?: string;
+    };
 }
 
 // ============================================================================
@@ -20,9 +20,9 @@ export interface IOpenSearchClientConfig {
 // ============================================================================
 
 export const OpenSearchClientConfig = createAbstraction<IOpenSearchClientConfig>(
-  "Core/OpenSearchClientConfig"
+    "Core/OpenSearchClientConfig"
 );
 
 export namespace OpenSearchClientConfig {
-  export type Interface = IOpenSearchClientConfig;
+    export type Interface = IOpenSearchClientConfig;
 }

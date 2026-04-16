@@ -7,30 +7,30 @@ import { MockStorageClient } from "./mocks/storage-client.ts";
 import { v5UnknownRecord } from "./fixtures/v5-records.ts";
 
 describe("Record Filtering", () => {
-  let database: MockDatabaseClient;
-  let storage: MockStorageClient;
-  let config: MigrationConfig;
-  let modelProvider: ModelProvider;
+    let database: MockDatabaseClient;
+    let storage: MockStorageClient;
+    let config: MigrationConfig;
+    let modelProvider: ModelProvider;
 
-  beforeEach(() => {
-    database = new MockDatabaseClient();
-    storage = new MockStorageClient();
-    modelProvider = new ModelProvider(database, "source-table");
-    config = {
-      sourcePrimaryTable: "source-table",
-      targetPrimaryTable: "target-table",
-      sourceFmBucket: "source-bucket",
-      targetFmBucket: "target-bucket",
-      modelProvider
-    };
-  });
+    beforeEach(() => {
+        database = new MockDatabaseClient();
+        storage = new MockStorageClient();
+        modelProvider = new ModelProvider(database, "source-table");
+        config = {
+            sourcePrimaryTable: "source-table",
+            targetPrimaryTable: "target-table",
+            sourceFmBucket: "source-bucket",
+            targetFmBucket: "target-bucket",
+            modelProvider
+        };
+    });
 
-  it("should skip records without matching pipeline", async () => {
-    const runner = createTestRunner(config, database);
+    it("should skip records without matching pipeline", async () => {
+        const runner = createTestRunner(config, database);
 
-    const commands = await runner.processRecord(v5UnknownRecord);
+        const commands = await runner.processRecord(v5UnknownRecord);
 
-    // Should return empty commands array (record skipped)
-    expect(commands).toHaveLength(0);
-  });
+        // Should return empty commands array (record skipped)
+        expect(commands).toHaveLength(0);
+    });
 });

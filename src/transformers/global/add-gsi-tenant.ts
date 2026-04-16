@@ -6,31 +6,31 @@ import { TransformContext } from "../../core/types.ts";
  * NOTE: This transformer expects wrapInData to run FIRST, so tenant is in data.tenant.
  */
 export const addGsiTenant: Transformer = {
-  name: "addGsiTenant",
-  transform(ctx: TransformContext) {
-    const { record } = ctx;
+    name: "addGsiTenant",
+    transform(ctx: TransformContext) {
+        const { record } = ctx;
 
-    // Skip if GSI_TENANT already exists
-    if (record.GSI_TENANT) {
-      return;
-    }
+        // Skip if GSI_TENANT already exists
+        if (record.GSI_TENANT) {
+            return;
+        }
 
-    // Try to extract tenant from PK (e.g., T#root#... -> root)
-    if (typeof record.PK === "string" && record.PK.startsWith("T#")) {
-      const parts = record.PK.split("#");
-      if (parts.length >= 2) {
-        record.GSI_TENANT = parts[1];
-        return;
-      }
-    }
+        // Try to extract tenant from PK (e.g., T#root#... -> root)
+        if (typeof record.PK === "string" && record.PK.startsWith("T#")) {
+            const parts = record.PK.split("#");
+            if (parts.length >= 2) {
+                record.GSI_TENANT = parts[1];
+                return;
+            }
+        }
 
-    // Try to extract from data.tenant (wrapInData already ran)
-    if (record.data && typeof record.data === "object") {
-      const data = record.data as Record<string, unknown>;
-      if (typeof data.tenant === "string") {
-        record.GSI_TENANT = data.tenant;
-        return;
-      }
+        // Try to extract from data.tenant (wrapInData already ran)
+        if (record.data && typeof record.data === "object") {
+            const data = record.data as Record<string, unknown>;
+            if (typeof data.tenant === "string") {
+                record.GSI_TENANT = data.tenant;
+                return;
+            }
+        }
     }
-  }
 };

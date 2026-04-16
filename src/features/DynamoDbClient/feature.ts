@@ -4,14 +4,14 @@ import { SourceDynamoDbClient, TargetDynamoDbClient } from "./abstractions/Dynam
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
 
 export const DynamoDbClientFeature = createFeature({
-  name: "Core/DynamoDbClientFeature",
-  register(container) {
-    const config = container.resolve(DynamoDbClientConfig);
+    name: "Core/DynamoDbClientFeature",
+    register(container) {
+        const config = container.resolve(DynamoDbClientConfig);
 
-    const sourceClient = new DynamoDbClientImpl(config.source);
-    container.registerInstance(SourceDynamoDbClient, sourceClient);
+        const sourceClient = new DynamoDbClientImpl(config.source);
+        container.registerInstance(SourceDynamoDbClient, sourceClient);
 
-    const targetClient = new DynamoDbClientImpl(config.target);
-    container.registerInstance(TargetDynamoDbClient, targetClient);
-  }
+        const targetClient = new DynamoDbClientImpl(config.target);
+        container.registerInstance(TargetDynamoDbClient, targetClient);
+    }
 });

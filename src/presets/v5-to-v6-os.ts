@@ -31,24 +31,24 @@ import { removeFolderRevision } from "../transformers/cms/remove-folder-revision
  * and writes OS-shaped records to the target table.
  */
 export const v5ToV6OsPreset: MigrationPreset = {
-  name: "v5-to-v6-os",
-  description: "Webiny v5 to v6 OpenSearch migration — CMS entries",
-  configure(runner: MigrationRunner): void {
-    const cmsEntries = new PipelineBuilder()
-      .filter(isCmsEntry)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(fixCmePk)
-      .use(fixBrokenStorageKeys)
-      .use(transformRichText)
-      .use(updateModelIds)
-      .use(removeFolderRevision)
-      .use(removeAttributes)
-      .build();
+    name: "v5-to-v6-os",
+    description: "Webiny v5 to v6 OpenSearch migration — CMS entries",
+    configure(runner: MigrationRunner): void {
+        const cmsEntries = new PipelineBuilder()
+            .filter(isCmsEntry)
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(fixCmePk)
+            .use(fixBrokenStorageKeys)
+            .use(transformRichText)
+            .use(updateModelIds)
+            .use(removeFolderRevision)
+            .use(removeAttributes)
+            .build();
 
-    runner.register(cmsEntries);
-  }
+        runner.register(cmsEntries);
+    }
 };
 
 export default v5ToV6OsPreset;

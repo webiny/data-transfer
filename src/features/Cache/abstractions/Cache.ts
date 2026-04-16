@@ -1,12 +1,12 @@
 import { createAbstraction } from "@/src/base/index.ts";
 
 interface ICache {
-  get<T>(key: string): T | undefined;
-  set<T>(key: string, value: T): void;
-  has(key: string): boolean;
-  delete(key: string): boolean;
-  clear(): void;
-  size(): number;
+    get<T>(key: string): T | undefined;
+    set<T>(key: string, value: T): void;
+    has(key: string): boolean;
+    delete(key: string): boolean;
+    clear(): void;
+    size(): number;
 }
 
 // ============================================================================
@@ -16,5 +16,5 @@ interface ICache {
 export const Cache = createAbstraction<ICache>("Core/Cache");
 
 export namespace Cache {
-  export type Interface = ICache;
+    export type Interface = ICache;
 }

@@ -9,60 +9,60 @@ import { GzipCompressionFeature } from "./features/GzipCompression/index.ts";
 import { ModelProviderFeature } from "./features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "./features/TenantLocales/index.ts";
 import {
-  OpenSearchClientConfig,
-  OpenSearchClientFeature
+    OpenSearchClientConfig,
+    OpenSearchClientFeature
 } from "./features/OpenSearchClient/index.ts";
 import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
 
 export interface BootstrapOptions {
-  config: MigrationConfig.Interface;
-  logLevel?: "debug" | "info" | "warn" | "error";
-  json?: boolean;
+    config: MigrationConfig.Interface;
+    logLevel?: "debug" | "info" | "warn" | "error";
+    json?: boolean;
 }
 
 export function bootstrap(options: BootstrapOptions): Container {
-  const { config } = options;
-  const container = new Container();
+    const { config } = options;
+    const container = new Container();
 
-  // Core: config + logger + cache + gzip
-  MigrationConfigFeature.register(container, { config });
-  LoggerFeature.register(container, {
-    logLevel: options.logLevel || "info",
-    json: options.json || false
-  });
-  CacheFeature.register(container);
-  GzipCompressionFeature.register(container);
-
-  // DynamoDB clients
-  container.registerInstance(DynamoDbClientConfig, {
-    source: {
-      region: config.source.region,
-      credentials: config.source.credentials
-    },
-    target: {
-      region: config.target.region,
-      credentials: config.target.credentials
-    }
-  });
-  DynamoDbClientFeature.register(container);
-
-  // OpenSearch client (os mode only)
-  if (config.storage === "os") {
-    container.registerInstance(OpenSearchClientConfig, {
-      endpoint: config.target.opensearch.endpoint,
-      region: config.target.region,
-      service: config.target.opensearch.service,
-      credentials: config.target.credentials
+    // Core: config + logger + cache + gzip
+    MigrationConfigFeature.register(container, { config });
+    LoggerFeature.register(container, {
+        logLevel: options.logLevel || "info",
+        json: options.json || false
     });
-    OpenSearchClientFeature.register(container);
-  }
+    CacheFeature.register(container);
+    GzipCompressionFeature.register(container);
 
-  // Transfer lifecycle hooks (composite — collects all registered hooks)
-  TransferLifecycleFeature.register(container);
+    // DynamoDB clients
+    container.registerInstance(DynamoDbClientConfig, {
+        source: {
+            region: config.source.region,
+            credentials: config.source.credentials
+        },
+        target: {
+            region: config.target.region,
+            credentials: config.target.credentials
+        }
+    });
+    DynamoDbClientFeature.register(container);
 
-  // Model provider + tenant locales
-  ModelProviderFeature.register(container);
-  TenantLocalesFeature.register(container);
+    // OpenSearch client (os mode only)
+    if (config.storage === "os") {
+        container.registerInstance(OpenSearchClientConfig, {
+            endpoint: config.target.opensearch.endpoint,
+            region: config.target.region,
+            service: config.target.opensearch.service,
+            credentials: config.target.credentials
+        });
+        OpenSearchClientFeature.register(container);
+    }
 
-  return container;
+    // Transfer lifecycle hooks (composite — collects all registered hooks)
+    TransferLifecycleFeature.register(container);
+
+    // Model provider + tenant locales
+    ModelProviderFeature.register(container);
+    TenantLocalesFeature.register(container);
+
+    return container;
 }

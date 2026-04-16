@@ -10,15 +10,15 @@ import { renameFieldAttributes } from "../../transformers/cms/rename-field-attri
  * Pre-configured pipeline for CMS Models with all v5-to-v6 transformations.
  */
 export class CmsModelPipeline extends PipelineBuilder {
-  constructor() {
-    super();
+    constructor() {
+        super();
 
-    this.filter(isCmsModel);
-    this.use(wrapInData);
-    this.use(addGsiTenant);
-    this.use(removeLocale);
-    this.use(transformModelGroup);
-    this.use(renameFieldAttributes);
-    this.use(removeAttributes);
-  }
+        this.filter(isCmsModel);
+        this.use(wrapInData);
+        this.use(addGsiTenant);
+        this.use(removeLocale);
+        this.use(transformModelGroup);
+        this.use(renameFieldAttributes);
+        this.use(removeAttributes);
+    }
 }

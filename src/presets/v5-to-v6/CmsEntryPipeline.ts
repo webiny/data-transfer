@@ -15,21 +15,21 @@ import { removeFolderRevision } from "../../transformers/cms/remove-folder-revis
  * Pre-configured pipeline for CMS Entries with all v5-to-v6 transformations.
  */
 export class CmsEntryPipeline extends PipelineBuilder {
-  constructor() {
-    super();
+    constructor() {
+        super();
 
-    // Configure filter
-    this.filter(isCmsEntry);
+        // Configure filter
+        this.filter(isCmsEntry);
 
-    // Configure transformers (wrapInData MUST be first)
-    this.use(wrapInData);
-    this.use(addGsiTenant);
-    this.use(removeLocale);
-    this.use(fixCmePk);
-    this.use(fixBrokenStorageKeys);
-    this.use(transformRichText);
-    this.use(updateModelIds);
-    this.use(removeFolderRevision);
-    this.use(removeAttributes);
-  }
+        // Configure transformers (wrapInData MUST be first)
+        this.use(wrapInData);
+        this.use(addGsiTenant);
+        this.use(removeLocale);
+        this.use(fixCmePk);
+        this.use(fixBrokenStorageKeys);
+        this.use(transformRichText);
+        this.use(updateModelIds);
+        this.use(removeFolderRevision);
+        this.use(removeAttributes);
+    }
 }

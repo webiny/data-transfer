@@ -1,3 +1,8 @@
-node_modules
-.transfer
+.agents
+.claude
+.yarn
 coverage
+docs
+node_modules
+plan
+.transfer
