@@ -1,16 +1,16 @@
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
-import { bootstrap } from "../bootstrap.ts";
-import { loadConfig } from "../features/MigrationConfig/loadConfig.ts";
-import { Logger } from "../features/Logger/index.ts";
-import { MigrationConfig } from "../features/MigrationConfig/index.ts";
+import { bootstrap } from "../../bootstrap.ts";
+import { loadConfig } from "../../features/MigrationConfig/loadConfig.ts";
+import { Logger } from "../../features/Logger/index.ts";
+import { MigrationConfig } from "../../features/MigrationConfig/index.ts";
 import {
     BeforeTransferHook,
     AfterTransferHook,
     TransferContext
-} from "../features/TransferLifecycle/index.ts";
+} from "../../features/TransferLifecycle/index.ts";
 
-export async function run(configPath: string): Promise<void> {
+export async function handler(configPath: string): Promise<void> {
     const config = await loadConfig(configPath);
     const container = bootstrap({ config });
     const logger = container.resolve(Logger);
@@ -92,7 +92,7 @@ async function spawnWorker(
     configPath: string,
     command: string
 ): Promise<void> {
-    const binPath = fileURLToPath(new URL("../../bin.js", import.meta.url));
+    const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
 
     const args = [
         binPath,

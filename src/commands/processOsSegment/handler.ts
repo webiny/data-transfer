@@ -1,17 +1,17 @@
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { DynamoDBClient } from "../database/dynamodb-client.ts";
-import { createLogger } from "../utils/logger.ts";
-import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "../utils/tenants.ts";
-import { MigrationConfig, PutRecordCommand } from "../core/types.ts";
-import { ModelProvider } from "../models/model-provider.ts";
-import { MigrationRunner } from "../core/runner.ts";
-import { loadPreset } from "../core/preset-loader.ts";
-import { decompressOsRecord } from "../opensearch/decompress-record.ts";
-import { executeOsCommands, type OsCommandItem } from "../opensearch/executor.ts";
-import { createOpenSearchClient, type Client } from "../opensearch/client.ts";
-import { isTransformedRecord } from "../utils/record-guards.ts";
-import { loadConfig } from "../features/MigrationConfig/loadConfig.ts";
+import { DynamoDBClient } from "../../database/dynamodb-client.ts";
+import { createLogger } from "../../utils/logger.ts";
+import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "../../utils/tenants.ts";
+import { MigrationConfig, PutRecordCommand } from "../../core/types.ts";
+import { ModelProvider } from "../../models/model-provider.ts";
+import { MigrationRunner } from "../../core/runner.ts";
+import { loadPreset } from "../../core/preset-loader.ts";
+import { decompressOsRecord } from "../../opensearch/decompress-record.ts";
+import { executeOsCommands, type OsCommandItem } from "../../opensearch/executor.ts";
+import { createOpenSearchClient, type Client } from "../../opensearch/client.ts";
+import { isTransformedRecord } from "../../utils/record-guards.ts";
+import { loadConfig } from "../../features/MigrationConfig/loadConfig.ts";
 
 interface ProcessOsSegmentArgs {
     runId: string;
@@ -20,7 +20,7 @@ interface ProcessOsSegmentArgs {
     config: string;
 }
 
-export async function runProcessOsSegment(argv: ProcessOsSegmentArgs): Promise<void> {
+export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
     const config = await loadConfig(argv.config);
     if (config.storage !== "os") {
         throw new Error(`process-os-segment requires storage: "os". Got: "${config.storage}"`);

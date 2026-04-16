@@ -1,13 +1,13 @@
-import { DynamoDBClient } from "../database/dynamodb-client.ts";
-import { S3Client } from "../storage/s3-client.ts";
-import { executeCommands } from "../core/executor.ts";
-import { createLogger } from "../utils/logger.ts";
-import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "../utils/tenants.ts";
-import { MigrationConfig } from "../core/types.ts";
-import { ModelProvider } from "../models/model-provider.ts";
-import { MigrationRunner } from "../core/runner.ts";
-import { loadPreset } from "../core/preset-loader.ts";
-import { loadConfig } from "../features/MigrationConfig/loadConfig.ts";
+import { DynamoDBClient } from "../../database/dynamodb-client.ts";
+import { S3Client } from "../../storage/s3-client.ts";
+import { executeCommands } from "../../core/executor.ts";
+import { createLogger } from "../../utils/logger.ts";
+import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "../../utils/tenants.ts";
+import { MigrationConfig } from "../../core/types.ts";
+import { ModelProvider } from "../../models/model-provider.ts";
+import { MigrationRunner } from "../../core/runner.ts";
+import { loadPreset } from "../../core/preset-loader.ts";
+import { loadConfig } from "../../features/MigrationConfig/loadConfig.ts";
 
 interface ProcessSegmentArgs {
     runId: string;
@@ -16,7 +16,7 @@ interface ProcessSegmentArgs {
     config: string;
 }
 
-export async function runProcessSegment(argv: ProcessSegmentArgs): Promise<void> {
+export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const config = await loadConfig(argv.config);
     if (config.storage !== "ddb") {
         throw new Error(`process-segment requires storage: "ddb". Got: "${config.storage}"`);
