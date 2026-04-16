@@ -13,6 +13,7 @@ import {
     OpenSearchClientConfig,
     OpenSearchClientFeature
 } from "./features/OpenSearchClient/index.ts";
+import { PresetLoaderFeature } from "./features/PresetLoader/index.ts";
 import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
 
 export interface BootstrapOptions {
@@ -76,7 +77,8 @@ export function bootstrap(options: BootstrapOptions): Container {
     // Transfer lifecycle hooks (composite — collects all registered hooks)
     TransferLifecycleFeature.register(container);
 
-    // Model provider + tenant locales
+    // Preset loader + model provider + tenant locales
+    PresetLoaderFeature.register(container);
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
 
