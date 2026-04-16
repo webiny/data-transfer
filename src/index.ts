@@ -9,3 +9,4 @@
  */
 export { createDdbTransfer } from "./features/MigrationConfig/createDdbTransfer.ts";
 export { createOsTransfer } from "./features/MigrationConfig/createOsTransfer.ts";
+export { loadEnv } from "./utils/load-env.ts";

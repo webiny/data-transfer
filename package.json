@@ -32,6 +32,7 @@
     "@webiny/api-opensearch": "^6.1.0",
     "@webiny/di": "^0.2.3",
     "@webiny/lexical-converter": "^6.1.0",
+    "dotenv": "^17.4.2",
     "execa": "^9.6.1",
     "exifreader": "^4.38.1",
     "jsdom": "^29.0.2",
