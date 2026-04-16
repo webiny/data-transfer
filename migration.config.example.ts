@@ -1,4 +1,4 @@
-import { MigrationConfiguration } from "./src/config/types.ts";
+import { MigrationConfiguration } from "./src/features/MigrationConfig/validation.ts";
 
 /**
  * Example Migration Configuration
@@ -7,22 +7,19 @@ import { MigrationConfiguration } from "./src/config/types.ts";
  * The config file supports TypeScript for type safety and autocomplete.
  */
 const config: MigrationConfiguration = {
+  storage: "ddb",
+
   // ============================================================================
   // Source Account (v5 data) - Account A
   // ============================================================================
   source: {
     region: "us-east-1",
 
-    // Option 1: Use environment variables for credentials (recommended)
     credentials: {
       accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
       // sessionToken: process.env.SOURCE_AWS_SESSION_TOKEN // Optional for temporary credentials
     },
-
-    // Option 2: Omit credentials to use default AWS credential chain
-    // (IAM role, AWS profile, environment variables, etc.)
-    // credentials: undefined,
 
     dynamodb: {
       tableName: "webiny-v5-production"

@@ -7,7 +7,7 @@
 Create a migration configuration file (e.g., `migration.config.ts`):
 
 ```typescript
-import { MigrationConfiguration } from "./src/config/types";
+import { MigrationConfiguration } from "./src/features/MigrationConfig/validation";
 
 const config: MigrationConfiguration = {
   storage: "ddb", // "ddb" or "os"
@@ -89,11 +89,12 @@ The `source.dynamodb.tableName` is the primary DynamoDB table — needed to load
 
 The OpenSearch client uses the target account's `credentials` and `region` for AWS SigV4 signing. The `service` field must be `"opensearch"` (managed) or `"opensearch-serverless"`.
 
-**Lifecycle hooks:** When running in `os` mode, the tool automatically:
-1. Disables `refresh_interval` on all target OpenSearch indexes before migration starts
-2. Re-enables `refresh_interval` (`1s`) on all indexes after migration completes
+**Index management:** When running in `os` mode, the tool automatically:
+1. Disables `refresh_interval` on each index just before writing to it (just-in-time, not upfront)
+2. Creates missing indexes with the Webiny base mapping and `refresh_interval: "-1"`
+3. After transfer completes, restores each index to its **original** `refresh_interval` value
 
-This prevents excessive indexing overhead during bulk data transfer.
+Only indexes that were actually written to are affected — safe for shared OpenSearch clusters.
 
 ### Migration Presets
 
