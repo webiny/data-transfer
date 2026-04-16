@@ -11,6 +11,7 @@ import { Cache } from "../src/features/Cache/index.ts";
 import { GzipCompression } from "../src/features/GzipCompression/index.ts";
 import { ModelProvider } from "../src/features/ModelProvider/index.ts";
 import { TenantLocales } from "../src/features/TenantLocales/index.ts";
+import { SourceS3Client, TargetS3Client } from "../src/features/S3Client/index.ts";
 import { OpenSearchClient } from "../src/features/OpenSearchClient/index.ts";
 
 describe("bootstrap", () => {
@@ -63,6 +64,8 @@ describe("bootstrap", () => {
             expect(container.resolve(TargetDynamoDbClient)).toBeDefined();
             expect(container.resolve(ModelProvider)).toBeDefined();
             expect(container.resolve(TenantLocales)).toBeDefined();
+            expect(container.resolve(SourceS3Client)).toBeDefined();
+            expect(container.resolve(TargetS3Client)).toBeDefined();
         });
 
         it("should not register OpenSearchClient in ddb mode", () => {
@@ -75,6 +78,14 @@ describe("bootstrap", () => {
             const container = bootstrap({ config: ddbConfig, logLevel: "debug" });
             const logger = container.resolve(Logger);
             expect(logger).toBeDefined();
+        });
+    });
+
+    describe("ddb mode - exclusions", () => {
+        it("should not register S3Client in os mode", () => {
+            const container = bootstrap({ config: osConfig });
+            expect(() => container.resolve(SourceS3Client)).toThrow();
+            expect(() => container.resolve(TargetS3Client)).toThrow();
         });
     });
 

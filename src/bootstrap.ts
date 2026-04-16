@@ -8,6 +8,7 @@ import { CacheFeature } from "./features/Cache/index.ts";
 import { GzipCompressionFeature } from "./features/GzipCompression/index.ts";
 import { ModelProviderFeature } from "./features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "./features/TenantLocales/index.ts";
+import { S3ClientConfig, S3ClientFeature } from "./features/S3Client/index.ts";
 import {
     OpenSearchClientConfig,
     OpenSearchClientFeature
@@ -45,6 +46,21 @@ export function bootstrap(options: BootstrapOptions): Container {
         }
     });
     DynamoDbClientFeature.register(container);
+
+    // S3 clients (ddb mode only)
+    if (config.storage === "ddb") {
+        container.registerInstance(S3ClientConfig, {
+            source: {
+                region: config.source.region,
+                credentials: config.source.credentials
+            },
+            target: {
+                region: config.target.region,
+                credentials: config.target.credentials
+            }
+        });
+        S3ClientFeature.register(container);
+    }
 
     // OpenSearch client (os mode only)
     if (config.storage === "os") {
