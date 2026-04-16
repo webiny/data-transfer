@@ -1,3 +1,5 @@
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
 import { DynamoDBClient } from "./database/dynamodb-client.ts";
 import { createLogger } from "./utils/logger.ts";
 import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "./utils/tenants.ts";
@@ -56,7 +58,7 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
   });
 
   // Cache of known indexes — persists across batches within this segment
-  const knownIndexes = new Set<string>();
+  const touchedIndexes = new Map<string, string>();
 
   // Fetch tenants and default locales from source primary table
   logger.info("Fetching tenants and default locales...");
@@ -144,7 +146,7 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
         targetDatabase,
         options.config.target.opensearch.tableName,
         osClient,
-        knownIndexes
+        touchedIndexes
       );
       migratedCount += migrated;
       skippedCount += batch.length - migrated;
@@ -166,7 +168,7 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
       targetDatabase,
       options.config.target.opensearch.tableName,
       osClient,
-      knownIndexes
+      touchedIndexes
     );
     migratedCount += migrated;
     skippedCount += batch.length - migrated;
@@ -175,6 +177,17 @@ export async function processOsSegment(options: ProcessOsSegmentOptions): Promis
   logger.info(
     `OS segment ${options.segment} completed: ${processedCount} processed, ${migratedCount} migrated, ${skippedCount} skipped`
   );
+
+  // Write touched indexes to file for the after-hook to restore
+  if (touchedIndexes.size > 0) {
+    const transferDir = join(process.cwd(), ".transfer", options.runId);
+    await mkdir(transferDir, { recursive: true });
+
+    const indexData = Object.fromEntries(touchedIndexes);
+    const filePath = join(transferDir, `segment-${options.segment}-indexes.json`);
+    await writeFile(filePath, JSON.stringify(indexData, null, 2));
+    logger.info(`Wrote ${touchedIndexes.size} touched indexes to ${filePath}`);
+  }
 }
 
 // ============================================================================
@@ -195,7 +208,7 @@ async function processOsBatch(
   targetDatabase: DynamoDBClient,
   targetTable: string,
   osClient?: Client,
-  knownIndexes?: Set<string>
+  touchedIndexes?: Map<string, string>
 ): Promise<number> {
   const osItems: OsCommandItem[] = [];
 
@@ -224,7 +237,7 @@ async function processOsBatch(
     database: targetDatabase,
     targetTable,
     osClient,
-    knownIndexes
+    touchedIndexes
   });
 
   return osItems.length;

@@ -30,12 +30,10 @@ export interface OsExecutorDependencies {
   targetTable: string;
   /** OpenSearch client for index creation. If not provided, index creation is skipped. */
   osClient?: Client;
-  /** Cache of known index names. Persists across batches within a segment. */
-  knownIndexes?: Set<string>;
+  /** Map of indexName → original refresh_interval. Persists across batches within a segment. */
+  touchedIndexes?: Map<string, string>;
   /** Custom retry schedule in ms. Defaults to [5000, 10000, 20000, 30000, 30000]. */
   retrySchedule?: number[];
-  /** Optional filter to determine which indexes to manage. When not set, all indexes are managed. */
-  filterIndex?: (params: { index: string }) => boolean;
 }
 
 // ============================================================================
@@ -75,14 +73,11 @@ export async function executeOsCommands(
   );
 
   // Ensure all target indexes exist and have indexing disabled (sequential)
-  if (deps.osClient && deps.knownIndexes) {
+  if (deps.osClient && deps.touchedIndexes) {
     const uniqueIndexes = new Set(osRecords.map(r => r.index));
     const schedule = deps.retrySchedule || RETRY_SCHEDULE;
     for (const indexName of uniqueIndexes) {
-      if (deps.filterIndex && !deps.filterIndex({ index: indexName })) {
-        continue;
-      }
-      await ensureIndex(indexName, deps.osClient, deps.knownIndexes, schedule);
+      await ensureIndex(indexName, deps.osClient, deps.touchedIndexes, schedule);
     }
   }
 
@@ -96,29 +91,34 @@ export async function executeOsCommands(
 async function ensureIndex(
   indexName: string,
   client: Client,
-  knownIndexes: Set<string>,
+  touchedIndexes: Map<string, string>,
   schedule: number[]
 ): Promise<void> {
-  if (knownIndexes.has(indexName)) return;
+  if (touchedIndexes.has(indexName)) {
+    return;
+  }
 
   try {
     await withRetry(
       async () => {
         const { body: exists } = await client.indices.exists({ index: indexName });
         if (exists) {
-          // Disable refresh on existing index
+          // Read current refresh_interval before disabling
+          const originalRefresh = await getRefreshInterval(client, indexName);
           try {
             await client.indices.putSettings({
               index: indexName,
               body: { index: { refresh_interval: "-1" } }
             });
-            logger.info(`Disabled refresh on existing index: ${indexName}`);
+            logger.info(
+              `Disabled refresh on existing index: ${indexName} (was: ${originalRefresh})`
+            );
           } catch (settingsError) {
             logger.warn(
               `Failed to disable refresh on index: ${indexName}. Continuing. Error: ${settingsError}`
             );
           }
-          knownIndexes.add(indexName);
+          touchedIndexes.set(indexName, originalRefresh);
           return;
         }
 
@@ -144,7 +144,8 @@ async function ensureIndex(
           }
         }
 
-        knownIndexes.add(indexName);
+        // New indexes were created with "-1", store "1s" as the default to restore
+        touchedIndexes.set(indexName, "1s");
       },
       `ensureIndex("${indexName}")`,
       schedule
@@ -192,8 +193,20 @@ async function withRetry<T>(
 
 function isAlreadyExistsError(error: any): boolean {
   const errorType = error?.meta?.body?.error?.type;
-  if (errorType === "resource_already_exists_exception") return true;
+  if (errorType === "resource_already_exists_exception") {
+    return true;
+  }
 
   const message = error?.message || "";
   return message.includes("resource_already_exists_exception");
+}
+
+async function getRefreshInterval(client: Client, indexName: string): Promise<string> {
+  try {
+    const { body } = await client.indices.getSettings({ index: indexName });
+    const settings = body[indexName]?.settings?.index;
+    return settings?.refresh_interval || "1s";
+  } catch {
+    return "1s";
+  }
 }

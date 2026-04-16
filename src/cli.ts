@@ -6,7 +6,11 @@ import { execa } from "execa";
 import { bootstrap } from "./bootstrap.ts";
 import { loadConfig } from "./features/MigrationConfig/loadConfig.ts";
 import { Logger } from "./features/Logger/index.ts";
-import { BeforeTransferHook, AfterTransferHook } from "./features/TransferLifecycle/index.ts";
+import {
+  BeforeTransferHook,
+  AfterTransferHook,
+  TransferContext
+} from "./features/TransferLifecycle/index.ts";
 import { MigrationConfig } from "./features/MigrationConfig/index.ts";
 import { processSegment } from "./process-segment.ts";
 import { processOsSegment } from "./process-os-segment.ts";
@@ -34,12 +38,15 @@ yargs(hideBin(process.argv))
       const runId = String(Date.now());
       const segments = config.migration.segments || 1;
 
+      // Register transfer context so hooks can access runId
+      container.registerInstance(TransferContext, { runId });
+
       logConfig(logger, config, runId, segments);
 
       const startTime = Date.now();
 
       try {
-        // Before-transfer hooks (e.g., disable OS refresh)
+        // Before-transfer hooks
         const beforeHook = container.resolve(BeforeTransferHook);
         logger.info("Running before-transfer hooks...");
         await beforeHook.execute();

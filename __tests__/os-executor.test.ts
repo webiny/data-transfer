@@ -13,7 +13,11 @@ function createMockOsClient() {
   return {
     indices: {
       exists: vi.fn(),
-      create: vi.fn()
+      create: vi.fn(),
+      putSettings: vi.fn().mockResolvedValue({}),
+      getSettings: vi.fn().mockResolvedValue({
+        body: {}
+      })
     }
   } as any;
 }
@@ -133,13 +137,13 @@ describe("executeOsCommands", () => {
 describe("index creation", () => {
   let database: MockDatabaseClient;
   let osClient: ReturnType<typeof createMockOsClient>;
-  let knownIndexes: Set<string>;
+  let touchedIndexes: Map<string, string>;
 
   beforeEach(() => {
     database = new MockDatabaseClient();
     vi.spyOn(database, "batchPut").mockResolvedValue();
     osClient = createMockOsClient();
-    knownIndexes = new Set();
+    touchedIndexes = new Map();
   });
 
   function makeDeps(): OsExecutorDependencies {
@@ -147,7 +151,7 @@ describe("index creation", () => {
       database,
       targetTable: "target-os-table",
       osClient,
-      knownIndexes,
+      touchedIndexes,
       retrySchedule: [10, 10]
     };
   }

@@ -112,7 +112,7 @@ describe("OS migration integration", () => {
     const runner = new MigrationRunner(migrationConfig, sourceDb);
     preset.configure(runner, migrationConfig, sourceDb);
 
-    const knownIndexes = new Set<string>();
+    const touchedIndexes = new Map<string, string>();
     const osItems: OsCommandItem[] = [];
 
     for (const record of sourceRecords) {
@@ -140,12 +140,12 @@ describe("OS migration integration", () => {
       database: targetDb,
       targetTable: "target-os",
       osClient,
-      knownIndexes,
+      touchedIndexes,
       retrySchedule: [100, 100]
     });
 
     // Track created indexes for cleanup
-    for (const idx of knownIndexes) {
+    for (const idx of touchedIndexes.keys()) {
       createdIndexes.add(idx);
     }
 
@@ -219,18 +219,18 @@ describe("OS migration integration", () => {
       }
     }
 
-    const knownIndexes = new Set<string>();
+    const touchedIndexes = new Map<string, string>();
 
     await executeOsCommands(osItems, {
       database: targetDb,
       targetTable: "target-os",
       osClient,
-      knownIndexes,
+      touchedIndexes,
       retrySchedule: [100, 100]
     });
 
     // Track created indexes for cleanup
-    for (const idx of knownIndexes) {
+    for (const idx of touchedIndexes.keys()) {
       createdIndexes.add(idx);
     }
 
@@ -245,8 +245,8 @@ describe("OS migration integration", () => {
     expect(indexNames).toContain("root-headless-cms-article");
 
     // Verify indexes are cached
-    expect(knownIndexes.has("root-headless-cms-category")).toBe(true);
-    expect(knownIndexes.has("root-headless-cms-article")).toBe(true);
+    expect(touchedIndexes.has("root-headless-cms-category")).toBe(true);
+    expect(touchedIndexes.has("root-headless-cms-article")).toBe(true);
   }, 30000);
 
   it("should skip page records during decompression", async () => {
@@ -298,7 +298,7 @@ describe("OS migration integration", () => {
     const runner = new MigrationRunner(migrationConfig, sourceDb);
     preset.configure(runner, migrationConfig, sourceDb);
 
-    const knownIndexes = new Set<string>();
+    const touchedIndexes = new Map<string, string>();
     const osItems: OsCommandItem[] = [];
 
     for (const record of sourceRecords) {
@@ -357,12 +357,12 @@ describe("OS migration integration", () => {
       database: targetDb,
       targetTable: "target-os",
       osClient,
-      knownIndexes,
+      touchedIndexes,
       retrySchedule: [100, 100]
     });
 
     // Track created indexes for cleanup
-    for (const idx of knownIndexes) {
+    for (const idx of touchedIndexes.keys()) {
       createdIndexes.add(idx);
     }
 
@@ -370,7 +370,7 @@ describe("OS migration integration", () => {
     expect(indexedDocuments.length).toBeGreaterThan(0);
 
     // Query OS to verify documents exist in each index
-    for (const indexName of knownIndexes) {
+    for (const indexName of touchedIndexes.keys()) {
       const { body: searchResult } = await osClient.search({
         index: indexName,
         body: { query: { match_all: {} } }

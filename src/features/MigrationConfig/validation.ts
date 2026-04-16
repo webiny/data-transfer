@@ -44,13 +44,7 @@ const osTargetAccountConfigSchema = z.object({
   opensearch: z.object({
     endpoint: z.url(),
     tableName: z.string(),
-    service: z.enum(["opensearch", "opensearch-serverless"]),
-    filterIndex: z
-      .custom<(params: { index: string }) => boolean>(
-        (val) => typeof val === "function",
-        "filterIndex must be a function"
-      )
-      .optional()
+    service: z.enum(["opensearch", "opensearch-serverless"])
   })
 });
 
