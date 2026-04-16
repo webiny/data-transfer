@@ -1,5 +1,9 @@
 import { loadEnv, createOsTransfer } from "@webiny/data-transfer";
 
+// Loads the .env file from THIS directory (next to this config file).
+// Using import.meta.url ensures each project folder loads its own .env,
+// so credentials stay isolated between projects — even when you run
+// the transfer from the repository root.
 loadEnv(import.meta.url);
 
 export default createOsTransfer({
