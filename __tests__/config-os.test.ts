@@ -40,7 +40,7 @@ describe("config validation", () => {
                 dynamodb: { tableName: "tgt" },
                 s3: { bucket: "tgt-bucket" }
             },
-            migration: { preset: "v5-to-v6" }
+            pipeline: { preset: "v5-to-v6" }
         });
 
         const config = await loadConfig(configPath);
@@ -67,7 +67,7 @@ describe("config validation", () => {
                     service: "opensearch"
                 }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
 
         const config = await loadConfig(configPath);
@@ -92,7 +92,7 @@ describe("config validation", () => {
                     service: "opensearch-serverless"
                 }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
 
         const config = await loadConfig(configPath);
@@ -107,7 +107,7 @@ describe("config validation", () => {
         const configPath = writeConfig({
             source: { region: "eu-central-1", dynamodb: { tableName: "s" }, s3: { bucket: "b" } },
             target: { region: "eu-central-1", dynamodb: { tableName: "t" }, s3: { bucket: "b" } },
-            migration: { preset: "v5-to-v6" }
+            pipeline: { preset: "v5-to-v6" }
         });
         await expect(loadConfig(configPath)).rejects.toThrow();
     });
@@ -117,7 +117,7 @@ describe("config validation", () => {
             storage: "invalid",
             source: { region: "eu-central-1", dynamodb: { tableName: "s" }, s3: { bucket: "b" } },
             target: { region: "eu-central-1", dynamodb: { tableName: "t" }, s3: { bucket: "b" } },
-            migration: { preset: "v5-to-v6" }
+            pipeline: { preset: "v5-to-v6" }
         });
         await expect(loadConfig(configPath)).rejects.toThrow();
     });
@@ -134,7 +134,7 @@ describe("config validation", () => {
                     service: "opensearch"
                 }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
         await expect(loadConfig(configPath)).rejects.toThrow();
     });
@@ -151,7 +151,7 @@ describe("config validation", () => {
                     service: "opensearch"
                 }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
         await expect(loadConfig(configPath)).rejects.toThrow();
     });
@@ -165,7 +165,7 @@ describe("config validation", () => {
                 opensearch: { tableName: "src-es" }
             },
             target: { region: "eu-central-1" },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
         await expect(loadConfig(configPath)).rejects.toThrow();
     });
@@ -182,7 +182,7 @@ describe("config validation", () => {
                 region: "eu-central-1",
                 opensearch: { endpoint: "https://es.example.com", tableName: "tgt-es" }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
         await expect(loadConfig(configPath)).rejects.toThrow();
     });
@@ -199,7 +199,7 @@ describe("config validation", () => {
                 region: "eu-central-1",
                 opensearch: { tableName: "tgt-es", service: "opensearch" }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
         await expect(loadConfig(configPath)).rejects.toThrow();
     });

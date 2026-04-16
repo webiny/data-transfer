@@ -63,7 +63,7 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const modelProvider = new ModelProvider(
         sourceDatabase,
         config.source.dynamodb.tableName,
-        config.migration.modelsDir
+        config.pipeline.modelsDir
     );
     await modelProvider.preloadModels(tenantLocales);
 
@@ -76,8 +76,8 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
         sourceStorage
     };
 
-    logger.info(`Loading preset: ${config.migration.preset}`);
-    const preset = await loadPreset(config.migration.preset);
+    logger.info(`Loading preset: ${config.pipeline.preset}`);
+    const preset = await loadPreset(config.pipeline.preset);
     logger.info(`Loaded preset: "${preset.name}" - ${preset.description}`);
 
     const runner = new MigrationRunner(migrationConfig, sourceDatabase);

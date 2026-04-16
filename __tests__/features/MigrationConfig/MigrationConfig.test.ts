@@ -45,7 +45,7 @@ describe("MigrationConfig Feature", () => {
                     dynamodb: { tableName: "tgt" },
                     s3: { bucket: "tgt-bucket" }
                 },
-                migration: { preset: "v5-to-v6" }
+                pipeline: { preset: "v5-to-v6" }
             });
 
             const config = await loadConfig(configPath);
@@ -70,7 +70,7 @@ describe("MigrationConfig Feature", () => {
                         service: "opensearch"
                     }
                 },
-                migration: { preset: "v5-to-v6-os" }
+                pipeline: { preset: "v5-to-v6-os" }
             });
 
             const config = await loadConfig(configPath);
@@ -99,7 +99,7 @@ describe("MigrationConfig Feature", () => {
                     dynamodb: { tableName: "tgt" },
                     s3: { bucket: "tgt-bucket" }
                 },
-                migration: { preset: "v5-to-v6" }
+                pipeline: { preset: "v5-to-v6" }
             });
 
             const config = await loadConfig(configPath);
@@ -126,7 +126,7 @@ describe("MigrationConfig Feature", () => {
                     dynamodb: { tableName: "tgt" },
                     s3: { bucket: "tgt-bucket" }
                 },
-                migration: { preset: "v5-to-v6" }
+                pipeline: { preset: "v5-to-v6" }
             });
 
             const config = await loadConfig(configPath);

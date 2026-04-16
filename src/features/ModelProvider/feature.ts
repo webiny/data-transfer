@@ -13,7 +13,7 @@ export const ModelProviderFeature = createFeature({
         const config = container.resolve(MigrationConfig);
 
         const tableName = config.source.dynamodb.tableName;
-        const modelsDir = config.migration.modelsDir;
+        const modelsDir = config.pipeline.modelsDir;
 
         const provider = new ModelProviderImpl(database, logger, tableName, modelsDir);
         container.registerInstance(ModelProvider, provider);

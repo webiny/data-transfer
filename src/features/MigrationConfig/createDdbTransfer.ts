@@ -24,7 +24,7 @@ import type { DdbMigrationConfiguration } from "./validation.ts";
  *     dynamodb: { tableName: "webiny-v6-table" },
  *     s3: { bucket: "webiny-v6-files" }
  *   },
- *   migration: { preset: "v5-to-v6", segments: 4 }
+ *   pipeline: { preset: "v5-to-v6", segments: 4 }
  * });
  * ```
  */

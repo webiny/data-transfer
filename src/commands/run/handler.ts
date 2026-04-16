@@ -16,7 +16,7 @@ export async function handler(configPath: string): Promise<void> {
     const logger = container.resolve(Logger);
 
     const runId = String(Date.now());
-    const segments = config.migration.segments || 1;
+    const segments = config.pipeline.segments || 1;
 
     container.registerInstance(TransferContext, { runId });
 
@@ -65,7 +65,7 @@ function logConfig(
     logger.info("Starting transfer with configuration:");
     logger.info(`  Run ID: ${runId}`);
     logger.info(`  Storage: ${config.storage}`);
-    logger.info(`  Preset: ${config.migration.preset}`);
+    logger.info(`  Preset: ${config.pipeline.preset}`);
     logger.info(`  Segments: ${segments}`);
 
     if (config.storage === "ddb") {

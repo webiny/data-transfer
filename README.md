@@ -28,7 +28,7 @@ export default createDdbTransfer({
     dynamodb: { tableName: "webiny-v6-table" },
     s3: { bucket: "webiny-v6-files" }
   },
-  migration: {
+  pipeline: {
     preset: "v5-to-v6",
     segments: 4,
     modelsDir: "./path/to/models"
@@ -82,7 +82,7 @@ export default createOsTransfer({
       service: "opensearch"
     }
   },
-  migration: {
+  pipeline: {
     preset: "v5-to-v6-os",
     segments: 4
   }

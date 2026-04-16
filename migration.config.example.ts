@@ -26,7 +26,7 @@ export default createDdbTransfer({
     dynamodb: { tableName: "webiny-v6-production" },
     s3: { bucket: "webiny-v6-files" }
   },
-  migration: {
+  pipeline: {
     preset: "v5-to-v6",
     segments: 4
     // modelsDir: "./models"

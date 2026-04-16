@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { awsCredentialsSchema, migrationSettingsSchema } from "./shared.schema.ts";
+import { awsCredentialsSchema, pipelineSettingsSchema } from "./shared.schema.ts";
 
 const ddbAccountConfigSchema = z.object({
     region: z.string(),
@@ -11,7 +11,7 @@ const ddbAccountConfigSchema = z.object({
 export const ddbTransferInputSchema = z.object({
     source: ddbAccountConfigSchema,
     target: ddbAccountConfigSchema,
-    migration: migrationSettingsSchema
+    pipeline: pipelineSettingsSchema
 });
 
 export type DdbTransferInput = z.infer<typeof ddbTransferInputSchema>;

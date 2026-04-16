@@ -19,13 +19,13 @@ describe("createDdbTransfer", () => {
                 dynamodb: { tableName: "tgt" },
                 s3: { bucket: "tgt-bucket" }
             },
-            migration: { preset: "v5-to-v6" }
+            pipeline: { preset: "v5-to-v6" }
         });
 
         expect(config.storage).toBe("ddb");
         expect(config.source.dynamodb.tableName).toBe("src");
         expect(config.target.s3.bucket).toBe("tgt-bucket");
-        expect(config.migration.preset).toBe("v5-to-v6");
+        expect(config.pipeline.preset).toBe("v5-to-v6");
     });
 
     it("should accept optional segments and modelsDir", () => {
@@ -42,11 +42,11 @@ describe("createDdbTransfer", () => {
                 dynamodb: { tableName: "tgt" },
                 s3: { bucket: "tgt-bucket" }
             },
-            migration: { preset: "v5-to-v6", segments: 8, modelsDir: "./models" }
+            pipeline: { preset: "v5-to-v6", segments: 8, modelsDir: "./models" }
         });
 
-        expect(config.migration.segments).toBe(8);
-        expect(config.migration.modelsDir).toBe("./models");
+        expect(config.pipeline.segments).toBe(8);
+        expect(config.pipeline.modelsDir).toBe("./models");
     });
 
     it("should throw on missing source region", () => {
@@ -63,7 +63,7 @@ describe("createDdbTransfer", () => {
                     dynamodb: { tableName: "tgt" },
                     s3: { bucket: "b" }
                 },
-                migration: { preset: "v5-to-v6" }
+                pipeline: { preset: "v5-to-v6" }
             })
         ).toThrow();
     });
@@ -82,7 +82,7 @@ describe("createDdbTransfer", () => {
                     dynamodb: { tableName: "tgt" },
                     s3: { bucket: "b" }
                 },
-                migration: { preset: "v5-to-v6" }
+                pipeline: { preset: "v5-to-v6" }
             })
         ).toThrow();
     });
@@ -102,7 +102,7 @@ describe("createDdbTransfer", () => {
                     dynamodb: { tableName: "tgt" },
                     s3: { bucket: "b" }
                 },
-                migration: {} as any
+                pipeline: {} as any
             })
         ).toThrow();
     });
@@ -126,7 +126,7 @@ describe("createOsTransfer", () => {
                     service: "opensearch"
                 }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
 
         expect(config.storage).toBe("os");
@@ -152,7 +152,7 @@ describe("createOsTransfer", () => {
                     service: "opensearch-serverless"
                 }
             },
-            migration: { preset: "v5-to-v6-os" }
+            pipeline: { preset: "v5-to-v6-os" }
         });
 
         expect(config.target.opensearch.service).toBe("opensearch-serverless");
@@ -175,7 +175,7 @@ describe("createOsTransfer", () => {
                         service: "opensearch"
                     }
                 },
-                migration: { preset: "v5-to-v6-os" }
+                pipeline: { preset: "v5-to-v6-os" }
             })
         ).toThrow();
     });
@@ -197,7 +197,7 @@ describe("createOsTransfer", () => {
                         tableName: "tgt-es"
                     } as any
                 },
-                migration: { preset: "v5-to-v6-os" }
+                pipeline: { preset: "v5-to-v6-os" }
             })
         ).toThrow();
     });
@@ -220,7 +220,7 @@ describe("createOsTransfer", () => {
                         service: "opensearch"
                     }
                 },
-                migration: { preset: "v5-to-v6-os" }
+                pipeline: { preset: "v5-to-v6-os" }
             })
         ).toThrow();
     });

@@ -28,7 +28,7 @@ describe("bootstrap", () => {
             dynamodb: { tableName: "target-table" },
             s3: { bucket: "target-bucket" }
         },
-        migration: { preset: "v5-to-v6" }
+        pipeline: { preset: "v5-to-v6" }
     };
 
     const osConfig: MigrationConfig.Interface = {
@@ -48,7 +48,7 @@ describe("bootstrap", () => {
                 service: "opensearch" as const
             }
         },
-        migration: { preset: "v5-to-v6-os" }
+        pipeline: { preset: "v5-to-v6-os" }
     };
 
     describe("ddb mode", () => {

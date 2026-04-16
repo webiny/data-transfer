@@ -27,7 +27,7 @@ import type { OsMigrationConfiguration } from "./validation.ts";
  *       service: "opensearch"
  *     }
  *   },
- *   migration: { preset: "v5-to-v6-os", segments: 4 }
+ *   pipeline: { preset: "v5-to-v6-os", segments: 4 }
  * });
  * ```
  */

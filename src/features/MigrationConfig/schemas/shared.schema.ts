@@ -6,7 +6,7 @@ export const awsCredentialsSchema = z.object({
     sessionToken: z.string().optional()
 });
 
-export const migrationSettingsSchema = z.object({
+export const pipelineSettingsSchema = z.object({
     preset: z.string(),
     segments: z.number().int().positive().optional(),
     modelsDir: z.string().optional()

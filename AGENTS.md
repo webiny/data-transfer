@@ -15,7 +15,7 @@ This tool transfers Webiny data between environments. Current use case is v5-to-
 **User config files** import builder functions from the package:
 ```typescript
 import { createDdbTransfer } from "@webiny/v5-to-v6";
-export default createDdbTransfer({ source: {...}, target: {...}, migration: {...} });
+export default createDdbTransfer({ source: {...}, target: {...}, pipeline: {...} });
 ```
 
 **Running:** `yarn webiny-v5-to-v6 --config=./migration.config.ts`
