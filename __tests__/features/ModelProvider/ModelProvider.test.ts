@@ -1,22 +1,38 @@
 import "reflect-metadata";
 import { describe, it, expect, beforeEach } from "vitest";
-import { writeFileSync, mkdtempSync, rmSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { Container } from "@webiny/di";
-import { ModelProviderImpl } from "../../../src/features/ModelProvider/ModelProvider.ts";
-import { ModelProvider } from "../../../src/features/ModelProvider/abstractions/ModelProvider.ts";
+import { ModelProvider, ModelProviderFeature } from "../../../src/features/ModelProvider/index.ts";
+import { SourceDynamoDbClient } from "../../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { MigrationConfig } from "../../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { LoggerFeature } from "../../../src/features/Logger/index.ts";
 import { MockDynamoDbClient } from "../DynamoDbClient/MockDynamoDbClient.ts";
 
-// Simple mock logger
-const mockLogger = {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    fatal: () => {},
-    done: () => {}
-};
+function createContainer(database: MockDynamoDbClient, modelsDir?: string): Container {
+    const container = new Container();
+    LoggerFeature.register(container, { logLevel: "error", json: false });
+    container.registerInstance(SourceDynamoDbClient, database);
+    container.registerInstance(MigrationConfig, {
+        storage: "ddb",
+        source: {
+            region: "us-east-1",
+            credentials: { accessKeyId: "test", secretAccessKey: "test" },
+            dynamodb: { tableName: "source-table" },
+            s3: { bucket: "bucket" }
+        },
+        target: {
+            region: "us-east-1",
+            credentials: { accessKeyId: "test", secretAccessKey: "test" },
+            dynamodb: { tableName: "target-table" },
+            s3: { bucket: "bucket" }
+        },
+        pipeline: { preset: "v5-to-v6", modelsDir }
+    } as MigrationConfig.Interface);
+    ModelProviderFeature.register(container);
+    return container;
+}
 
 describe("ModelProvider", () => {
     describe("preloadModels from DB", () => {
@@ -49,7 +65,8 @@ describe("ModelProvider", () => {
                 ]
             });
 
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(new Map([["root", "en-US"]]));
 
             expect(provider.getModelIds()).toHaveLength(2);
@@ -60,7 +77,8 @@ describe("ModelProvider", () => {
 
         it("should return undefined for unknown model", async () => {
             const database = new MockDynamoDbClient();
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(new Map([["root", "en-US"]]));
 
             expect(provider.getModel("nonexistent")).toBeUndefined();
@@ -86,11 +104,11 @@ describe("ModelProvider", () => {
                 ]
             });
 
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(new Map([["root", "en-US"]]));
 
             expect(provider.getModelIds()).toHaveLength(1);
-            // First one wins for DB
             expect(provider.getModel("category")!.name).toBe("Category");
         });
 
@@ -114,7 +132,8 @@ describe("ModelProvider", () => {
                 ]
             });
 
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(
                 new Map([
                     ["root", "en-US"],
@@ -146,7 +165,8 @@ describe("ModelProvider", () => {
             );
 
             const database = new MockDynamoDbClient();
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table", tmpDir);
+            const container = createContainer(database, tmpDir);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(new Map([["root", "en-US"]]));
 
             expect(provider.getModel("category")).toBeDefined();
@@ -179,10 +199,10 @@ describe("ModelProvider", () => {
                 })
             );
 
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table", tmpDir);
+            const container = createContainer(database, tmpDir);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(new Map([["root", "en-US"]]));
 
-            // JSON takes precedence
             expect(provider.getModel("category")!.name).toBe("Category from JSON");
 
             rmSync(tmpDir, { recursive: true, force: true });
@@ -195,7 +215,8 @@ describe("ModelProvider", () => {
             );
 
             const database = new MockDynamoDbClient();
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table", tmpDir);
+            const container = createContainer(database, tmpDir);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(new Map([["root", "en-US"]]));
 
             expect(provider.getModelIds()).toHaveLength(0);
@@ -207,7 +228,8 @@ describe("ModelProvider", () => {
             writeFileSync(join(tmpDir, "readme.txt"), "not a model");
 
             const database = new MockDynamoDbClient();
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table", tmpDir);
+            const container = createContainer(database, tmpDir);
+            const provider = container.resolve(ModelProvider);
             await provider.preloadModels(new Map([["root", "en-US"]]));
 
             expect(provider.getModelIds()).toHaveLength(0);
@@ -217,17 +239,20 @@ describe("ModelProvider", () => {
     });
 
     describe("DI registration", () => {
-        it("should resolve from container via feature", async () => {
-            // This test verifies the feature wiring works by manually
-            // registering the instance (since we don't have full DI setup here)
-            const container = new Container();
+        it("should resolve from container", () => {
             const database = new MockDynamoDbClient();
-            const provider = new ModelProviderImpl(database, mockLogger, "source-table");
-
-            container.registerInstance(ModelProvider, provider);
-
+            const container = createContainer(database);
             const resolved = container.resolve(ModelProvider);
-            expect(resolved).toBe(provider);
+            expect(resolved).toBeDefined();
+            expect(typeof resolved.preloadModels).toBe("function");
+        });
+
+        it("should return same instance on multiple resolves", () => {
+            const database = new MockDynamoDbClient();
+            const container = createContainer(database);
+            const first = container.resolve(ModelProvider);
+            const second = container.resolve(ModelProvider);
+            expect(first).toBe(second);
         });
     });
 });

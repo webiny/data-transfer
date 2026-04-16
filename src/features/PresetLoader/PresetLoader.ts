@@ -2,7 +2,7 @@ import { pathToFileURL } from "node:url";
 import { resolve, isAbsolute } from "node:path";
 import { existsSync } from "node:fs";
 import type { MigrationPreset } from "@/src/core/types.ts";
-import { PresetLoader } from "./abstractions/PresetLoader.ts";
+import { PresetLoader as PresetLoaderAbstraction } from "./abstractions/PresetLoader.ts";
 import { Logger } from "../Logger/abstractions/Logger.ts";
 
 const BUILT_IN_PRESETS = new Map<string, string>([
@@ -10,7 +10,7 @@ const BUILT_IN_PRESETS = new Map<string, string>([
     ["v5-to-v6-os", new URL("../../presets/v5-to-v6-os.ts", import.meta.url).pathname]
 ]);
 
-export class PresetLoaderImpl implements PresetLoader.Interface {
+class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
     public constructor(private readonly logger: Logger.Interface) {}
 
     public async load(presetNameOrPath: string): Promise<MigrationPreset> {
@@ -80,3 +80,8 @@ export class PresetLoaderImpl implements PresetLoader.Interface {
         );
     }
 }
+
+export const PresetLoader = PresetLoaderAbstraction.createImplementation({
+    implementation: PresetLoaderImpl,
+    dependencies: [Logger]
+});

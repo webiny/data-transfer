@@ -4,6 +4,6 @@ import { GzipCompression } from "./GzipCompression.ts";
 export const GzipCompressionFeature = createFeature({
     name: "Core/GzipCompressionFeature",
     register(container) {
-        container.register(GzipCompression);
+        container.register(GzipCompression).inSingletonScope();
     }
 });

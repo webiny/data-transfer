@@ -2,17 +2,22 @@ import { readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { SourceDynamoDbClient } from "../DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { Logger } from "../Logger/abstractions/Logger.ts";
-import { ModelProvider } from "./abstractions/ModelProvider.ts";
+import { MigrationConfig } from "../MigrationConfig/abstractions/MigrationConfig.ts";
+import { ModelProvider as ModelProviderAbstraction } from "./abstractions/ModelProvider.ts";
 
-export class ModelProviderImpl implements ModelProvider.Interface {
-    private models: Map<string, ModelProvider.ModelType> = new Map();
+class ModelProviderImpl implements ModelProviderAbstraction.Interface {
+    private models: Map<string, ModelProviderAbstraction.ModelType> = new Map();
+    private readonly tableName: string;
+    private readonly modelsDir?: string;
 
     public constructor(
-        private database: SourceDynamoDbClient.Interface,
-        private logger: Logger.Interface,
-        private tableName: string,
-        private modelsDir?: string
-    ) {}
+        private readonly database: SourceDynamoDbClient.Interface,
+        private readonly logger: Logger.Interface,
+        config: MigrationConfig.Interface
+    ) {
+        this.tableName = config.source.dynamodb.tableName;
+        this.modelsDir = config.pipeline.modelsDir;
+    }
 
     public async preloadModels(tenantLocales: Map<string, string>): Promise<void> {
         let dbCount = 0;
@@ -28,7 +33,7 @@ export class ModelProviderImpl implements ModelProvider.Interface {
                 for (const record of records) {
                     const modelId = record.modelId as string;
                     if (modelId && !this.models.has(modelId)) {
-                        this.models.set(modelId, record as ModelProvider.ModelType);
+                        this.models.set(modelId, record as ModelProviderAbstraction.ModelType);
                         dbCount++;
                     }
                 }
@@ -47,7 +52,7 @@ export class ModelProviderImpl implements ModelProvider.Interface {
                     try {
                         const path = join(this.modelsDir, file);
                         const content = await readFile(path, "utf-8");
-                        const model = JSON.parse(content) as ModelProvider.ModelType;
+                        const model = JSON.parse(content) as ModelProviderAbstraction.ModelType;
 
                         if (model.modelId) {
                             // JSON models override DB models (user-provided takes precedence)
@@ -70,7 +75,7 @@ export class ModelProviderImpl implements ModelProvider.Interface {
         );
     }
 
-    public getModel(modelId: string): ModelProvider.ModelType | undefined {
+    public getModel(modelId: string): ModelProviderAbstraction.ModelType | undefined {
         return this.models.get(modelId);
     }
 
@@ -78,3 +83,8 @@ export class ModelProviderImpl implements ModelProvider.Interface {
         return Array.from(this.models.keys());
     }
 }
+
+export const ModelProvider = ModelProviderAbstraction.createImplementation({
+    implementation: ModelProviderImpl,
+    dependencies: [SourceDynamoDbClient, Logger, MigrationConfig]
+});

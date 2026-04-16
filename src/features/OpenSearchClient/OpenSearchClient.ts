@@ -1,12 +1,12 @@
 import { Client } from "@opensearch-project/opensearch";
 import { AwsSigv4Signer } from "@opensearch-project/opensearch/aws";
-import { OpenSearchClient } from "./abstractions/OpenSearchClient.ts";
+import { OpenSearchClient as OpenSearchClientAbstraction } from "./abstractions/OpenSearchClient.ts";
 import { OpenSearchClientConfig } from "./abstractions/OpenSearchClientConfig.ts";
 
-export class OpenSearchClientImpl implements OpenSearchClient.Interface {
+class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
     private client: Client;
 
-    constructor(config: OpenSearchClientConfig.Interface) {
+    public constructor(config: OpenSearchClientConfig.Interface) {
         this.client = new Client({
             ...AwsSigv4Signer({
                 region: config.region,
@@ -26,21 +26,24 @@ export class OpenSearchClientImpl implements OpenSearchClient.Interface {
         return Boolean(body);
     }
 
-    public async createIndex(index: string, body?: OpenSearchClient.CreateBody): Promise<void> {
+    public async createIndex(
+        index: string,
+        body?: OpenSearchClientAbstraction.CreateBody
+    ): Promise<void> {
         await this.client.indices.create({
             index,
             body: body as any
         });
     }
 
-    public async listIndexes(): Promise<OpenSearchClient.Info[]> {
+    public async listIndexes(): Promise<OpenSearchClientAbstraction.Info[]> {
         const { body } = await this.client.cat.indices({ format: "json" });
-        return (body || []) as OpenSearchClient.Info[];
+        return (body || []) as OpenSearchClientAbstraction.Info[];
     }
 
     public async putIndexSettings(
         index: string,
-        settings: OpenSearchClient.Settings
+        settings: OpenSearchClientAbstraction.Settings
     ): Promise<void> {
         await this.client.indices.putSettings({
             index,
@@ -48,3 +51,8 @@ export class OpenSearchClientImpl implements OpenSearchClient.Interface {
         });
     }
 }
+
+export const OpenSearchClient = OpenSearchClientAbstraction.createImplementation({
+    implementation: OpenSearchClientImpl,
+    dependencies: [OpenSearchClientConfig]
+});

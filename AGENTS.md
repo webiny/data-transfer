@@ -41,7 +41,7 @@ export default createDdbTransfer({ source: {...}, target: {...}, pipeline: {...}
 
 After completing any task, **always run these in order before committing**:
 
-1. `yarn prettier:fix` — format all source and test files
+1. `yarn format:fix` — format all source and test files (oxfmt)
 2. `yarn ts-check` — verify TypeScript compiles with no errors
 3. `yarn test:coverage` — run full test suite with coverage
 4. `git status` — check for ALL modified files (including prettier changes) and stage them all
@@ -329,7 +329,7 @@ These files contain old code still used by command handlers (not yet migrated to
 ### Important conventions to follow
 
 - Read the full AGENTS.md before starting work
-- Always run verification steps before committing (prettier:fix, ts-check, test:coverage, git status)
+- Always run verification steps before committing (format:fix, ts-check, test:coverage, git status)
 - Use yarn, never npm
 - Use namespaces for types, never export interfaces directly
 - Use `public`/`private`/`protected` on all class members

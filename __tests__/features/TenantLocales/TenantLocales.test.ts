@@ -1,18 +1,35 @@
 import "reflect-metadata";
 import { describe, it, expect, beforeEach } from "vitest";
 import { Container } from "@webiny/di";
-import { TenantLocalesImpl } from "../../../src/features/TenantLocales/TenantLocales.ts";
-import { TenantLocales } from "../../../src/features/TenantLocales/abstractions/TenantLocales.ts";
+import { TenantLocales, TenantLocalesFeature } from "../../../src/features/TenantLocales/index.ts";
+import { SourceDynamoDbClient } from "../../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { MigrationConfig } from "../../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { LoggerFeature } from "../../../src/features/Logger/index.ts";
 import { MockDynamoDbClient } from "../DynamoDbClient/MockDynamoDbClient.ts";
 
-const mockLogger = {
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    fatal: () => {},
-    done: () => {}
-};
+function createContainer(database: MockDynamoDbClient): Container {
+    const container = new Container();
+    LoggerFeature.register(container, { logLevel: "error", json: false });
+    container.registerInstance(SourceDynamoDbClient, database);
+    container.registerInstance(MigrationConfig, {
+        storage: "ddb",
+        source: {
+            region: "us-east-1",
+            credentials: { accessKeyId: "test", secretAccessKey: "test" },
+            dynamodb: { tableName: "source-table" },
+            s3: { bucket: "bucket" }
+        },
+        target: {
+            region: "us-east-1",
+            credentials: { accessKeyId: "test", secretAccessKey: "test" },
+            dynamodb: { tableName: "target-table" },
+            s3: { bucket: "bucket" }
+        },
+        pipeline: { preset: "v5-to-v6" }
+    } as MigrationConfig.Interface);
+    TenantLocalesFeature.register(container);
+    return container;
+}
 
 describe("TenantLocales", () => {
     describe("preload", () => {
@@ -34,7 +51,8 @@ describe("TenantLocales", () => {
                 ]
             });
 
-            const tenantLocales = new TenantLocalesImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const tenantLocales = container.resolve(TenantLocales);
             await tenantLocales.preload();
 
             const map = tenantLocales.getMap();
@@ -43,8 +61,8 @@ describe("TenantLocales", () => {
 
         it("should always include root tenant", async () => {
             const database = new MockDynamoDbClient();
-
-            const tenantLocales = new TenantLocalesImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const tenantLocales = container.resolve(TenantLocales);
             await tenantLocales.preload();
 
             const map = tenantLocales.getMap();
@@ -82,7 +100,8 @@ describe("TenantLocales", () => {
                 ]
             });
 
-            const tenantLocales = new TenantLocalesImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const tenantLocales = container.resolve(TenantLocales);
             await tenantLocales.preload();
 
             const map = tenantLocales.getMap();
@@ -104,7 +123,8 @@ describe("TenantLocales", () => {
                 ]
             });
 
-            const tenantLocales = new TenantLocalesImpl(database, mockLogger, "source-table");
+            const container = createContainer(database);
+            const tenantLocales = container.resolve(TenantLocales);
             await tenantLocales.preload();
 
             expect(tenantLocales.getMap().get("root")).toBe("en-US");
@@ -112,14 +132,13 @@ describe("TenantLocales", () => {
     });
 
     describe("isDefaultLocaleRecord", () => {
-        let tenantLocales: TenantLocalesImpl;
+        let tenantLocales: TenantLocales.Interface;
 
         beforeEach(async () => {
             const database = new MockDynamoDbClient();
-            tenantLocales = new TenantLocalesImpl(database, mockLogger, "source-table");
-            // Manually set locales for testing
+            const container = createContainer(database);
+            tenantLocales = container.resolve(TenantLocales);
             await tenantLocales.preload();
-            // root -> en-US is auto-added
         });
 
         it("should accept records matching default locale", () => {
@@ -150,14 +169,19 @@ describe("TenantLocales", () => {
 
     describe("DI registration", () => {
         it("should resolve from container", () => {
-            const container = new Container();
             const database = new MockDynamoDbClient();
-            const instance = new TenantLocalesImpl(database, mockLogger, "source-table");
-
-            container.registerInstance(TenantLocales, instance);
-
+            const container = createContainer(database);
             const resolved = container.resolve(TenantLocales);
-            expect(resolved).toBe(instance);
+            expect(resolved).toBeDefined();
+            expect(typeof resolved.preload).toBe("function");
+        });
+
+        it("should return same instance on multiple resolves", () => {
+            const database = new MockDynamoDbClient();
+            const container = createContainer(database);
+            const first = container.resolve(TenantLocales);
+            const second = container.resolve(TenantLocales);
+            expect(first).toBe(second);
         });
     });
 });

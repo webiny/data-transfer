@@ -1,15 +1,19 @@
 import { SourceDynamoDbClient } from "../DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { Logger } from "../Logger/abstractions/Logger.ts";
-import { TenantLocales } from "./abstractions/TenantLocales.ts";
+import { MigrationConfig } from "../MigrationConfig/abstractions/MigrationConfig.ts";
+import { TenantLocales as TenantLocalesAbstraction } from "./abstractions/TenantLocales.ts";
 
-export class TenantLocalesImpl implements TenantLocales.Interface {
+class TenantLocalesImpl implements TenantLocalesAbstraction.Interface {
     private tenantLocales: Map<string, string> = new Map();
+    private readonly tableName: string;
 
     public constructor(
-        private database: SourceDynamoDbClient.Interface,
-        private logger: Logger.Interface,
-        private tableName: string
-    ) {}
+        private readonly database: SourceDynamoDbClient.Interface,
+        private readonly logger: Logger.Interface,
+        config: MigrationConfig.Interface
+    ) {
+        this.tableName = config.source.dynamodb.tableName;
+    }
 
     public async preload(): Promise<void> {
         const tenants = await this.fetchTenants();
@@ -93,3 +97,8 @@ export class TenantLocalesImpl implements TenantLocales.Interface {
         return "en-US";
     }
 }
+
+export const TenantLocales = TenantLocalesAbstraction.createImplementation({
+    implementation: TenantLocalesImpl,
+    dependencies: [SourceDynamoDbClient, Logger, MigrationConfig]
+});
