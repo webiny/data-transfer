@@ -60,6 +60,9 @@ src/
 ├── base/                     # Foundation: createAbstraction, createFeature, Result, BaseError
 ├── commands/                 # CLI commands (self-registering)
 │   ├── index.ts              # Exports all register functions
+│   ├── init/                 # Scaffold a new transfer project
+│   │   ├── handler.ts        # Copies templates, writes package.json
+│   │   └── register.ts       # Registers "init <folder>" on yargs
 │   ├── run/                  # Main orchestrator command ($0)
 │   │   ├── handler.ts        # Logic: bootstrap, hooks, spawn workers
 │   │   └── register.ts       # Registers on yargs
@@ -83,7 +86,21 @@ src/
 ├── transformers/             # Record transformers (wrapInData, removeLocale, etc.)
 ├── presets/                  # Migration presets (v5-to-v6-ddb, v5-to-v6-os)
 ├── opensearch/               # OS executor, decompress (legacy, partially migrated)
+├── utils/
+│   └── load-env.ts           # loadEnv(import.meta.url) — exported for user config files
 └── [legacy dirs]             # database/, config/, models/, utils/, storage/ — being replaced by features
+templates/                    # Scaffolded by `init` command
+├── package.json.tpl          # Template with {{PROJECT_NAME}} placeholder
+├── README.md
+├── .gitignore
+├── .env.example
+├── projects/example/         # Example project configs
+│   ├── ddb.transfer.config.ts
+│   ├── os.transfer.config.ts
+│   └── .env.example
+├── transformers/.gitkeep
+├── presets/.gitkeep
+└── features/.gitkeep
 ```
 
 ## Command Structure

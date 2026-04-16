@@ -1,17 +1,36 @@
 # Webiny Data Transfer Tool
 
-## Usage
+## Quick Start
 
-### Configuration File Approach
+```bash
+npx @webiny/data-transfer init my-transfer
+cd my-transfer
+yarn install
+cp projects/example/.env.example projects/example/.env
+# Edit projects/example/.env with your AWS credentials
+yarn transfer --config=./projects/example/ddb.transfer.config.ts
+```
 
-Create a migration configuration file (e.g., `migration.config.ts`):
+The `init` command scaffolds a project with config templates, `.env` files, and directories for custom transformers, presets, and features.
+
+## Manual Setup
+
+Install the tool:
+
+```bash
+yarn add @webiny/data-transfer
+```
+
+Create a config file:
 
 ```typescript
-import { createDdbTransfer } from "@webiny/data-transfer";
+import { loadEnv, createDdbTransfer } from "@webiny/data-transfer";
+
+loadEnv(import.meta.url);
 
 export default createDdbTransfer({
   source: {
-    region: "us-east-1",
+    region: process.env.SOURCE_REGION!,
     credentials: {
       accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
@@ -20,7 +39,7 @@ export default createDdbTransfer({
     s3: { bucket: "webiny-v5-files" }
   },
   target: {
-    region: "us-east-1",
+    region: process.env.TARGET_REGION!,
     credentials: {
       accessKeyId: process.env.TARGET_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.TARGET_AWS_SECRET_ACCESS_KEY!
@@ -36,16 +55,10 @@ export default createDdbTransfer({
 });
 ```
 
-Install the tool as a dev dependency:
-
-```bash
-yarn add -D @webiny/data-transfer@github:webiny/v5-to-v6
-```
-
 Then run:
 
 ```bash
-yarn webiny-data-transfer --config=./migration.config.ts
+yarn webiny-data-transfer --config=./my-config.ts
 ```
 
 ### Storage Modes
@@ -58,7 +71,9 @@ The `storage` field determines which data source to migrate. Run DDB migration f
 ### OpenSearch (`os`) Configuration
 
 ```typescript
-import { createOsTransfer } from "@webiny/data-transfer";
+import { loadEnv, createOsTransfer } from "@webiny/data-transfer";
+
+loadEnv(import.meta.url);
 
 export default createOsTransfer({
   source: {
