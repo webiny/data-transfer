@@ -1,5 +1,5 @@
 import { pathToFileURL } from "node:url";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { MigrationConfig } from "./abstractions/MigrationConfig.ts";
 
 /**
@@ -29,6 +29,12 @@ export async function loadConfig(configPath: string): Promise<MigrationConfig.In
                 `Config file ${configPath} has invalid or missing "storage" field. ` +
                     `Use createDdbTransfer() or createOsTransfer() to create your config.`
             );
+        }
+
+        // Resolve modelsDir relative to the config file's directory
+        if (config.pipeline?.modelsDir) {
+            const configDir = dirname(absolutePath);
+            config.pipeline.modelsDir = resolve(configDir, config.pipeline.modelsDir);
         }
 
         return config as MigrationConfig.Interface;

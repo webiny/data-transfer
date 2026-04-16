@@ -28,6 +28,6 @@ export default createDdbTransfer({
     pipeline: {
         preset: "v5-to-v6",
         segments: 4
-        // modelsDir: "./projects/example/models"
+        // modelsDir: "./models"
     }
 });

@@ -1,5 +1,5 @@
 import { pathToFileURL } from "node:url";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { migrationConfigSchema, type MigrationConfiguration } from "./validation.ts";
 
 // ============================================================================
@@ -22,7 +22,15 @@ export async function loadConfig(configPath: string): Promise<MigrationConfigura
             throw new Error(`Config file ${configPath} must have a default export`);
         }
 
-        return migrationConfigSchema.parse(config);
+        const parsed = migrationConfigSchema.parse(config);
+
+        // Resolve modelsDir relative to the config file's directory
+        if (parsed.pipeline?.modelsDir) {
+            const configDir = dirname(absolutePath);
+            parsed.pipeline.modelsDir = resolve(configDir, parsed.pipeline.modelsDir);
+        }
+
+        return parsed;
     } catch (error) {
         if (error instanceof Error) {
             throw new Error(`Failed to load config from ${configPath}: ${error.message}`);
