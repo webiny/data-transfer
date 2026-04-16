@@ -22,12 +22,17 @@ export default createDdbTransfer({ source: {...}, target: {...}, pipeline: {...}
 
 **Running:** `yarn transfer --config=./projects/example/ddb.transfer.config.ts`
 
+**Public API** (exported from `src/index.ts` via `package.json` `exports` field):
+- `createDdbTransfer(input)` — validates with Zod, returns config with `storage: "ddb"`
+- `createOsTransfer(input)` — validates with Zod, returns config with `storage: "os"`
+- `loadEnv(import.meta.url)` — loads `.env` from the calling file's directory (cross-platform)
+
 **Config builder functions** (`createDdbTransfer`, `createOsTransfer`):
 - Live in `src/features/MigrationConfig/`
-- Exported from `src/index.ts` (mapped via `package.json` `exports` field)
 - Validate input with Zod at creation time
 - Add `storage: "ddb"` or `storage: "os"` internally
 - User never sets `storage` manually
+- Config field is `pipeline: { preset, segments?, modelsDir? }` (not `migration`)
 
 ## Verification Steps
 
@@ -262,6 +267,10 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 - **Credentials required**: AWS credentials are mandatory in all config schemas (not optional)
 - **No `put` method**: DynamoDbClient only has `scan`, `query`, `batchPut` — use `batchPut` even for single records
 - **Self-registering commands**: each command folder has handler.ts + register.ts, CLI just chains registrations
+- **Init command**: `init <folder>` scaffolds a new project by copying `templates/` directory, replaces `{{PROJECT_NAME}}` in `package.json.tpl`, removes the `.tpl` file. Fails if folder exists.
+- **loadEnv helper**: exported for user config files — loads `.env` relative to the config file's location using `import.meta.url`. Uses `dotenv` internally. Each project folder has its own `.env` for credential isolation.
+- **Template structure**: `templates/` contains real files (not inline strings) that get copied verbatim. `package.json.tpl` is the only templated file.
+- **Scaffolded project**: `"type": "module"`, `"private": true`, single `"transfer"` script pointing to the `webiny-data-transfer` binary. Users can have multiple project folders under `projects/` with isolated `.env` files.
 
 ## Testing Patterns
 
@@ -315,4 +324,7 @@ These files contain old code still used by command handlers (not yet migrated to
 - Use namespaces for types, never export interfaces directly
 - Use `public`/`private`/`protected` on all class members
 - Always wrap if/for/while in curly braces
-- Config builder functions (`createDdbTransfer`, `createOsTransfer`) are the user-facing API — keep them simple and well-documented
+- Config field is `pipeline` (not `migration`) — holds `preset`, `segments`, `modelsDir`
+- Public API exports live in `src/index.ts`: `createDdbTransfer`, `createOsTransfer`, `loadEnv`
+- Template files in `templates/` are real files that get copied — keep them valid and up to date when changing config schemas or the public API
+- The `.env` files must never be committed — `.gitignore` in templates blocks `**/.env`
