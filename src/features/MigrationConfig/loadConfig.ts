@@ -1,11 +1,13 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import { migrationConfigSchema } from "./validation.ts";
 import { MigrationConfig } from "./abstractions/MigrationConfig.ts";
 
 /**
- * Load and validate a migration configuration file.
- * Returns the validated config to be registered as an instance.
+ * Load a transfer configuration file.
+ *
+ * The config file should use `createDdbTransfer` or `createOsTransfer`
+ * to create and validate the config. The loader performs a lightweight
+ * check — the builder functions handle full validation.
  */
 export async function loadConfig(configPath: string): Promise<MigrationConfig.Interface> {
     const absolutePath = resolve(process.cwd(), configPath);
@@ -16,10 +18,20 @@ export async function loadConfig(configPath: string): Promise<MigrationConfig.In
         const config = module.default;
 
         if (!config) {
-            throw new Error(`Config file ${configPath} must have a default export`);
+            throw new Error(
+                `Config file ${configPath} must have a default export. ` +
+                    `Use createDdbTransfer() or createOsTransfer() to create your config.`
+            );
         }
 
-        return migrationConfigSchema.parse(config);
+        if (!config.storage || (config.storage !== "ddb" && config.storage !== "os")) {
+            throw new Error(
+                `Config file ${configPath} has invalid or missing "storage" field. ` +
+                    `Use createDdbTransfer() or createOsTransfer() to create your config.`
+            );
+        }
+
+        return config as MigrationConfig.Interface;
     } catch (error) {
         if (error instanceof Error) {
             throw new Error(`Failed to load config from ${configPath}: ${error.message}`);
