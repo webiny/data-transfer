@@ -45,6 +45,7 @@ export async function handler(folderName: string): Promise<void> {
     console.log(`  │   └── example/`);
     console.log(`  │       ├── ddb.transfer.config.ts`);
     console.log(`  │       ├── os.transfer.config.ts`);
+    console.log(`  │       ├── models/          # custom CMS model JSON overrides`);
     console.log(`  │       └── .env.example`);
     console.log(`  ├── transformers/`);
     console.log(`  ├── presets/`);

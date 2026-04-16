@@ -31,5 +31,6 @@ export default createOsTransfer({
     pipeline: {
         preset: "v5-to-v6-os",
         segments: 4
+        // modelsDir: "./projects/example/models"
     }
 });
