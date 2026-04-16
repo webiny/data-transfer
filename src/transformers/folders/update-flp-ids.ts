@@ -6,22 +6,22 @@ import { TransformContext } from "../../core/types.ts";
  * Note: FLP records already have data attribute, so wrapInData doesn't wrap them again
  */
 export const updateFlpIds: Transformer = {
-  name: "updateFlpIds",
-  transform(ctx: TransformContext) {
-    const { record } = ctx;
+    name: "updateFlpIds",
+    transform(ctx: TransformContext) {
+        const { record } = ctx;
 
-    if (record.data && typeof record.data === "object") {
-      const data = record.data as Record<string, unknown>;
+        if (record.data && typeof record.data === "object") {
+            const data = record.data as Record<string, unknown>;
 
-      // Remove #0001 from id
-      if (typeof data.id === "string") {
-        data.id = data.id.replace(/#0001$/, "");
-      }
+            // Remove #0001 from id
+            if (typeof data.id === "string") {
+                data.id = data.id.replace(/#0001$/, "");
+            }
 
-      // Remove #0001 from parentId
-      if (typeof data.parentId === "string") {
-        data.parentId = data.parentId.replace(/#0001$/, "");
-      }
+            // Remove #0001 from parentId
+            if (typeof data.parentId === "string") {
+                data.parentId = data.parentId.replace(/#0001$/, "");
+            }
+        }
     }
-  }
 };

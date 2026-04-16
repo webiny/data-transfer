@@ -1,21 +1,29 @@
 {
-  "name": "@webiny/v5-to-v6",
+  "name": "@webiny/data-transfer",
   "version": "1.0.0",
-  "description": "Webiny v5 to v6 DynamoDB migration tool",
+  "description": "Webiny data transfer tool",
   "type": "module",
-  "bin": "./bin.js",
+  "bin": {
+    "webiny-data-transfer": "./bin.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "ts-check": "yarn tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.include=\"src/**/**\"",
     "test:watch": "vitest",
-    "prettier:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\" --list-different"
+    "format": "oxfmt",
+    "format:fix": "oxfmt"
   },
   "keywords": [
     "webiny",
+    "data-transfer",
     "migration",
-    "dynamodb"
+    "dynamodb",
+    "opensearch"
   ],
   "author": "Webiny",
   "license": "MIT",
@@ -24,8 +32,10 @@
     "@aws-sdk/client-s3": "^3.1030.0",
     "@aws-sdk/lib-dynamodb": "^3.1030.0",
     "@opensearch-project/opensearch": "^3.5.1",
-    "@webiny/api-opensearch": "^6.1.0",
-    "@webiny/lexical-converter": "^6.1.0",
+    "@webiny/api-opensearch": "^6.2.0",
+    "@webiny/di": "^0.2.3",
+    "@webiny/lexical-converter": "^6.2.0",
+    "dotenv": "^17.4.2",
     "execa": "^9.6.1",
     "exifreader": "^4.38.1",
     "jsdom": "^29.0.2",
@@ -46,12 +56,12 @@
     "@vitest/coverage-v8": "4.1.4",
     "dynalite": "^4.0.0",
     "jest-dynalite": "^3.6.1",
-    "prettier": "^3.8.2",
-    "typescript": "^5.9.3",
+    "oxfmt": "^0.45.0",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.4"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "packageManager": "yarn@4.13.0"
 }

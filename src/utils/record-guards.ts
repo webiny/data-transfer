@@ -4,12 +4,12 @@
  * after transformers (wrapInData, addGsiTenant, etc.) have run.
  */
 export interface TransformedRecord {
-  PK: string;
-  SK: string;
-  TYPE: string;
-  GSI_TENANT: string;
-  data: Record<string, unknown>;
-  [key: string]: unknown;
+    PK: string;
+    SK: string;
+    TYPE: string;
+    GSI_TENANT: string;
+    data: Record<string, unknown>;
+    [key: string]: unknown;
 }
 
 /**
@@ -17,13 +17,13 @@ export interface TransformedRecord {
  * with correct types after pipeline transformation.
  */
 export function isTransformedRecord(record: Record<string, unknown>): record is TransformedRecord {
-  return (
-    typeof record.PK === "string" &&
-    typeof record.SK === "string" &&
-    typeof record.TYPE === "string" &&
-    typeof record.GSI_TENANT === "string" &&
-    record.data !== null &&
-    record.data !== undefined &&
-    typeof record.data === "object"
-  );
+    return (
+        typeof record.PK === "string" &&
+        typeof record.SK === "string" &&
+        typeof record.TYPE === "string" &&
+        typeof record.GSI_TENANT === "string" &&
+        record.data !== null &&
+        record.data !== undefined &&
+        typeof record.data === "object"
+    );
 }

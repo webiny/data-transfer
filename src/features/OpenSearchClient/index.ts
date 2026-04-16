@@ -1,0 +1,2 @@
+export { OpenSearchClient, OpenSearchClientConfig } from "./abstractions/index.ts";
+export { OpenSearchClientFeature } from "./feature.ts";

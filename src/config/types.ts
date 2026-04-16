@@ -1,9 +1,6 @@
 export type {
-  MigrationConfiguration,
-  DdbMigrationConfiguration,
-  OsMigrationConfiguration,
-  DdbAccountConfiguration,
-  OsSourceAccountConfiguration,
-  OsTargetAccountConfiguration,
-  StorageType
+    MigrationConfiguration,
+    DdbMigrationConfiguration,
+    OsMigrationConfiguration,
+    StorageType
 } from "./validation.ts";

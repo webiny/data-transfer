@@ -7,14 +7,14 @@ import { CmsEntryPipeline } from "./CmsEntryPipeline.js";
  * Pre-configured pipeline for File Manager files with all v5-to-v6 transformations.
  */
 export class FmFilePipeline extends CmsEntryPipeline {
-  constructor() {
-    super();
+    constructor() {
+        super();
 
-    // Configure filter
-    this.filter(isFmFile);
+        // Configure filter
+        this.filter(isFmFile);
 
-    // File Manager-specific transformers
-    this.use(createFileMetadata);
-    this.use(extractImageMetadata);
-  }
+        // File Manager-specific transformers
+        this.use(createFileMetadata);
+        this.use(extractImageMetadata);
+    }
 }

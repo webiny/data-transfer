@@ -14,44 +14,44 @@ export type RecordFilter<T = Record<string, unknown>> = (record: T) => boolean;
 // ============================================================================
 
 export class TransformPipeline<TInput extends Record<string, unknown>> {
-  private transformers: Transformer<any>[] = [];
-  private filters: RecordFilter<TInput>[] = [];
+    private transformers: Transformer<any>[] = [];
+    private filters: RecordFilter<TInput>[] = [];
 
-  /** Add a filter - record must pass ALL filters to be processed */
-  filter(predicate: RecordFilter<TInput>): this {
-    this.filters.push(predicate);
-    return this;
-  }
-
-  use<T>(transformer: Transformer<T>): this {
-    this.transformers.push(transformer);
-    return this;
-  }
-
-  /** Check if a record should be processed */
-  accepts(record: TInput): boolean {
-    return this.filters.every(f => f(record));
-  }
-
-  async run(
-    record: TInput,
-    config: MigrationConfig,
-    database: DatabaseClient,
-    cache?: Map<string, unknown>
-  ): Promise<PipelineResult | null> {
-    // Skip records that don't pass filters
-    if (!this.accepts(record)) {
-      return null;
+    /** Add a filter - record must pass ALL filters to be processed */
+    filter(predicate: RecordFilter<TInput>): this {
+        this.filters.push(predicate);
+        return this;
     }
 
-    const ctx = createContext(record, config, database, cache);
-
-    for (const transformer of this.transformers) {
-      await transformer.transform(ctx);
+    use<T>(transformer: Transformer<T>): this {
+        this.transformers.push(transformer);
+        return this;
     }
 
-    ctx.putPrimaryRecord(ctx.record);
+    /** Check if a record should be processed */
+    accepts(record: TInput): boolean {
+        return this.filters.every(f => f(record));
+    }
 
-    return { commands: ctx.commands };
-  }
+    async run(
+        record: TInput,
+        config: MigrationConfig,
+        database: DatabaseClient,
+        cache?: Map<string, unknown>
+    ): Promise<PipelineResult | null> {
+        // Skip records that don't pass filters
+        if (!this.accepts(record)) {
+            return null;
+        }
+
+        const ctx = createContext(record, config, database, cache);
+
+        for (const transformer of this.transformers) {
+            await transformer.transform(ctx);
+        }
+
+        ctx.putPrimaryRecord(ctx.record);
+
+        return { commands: ctx.commands };
+    }
 }

@@ -24,51 +24,54 @@ import { CmsEntryPipeline } from "@/src/presets/v5-to-v6/CmsEntryPipeline.js";
 // Migrate specific model with referenced files
 // ============================================================================
 export const copyPartnerFiles: Transformer = {
-  name: "copyPartnerFiles",
-  async transform(ctx: TransformContext) {
-    if (ctx.record.TYPE !== "cms.entry.l") {
-      return;
+    name: "copyPartnerFiles",
+    async transform(ctx: TransformContext) {
+        if (ctx.record.TYPE !== "cms.entry.l") {
+            return;
+        }
+
+        // TODO: find file fields, and extract file ID from file URL
+        const fileId = "";
+
+        if (fileId) {
+            // Query both CMS records (latest + published)
+            const latestRecord = await ctx.queryRecord(`T#root#L#en-US#CMS#CME#CME#${fileId}`, "L");
+
+            const publishedRecord = await ctx.queryRecord(
+                `T#root#L#en-US#CMS#CME#CME#${fileId}`,
+                "REV#0001"
+            );
+
+            const fileRecords = [latestRecord, publishedRecord].filter(Boolean) as Record<
+                string,
+                any
+            >[];
+
+            if (fileRecords.length > 0) {
+                // Execute File Manager pipeline on both records
+                const fmPipeline = new FmFilePipeline();
+
+                await ctx.executePipeline(fmPipeline, fileRecords);
+            }
+        }
     }
-
-    // TODO: find file fields, and extract file ID from file URL
-    const fileId = "";
-
-    if (fileId) {
-      // Query both CMS records (latest + published)
-      const latestRecord = await ctx.queryRecord(`T#root#L#en-US#CMS#CME#CME#${fileId}`, "L");
-
-      const publishedRecord = await ctx.queryRecord(
-        `T#root#L#en-US#CMS#CME#CME#${fileId}`,
-        "REV#0001"
-      );
-
-      const fileRecords = [latestRecord, publishedRecord].filter(Boolean) as Record<string, any>[];
-
-      if (fileRecords.length > 0) {
-        // Execute File Manager pipeline on both records
-        const fmPipeline = new FmFilePipeline();
-
-        await ctx.executePipeline(fmPipeline, fileRecords);
-      }
-    }
-  }
 };
 
 const PARTNER_MODEL_ID = "partner";
 
 export const preset: MigrationPreset = {
-  name: "v5-cms-model-with-files",
-  description: "Migrate specific model with referenced files from v5 to v6",
-  configure(runner: MigrationRunner): void {
-    const modelPipeline = new CmsModelPipeline()
-      .filter(record => record.modelId === PARTNER_MODEL_ID)
-      .build();
+    name: "v5-cms-model-with-files",
+    description: "Migrate specific model with referenced files from v5 to v6",
+    configure(runner: MigrationRunner): void {
+        const modelPipeline = new CmsModelPipeline()
+            .filter(record => record.modelId === PARTNER_MODEL_ID)
+            .build();
 
-    const entriesPipeline = new CmsEntryPipeline()
-      .filter(record => record.modelId === PARTNER_MODEL_ID)
-      .use(copyPartnerFiles)
-      .build();
+        const entriesPipeline = new CmsEntryPipeline()
+            .filter(record => record.modelId === PARTNER_MODEL_ID)
+            .use(copyPartnerFiles)
+            .build();
 
-    runner.register(modelPipeline).register(entriesPipeline);
-  }
+        runner.register(modelPipeline).register(entriesPipeline);
+    }
 };

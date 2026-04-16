@@ -1,28 +1,29 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "lib": ["ES2022"],
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "outDir": "./dist",
-    "rootDirs": ["./src", "__tests__", "./examples"],
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": ["src/**/*", "__tests__/**/*", "examples/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ES2022",
+        "lib": ["ES2022"],
+        "moduleResolution": "bundler",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "outDir": "./dist",
+        "rootDirs": ["./src", "__tests__", "./examples"],
+        "paths": {
+            "@/*": ["./*"],
+            "~/*": ["./src/*"]
+        }
+    },
+    "include": ["src/**/*", "__tests__/**/*", "examples/**/*"],
+    "exclude": ["node_modules", "dist"]
 }
