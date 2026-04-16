@@ -14,6 +14,7 @@ import {
     OpenSearchClientFeature
 } from "./features/OpenSearchClient/index.ts";
 import { PresetLoaderFeature } from "./features/PresetLoader/index.ts";
+import { WorkerSpawnerFeature } from "./features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
 
 export interface BootstrapOptions {
@@ -77,8 +78,9 @@ export function bootstrap(options: BootstrapOptions): Container {
     // Transfer lifecycle hooks (composite — collects all registered hooks)
     TransferLifecycleFeature.register(container);
 
-    // Preset loader + model provider + tenant locales
+    // Preset loader + worker spawner + model provider + tenant locales
     PresetLoaderFeature.register(container);
+    WorkerSpawnerFeature.register(container);
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
 

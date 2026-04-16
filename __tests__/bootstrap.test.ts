@@ -13,6 +13,7 @@ import { ModelProvider } from "../src/features/ModelProvider/index.ts";
 import { TenantLocales } from "../src/features/TenantLocales/index.ts";
 import { SourceS3Client, TargetS3Client } from "../src/features/S3Client/index.ts";
 import { PresetLoader } from "../src/features/PresetLoader/index.ts";
+import { WorkerSpawner } from "../src/features/WorkerSpawner/index.ts";
 import { OpenSearchClient } from "../src/features/OpenSearchClient/index.ts";
 
 describe("bootstrap", () => {
@@ -68,6 +69,7 @@ describe("bootstrap", () => {
             expect(container.resolve(SourceS3Client)).toBeDefined();
             expect(container.resolve(TargetS3Client)).toBeDefined();
             expect(container.resolve(PresetLoader)).toBeDefined();
+            expect(container.resolve(WorkerSpawner)).toBeDefined();
         });
 
         it("should not register OpenSearchClient in ddb mode", () => {
