@@ -3,19 +3,11 @@ import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { Container } from "@webiny/di";
-import { DirectoryTool, DirectoryToolFeature } from "../../../src/features/DirectoryTool/index.ts";
-import { LoggerFeature } from "../../../src/features/Logger/index.ts";
+import { DirectoryTool } from "../../../src/features/DirectoryTool/index.ts";
+import { createDdbContainer } from "../../containers/index.ts";
 
 describe("DirectoryTool Feature", () => {
     let tmpDir: string;
-
-    function createContainer(): Container {
-        const container = new Container();
-        LoggerFeature.register(container, { logLevel: "error", json: false });
-        DirectoryToolFeature.register(container);
-        return container;
-    }
 
     beforeEach(() => {
         tmpDir = mkdtempSync(join(tmpdir(), "dir-tool-test-"));
@@ -25,115 +17,79 @@ describe("DirectoryTool Feature", () => {
         rmSync(tmpDir, { recursive: true, force: true });
     });
 
+    function resolve(): DirectoryTool.Interface {
+        return createDdbContainer().resolve(DirectoryTool);
+    }
+
     describe("DI registration", () => {
         it("should resolve from container", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-            expect(tool).toBeDefined();
+            expect(resolve()).toBeDefined();
         });
 
         it("should return same instance on multiple resolves", () => {
-            const container = createContainer();
-            const first = container.resolve(DirectoryTool);
-            const second = container.resolve(DirectoryTool);
-            expect(first).toBe(second);
+            const container = createDdbContainer();
+            expect(container.resolve(DirectoryTool)).toBe(container.resolve(DirectoryTool));
         });
     });
 
     describe("exists", () => {
         it("should return true for existing directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-            expect(tool.exists(tmpDir)).toBe(true);
+            expect(resolve().exists(tmpDir)).toBe(true);
         });
 
         it("should return false for non-existing directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-            expect(tool.exists(join(tmpDir, "nonexistent"))).toBe(false);
+            expect(resolve().exists(join(tmpDir, "nonexistent"))).toBe(false);
         });
     });
 
     describe("create", () => {
         it("should create a new directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
             const newDir = join(tmpDir, "new-dir");
-
-            tool.create(newDir);
-
+            resolve().create(newDir);
             expect(existsSync(newDir)).toBe(true);
         });
 
         it("should create nested directories", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
             const nested = join(tmpDir, "a", "b", "c");
-
-            tool.create(nested);
-
+            resolve().create(nested);
             expect(existsSync(nested)).toBe(true);
         });
 
         it("should be a no-op for existing directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
-            tool.create(tmpDir);
-
+            resolve().create(tmpDir);
             expect(existsSync(tmpDir)).toBe(true);
         });
     });
 
     describe("readDir", () => {
         it("should return filenames in directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
             writeFileSync(join(tmpDir, "a.txt"), "a");
             writeFileSync(join(tmpDir, "b.txt"), "b");
 
-            const files = tool.readDir(tmpDir);
+            const files = resolve().readDir(tmpDir);
             expect(files).not.toBeNull();
             expect(files!.sort()).toEqual(["a.txt", "b.txt"]);
         });
 
         it("should return null for non-existing directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
-            const result = tool.readDir(join(tmpDir, "nonexistent"));
-            expect(result).toBeNull();
+            expect(resolve().readDir(join(tmpDir, "nonexistent"))).toBeNull();
         });
 
         it("should return empty array for empty directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
             const emptyDir = join(tmpDir, "empty");
             mkdirSync(emptyDir);
-
-            const files = tool.readDir(emptyDir);
-            expect(files).toEqual([]);
+            expect(resolve().readDir(emptyDir)).toEqual([]);
         });
     });
 
     describe("readDirOrThrow", () => {
         it("should return filenames in directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
             writeFileSync(join(tmpDir, "file.txt"), "content");
-
-            const files = tool.readDirOrThrow(tmpDir);
-            expect(files).toContain("file.txt");
+            expect(resolve().readDirOrThrow(tmpDir)).toContain("file.txt");
         });
 
         it("should throw for non-existing directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
-            expect(() => tool.readDirOrThrow(join(tmpDir, "nonexistent"))).toThrow(
+            expect(() => resolve().readDirOrThrow(join(tmpDir, "nonexistent"))).toThrow(
                 "Directory not found"
             );
         });
@@ -141,59 +97,40 @@ describe("DirectoryTool Feature", () => {
 
     describe("remove", () => {
         it("should remove existing directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
             const dir = join(tmpDir, "to-remove");
             mkdirSync(dir);
             writeFileSync(join(dir, "file.txt"), "content");
 
-            tool.remove(dir);
-
+            resolve().remove(dir);
             expect(existsSync(dir)).toBe(false);
         });
 
         it("should not throw for non-existing directory", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
-            expect(() => tool.remove(join(tmpDir, "nonexistent"))).not.toThrow();
+            expect(() => resolve().remove(join(tmpDir, "nonexistent"))).not.toThrow();
         });
     });
 
     describe("copy", () => {
         it("should copy directory recursively", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
             const source = join(tmpDir, "source");
             mkdirSync(source);
             writeFileSync(join(source, "file.txt"), "hello");
 
-            const target = join(tmpDir, "target");
-
-            tool.copy(source, target);
-
-            expect(existsSync(join(target, "file.txt"))).toBe(true);
+            resolve().copy(source, join(tmpDir, "target"));
+            expect(existsSync(join(tmpDir, "target", "file.txt"))).toBe(true);
         });
 
         it("should not throw for non-existing source", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
             expect(() =>
-                tool.copy(join(tmpDir, "nonexistent"), join(tmpDir, "target"))
+                resolve().copy(join(tmpDir, "nonexistent"), join(tmpDir, "target"))
             ).not.toThrow();
         });
     });
 
     describe("copyOrThrow", () => {
         it("should throw for non-existing source", () => {
-            const container = createContainer();
-            const tool = container.resolve(DirectoryTool);
-
             expect(() =>
-                tool.copyOrThrow(join(tmpDir, "nonexistent"), join(tmpDir, "target"))
+                resolve().copyOrThrow(join(tmpDir, "nonexistent"), join(tmpDir, "target"))
             ).toThrow("Source directory not found");
         });
     });

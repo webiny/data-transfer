@@ -1,51 +1,19 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { Container } from "@webiny/di";
-import {
-    OpenSearchClient,
-    OpenSearchClientConfig,
-    OpenSearchClientFeature
-} from "../../../src/features/OpenSearchClient/index.ts";
+import { OpenSearchClient } from "../../../src/features/OpenSearchClient/index.ts";
 import { MockOpenSearchClient } from "./MockOpenSearchClient.ts";
+import { createOsContainer } from "../../containers/index.ts";
 
 describe("OpenSearchClient Feature", () => {
     describe("DI registration", () => {
         it("should resolve client from container", () => {
-            const container = new Container();
-
-            container.registerInstance(OpenSearchClientConfig, {
-                endpoint: "https://localhost:9200",
-                region: "us-east-1",
-                service: "opensearch" as const,
-                credentials: {
-                    accessKeyId: "test",
-                    secretAccessKey: "test"
-                }
-            });
-
-            OpenSearchClientFeature.register(container);
-
+            const container = createOsContainer();
             const client = container.resolve(OpenSearchClient);
             expect(client).toBeDefined();
         });
 
         it("should resolve same instance on multiple resolves", () => {
-            const container = new Container();
-
-            container.registerInstance(OpenSearchClientConfig, {
-                endpoint: "https://localhost:9200",
-                region: "us-east-1",
-                service: "opensearch" as const,
-                credentials: {
-                    accessKeyId: "test",
-                    secretAccessKey: "test"
-                }
-            });
-
-            OpenSearchClientFeature.register(container);
-
-            const first = container.resolve(OpenSearchClient);
-            const second = container.resolve(OpenSearchClient);
-            expect(first).toBe(second);
+            const container = createOsContainer();
+            expect(container.resolve(OpenSearchClient)).toBe(container.resolve(OpenSearchClient));
         });
     });
 
