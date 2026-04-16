@@ -9,7 +9,7 @@ import type { DdbMigrationConfiguration } from "./validation.ts";
  *
  * @example
  * ```typescript
- * import { createDdbTransfer } from "webiny-v5-to-v6";
+ * import { createDdbTransfer } from "@webiny/data-transfer";
  *
  * export default createDdbTransfer({
  *   source: {

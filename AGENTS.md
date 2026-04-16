@@ -8,17 +8,19 @@ This document is read by AI agents (Claude Code, Copilot, Codex, etc.) when work
 
 This tool transfers Webiny data between environments. Current use case is v5-to-v6 migration, but it will also support production-to-dev data transfer for testing/development. Name things generically ("transfer" not "migration") where possible.
 
-**Package name:** `@webiny/v5-to-v6`
+**Package name:** `@webiny/data-transfer`
 
-**User installation:** `yarn add -D @webiny/v5-to-v6@github:webiny/v5-to-v6` (not published to npm)
+**User installation:** `npm install @webiny/data-transfer` (published to npm)
 
 **User config files** import builder functions from the package:
 ```typescript
-import { createDdbTransfer } from "@webiny/v5-to-v6";
+import { createDdbTransfer } from "@webiny/data-transfer";
 export default createDdbTransfer({ source: {...}, target: {...}, pipeline: {...} });
 ```
 
-**Running:** `yarn webiny-v5-to-v6 --config=./migration.config.ts`
+**Scaffolding:** `npx @webiny/data-transfer init my-transfer-folder`
+
+**Running:** `yarn transfer --config=./projects/example/ddb.transfer.config.ts`
 
 **Config builder functions** (`createDdbTransfer`, `createOsTransfer`):
 - Live in `src/features/MigrationConfig/`

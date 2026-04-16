@@ -9,7 +9,7 @@ import type { OsMigrationConfiguration } from "./validation.ts";
  *
  * @example
  * ```typescript
- * import { createOsTransfer } from "webiny-v5-to-v6";
+ * import { createOsTransfer } from "@webiny/data-transfer";
  *
  * export default createOsTransfer({
  *   source: {

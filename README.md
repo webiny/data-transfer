@@ -1,4 +1,4 @@
-# Webiny v5 to v6 Migration Tool
+# Webiny Data Transfer Tool
 
 ## Usage
 
@@ -7,7 +7,7 @@
 Create a migration configuration file (e.g., `migration.config.ts`):
 
 ```typescript
-import { createDdbTransfer } from "@webiny/v5-to-v6";
+import { createDdbTransfer } from "@webiny/data-transfer";
 
 export default createDdbTransfer({
   source: {
@@ -39,13 +39,13 @@ export default createDdbTransfer({
 Install the tool as a dev dependency:
 
 ```bash
-yarn add -D @webiny/v5-to-v6@github:webiny/v5-to-v6
+yarn add -D @webiny/data-transfer@github:webiny/v5-to-v6
 ```
 
 Then run:
 
 ```bash
-yarn webiny-v5-to-v6 --config=./migration.config.ts
+yarn webiny-data-transfer --config=./migration.config.ts
 ```
 
 ### Storage Modes
@@ -58,7 +58,7 @@ The `storage` field determines which data source to migrate. Run DDB migration f
 ### OpenSearch (`os`) Configuration
 
 ```typescript
-import { createOsTransfer } from "@webiny/v5-to-v6";
+import { createOsTransfer } from "@webiny/data-transfer";
 
 export default createOsTransfer({
   source: {

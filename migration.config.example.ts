@@ -1,4 +1,4 @@
-import { createDdbTransfer } from "@webiny/v5-to-v6";
+import { createDdbTransfer } from "@webiny/data-transfer";
 
 /**
  * Example DynamoDB Transfer Configuration

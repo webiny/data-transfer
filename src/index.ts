@@ -1,10 +1,8 @@
 /**
  * Public API for config file authors.
  *
- * Usage in migration config files:
- *
  * ```typescript
- * import { createDdbTransfer } from "webiny-v5-to-v6";
+ * import { createDdbTransfer } from "@webiny/data-transfer";
  *
  * export default createDdbTransfer({ ... });
  * ```

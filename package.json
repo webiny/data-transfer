@@ -1,9 +1,11 @@
 {
-  "name": "@webiny/v5-to-v6",
+  "name": "@webiny/data-transfer",
   "version": "1.0.0",
-  "description": "Webiny v5 to v6 DynamoDB migration tool",
+  "description": "Webiny data transfer tool",
   "type": "module",
-  "bin": "./bin.js",
+  "bin": {
+    "webiny-data-transfer": "./bin.js"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
