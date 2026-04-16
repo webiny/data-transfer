@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect, beforeEach } from "vitest";
 import { Container } from "@webiny/di";
 import { Cache, CacheFeature } from "../../../src/features/Cache/index.ts";

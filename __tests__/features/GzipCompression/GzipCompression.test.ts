@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect, beforeAll } from "vitest";
 import { Container } from "@webiny/di";
 import {

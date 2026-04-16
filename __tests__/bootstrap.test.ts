@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect } from "vitest";
 import { bootstrap } from "../src/bootstrap.ts";
 import { MigrationConfig } from "../src/features/MigrationConfig/index.ts";

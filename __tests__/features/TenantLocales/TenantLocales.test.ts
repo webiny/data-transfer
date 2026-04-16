@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect, beforeEach } from "vitest";
 import { Container } from "@webiny/di";
 import { TenantLocales, TenantLocalesFeature } from "../../../src/features/TenantLocales/index.ts";

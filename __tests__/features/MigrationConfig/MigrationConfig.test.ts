@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Container } from "@webiny/di";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";

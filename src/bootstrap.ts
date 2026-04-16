@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { Container } from "@webiny/di";
 import { MigrationConfig } from "./features/MigrationConfig/index.ts";
 import { MigrationConfigFeature } from "./features/MigrationConfig/index.ts";

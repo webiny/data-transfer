@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
 import { PresetLoader, PresetLoaderFeature } from "../../../src/features/PresetLoader/index.ts";

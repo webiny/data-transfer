@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { existsSync, writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";

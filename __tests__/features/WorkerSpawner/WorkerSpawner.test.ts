@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
 import { WorkerSpawner, WorkerSpawnerFeature } from "../../../src/features/WorkerSpawner/index.ts";
