@@ -82,14 +82,20 @@ src/
 │       └── register.ts
 ├── features/                 # DI features (see Feature Structure below)
 │   ├── Cache/
+│   ├── DirectoryTool/        # Sync directory operations (create, readDir, remove, copy)
 │   ├── DynamoDbClient/
+│   ├── FileTool/             # Sync file operations (readFile, writeFile, remove, copy)
 │   ├── GzipCompression/
 │   ├── Logger/
 │   ├── MigrationConfig/
 │   ├── ModelProvider/
 │   ├── OpenSearchClient/
+│   ├── PresetLoader/         # Loads built-in or custom presets by name/path
+│   ├── S3Client/             # SourceS3Client + TargetS3Client (ddb mode only)
 │   ├── TenantLocales/
-│   └── TransferLifecycle/
+│   ├── TransferLifecycle/
+│   ├── TransformContext/     # DdbTransformContextFactory + OsTransformContextFactory
+│   └── WorkerSpawner/       # Spawns child processes for parallel segment processing
 ├── core/                     # Pipeline, runner, executor, context (legacy, being migrated)
 ├── transformers/             # Record transformers (wrapInData, removeLocale, etc.)
 ├── presets/                  # Migration presets (v5-to-v6-ddb, v5-to-v6-os)
@@ -246,20 +252,27 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 
 ## Registered Features
 
-| Feature                | Abstraction(s)                                 | Scope                | Notes                                            |
-| ---------------------- | ---------------------------------------------- | -------------------- | ------------------------------------------------ |
-| Logger                 | `Logger`                                       | Singleton (instance) | PinoLogger with pretty/json transport            |
-| Cache                  | `Cache`                                        | Singleton            | InMemoryCache via createImplementation           |
-| GzipCompression        | `GzipCompression`                              | Transient            | Via createImplementation                         |
-| DynamoDbClient         | `SourceDynamoDbClient`, `TargetDynamoDbClient` | Singleton (instance) | Separate clients per region/credentials          |
-| DynamoDbClientConfig   | `DynamoDbClientConfig`                         | Instance             | Source + target connection details               |
-| OpenSearchClient       | `OpenSearchClient`                             | Singleton (instance) | OS mode only. Also registers after-transfer hook |
-| OpenSearchClientConfig | `OpenSearchClientConfig`                       | Instance             | OS mode only                                     |
-| MigrationConfig        | `MigrationConfig`                              | Instance             | Loaded async, registered before bootstrap        |
-| ModelProvider          | `ModelProvider`                                | Singleton (instance) | Loads from DDB + JSON files                      |
-| TenantLocales          | `TenantLocales`                                | Singleton (instance) | Preloads tenant/locale map                       |
-| TransferLifecycle      | `BeforeTransferHook`, `AfterTransferHook`      | Composite            | Collects all registered hooks                    |
-| TransferContext        | `TransferContext`                              | Instance             | Holds runId, registered by CLI before hooks      |
+| Feature                | Abstraction(s)                                            | Scope                | Notes                                                                               |
+| ---------------------- | --------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------- |
+| Logger                 | `Logger`                                                  | Singleton            | PinoLogger with pretty/json transport                                               |
+| Cache                  | `Cache`                                                   | Singleton            | InMemoryCache via createImplementation                                              |
+| GzipCompression        | `GzipCompression`                                         | Singleton            | Via createImplementation                                                            |
+| DirectoryTool          | `DirectoryTool`                                           | Singleton            | Sync dir ops: create, readDir, remove, copy. Depends on Logger                      |
+| FileTool               | `FileTool`                                                | Singleton            | Sync file ops: readFile, writeFile, remove, copy. Depends on Logger + DirectoryTool |
+| DynamoDbClient         | `SourceDynamoDbClient`, `TargetDynamoDbClient`            | Singleton (instance) | Separate clients per region/credentials                                             |
+| DynamoDbClientConfig   | `DynamoDbClientConfig`                                    | Instance             | Source + target connection details                                                  |
+| S3Client               | `SourceS3Client`, `TargetS3Client`                        | Singleton (instance) | DDB mode only. Retry + batch concurrency                                            |
+| S3ClientConfig         | `S3ClientConfig`                                          | Instance             | DDB mode only                                                                       |
+| OpenSearchClient       | `OpenSearchClient`                                        | Singleton            | OS mode only. Also registers after-transfer hook                                    |
+| OpenSearchClientConfig | `OpenSearchClientConfig`                                  | Instance             | OS mode only                                                                        |
+| MigrationConfig        | `MigrationConfig`                                         | Instance             | Loaded async, registered before bootstrap                                           |
+| ModelProvider          | `ModelProvider`                                           | Singleton            | Loads from DDB + JSON files. Deps: SourceDynamoDbClient, Logger, MigrationConfig    |
+| TenantLocales          | `TenantLocales`                                           | Singleton            | Preloads tenant/locale map. Deps: SourceDynamoDbClient, Logger, MigrationConfig     |
+| PresetLoader           | `PresetLoader`                                            | Singleton            | Loads built-in or custom presets. Deps: Logger                                      |
+| WorkerSpawner          | `WorkerSpawner`                                           | Singleton            | Spawns child processes via execa. Deps: Logger                                      |
+| TransferLifecycle      | `BeforeTransferHook`, `AfterTransferHook`                 | Composite            | Collects all registered hooks                                                       |
+| TransferContext        | `TransferContext`                                         | Instance             | Holds runId, registered by CLI before hooks                                         |
+| TransformContext       | `DdbTransformContextFactory`, `OsTransformContextFactory` | Singleton            | Mode-conditional. Creates per-record contexts with commands, cache, modelProvider   |
 
 ## Architecture Decisions
 
@@ -280,11 +293,15 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 ## Testing Patterns
 
 - Tests live in `__tests__/features/FeatureName/` mirroring the feature structure
-- Mock implementations live alongside tests (e.g., `MockDynamoDbClient.ts`)
+- **Shared container factories** in `__tests__/containers/`:
+  - `createDdbContainer({ sourceRecords?, modelsDir?, logLevel? })` — full DDB mode container with mocks
+  - `createOsContainer({ sourceRecords?, modelsDir?, logLevel? })` — full OS mode container with mocks
+  - Tests resolve the feature under test from these containers — never manually construct implementations
+- Mock implementations: `MockDynamoDbClient` (in `__tests__/features/DynamoDbClient/`), `MockOpenSearchClient` (in `__tests__/features/OpenSearchClient/`)
+- `registerInstance` only for mocks that replace real AWS clients, never for the feature being tested
+- Do NOT import `reflect-metadata` — `@webiny/di` loads it internally
 - Integration tests in `__tests__/integration/` use dynalite (local DDB) and local OpenSearch
 - OS record mocker in `__tests__/utils/os-record-mocker.ts` generates configurable test data
-- Snapshot tests: `os-table-migration.test.ts` writes `os-table-migrated.json` (gitignored)
-- Lambda simulation: spy on `batchPut` to decompress + index into OS for verification
 
 ## Files to Delete (after full DI migration)
 
@@ -302,25 +319,48 @@ These files contain old code still used by command handlers (not yet migrated to
 
 ## Next Steps (for future agents)
 
-### Priority 1: Migrate command handlers to DI
+### Priority 1: Migrate core pipeline to DI
+
+The `TransformContext` factories are done. Remaining core components:
+
+- **`TransformPipeline`** (`src/core/pipeline.ts`) — currently a class with `filter()`, `use()`, `accepts()`, `run()`. It calls `createContext()` (legacy) internally. Needs to accept a `TransformContextFactory` instead. The `PipelineBuilder` in `src/core/pipelines.ts` builds pipelines and should also be migrated.
+- **`MigrationRunner`** (`src/core/runner.ts`) — holds an array of pipelines, iterates records through them. Depends on `TransformPipeline`, the legacy `MigrationConfig` (core type), and `DatabaseClient`. Should become a DI feature that resolves the context factory.
+- **`executeCommands`** (`src/core/executor.ts`) — takes commands + legacy `DatabaseClient`/`StorageClient`, groups PUT by table, runs S3 copies. Should become a DI feature resolving `TargetDynamoDbClient` + `TargetS3Client`.
+
+**Dependency order:** Pipeline → Runner → Executor (or Executor independently, then Runner)
+
+**Key design decisions already made:**
+
+- `BaseTransformContext` in `src/features/TransformContext/abstractions/` has record types (`BaseRecord`, `DdbRecord`, `OsRecord`) and command types (`PutRecordCommand`, `S3CopyCommand`) — all in the `BaseTransformContext` namespace
+- `DdbTransformContext` extends base with `copyFile` + `getFile`; `OsTransformContext` has no S3 methods
+- Context `cache` is `Cache.Interface` (not raw `Map`)
+- Context method is `putRecord` (not `putPrimaryRecord`)
+- Factories are mode-conditional: `DdbTransformContextFactory` registered in ddb mode only (needs `SourceS3Client`), `OsTransformContextFactory` registered in os mode only
+
+**When migrating Pipeline:**
+
+- `TransformPipeline.run()` currently calls `createContext(record, config, database, cache)` — should call `contextFactory.create({ record })` instead
+- The `Transformer` interface (`src/core/transformer.ts`) uses the old `TransformContext` from `src/core/types.ts` — should use `BaseTransformContext.Interface` from the new abstractions
+- Filters (`RecordFilter`) and filter functions (`isCmsEntry`, `isCmsModel`, etc.) are pure functions, no DI needed
+
+**When migrating Runner:**
+
+- Currently takes `MigrationConfig` (core) + `DatabaseClient` (legacy) in constructor — should take the context factory via DI
+- `runner.cache` is a plain `Map` — should use DI `Cache`
+
+**When migrating Executor:**
+
+- Currently takes `{ database: DatabaseClient, storage: StorageClient }` — should resolve `TargetDynamoDbClient` + `TargetS3Client` from container
+- OS executor (`src/opensearch/executor.ts`) is separate and has its own migration path
+
+### Priority 2: Migrate command handlers to DI
 
 - `src/commands/processSegment/handler.ts` and `src/commands/processOsSegment/handler.ts` still use legacy imports (old DynamoDBClient, old logger, old tenants util, etc.)
 - They should call `bootstrap({ config })` and resolve features from the container instead of creating instances manually
 - Once migrated, delete all files listed in "Files to Delete" above
+- Most DI features are now ready — after pipeline/runner/executor migration, the handlers just need to resolve and call
 
-### Priority 2: Extract remaining concerns as features
-
-- **WorkerSpawner** — `spawnWorker()` in `run/handler.ts` could be a feature for testability
-- **PresetLoader** — `src/core/preset-loader.ts` could become a DI feature
-- **S3Client** — `src/storage/s3-client.ts` needs a feature (similar to DynamoDbClient pattern)
-
-### Priority 3: Migrate core pipeline to DI
-
-- `src/core/` (pipeline, runner, context, executor) could use DI abstractions
-- The `TransformContext` currently receives a `MigrationConfig` object — could resolve dependencies from container instead
-- The `MigrationRunner` could become a feature with the `Cache` injected
-
-### Priority 4: Production-to-dev data transfer
+### Priority 3: Production-to-dev data transfer
 
 - Extend the tool to support production-to-dev data transfer (not just v5-to-v6 migration)
 - May need new presets, new config options, possibly new storage modes
@@ -338,3 +378,9 @@ These files contain old code still used by command handlers (not yet migrated to
 - Public API exports live in `src/index.ts`: `createDdbTransfer`, `createOsTransfer`, `loadEnv`
 - Template files in `templates/` are real files that get copied — keep them valid and up to date when changing config schemas or the public API
 - The `.env` files must never be committed — `.gitignore` in templates blocks `**/.env`
+- Path alias: use `~/features/X` (maps to `./src/features/X`) — configured in tsconfig and vitest.config.ts. Old code uses `@/src/` — update as you touch files
+- Do NOT import `reflect-metadata` anywhere — `@webiny/di` handles it
+- Use `createImplementation` + `container.register().inSingletonScope()` — never manually `new` + `registerInstance` for DI-managed services
+- Implementation classes must be private (not exported) — tests resolve from shared container factories
+- Use `FileTool` / `DirectoryTool` for all file system operations in DI code — never import `node:fs` directly in features
+- `modelsDir` is resolved relative to the config file location by `loadConfig` — users write `"./models"` not absolute paths
