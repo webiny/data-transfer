@@ -14,6 +14,8 @@ import { TenantLocales } from "../src/features/TenantLocales/index.ts";
 import { SourceS3Client, TargetS3Client } from "../src/features/S3Client/index.ts";
 import { PresetLoader } from "../src/features/PresetLoader/index.ts";
 import { WorkerSpawner } from "../src/features/WorkerSpawner/index.ts";
+import { DirectoryTool } from "../src/features/DirectoryTool/index.ts";
+import { FileTool } from "../src/features/FileTool/index.ts";
 import { OpenSearchClient } from "../src/features/OpenSearchClient/index.ts";
 
 describe("bootstrap", () => {
@@ -62,6 +64,8 @@ describe("bootstrap", () => {
             expect(container.resolve(Logger)).toBeDefined();
             expect(container.resolve(Cache)).toBeDefined();
             expect(container.resolve(GzipCompression)).toBeDefined();
+            expect(container.resolve(DirectoryTool)).toBeDefined();
+            expect(container.resolve(FileTool)).toBeDefined();
             expect(container.resolve(SourceDynamoDbClient)).toBeDefined();
             expect(container.resolve(TargetDynamoDbClient)).toBeDefined();
             expect(container.resolve(ModelProvider)).toBeDefined();

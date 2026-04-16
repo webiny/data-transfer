@@ -6,6 +6,8 @@ import { DynamoDbClientConfig, DynamoDbClientFeature } from "./features/DynamoDb
 import { LoggerFeature } from "./features/Logger/index.ts";
 import { CacheFeature } from "./features/Cache/index.ts";
 import { GzipCompressionFeature } from "./features/GzipCompression/index.ts";
+import { DirectoryToolFeature } from "./features/DirectoryTool/index.ts";
+import { FileToolFeature } from "./features/FileTool/index.ts";
 import { ModelProviderFeature } from "./features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "./features/TenantLocales/index.ts";
 import { S3ClientConfig, S3ClientFeature } from "./features/S3Client/index.ts";
@@ -35,6 +37,8 @@ export function bootstrap(options: BootstrapOptions): Container {
     });
     CacheFeature.register(container);
     GzipCompressionFeature.register(container);
+    DirectoryToolFeature.register(container);
+    FileToolFeature.register(container);
 
     // DynamoDB clients
     container.registerInstance(DynamoDbClientConfig, {
