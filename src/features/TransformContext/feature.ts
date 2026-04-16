@@ -8,10 +8,11 @@ export const TransformContextFeature = createFeature({
     register(container) {
         const config = container.resolve(MigrationConfig);
 
+        // DDB factory depends on SourceS3Client which is only registered in ddb mode
         if (config.storage === "ddb") {
             container.register(DdbTransformContextFactory).inSingletonScope();
-        } else {
-            container.register(OsTransformContextFactory).inSingletonScope();
         }
+
+        container.register(OsTransformContextFactory).inSingletonScope();
     }
 });
