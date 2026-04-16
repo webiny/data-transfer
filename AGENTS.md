@@ -28,14 +28,80 @@ All steps must pass and all changes must be included in the commit.
 - Abstractions index files only export const tokens (no type exports) — use namespaces for types
 - Use `createImplementation` + `container.register` for stateless services (no constructor config)
 - Use `registerInstance` only when runtime config is needed to construct the instance
+- Implementation classes should NOT be exported — resolve from container in tests
+
+## Project Structure
+
+```
+src/
+├── cli.ts                    # Entry point — thin yargs router (14 lines)
+├── bootstrap.ts              # Creates DI container, registers all features
+├── base/                     # Foundation: createAbstraction, createFeature, Result, BaseError
+├── commands/                 # CLI commands (self-registering)
+│   ├── index.ts              # Exports all register functions
+│   ├── run/                  # Main orchestrator command ($0)
+│   │   ├── handler.ts        # Logic: bootstrap, hooks, spawn workers
+│   │   └── register.ts       # Registers on yargs
+│   ├── processSegment/       # DDB worker command
+│   │   ├── handler.ts
+│   │   └── register.ts
+│   └── processOsSegment/     # OS worker command
+│       ├── handler.ts
+│       └── register.ts
+├── features/                 # DI features (see Feature Structure below)
+│   ├── Cache/
+│   ├── DynamoDbClient/
+│   ├── GzipCompression/
+│   ├── Logger/
+│   ├── MigrationConfig/
+│   ├── ModelProvider/
+│   ├── OpenSearchClient/
+│   ├── TenantLocales/
+│   └── TransferLifecycle/
+├── core/                     # Pipeline, runner, executor, context (legacy, being migrated)
+├── transformers/             # Record transformers (wrapInData, removeLocale, etc.)
+├── presets/                  # Migration presets (v5-to-v6-ddb, v5-to-v6-os)
+├── opensearch/               # OS executor, decompress (legacy, partially migrated)
+└── [legacy dirs]             # database/, config/, models/, utils/, storage/ — being replaced by features
+```
+
+## Command Structure
+
+Each CLI command is a self-registering folder:
+
+```
+src/commands/commandName/
+├── handler.ts     # The actual logic
+└── register.ts    # Registers command on yargs
+```
+
+**Adding a new command:**
+1. Create folder in `src/commands/`
+2. Add `handler.ts` with the logic
+3. Add `register.ts` with `registerXCommand(yargs: Argv): Argv`
+4. Export from `src/commands/index.ts`
+5. Register in `src/cli.ts`
+
+```typescript
+// register.ts
+import type { Argv } from "yargs";
+import { handler } from "./handler.ts";
+
+export function registerMyCommand(yargs: Argv): Argv {
+  return yargs.command(
+    "my-command",
+    "Description",
+    (yargs) => { return yargs.option(...); },
+    async (argv) => { await handler(argv); }
+  );
+}
+```
 
 ## DI Architecture Patterns (`@webiny/di`)
 
 This project uses `@webiny/di` for dependency injection with SOLID principles.
 
 ### Foundation: `src/base/`
-
-The `src/base/` module provides wrappers and utilities on top of `@webiny/di`:
 
 - `createAbstraction<T>(name)` — creates a typed DI token (`Abstraction<T>`)
 - `createFeature({ name, register })` — defines a feature module that registers implementations into a `Container`
@@ -76,8 +142,8 @@ export namespace FeatureName {
 
 **Key rules:**
 - All types accessible only via namespace (`FeatureName.Interface`, `FeatureName.Record`, etc.)
-- Never export interfaces directly from abstraction files
-- Abstraction name uses domain prefix (`"Core/"`, `"Transfer/"`)
+- Never export interfaces directly from abstraction index files
+- Abstraction name uses domain prefix (`"Core/"`, `"Transfer/"`, `"Base/"`)
 
 ### Implementation Pattern
 
@@ -106,19 +172,6 @@ export const FeatureName = FeatureNameAbstraction.createImplementation({
 Used when multiple implementations of the same abstraction should all be executed:
 
 ```typescript
-// Abstraction
-export const BeforeTransferHook = createAbstraction<IBeforeTransferHook>("Transfer/BeforeTransferHook");
-
-// Composite collects all registered implementations
-class BeforeTransferHookCompositeImpl implements BeforeTransferHook.Interface {
-  public constructor(private readonly hooks: BeforeTransferHook.Interface[]) {}
-  public async execute(): Promise<void> {
-    for (const hook of this.hooks) {
-      await hook.execute();
-    }
-  }
-}
-
 export const BeforeTransferHookComposite = BeforeTransferHook.createComposite({
   implementation: BeforeTransferHookCompositeImpl,
   dependencies: [[BeforeTransferHook, { multiple: true }]]
@@ -128,12 +181,12 @@ export const BeforeTransferHookComposite = BeforeTransferHook.createComposite({
 container.registerComposite(BeforeTransferHookComposite);
 
 // Other features register their hook implementations
-container.register(DisableRefreshHook); // implements BeforeTransferHook
+container.register(SomeHook); // implements BeforeTransferHook
 ```
 
 ### Bootstrap
 
-`src/bootstrap.ts` creates and configures the DI container. Both CLI (main process) and workers call it:
+`src/bootstrap.ts` creates and configures the DI container:
 
 ```typescript
 const config = await loadConfig(argv.config);
@@ -148,16 +201,17 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 | Feature | Abstraction(s) | Scope | Notes |
 |---------|----------------|-------|-------|
 | Logger | `Logger` | Singleton (instance) | PinoLogger with pretty/json transport |
-| Cache | `Cache` | Singleton | InMemoryCache, shared across records |
-| GzipCompression | `GzipCompression` | Transient | Stateless compress/decompress |
+| Cache | `Cache` | Singleton | InMemoryCache via createImplementation |
+| GzipCompression | `GzipCompression` | Transient | Via createImplementation |
 | DynamoDbClient | `SourceDynamoDbClient`, `TargetDynamoDbClient` | Singleton (instance) | Separate clients per region/credentials |
 | DynamoDbClientConfig | `DynamoDbClientConfig` | Instance | Source + target connection details |
-| OpenSearchClient | `OpenSearchClient` | Singleton (instance) | OS mode only. Also registers lifecycle hooks |
+| OpenSearchClient | `OpenSearchClient` | Singleton (instance) | OS mode only. Also registers after-transfer hook |
 | OpenSearchClientConfig | `OpenSearchClientConfig` | Instance | OS mode only |
 | MigrationConfig | `MigrationConfig` | Instance | Loaded async, registered before bootstrap |
 | ModelProvider | `ModelProvider` | Singleton (instance) | Loads from DDB + JSON files |
 | TenantLocales | `TenantLocales` | Singleton (instance) | Preloads tenant/locale map |
 | TransferLifecycle | `BeforeTransferHook`, `AfterTransferHook` | Composite | Collects all registered hooks |
+| TransferContext | `TransferContext` | Instance | Holds runId, registered by CLI before hooks |
 
 ## Architecture Decisions
 
@@ -165,16 +219,26 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 - **Separate configs**: users run DDB transfer first, then OS transfer with separate config files
 - **Workers are separate processes**: each worker loads config and bootstraps its own container
 - **OS flow**: decompress gzipped records → run through same pipeline as DDB → gzip in parallel → write to target OS DDB table
-- **Index creation**: OS executor creates missing indexes with retry (5/10/20/30/30s schedule)
-- **Lifecycle hooks**: composite pattern — OpenSearch feature registers disable/enable refresh hooks, orchestrator just calls the composite
+- **Index management**: OS executor creates missing indexes with retry (5/10/20/30/30s schedule). Disables refresh just-in-time when first encountering an index. Stores original refresh_interval in `.transfer/<runId>/segment-N-indexes.json`. After-hook reads files and restores original values.
+- **Lifecycle hooks**: composite pattern — features register hooks, orchestrator calls composites without knowing implementations
 - **Credentials required**: AWS credentials are mandatory in all config schemas (not optional)
 - **No `put` method**: DynamoDbClient only has `scan`, `query`, `batchPut` — use `batchPut` even for single records
+- **Self-registering commands**: each command folder has handler.ts + register.ts, CLI just chains registrations
+
+## Testing Patterns
+
+- Tests live in `__tests__/features/FeatureName/` mirroring the feature structure
+- Mock implementations live alongside tests (e.g., `MockDynamoDbClient.ts`)
+- Integration tests in `__tests__/integration/` use dynalite (local DDB) and local OpenSearch
+- OS record mocker in `__tests__/utils/os-record-mocker.ts` generates configurable test data
+- Snapshot tests: `os-table-migration.test.ts` writes `os-table-migrated.json` (gitignored)
+- Lambda simulation: spy on `batchPut` to decompress + index into OS for verification
 
 ## Files to Delete (after full DI migration)
 
-These files contain old code that's been replaced by features but still used by `process-segment.ts` and `process-os-segment.ts`:
+These files contain old code still used by command handlers (not yet migrated to DI):
 
-- `src/config/` — replaced by `MigrationConfig` feature
+- `src/config/` — replaced by `MigrationConfig` feature (currently re-exports)
 - `src/database/` — replaced by `DynamoDbClient` feature
 - `src/utils/logger.ts` — replaced by `Logger` feature
 - `src/utils/gzip-compression.ts` — replaced by `GzipCompression` feature
@@ -183,3 +247,11 @@ These files contain old code that's been replaced by features but still used by 
 - `src/opensearch/client.ts` — replaced by `OpenSearchClient` feature
 - `src/opensearch/lifecycle.ts` — replaced by `TransferLifecycle` + OS hooks
 - `__tests__/mocks/database-client.ts` — replaced by `MockDynamoDbClient` in `__tests__/features/DynamoDbClient/`
+
+## Next Steps (for future agents)
+
+1. **Rewrite command handlers to use DI** — `processSegment/handler.ts` and `processOsSegment/handler.ts` still use legacy imports. They should bootstrap the container and resolve features instead of creating instances manually.
+2. **Delete legacy code** — once handlers are migrated, remove the files listed above.
+3. **Extract WorkerSpawner** — the `spawnWorker` function in `run/handler.ts` could be a feature for testability.
+4. **Extract PresetLoader as feature** — `src/core/preset-loader.ts` could become a DI feature.
+5. **Migrate core pipeline to DI** — `src/core/` (pipeline, runner, context, executor) could use DI abstractions.
