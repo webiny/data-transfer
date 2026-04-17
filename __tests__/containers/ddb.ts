@@ -1,4 +1,5 @@
 import { Container } from "@webiny/di";
+import { ContainerToken } from "../../src/base/index.ts";
 import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "../../src/tools/Logger/index.ts";
@@ -58,6 +59,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     };
 
     const container = new Container();
+    container.registerInstance(ContainerToken, container);
 
     // Core
     MigrationConfigFeature.register(container, { config });

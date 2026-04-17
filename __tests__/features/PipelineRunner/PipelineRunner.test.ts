@@ -1,143 +1,355 @@
 import { describe, it, expect } from "vitest";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { TransformPipeline } from "~/domain/transform/Pipeline.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import type { Transformer } from "~/domain/transform/Transformer.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import { createDdbContainer, createOsContainer } from "../../containers/index.ts";
+import { Container } from "@webiny/di";
+import type { Abstraction } from "@webiny/di";
+import { ContainerToken, createAbstraction } from "~/base/index.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Commands } from "~/domain/transform/commands/Commands.ts";
+import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
+import {
+    Pipeline,
+    PipelineBuilder,
+    Scanner,
+    Processor,
+    Hook,
+    createFilter
+} from "~/domain/pipeline/index.ts";
+import {
+    FakeScannerImpl,
+    FakeProcessorImpl,
+    FakeHookAImpl,
+    FakeHookBImpl,
+    FakeTransformer,
+    TagTransformerImpl,
+    FakeProcessor,
+    FakeScanner
+} from "../../domain/pipeline/fixtures/fakes.ts";
+import type { FakeRecord, FakeContext, FakeShard } from "../../domain/pipeline/fixtures/types.ts";
 
-function makeRecord(overrides: Partial<BaseRecord> = {}): BaseRecord {
-    return {
-        PK: "T#root#L#en-US#CMS#CME#abc",
-        SK: "REV#0001",
-        _et: "CmsEntries",
-        _ct: "2024-01-01T00:00:00.000Z",
-        _md: "2024-01-01T00:00:00.000Z",
-        TYPE: "cms.entry",
-        ...overrides
-    };
+interface CapturedLog {
+    level: string;
+    message: string;
+    args: unknown[];
 }
 
-describe("PipelineRunner Feature", () => {
-    describe("DI registration", () => {
-        it("should resolve from ddb container", () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
-            expect(runner).toBeDefined();
-            expect(typeof runner.register).toBe("function");
-            expect(typeof runner.processRecord).toBe("function");
-            expect(typeof runner.processAll).toBe("function");
-        });
+class TestLogger implements Logger.Interface {
+    public readonly entries: CapturedLog[] = [];
+    public debug(message: string, ...args: unknown[]): void {
+        this.entries.push({ level: "debug", message, args });
+    }
+    public info(message: string, ...args: unknown[]): void {
+        this.entries.push({ level: "info", message, args });
+    }
+    public warn(message: string, ...args: unknown[]): void {
+        this.entries.push({ level: "warn", message, args });
+    }
+    public error(message: string, ...args: unknown[]): void {
+        this.entries.push({ level: "error", message, args });
+    }
+    public fatal(message: string, ...args: unknown[]): void {
+        this.entries.push({ level: "fatal", message, args });
+    }
+    public done(message: string): void {
+        this.entries.push({ level: "done", message, args: [] });
+    }
+    public child(_prefix: string): Logger.Interface {
+        return this;
+    }
+}
 
-        it("should resolve from os container", () => {
-            const container = createOsContainer();
-            const runner = container.resolve(PipelineRunner);
-            expect(runner).toBeDefined();
-        });
+function makeContainer(): { container: Container; logger: TestLogger } {
+    const container = new Container();
+    const logger = new TestLogger();
+    container.registerInstance(ContainerToken, container);
+    container.registerInstance(Logger, logger);
+    container.register(FakeScannerImpl).inSingletonScope();
+    container.register(FakeProcessorImpl).inSingletonScope();
+    container.register(TagTransformerImpl).inSingletonScope();
+    container.register(FakeHookAImpl).inSingletonScope();
+    container.register(FakeHookBImpl).inSingletonScope();
+    PipelineRunnerFeature.register(container);
+    return { container, logger };
+}
 
-        it("should return same instance on multiple resolves", () => {
-            const container = createDdbContainer();
-            expect(container.resolve(PipelineRunner)).toBe(container.resolve(PipelineRunner));
-        });
+type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
+
+function buildPipeline(
+    container: Container,
+    name: string,
+    extras: {
+        filterFn?: (r: FakeRecord) => boolean;
+        useTransformer?: boolean;
+        beforeHook?: Abstraction<Hook.Interface>;
+        afterHook?: Abstraction<Hook.Interface>;
+    } = {}
+): AnyPipeline {
+    const runner = container.resolve(PipelineRunner);
+    const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        name,
+        scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+        processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+    });
+    builder.filter(createFilter<FakeRecord>(extras.filterFn ?? (() => true)));
+    if (extras.useTransformer) {
+        builder.use(FakeTransformer);
+    }
+    if (extras.beforeHook) {
+        builder.beforeExecuteCommands(extras.beforeHook);
+    }
+    if (extras.afterHook) {
+        builder.afterExecuteCommands(extras.afterHook);
+    }
+    return builder.build() as unknown as AnyPipeline;
+}
+
+describe("PipelineRunner — DI registration", () => {
+    it("resolves from a container", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        expect(runner).toBeDefined();
+        expect(typeof runner.pipeline).toBe("function");
+        expect(typeof runner.register).toBe("function");
+        expect(typeof runner.run).toBe("function");
     });
 
-    describe("processRecord", () => {
-        it("should return empty Commands if no pipeline is registered", async () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
-            const commands = await runner.processRecord(makeRecord());
-            expect(commands.size()).toBe(0);
+    it("returns the same instance on repeated resolves", () => {
+        const { container } = makeContainer();
+        expect(container.resolve(PipelineRunner)).toBe(container.resolve(PipelineRunner));
+    });
+});
+
+describe("PipelineRunner.pipeline()", () => {
+    it("returns a typed PipelineBuilder", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "test",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
+        expect(builder).toBeInstanceOf(PipelineBuilder);
+    });
+});
 
-        it("should return empty Commands when no pipeline matches", async () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
-
-            runner.register(new TransformPipeline().filter(r => r.TYPE === "nothing.matches"));
-
-            const commands = await runner.processRecord(makeRecord());
-            expect(commands.size()).toBe(0);
-        });
-
-        it("should run first matching pipeline", async () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
-
-            const tagAs: (tag: string) => Transformer = tag => ({
-                name: `tag-${tag}`,
-                transform(ctx) {
-                    ctx.record.tag = tag;
-                }
-            });
-
-            const first = new TransformPipeline()
-                .filter(r => r.TYPE === "cms.entry")
-                .use(tagAs("first"));
-            const second = new TransformPipeline()
-                .filter(r => r.TYPE === "cms.entry")
-                .use(tagAs("second"));
-
-            runner.register(first).register(second);
-
-            const commands = await runner.processRecord(makeRecord());
-            const puts = commands.get<PutRecord>(PutRecord.key);
-            expect(puts).toHaveLength(1);
-            expect(puts[0].record.tag).toBe("first");
-        });
-
-        it("should propagate exceptions from transformers", async () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
-
-            const bad: Transformer = {
-                name: "bad",
-                transform() {
-                    throw new Error("boom");
-                }
-            };
-
-            runner.register(new TransformPipeline().filter(r => r.TYPE === "cms.entry").use(bad));
-
-            await expect(runner.processRecord(makeRecord())).rejects.toThrow("boom");
-        });
+describe("PipelineRunner.register()", () => {
+    it("returns the runner for chaining", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        const pipeline = buildPipeline(container, "p");
+        expect(runner.register(pipeline)).toBe(runner);
     });
 
-    describe("processAll", () => {
-        it("should merge commands from all records", async () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
+    it("throws when a duplicate pipeline name is registered", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "dup"));
+        expect(() => runner.register(buildPipeline(container, "dup"))).toThrow(
+            /already registered/i
+        );
+    });
 
-            runner.register(new TransformPipeline().filter(r => r.TYPE === "cms.entry"));
+    it("emits a debug log per before- and after-hook on registered pipelines", () => {
+        const { container, logger } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
 
-            const commands = await runner.processAll([
-                makeRecord({ PK: "a" }),
-                makeRecord({ PK: "b" }),
-                makeRecord({ PK: "c" })
-            ]);
+        runner.register(
+            buildPipeline(container, "with-hooks", {
+                beforeHook: Hook,
+                afterHook: Hook
+            })
+        );
 
-            expect(commands.get(PutRecord.key)).toHaveLength(3);
+        const debugEntries = logger.entries.filter(e => e.level === "debug");
+        expect(debugEntries.length).toBeGreaterThanOrEqual(2);
+        const lifecycleArgs = debugEntries.flatMap(e => e.args as string[]);
+        expect(lifecycleArgs).toContain("before");
+        expect(lifecycleArgs).toContain("after");
+    });
+});
+
+describe("PipelineRunner.run()", () => {
+    it("does not call processor.execute when transformers emit no commands", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        // TagTransformer pushes to ctx.emitted but adds nothing to ctx.commands.
+        // Buffer stays empty → no execute() call.
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "single", { useTransformer: true }));
+        await runner.run();
+
+        expect(processor.executed).toHaveLength(0);
+    });
+
+    it("flushes per-processor buffers via execute() when commands are emitted", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" }
+        ];
+
+        // Inline emitting transformer: register a token-backed class that pushes a
+        // command into ctx.commands per record.
+        interface IEmitTransformer {
+            transform(ctx: FakeContext): void;
+        }
+        class EmitTransformer implements IEmitTransformer {
+            public transform(ctx: FakeContext): void {
+                ctx.commands.add({ key: "TEST_CMD" });
+            }
+        }
+        const EmitToken = createAbstraction<IEmitTransformer>("Test/EmitTransformer");
+        const EmitImpl = EmitToken.createImplementation({
+            implementation: EmitTransformer,
+            dependencies: []
         });
+        container.register(EmitImpl).inSingletonScope();
 
-        it("should return empty Commands for empty input", async () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
-            const commands = await runner.processAll([]);
-            expect(commands.size()).toBe(0);
+        const runner = container.resolve(PipelineRunner);
+        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "with-cmd",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
+        builder.filter(createFilter<FakeRecord>(() => true)).use(EmitToken);
+        runner.register(builder.build() as unknown as AnyPipeline);
+        await runner.run();
 
-        it("should skip records with no matching pipeline but include matches", async () => {
-            const container = createDdbContainer();
-            const runner = container.resolve(PipelineRunner);
+        // One execute() call per processor at shard end (we have one shard, one processor).
+        // Buffer contains 2 commands (one per record).
+        expect(processor.executed).toHaveLength(1);
+        expect(processor.executed[0]?.size()).toBe(2);
+    });
 
-            runner.register(new TransformPipeline().filter(r => r.TYPE === "cms.entry"));
+    it("aggregates commands across pipelines sharing a processor token into one execute() call", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" }
+        ];
 
-            const commands = await runner.processAll([
-                makeRecord({ PK: "a", TYPE: "cms.entry" }),
-                makeRecord({ PK: "b", TYPE: "other.type" }),
-                makeRecord({ PK: "c", TYPE: "cms.entry" })
-            ]);
-
-            expect(commands.get(PutRecord.key)).toHaveLength(2);
+        interface IEmitTransformer {
+            transform(ctx: FakeContext): void;
+        }
+        class EmitTransformer implements IEmitTransformer {
+            public transform(ctx: FakeContext): void {
+                ctx.commands.add({ key: "TEST_CMD" });
+            }
+        }
+        const EmitToken = createAbstraction<IEmitTransformer>("Test/EmitTransformerShared");
+        const EmitImpl = EmitToken.createImplementation({
+            implementation: EmitTransformer,
+            dependencies: []
         });
+        container.register(EmitImpl).inSingletonScope();
+
+        const runner = container.resolve(PipelineRunner);
+
+        // Two pipelines, both pointing at the SAME Scanner and SAME Processor tokens.
+        // DI singleton means they share the resolved processor instance, so their
+        // command buffers should merge into one.
+        const builderA = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "shared-A",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builderA.filter(createFilter<FakeRecord>(() => true)).use(EmitToken);
+
+        const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "shared-B",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builderB.filter(createFilter<FakeRecord>(() => true)).use(EmitToken);
+
+        runner.register(builderA.build()).register(builderB.build());
+        await runner.run();
+
+        // Single processor instance → one execute() call per shard, with all 4 commands
+        // (2 records × 2 pipelines emitting 1 cmd each).
+        expect(processor.executed).toHaveLength(1);
+        expect(processor.executed[0]?.size()).toBe(4);
+    });
+
+    it("evaluates each pipeline independently against each record (all-matches)", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        const runner = container.resolve(PipelineRunner);
+        const acceptCalls: string[] = [];
+        const builderA = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "a",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builderA.filter(
+            createFilter<FakeRecord>(r => {
+                acceptCalls.push(`a:${r.id}`);
+                return true;
+            })
+        );
+        const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "b",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builderB.filter(
+            createFilter<FakeRecord>(r => {
+                acceptCalls.push(`b:${r.id}`);
+                return true;
+            })
+        );
+        runner
+            .register(builderA.build() as unknown as AnyPipeline)
+            .register(builderB.build() as unknown as AnyPipeline);
+
+        await runner.run();
+
+        // Both pipelines evaluate the single record (all-matches semantics)
+        expect(acceptCalls).toEqual(["a:r1", "b:r1"]);
+    });
+
+    it("emits a debug log when a record matches no pipeline in a group", async () => {
+        const { container, logger } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        scanner.records = [{ id: "r1", type: "miss" }];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
+        await runner.run();
+
+        const dropMessages = logger.entries.filter(
+            e => e.message === "record dropped: no matching pipeline in merge group"
+        );
+        expect(dropMessages.length).toBeGreaterThan(0);
+    });
+
+    it("propagates exceptions thrown by the scanner", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        // Override scan to throw
+        scanner.records = [];
+        const original = scanner.scan.bind(scanner);
+        scanner.scan = async function* () {
+            throw new Error("scanner-boom");
+        };
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "p"));
+        await expect(runner.run()).rejects.toThrow("scanner-boom");
+
+        scanner.scan = original;
+    });
+
+    it("does nothing when no pipelines are registered", async () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        await expect(runner.run()).resolves.toBeUndefined();
     });
 });

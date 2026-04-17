@@ -1,19 +1,33 @@
+import type { Abstraction } from "@webiny/di";
 import { createAbstraction } from "~/base/index.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { TransformPipeline } from "~/domain/transform/Pipeline.ts";
+import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
+import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import type { Pipeline } from "~/domain/pipeline/Pipeline.ts";
+import type { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
+
+export interface PipelineRunnerFactoryInput<TRecord, TContext extends Processor.Context, TShard> {
+    name: string;
+    scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
+    processor: Abstraction<Processor.Interface<TRecord, TContext>>;
+}
 
 interface IPipelineRunner {
-    /** Register a pipeline — first-match-wins order */
-    register(pipeline: TransformPipeline<any>): this;
-    /** Run the first matching pipeline on a record; returns empty Commands if none match */
-    processRecord(record: BaseRecord): Promise<Commands>;
-    /** Run all records through processRecord and merge their commands into one collection */
-    processAll(records: BaseRecord[]): Promise<Commands>;
+    pipeline<TRecord, TContext extends Processor.Context, TShard>(
+        config: PipelineRunnerFactoryInput<TRecord, TContext, TShard>
+    ): PipelineBuilder<TRecord, TContext, TShard>;
+
+    register(pipeline: Pipeline<unknown, Processor.Context, unknown>): this;
+
+    run(): Promise<void>;
 }
 
 export const PipelineRunner = createAbstraction<IPipelineRunner>("Core/PipelineRunner");
 
 export namespace PipelineRunner {
     export type Interface = IPipelineRunner;
+    export type FactoryInput<
+        TRecord,
+        TContext extends Processor.Context,
+        TShard
+    > = PipelineRunnerFactoryInput<TRecord, TContext, TShard>;
 }
