@@ -8,6 +8,8 @@ This document is read by AI agents (Claude Code, Copilot, Codex, etc.) when work
 
 This tool transfers Webiny data between environments. Current use case is v5-to-v6 migration, but it will also support production-to-dev data transfer for testing/development. Name things generically ("transfer" not "migration") where possible.
 
+**Long-term vision:** `docs/design/generic-pipeline-framework.md` captures an exploration of making the tool source-agnostic (MySQL, S3-direct, etc.) rather than hardcoded to DDB+OS. Read it before any big refactor to scanner/preprocessor/executor abstractions.
+
 **Package name:** `@webiny/data-transfer`
 
 **User installation:** `npm install @webiny/data-transfer` (published to npm)
