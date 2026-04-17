@@ -1,13 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
 import { Processor } from "~/domain/pipeline/index.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
+import { Commands } from "~/domain/transform/commands/Commands.ts";
 
 interface TestRecord {
     id: string;
 }
 
 interface TestContext {
+    readonly commands: Commands;
     record: TestRecord;
     emit(cmd: string): void;
 }
@@ -25,12 +26,14 @@ class FakeProcessor implements Processor.Interface<TestRecord, TestContext> {
     }
 
     public createContext(record: TestRecord): TestContext {
-        return {
+        const ctx: TestContext = {
+            commands: new Commands(),
             record,
             emit: (cmd: string) => {
                 this.shardState.push(cmd);
             }
         };
+        return ctx;
     }
 }
 
@@ -62,7 +65,7 @@ describe("Processor abstraction", () => {
         expect(ctxB.record.id).toBe("b");
     });
 
-    it("exposes accumulated shard state", async () => {
+    it("exposes accumulated shard state", () => {
         const container = new Container();
         container.register(TestProcessor).inSingletonScope();
         const processor = container.resolve(Processor) as Processor.Interface<
@@ -75,5 +78,18 @@ describe("Processor abstraction", () => {
         ctx.emit("two");
 
         expect(processor.getShardState()).toEqual({ emitted: ["one", "two"] });
+    });
+
+    it("contexts carry a Commands instance per record", () => {
+        const container = new Container();
+        container.register(TestProcessor).inSingletonScope();
+        const processor = container.resolve(Processor) as Processor.Interface<
+            TestRecord,
+            TestContext
+        >;
+
+        const ctx = processor.createContext({ id: "x" });
+        expect(ctx.commands).toBeInstanceOf(Commands);
+        expect(ctx.commands.size()).toBe(0);
     });
 });
