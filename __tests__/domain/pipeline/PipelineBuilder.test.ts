@@ -94,3 +94,83 @@ describe("PipelineBuilder — construction and build()", () => {
         expect(() => builder.build()).toThrow(/filter/i);
     });
 });
+
+describe("PipelineBuilder.filter() — extended rules", () => {
+    it("accepts a single Filter and routes records correctly via accepts()", () => {
+        const container = makeContainer();
+        const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
+
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "single-filter",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        })
+            .filter(isFoo)
+            .build();
+
+        expect(pipeline.hasFilter).toBe(true);
+        expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
+        expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
+    });
+
+    it("accepts an array of Filters and AND-combines them in order", () => {
+        const container = makeContainer();
+        const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
+        const notDeleted = createFilter<FakeRecord>(r => r.payload?.deleted !== true);
+
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "array-filter",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        })
+            .filter([isFoo, notDeleted])
+            .build();
+
+        expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
+        expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
+        expect(pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(false);
+    });
+
+    it("throws when .filter() is called a second time on the same builder", () => {
+        const container = makeContainer();
+        const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
+        const isBar = createFilter<FakeRecord>(r => r.type === "bar");
+
+        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "double-filter",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        }).filter(isFoo);
+
+        expect(() => builder.filter(isBar)).toThrow(/\.filter\(\).*already called/i);
+    });
+
+    it("throws when .filter() receives an empty array", () => {
+        const container = makeContainer();
+        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "empty-array",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        });
+
+        expect(() => builder.filter([])).toThrow(/empty/i);
+    });
+
+    it("when .filter() is double-called with an empty array, throws the double-call error first (not empty-array)", () => {
+        const container = makeContainer();
+        const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
+        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "guard-order",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        }).filter(isFoo);
+
+        expect(() => builder.filter([])).toThrow(/\.filter\(\).*already called/i);
+        expect(() => builder.filter([])).not.toThrow(/empty/i);
+    });
+});

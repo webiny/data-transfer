@@ -34,8 +34,21 @@ export class PipelineBuilder<TRecord = unknown, TContext = unknown, TShard = unk
         this.container = config.container;
     }
 
-    public filter(input: Filter<TRecord>): this {
-        this.filters = [input];
+    public filter(input: Filter<TRecord> | Filter<TRecord>[]): this {
+        if (this.filterCalled) {
+            throw new Error(
+                `PipelineBuilder "${this.name}": .filter() already called. ` +
+                    "Pass an array to apply multiple filters in one call."
+            );
+        }
+        const asArray = Array.isArray(input) ? input : [input];
+        if (asArray.length === 0) {
+            throw new Error(
+                `PipelineBuilder "${this.name}": .filter([]) is empty — ` +
+                    "pass at least one filter or omit the call entirely."
+            );
+        }
+        this.filters = asArray;
         this.filterCalled = true;
         return this;
     }
