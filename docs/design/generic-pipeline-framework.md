@@ -268,54 +268,50 @@ export const example: MigrationPreset = {
 
 ### Pipeline merging & filter validation
 
-When a preset registers multiple pipelines with the **same scanner + same processor** combination, the runner should merge them into a single scan pass. Scanning a DDB table twice to run two separate pipelines is wasted I/O — one scan can feed both pipelines, with each pipeline's filter selecting the records it cares about.
+When a preset registers multiple pipelines that share the **same scanner** (regardless of processor), the runner merges them into a single scan pass. Scanning a 50M-row DDB table twice to feed two separate pipelines is wasted I/O *and* load on the source system — one scan can feed every pipeline that reads from that source.
 
-**Validation rule (enforced at `.build()` / `runner.register()` time, not at runtime):**
+**Why the merge key is scanner-only (not `(scanner, processor)`):** the processor is execution-side — it owns command flushing and per-record context creation. It has nothing to do with walking the source. A single DDB scan can legitimately fan out to a DDB-target pipeline (write back to DDB) **and** an OS-target pipeline (index into OpenSearch) — each pipeline still owns its own processor, but they share the scan.
 
-> If two or more pipelines share the same `{ scanner, processor }` combination, **every** pipeline in that group MUST declare a `.filter(...)`. If any pipeline in the group lacks a filter, `runner.register()` throws with a clear error.
+**Validation rule (enforced at `PipelineBuilder.build()` time):**
 
-Reason: a filter-less pipeline is a catch-all. If a catch-all coexists with a filtered pipeline on the same source, every record matches both — the runner cannot decide which pipeline's transforms to apply. That's a silent data corruption bug waiting to happen. Fail loudly at configuration time.
+> Every pipeline MUST declare a `.filter(...)`. Filter-less pipelines are rejected at build time. If the user wants a pipeline that accepts every record from its scanner, they must explicitly create a "match-all" filter (`createFilter(() => true)`).
 
-**Example — valid:**
+Reason: explicitness. With "all-matches" semantics (see below), a filter-less pipeline silently consumes every record from the scanner — rarely what the user intends, and silently corrupts data when it isn't. Forcing an explicit filter makes intent visible at the call site.
+
+**Match semantics (within a merge group):**
+
+For each scanned record, **every** pipeline in the group is evaluated independently. Each pipeline whose filters all pass produces commands routed to **its own** processor. Multiple matches per record are expected and supported — fan-out is the point.
+
+Records that match no filter in the group are silently dropped (with a `logger.debug(...)` for observability).
+
+**Example — valid (one scan, two lanes):**
 ```typescript
-// Both filtered → unambiguous
+// DDB scan feeds both lanes — one writes back to DDB, one indexes to OS
 new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
-    .filter(isRegularRecord)
+    .filter(isContentRecord)
     .use(transformRegular)
     .build();
 
-new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
-    .filter(isReferenceRecord)
-    .use(transformReference)
+new PipelineBuilder({ scanner: DdbScanner, processor: OsProcessor })
+    .filter(isContentRecord)
+    .use(buildOsIndex)
     .build();
 ```
 
-**Example — invalid:**
+**Example — invalid (filter-less, rejected at build):**
 ```typescript
-// Second pipeline is filter-less → throws at register()
 new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
-    .filter(isRegularRecord)
-    .use(transformRegular)
-    .build();
-
-new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
-    // no .filter() — which records does this apply to? ambiguous
     .use(transformEverything)
     .build();
+// throws: PipelineBuilder "...": .filter() is required
+//         (use createFilter(() => true) for an explicit catch-all).
 ```
 
-**Single-pipeline case:** A filter is still optional when only one pipeline uses a given scanner+processor combo — "all records from this scanner go through this pipeline" is unambiguous.
-
 **Implementation sketch:**
-- `PipelineRunner.register(pipeline)` groups pipelines by `{ scannerToken, processorToken }` key.
-- A finalization step (either on each `register` call or on a later `.freeze()` / first `.scan()`) walks the groups: for each group with `size > 1`, assert `every(p => p.hasFilter)`.
-- On execution: scanner yields records once; the runner evaluates filters in order and routes each record to the first matching pipeline's transform chain. (Alternative: run all matching pipelines' transforms — but that contradicts the "unambiguous" goal. First-match is safer.)
-
-**Open question:** what if two filters both match the same record? That's a filter overlap, different concern from the filter-less catch-all. Two reasonable policies:
-1. **Strict (first-match wins):** document the rule, tell authors to write disjoint filters. Cheap, no runtime cost.
-2. **Detection (runtime):** runner logs a warning when a record matches >1 filter in a group. Costs one extra filter eval per record.
-
-Recommendation: strict first-match. Detection adds cost for a class of bug that careful filter authoring avoids. Can always add `--strict-filters` mode later if it turns out to bite.
+- `PipelineBuilder.build()` throws if no `.filter()` call was made.
+- `PipelineRunner.register(pipeline)` groups pipelines by `scannerToken` identity (single-key).
+- A pipeline-name uniqueness check happens at `register()` regardless of group.
+- On execution: scanner yields records once per shard; the runner evaluates each pipeline's filters; **every matching pipeline runs**, each producing commands routed to its own processor.
 
 ### What `PipelineBuilder` does NOT commit to
 
@@ -492,6 +488,8 @@ preset-3-content-records
 
 This section captures concrete design locks from a long grill session. These are not speculation — they are the decisions to implement. Future agents should treat this as ground truth unless a later note supersedes it.
 
+> **Revision note (2026-04-17, later same day):** the merge-group key was originally `(scannerToken, processorToken)` and match semantics were "first-match wins". After realising that legitimate cases need one DDB scan to fan out into both a DDB-write lane and an OS-index lane, the key was reduced to **`scannerToken` only** and semantics changed to **"all matches run"**. The filter requirement was simultaneously tightened from "required only when group has 2+ pipelines" to **"always required, enforced at `PipelineBuilder.build()`"**. Sections "Pipeline merging & filter validation", "Merge groups", "Filters", "PipelineBuilder rules", and "State persistence" all reflect the new model. The `__tests__/security-teams.test.ts` and `src/presets/example.ts` files predate this revision; they are still useful as API-shape references but their semantics will need to be reread under the new rules.
+
 ### Core abstractions
 
 Four primitives drive the model:
@@ -554,7 +552,7 @@ configure(runner: PipelineRunner.Interface): void {
 - `.filter()` with a type-predicate narrows `TRecord` for downstream `.use()` calls.
 - `.use(token)` accepts only DI tokens (not instances). Multiple `.use()` calls chain; registration order is preserved and meaningful (transformers run serially in order).
 - `.beforeExecuteCommands(token)` / `.afterExecuteCommands(token)` take DI tokens for `Hook.Interface` features. Multiple calls allowed.
-- `.build()` requires at minimum `name`, `scanner`, `processor`. Everything else defaults to empty.
+- `.build()` requires `name`, `scanner`, `processor`, **and at least one `.filter(...)` call**. Building without a filter throws (see "Pipeline merging & filter validation" — filters are mandatory). Hooks default to empty.
 - `.build()` returns a `Pipeline` **class instance** with container baked in (not a frozen data struct — see rationale below).
 
 **Why Pipeline is a class, not a data struct:**
@@ -569,26 +567,29 @@ Initial grill concluded "plain frozen object" for serialization benefits. Reject
 
 ### Merge groups
 
-A **merge group** is a runtime bucket formed implicitly when two or more pipelines share the same scanner and processor DI tokens. Users don't declare merge groups — they emerge from registration.
+A **merge group** is a runtime bucket formed implicitly when two or more pipelines share the same **scanner** DI token. Processor identity is irrelevant for grouping — different processors can coexist within the same merge group, each receiving commands from its own pipeline. Users don't declare merge groups; they emerge from registration.
 
-**Identity:** `mergeGroupId = sanitize(scannerToken.description) + "__" + sanitize(processorToken.description)`. Slashes replaced with dashes for filesystem safety. Human-readable. Example: `Core-DdbScanner__Core-DdbProcessor`.
+**Identity:** `mergeGroupId = sanitize(scannerToken.description)`. Slashes replaced with dashes for filesystem safety. Example: `Core-DdbScanner`.
 
-**Validation at `register()`:**
+**Validation at `PipelineBuilder.build()`:**
 
-- If a merge group has exactly one pipeline, that pipeline's filter is optional.
-- If a merge group has two or more pipelines, **every** pipeline in the group must have at least one filter (from `.filter(...)`). Throws with clear error naming filter-less pipelines.
+- Every pipeline MUST have at least one filter (from `.filter(...)`). Filterless `.build()` throws immediately. Applies regardless of whether the pipeline ends up alone or grouped — the rule is unconditional.
+
+**Validation at `runner.register()`:**
+
+- Pipeline names must be unique across the entire run (irrespective of merge group).
 
 **Runtime semantics (within a group):**
 
-- Scanner runs once per shard (not per pipeline). Single scan, records routed.
-- Each scanned record is evaluated against each pipeline's filter **in registration order**. **First-match wins** — the record runs through that pipeline's transformer chain only. Other pipelines are skipped for that record.
-- Records that match no filter in the group are **silently dropped** (optional `logger.debug(...)` per dropped record, so it's observable when debug logging is on).
-- Commands from matched records accumulate into a shared batch; processor flushes batches.
-- `processor.getShardState()` aggregates state across the whole group (touchedIndexes from all 5 OS pipelines, for example). State is group-level, not pipeline-level.
+- Scanner runs once per shard. Single scan, records dispatched to all pipelines in the group.
+- Each scanned record is evaluated against each pipeline's filters **independently**. **All matching pipelines run** for that record — fan-out is expected and supported (one DDB record can flow to a DDB-target pipeline AND an OS-indexing pipeline simultaneously).
+- Records that match no filter in the group are **silently dropped** (optional `logger.debug(...)` per dropped record for observability).
+- Each pipeline's commands flow to **its own processor**, not a shared one. Processors are DI singletons by default, so multiple pipelines that declare the same processor token share an instance and aggregate state on it.
+- `processor.getShardState()` aggregates state across all pipelines that share that processor token within the group. State is **per-processor within the group**, not per-pipeline.
 
 **Runtime semantics (across groups):**
 
-- Merge groups execute **sequentially in registration order** (order of the first-registered pipeline in each group). Parallel execution is rejected as a default; can be added later as opt-in.
+- Merge groups execute **sequentially in registration order** (order of the first-registered pipeline in each group). Parallel execution across groups is rejected as a default; can be added later as opt-in.
 - Shards within a group run in parallel — one worker per shard.
 
 ### Hooks
@@ -616,6 +617,7 @@ Sequence for each merge group:
 ### Filters
 
 - Produced via `createFilter<TRecord>(fn: (r: TRecord) => boolean): Filter<TRecord>`. Branded return type prevents passing random functions to `.filter()`.
+- **Filters are mandatory.** Every pipeline must call `.filter(...)` exactly once before `.build()`. A pipeline that wants to consume every record from its scanner must declare an explicit `createFilter(() => true)`. There is no implicit "no filter = match all" mode — that ambiguity was the entire reason the rule exists.
 - Filters are **pure functions**, not DI features. Rationale: every existing filter in `src/domain/transform/filters.ts` is a pure predicate; no DI needs today. The one DI-touching gate (`tenantLocales.isDefaultLocaleRecord`) is currently inline in the handler, not a registered filter. When we migrate it, the preset's `configure` can close over a resolved `TenantLocales` instance.
 - If future demand requires DI-enabled filters, a second `createFilter({ deps, check })` form can be added non-breakingly.
 - Transformers and hooks stay DI classes — they have more complex dependencies and more ceremony is justified.
@@ -630,9 +632,10 @@ Sequence for each merge group:
 
 ### State persistence
 
-- Workers write `.transfer/<runId>/<mergeGroupId>/<shard>.json` at end of shard.
+- Workers write `.transfer/<runId>/<mergeGroupId>/<processorId>/<shard>.json` at end of shard. `processorId = sanitize(processorToken.description)`.
+- Two-level layout reflects the new model: one merge group per scanner, one sub-directory per processor token within the group. A merge group with one DDB processor + one OS processor produces two sibling sub-trees.
 - Content: JSON output of `processor.getShardState()`. Processor-defined shape (OS: `{ touchedIndexes: Record<string, number> }`; DDB: `{}` or minimal stats).
-- After-hooks read all shard-state files for their merge group and act on aggregated state.
+- After-hooks read all shard-state files for their (merge group, processor) tuple and act on aggregated state. A hook declared on multiple pipelines that share a processor only sees that processor's state.
 - Processor itself never touches the filesystem — worker framework owns file I/O. Separation of concerns: processor owns *what* the state is; framework owns *where/when* to persist.
 
 ### Summary of concrete changes needed to implement this
