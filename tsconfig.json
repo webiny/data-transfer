@@ -18,12 +18,12 @@
         "allowImportingTsExtensions": true,
         "noEmit": true,
         "outDir": "./dist",
-        "rootDirs": ["./src", "__tests__", "./examples"],
+        "rootDirs": ["./src", "__tests__"],
         "paths": {
             "@/*": ["./*"],
             "~/*": ["./src/*"]
         }
     },
-    "include": ["src/**/*", "__tests__/**/*", "examples/**/*"],
+    "include": ["src/**/*", "__tests__/**/*"],
     "exclude": ["node_modules", "dist"]
 }
