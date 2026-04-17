@@ -1,48 +1,33 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { createTestRunner } from "../src/utils/test-helpers.ts";
-import { executeCommands } from "../src/core/executor.ts";
-import { MigrationConfig } from "../src/core/types.ts";
-import { ModelProvider } from "../src/models/model-provider.ts";
-import { MockDatabaseClient } from "./mocks/database-client.ts";
-import { MockStorageClient } from "./mocks/storage-client.ts";
+import { describe, it, expect } from "vitest";
+import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { createDdbContainer } from "./containers/index.ts";
+import { MockDynamoDbClient } from "./services/DynamoDbClient/MockDynamoDbClient.ts";
 import { v5MailerSettings } from "./fixtures/v5-records.ts";
 
 describe("Mailer Settings", () => {
-    let database: MockDatabaseClient;
-    let storage: MockStorageClient;
-    let config: MigrationConfig;
-    let modelProvider: ModelProvider;
-
-    beforeEach(() => {
-        database = new MockDatabaseClient();
-        storage = new MockStorageClient();
-        modelProvider = new ModelProvider(database, "source-table");
-        config = {
-            sourcePrimaryTable: "source-table",
-            targetPrimaryTable: "target-table",
-            sourceFmBucket: "source-bucket",
-            targetFmBucket: "target-bucket",
-            modelProvider
-        };
-    });
-
     it("should migrate mailer settings to KeyValue format", async () => {
-        const runner = createTestRunner(config, database);
+        const container = createDdbContainer();
+        const runner = container.resolve(PipelineRunner);
+        const executor = container.resolve(DdbCommandExecutor);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
 
-        const commands = await runner.processRecord(v5MailerSettings);
-        await executeCommands(commands, { database, storage });
+        v5ToV6Preset.configure(runner);
 
-        const migratedRecords = database.batchPutRecords;
+        const commands = await runner.processRecord(v5MailerSettings as any);
+        await executor.execute(commands);
+
+        const migratedRecords = targetDb.batchPutRecords;
         expect(migratedRecords).toHaveLength(1);
 
-        const migratedRecord = migratedRecords[0];
+        const migratedRecord = migratedRecords[0] as any;
 
-        // Should change to KeyValue format
         expect(migratedRecord.PK).toBe("KV#root:Mailer/Settings/Transport");
         expect(migratedRecord.SK).toBe("A");
         expect(migratedRecord.TYPE).toBe("KeyValueStore");
 
-        // Should have proper data structure
         expect(migratedRecord.data.key).toBe("Mailer/Settings/Transport");
         expect(migratedRecord.data.scope).toBe("root");
         expect(migratedRecord.data.value).toBeDefined();
