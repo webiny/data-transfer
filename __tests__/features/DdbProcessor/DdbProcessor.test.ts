@@ -35,8 +35,8 @@ describe("DdbProcessor", () => {
         const ctxB = processor.createContext(makeRecord("b", "1"));
 
         expect(ctxA).not.toBe(ctxB);
-        expect((ctxA as { record: BaseRecord }).record.PK).toBe("a");
-        expect((ctxA as { commands: Commands }).commands).toBeInstanceOf(Commands);
+        expect((ctxA as unknown as { record: BaseRecord }).record.PK).toBe("a");
+        expect((ctxA as unknown as { commands: Commands }).commands).toBeInstanceOf(Commands);
     });
 
     it("delegates execute() to the underlying DdbCommandExecutor", async () => {

@@ -267,7 +267,9 @@ describe("PipelineRunner.run()", () => {
         });
         builderB.filter(createFilter<FakeRecord>(() => true)).use(EmitToken);
 
-        runner.register(builderA.build()).register(builderB.build());
+        runner
+            .register(builderA.build() as unknown as AnyPipeline)
+            .register(builderB.build() as unknown as AnyPipeline);
         await runner.run();
 
         // Single processor instance → one execute() call per shard, with all 4 commands

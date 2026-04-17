@@ -4,7 +4,7 @@ import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { createFilter } from "~/domain/pipeline/index.ts";
+import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { createAbstraction } from "~/base/index.ts";
@@ -12,6 +12,8 @@ import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { DdbShard } from "~/features/DdbScanner/index.ts";
+
+type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
 
 interface IPassthroughTransformer {
     transform(ctx: DdbTransformContext.Interface<BaseRecord>): void;
@@ -71,7 +73,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         teamsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
             .use(PassthroughTransformerToken);
-        runner.register(teamsBuilder.build());
+        runner.register(teamsBuilder.build() as unknown as AnyPipeline);
 
         const groupsBuilder = runner.pipeline<
             BaseRecord,
@@ -87,7 +89,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         groupsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.group"))
             .use(PassthroughTransformerToken);
-        runner.register(groupsBuilder.build());
+        runner.register(groupsBuilder.build() as unknown as AnyPipeline);
 
         await runner.run();
 
@@ -115,7 +117,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             >
         });
         builderA.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builderA.build());
+        runner.register(builderA.build() as unknown as AnyPipeline);
 
         const builderB = runner.pipeline<
             BaseRecord,
@@ -130,6 +132,8 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         builderB.filter(createFilter<BaseRecord>(() => true));
 
-        expect(() => runner.register(builderB.build())).toThrow(/already registered/i);
+        expect(() => runner.register(builderB.build() as unknown as AnyPipeline)).toThrow(
+            /already registered/i
+        );
     });
 });
