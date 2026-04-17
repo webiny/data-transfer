@@ -99,7 +99,8 @@ src/
 │   ├── Logger/               # Has child(prefix) for scoped log prefixes
 │   ├── MigrationConfig/
 │   ├── ModelProvider/
-│   ├── OpenSearchClient/
+│   ├── OpenSearchClient/     # Also supports getIndexSettings for reading refresh_interval
+│   ├── OsCommandExecutor/    # Gzips + ensures indexes + batch-writes to OS DDB (os mode only)
 │   ├── PipelineRunner/       # Registers pipelines, processes records (first-match wins)
 │   ├── PresetLoader/         # Loads built-in or custom presets by name/path
 │   ├── S3Client/             # SourceS3Client + TargetS3Client (ddb mode only)
@@ -286,6 +287,7 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 | TransformContext       | `DdbTransformContextFactory`, `OsTransformContextFactory` | Singleton            | Mode-conditional. Also registers active factory under `BaseTransformContextFactory` |
 | PipelineRunner         | `PipelineRunner`                                          | Singleton            | Registers pipelines, processes records via `BaseTransformContextFactory`            |
 | DdbCommandExecutor     | `DdbCommandExecutor`                                      | Singleton            | DDB mode only. Dispatches PUT_RECORD and S3_COPY commands in parallel               |
+| OsCommandExecutor      | `OsCommandExecutor`                                       | Singleton            | OS mode only. Gzips, ensures indexes w/ retry, batch-writes to target OS DDB        |
 
 ## Architecture Decisions
 
@@ -331,20 +333,27 @@ These files contain legacy code pending removal (see "Next Steps" for order):
 - `src/storage/` — replaced by `S3Client` feature
 - `src/opensearch/client.ts` — replaced by `OpenSearchClient` feature
 - `src/opensearch/lifecycle.ts` — replaced by `TransferLifecycle` + OS hooks
-- `src/opensearch/executor.ts` — pending migration to a new `OsCommandExecutor` feature
+- `src/opensearch/executor.ts` — replaced by `OsCommandExecutor` feature
+- `src/opensearch/decompress-record.ts` — still needed by OS handler until ported; `stripLocaleFromIndex` logic duplicated in `OsCommandExecutor` (safe to delete after OS handler migration uses something else for locale stripping)
 - `__tests__/mocks/database-client.ts`, `__tests__/mocks/storage-client.ts` — replaced by mocks under `__tests__/features/*/`
 
 ## Next Steps (for future agents)
 
 ### Priority 1: Migrate OS handler (`processOsSegment`)
 
-`src/commands/processSegment/handler.ts` is fully DI. `src/commands/processOsSegment/handler.ts` still uses legacy code. Migrate it similarly:
+`src/commands/processSegment/handler.ts` is fully DI. `src/commands/processOsSegment/handler.ts` still uses legacy code. All DI pieces are ready — this is now mostly mechanical:
 
-- Call `bootstrap({ config })` — OS mode conditional features are already wired
-- Resolve `Logger.child("[os-segment #N] ")`, `TenantLocales`, `ModelProvider`, `PresetLoader`, `PipelineRunner`, `SourceDynamoDbClient`, `OpenSearchClient`
-- The OS flow decompresses records → runs through pipeline → gzips back → writes to target OS table
-- An `OsCommandExecutor` feature likely needs to be added (counterpart to `DdbCommandExecutor`), or the OS executor logic moves into the handler
-- **`OsIndexEnsure` command** was intentionally deferred — revisit when migrating OS handler. See commands/ folder for existing `PutRecord`/`S3Copy`/`Commands` patterns to follow.
+- Call `bootstrap({ config })` — OS mode conditional features are wired (`OsCommandExecutor` registered in os mode)
+- Resolve `Logger.child("[os-segment #N] ")`, `TenantLocales`, `ModelProvider`, `PresetLoader`, `PipelineRunner`, `SourceDynamoDbClient`, `OsCommandExecutor`
+- Flow:
+  1. For each source OS DDB record: `decompressOsRecord(record)` to extract inner record + metadata + locale
+  2. Filter via `tenantLocales.isDefaultLocaleRecord()`
+  3. `runner.processRecord(innerRecord)` returns `Commands`
+  4. Extract `PutRecord` commands, pair each with the source's metadata + locale into `OsCommandExecutor.Item`
+  5. Batch up to 100, call `osExecutor.execute(items, touchedIndexes)`
+- Handler owns `touchedIndexes: Map<string, string>` and persists it to `.transfer/<runId>/segment-N-indexes.json` after the segment loop (for the after-transfer hook to consume)
+- Handler-side metadata pairing avoids coupling pipeline/context to OS-specific fields. Source PK+SK may be rewritten by transformers, so we pair BEFORE pipeline runs (per source record).
+- **Deferred**: `OsIndexEnsure` command was discussed and rejected for now — executor derives unique indexes from PUT records instead. Revisit if the implicit derivation causes issues.
 
 ### Priority 2: Legacy tests migration
 
