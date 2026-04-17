@@ -213,3 +213,60 @@ describe("PipelineBuilder.use()", () => {
         expect(builder.use(FakeTransformer)).toBe(builder);
     });
 });
+
+describe("PipelineBuilder — hook registration", () => {
+    it("registers before-hooks in declaration order", () => {
+        const container = makeContainer();
+        const matchAll = createFilter<FakeRecord>(() => true);
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "before-hooks",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        })
+            .filter(matchAll)
+            .beforeExecuteCommands(Hook)
+            .beforeExecuteCommands(Hook)
+            .build();
+
+        expect(pipeline.beforeHookTokens).toHaveLength(2);
+        expect(pipeline.beforeHookTokens[0]).toBe(Hook);
+        expect(pipeline.beforeHookTokens[1]).toBe(Hook);
+    });
+
+    it("registers after-hooks in declaration order", () => {
+        const container = makeContainer();
+        const matchAll = createFilter<FakeRecord>(() => true);
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "after-hooks",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        })
+            .filter(matchAll)
+            .afterExecuteCommands(Hook)
+            .afterExecuteCommands(Hook)
+            .build();
+
+        expect(pipeline.afterHookTokens).toHaveLength(2);
+    });
+
+    it("keeps before and after hook lists independent", () => {
+        const container = makeContainer();
+        const matchAll = createFilter<FakeRecord>(() => true);
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "mixed-hooks",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        })
+            .filter(matchAll)
+            .beforeExecuteCommands(Hook)
+            .afterExecuteCommands(Hook)
+            .afterExecuteCommands(Hook)
+            .build();
+
+        expect(pipeline.beforeHookTokens).toHaveLength(1);
+        expect(pipeline.afterHookTokens).toHaveLength(2);
+    });
+});

@@ -58,6 +58,16 @@ export class PipelineBuilder<TRecord = unknown, TContext = unknown, TShard = unk
         return this;
     }
 
+    public beforeExecuteCommands(token: Abstraction<Hook.Interface>): this {
+        this.beforeHooks.push(token);
+        return this;
+    }
+
+    public afterExecuteCommands(token: Abstraction<Hook.Interface>): this {
+        this.afterHooks.push(token);
+        return this;
+    }
+
     public build(): Pipeline<TRecord, TContext, TShard> {
         if (!this.filterCalled) {
             throw new Error(
