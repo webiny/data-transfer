@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript strict, `@webiny/di` (`Abstraction`, `Container`, `createAbstraction`), vitest, `~/` path alias (maps to `src/`).
 
-**Design reference:** `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" section captures all grilled decisions this plan implements. Note in particular the **2026-04-17 revision note**: merge-group key is **scanner only** (not `(scanner, processor)`), match semantics are **"all matches run"** (not first-match), and filters are **always required**, enforced at `PipelineBuilder.build()`. The `Pipeline.accepts()` and `.run()` primitives in this plan stay correct under both models — the merge-group changes only affect the future runner-integration plan. The single change this plan absorbs is the always-required filter rule (see Task 9).
+**Design reference:** `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" section captures all grilled decisions this plan implements. Note in particular the **2026-04-17 revision note**: merge-group key is **scanner only** (not `(scanner, processor)`), match semantics stay **first-match-wins** (registration order matters), and filters are **always required**, enforced at `PipelineBuilder.build()`. The `Pipeline.accepts()` primitive in this plan stays correct under the model — the merge-group changes only affect the future runner-integration plan. The single change this plan absorbs is the always-required filter rule (see Task 9).
 
 **Out of scope (future plans):**
 - `PipelineRunner.pipeline()` factory and `register()` merge-group grouping/validation.

@@ -276,25 +276,27 @@ When a preset registers multiple pipelines that share the **same scanner** (rega
 
 > Every pipeline MUST declare a `.filter(...)`. Filter-less pipelines are rejected at build time. If the user wants a pipeline that accepts every record from its scanner, they must explicitly create a "match-all" filter (`createFilter(() => true)`).
 
-Reason: explicitness. With "all-matches" semantics (see below), a filter-less pipeline silently consumes every record from the scanner — rarely what the user intends, and silently corrupts data when it isn't. Forcing an explicit filter makes intent visible at the call site.
+Reason: explicitness. A filter-less pipeline silently consumes every record from the scanner — rarely what the user intends, and silently corrupts data when it isn't. Forcing an explicit filter makes intent visible at the call site.
 
 **Match semantics (within a merge group):**
 
-For each scanned record, **every** pipeline in the group is evaluated independently. Each pipeline whose filters all pass produces commands routed to **its own** processor. Multiple matches per record are expected and supported — fan-out is the point.
+For each scanned record, pipelines in the group are evaluated **in registration order**. The **first pipeline** whose filters all pass is the one that runs for that record; subsequent pipelines in the group are skipped for that record. Pipeline registration order is therefore meaningful — the more specific filter goes first, the catch-all goes last.
 
-Records that match no filter in the group are silently dropped (with a `logger.debug(...)` for observability).
+Records that match no pipeline in the group are silently dropped (with a `logger.debug(...)` for observability).
 
-**Example — valid (one scan, two lanes):**
+To fan a single record out to multiple processors (e.g., write to DDB AND index to OS), use **two separate scanners** so each lane is its own merge group. Sharing a scanner means sharing a single dispatch decision per record.
+
+**Example — valid (catch the more specific filter first):**
 ```typescript
-// DDB scan feeds both lanes — one writes back to DDB, one indexes to OS
+// FmFile records ARE technically cms.entry-shaped, so put the FmFile pipeline first.
 new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
-    .filter(isContentRecord)
-    .use(transformRegular)
+    .filter(isFmFileRecord)
+    .use(transformFmFile)
     .build();
 
-new PipelineBuilder({ scanner: DdbScanner, processor: OsProcessor })
-    .filter(isContentRecord)
-    .use(buildOsIndex)
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    .filter(isCmsEntryRecord)  // would also match FmFile records, but FmFile pipeline runs first
+    .use(transformCmsEntry)
     .build();
 ```
 
@@ -488,7 +490,9 @@ preset-3-content-records
 
 This section captures concrete design locks from a long grill session. These are not speculation — they are the decisions to implement. Future agents should treat this as ground truth unless a later note supersedes it.
 
-> **Revision note (2026-04-17, later same day):** the merge-group key was originally `(scannerToken, processorToken)` and match semantics were "first-match wins". After realising that legitimate cases need one DDB scan to fan out into both a DDB-write lane and an OS-index lane, the key was reduced to **`scannerToken` only** and semantics changed to **"all matches run"**. The filter requirement was simultaneously tightened from "required only when group has 2+ pipelines" to **"always required, enforced at `PipelineBuilder.build()`"**. Sections "Pipeline merging & filter validation", "Merge groups", "Filters", "PipelineBuilder rules", and "State persistence" all reflect the new model. The `__tests__/security-teams.test.ts` and `src/presets/example.ts` files predate this revision; they are still useful as API-shape references but their semantics will need to be reread under the new rules.
+> **Revision note (2026-04-17, later same day):** the merge-group key was originally `(scannerToken, processorToken)`. After realising that legitimate cases need one DDB scan to fan out into both a DDB-write lane and an OS-index lane, the key was reduced to **`scannerToken` only**. Match semantics stay **first-match wins** — pipelines are evaluated against each record in registration order, and the first one whose filters all pass is the only one that runs for that record. Pipeline registration order is therefore meaningful (the more specific filter goes first). The filter requirement was simultaneously tightened from "required only when group has 2+ pipelines" to **"always required, enforced at `PipelineBuilder.build()`"**. Sections "Pipeline merging & filter validation", "Merge groups", "Filters", "PipelineBuilder rules", and "State persistence" all reflect the new model. The `__tests__/security-teams.test.ts` and `src/presets/example.ts` files predate this revision; they are still useful as API-shape references but their semantics will need to be reread under the new rules.
+>
+> **Correction (2026-04-17, even later same day):** an earlier draft of this revision note temporarily flipped match semantics to "all matches run" (every accepting pipeline fires per record). That was a misread of intent — the locked semantics are first-match-wins, as above. Code, spec, and plan all corrected accordingly.
 
 ### Core abstractions
 
@@ -584,10 +588,10 @@ A **merge group** is a runtime bucket formed implicitly when two or more pipelin
 
 **Runtime semantics (within a group):**
 
-- Scanner runs once per shard. Single scan, records dispatched to all pipelines in the group.
-- Each scanned record is evaluated against each pipeline's filters **independently**. **All matching pipelines run** for that record — fan-out is expected and supported (one DDB record can flow to a DDB-target pipeline AND an OS-indexing pipeline simultaneously).
-- Records that match no filter in the group are **silently dropped** (optional `logger.debug(...)` per dropped record for observability).
-- Each pipeline's commands flow to **its own processor**, not a shared one. Processors are DI singletons by default, so multiple pipelines that declare the same processor token share an instance and aggregate state on it.
+- Scanner runs once per shard. Single scan, records dispatched into the group.
+- For each record, pipelines are evaluated **in registration order**. The **first** pipeline whose filters all pass is the one that runs for that record; subsequent pipelines in the group are skipped for that record. Pipeline registration order is meaningful — put the more specific filter first, the catch-all last.
+- Records that match no pipeline in the group are **silently dropped** (optional `logger.debug(...)` per dropped record for observability).
+- Each pipeline's commands flow to **its own processor**. Processors are DI singletons by default, so multiple pipelines that declare the same processor token share an instance and aggregate state on it.
 - `processor.getShardState()` aggregates state across all pipelines that share that processor token within the group. State is **per-processor within the group**, not per-pipeline.
 
 **Runtime semantics (across groups):**

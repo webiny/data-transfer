@@ -135,6 +135,9 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 for (const cmd of ctx.commands.all()) {
                     buffer.add(cmd);
                 }
+                // First-match-wins: subsequent pipelines in this group are skipped
+                // for this record. Pipeline registration order determines priority.
+                break;
             }
             if (!matched) {
                 this.logger.debug(

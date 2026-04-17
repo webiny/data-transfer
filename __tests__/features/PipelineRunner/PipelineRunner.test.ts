@@ -228,9 +228,13 @@ describe("PipelineRunner.run()", () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         const processor = container.resolve(Processor) as FakeProcessor;
+        // Disjoint filters so each record is claimed by exactly one pipeline
+        // (first-match semantics) — both pipelines share the same processor
+        // token so their per-record commands accumulate in the same buffer.
         scanner.records = [
             { id: "r1", type: "foo" },
-            { id: "r2", type: "foo" }
+            { id: "r2", type: "bar" },
+            { id: "r3", type: "foo" }
         ];
 
         interface IEmitTransformer {
@@ -250,35 +254,32 @@ describe("PipelineRunner.run()", () => {
 
         const runner = container.resolve(PipelineRunner);
 
-        // Two pipelines, both pointing at the SAME Scanner and SAME Processor tokens.
-        // DI singleton means they share the resolved processor instance, so their
-        // command buffers should merge into one.
         const builderA = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
-            name: "shared-A",
+            name: "shared-foo",
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
-        builderA.filter(createFilter<FakeRecord>(() => true)).use(EmitToken);
+        builderA.filter(createFilter<FakeRecord>(r => r.type === "foo")).use(EmitToken);
 
         const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
-            name: "shared-B",
+            name: "shared-bar",
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
-        builderB.filter(createFilter<FakeRecord>(() => true)).use(EmitToken);
+        builderB.filter(createFilter<FakeRecord>(r => r.type === "bar")).use(EmitToken);
 
         runner
             .register(builderA.build() as unknown as AnyPipeline)
             .register(builderB.build() as unknown as AnyPipeline);
         await runner.run();
 
-        // Single processor instance → one execute() call per shard, with all 4 commands
-        // (2 records × 2 pipelines emitting 1 cmd each).
+        // Single processor instance → one execute() call per shard, with all 3 commands
+        // (3 records, each claimed by exactly one pipeline, all targeting the shared processor).
         expect(processor.executed).toHaveLength(1);
-        expect(processor.executed[0]?.size()).toBe(4);
+        expect(processor.executed[0]?.size()).toBe(3);
     });
 
-    it("evaluates each pipeline independently against each record (all-matches)", async () => {
+    it("evaluates pipelines in registration order and runs only the first match (first-match-wins)", async () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         scanner.records = [{ id: "r1", type: "foo" }];
@@ -313,8 +314,9 @@ describe("PipelineRunner.run()", () => {
 
         await runner.run();
 
-        // Both pipelines evaluate the single record (all-matches semantics)
-        expect(acceptCalls).toEqual(["a:r1", "b:r1"]);
+        // Only the first matching pipeline (A) evaluates and runs — B's filter
+        // is never invoked because A already claimed the record.
+        expect(acceptCalls).toEqual(["a:r1"]);
     });
 
     it("emits a debug log when a record matches no pipeline in a group", async () => {

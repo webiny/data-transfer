@@ -2,7 +2,7 @@
 
 **Status:** Approved spec / pending implementation plan
 **Date:** 2026-04-17
-**Implements:** locked decisions in `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" + 2026-04-17 revision note (scanner-only merge key, all-matches semantics, mandatory filters).
+**Implements:** locked decisions in `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" + 2026-04-17 revision note (scanner-only merge key, **first-match-wins** semantics, mandatory filters).
 **Builds on:** `docs/superpowers/plans/2026-04-17-pipeline-builder.md` (delivered: `Filter`, `Scanner`/`Processor`/`Hook` abstractions, `Pipeline`, `PipelineBuilder`).
 
 ---
@@ -272,6 +272,7 @@ for each (scannerToken, pipelines) in mergeGroups (insertion order):
                 for cmd of ctx.commands.all():
                     buffer.add(cmd)
                 processorBuffers.set(processor, buffer)
+                break  // first-match-wins: skip remaining pipelines for this record
             if !matched:
                 logger.debug("record dropped: no matching pipeline in merge group", { mergeGroupId })
 
@@ -285,7 +286,7 @@ Key properties:
 
 - **Merge groups run sequentially.** No parallel groups in this plan.
 - **Shards run sequentially within a group.** Worker plan changes this to one process per shard.
-- **Pipelines are evaluated independently per record.** A record can match multiple pipelines (all-matches semantics). Each matching pipeline runs its own transformers and emits commands into its processor's buffer.
+- **First-match-wins per record.** Pipelines are evaluated in registration order; the first one whose filters all pass is the only one that runs for that record. Subsequent pipelines in the group are skipped for that record. Pipeline registration order is meaningful — put the more specific filter first.
 - **Processors are resolved once per group.** DI singletons mean shared tokens → same instance. Buffers are keyed by the resolved instance, so two pipelines using the same processor token share a buffer and produce one combined `execute()` call per shard.
 - **No record-id leakage in logs.** The runner logs only `mergeGroupId` on the dropped-record debug line. Scanner-side logs are the right place to surface record-shape details (PK+SK for DDB, etc.).
 

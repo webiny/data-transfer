@@ -4,7 +4,7 @@
 
 **Goal:** Make the new `src/domain/pipeline/` primitives runnable end-to-end via a rewritten `PipelineRunner` plus real `DdbScanner` + `DdbProcessor` implementations, against a `MockDynamoDbClient` test container.
 
-**Architecture:** Replace the legacy `PipelineRunner` (no coexistence) with a new one that exposes a `runner.pipeline(...)` factory, groups pipelines by scanner token, dispatches records with all-matches semantics, and flushes per-processor command buffers at shard boundaries. Pipeline class drops its container reference (runner owns DI resolution); `Processor.Interface` tightens its TContext constraint to `{ readonly commands: Commands }` so the runner can extract commands safely.
+**Architecture:** Replace the legacy `PipelineRunner` (no coexistence) with a new one that exposes a `runner.pipeline(...)` factory, groups pipelines by scanner token, dispatches records with first-match-wins semantics (registration order matters), and flushes per-processor command buffers at shard boundaries. Pipeline class drops its container reference (runner owns DI resolution); `Processor.Interface` tightens its TContext constraint to `{ readonly commands: Commands }` so the runner can extract commands safely.
 
 **Tech Stack:** TypeScript strict, `@webiny/di`, vitest, `~/` path alias.
 
@@ -1209,7 +1209,7 @@ describe("PipelineRunner.run()", () => {
         expect(processor.executed[0]?.size()).toBe(2);
     });
 
-    it("evaluates each pipeline independently against each record (all-matches)", async () => {
+    it("evaluates pipelines in registration order and runs only the first match (first-match-wins)", async () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         scanner.records = [{ id: "r1", type: "foo" }];
@@ -1242,8 +1242,9 @@ describe("PipelineRunner.run()", () => {
 
         await runner.run();
 
-        // Both pipelines evaluate the single record (all-matches semantics)
-        expect(acceptCalls).toEqual(["a:r1", "b:r1"]);
+        // Only the first matching pipeline (A) evaluates and runs — B's filter
+        // is never invoked because A already claimed the record.
+        expect(acceptCalls).toEqual(["a:r1"]);
     });
 
     it("emits a debug log when a record matches no pipeline in a group", async () => {
@@ -1316,7 +1317,7 @@ git commit -m "feat: rewrite PipelineRunner around new Pipeline + merge groups
 
 Old register(TransformPipeline) / processRecord / processAll deleted.
 New API: pipeline() factory, register(Pipeline), run().
-Routes records by scanner-token grouping with all-matches semantics,
+Routes records by scanner-token grouping with first-match-wins semantics,
 buffers commands per processor instance, flushes at shard boundary.
 
 Fallout: security-teams.test.ts now broken (uses old processRecord),
