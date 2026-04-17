@@ -12,14 +12,7 @@ export default defineConfig({
         globals: true,
         environment: "node",
         include: ["**/*.test.ts"],
-        // Legacy tests pending migration to new DI pipeline/runner.
-        // See AGENTS.md — they rely on the old MigrationRunner which is incompatible
-        // with the new TransformPipeline. They'll be ported alongside old runner removal.
-        exclude: [
-            "**/node_modules/**",
-            "__tests__/os-table-migration.test.ts",
-            "__tests__/integration/os-migration.test.ts"
-        ],
+        exclude: ["**/node_modules/**"],
         coverage: {
             provider: "v8",
             reporter: ["text", "json", "html"]
