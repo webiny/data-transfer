@@ -21,13 +21,13 @@ Make the `src/domain/pipeline/` primitives runnable end-to-end. Replace `Pipelin
 - New `runner.pipeline(config)` factory returning a typed `PipelineBuilder`.
 - New `runner.register(pipeline)` accepting only the new `Pipeline`. Validates pipeline-name uniqueness; logs hook tokens at debug level (collected, not invoked).
 - New `runner.run()` for in-process end-to-end execution.
-- **Tighten `Processor.Interface` generic constraint** — `TContext` must extend `BaseTransformContext.Interface<TRecord>` (closes the deferred follow-up from the prior plan's final reviewer). This makes `ctx.commands` reachable from the runner safely. `BaseTransformContext.Interface` already has `readonly commands: Commands`.
+- **Tighten `Processor.Interface` generic constraint** — `TContext extends { readonly commands: Commands }`. Minimal constraint that lets the runner safely extract commands from a transformer's context without coupling Processor to the full `BaseTransformContext.Interface` shape. `BaseTransformContext.Interface` (production) and `FakeContext` (tests) both have `commands`, so they satisfy it. A wider constraint to `BaseTransformContext.Interface<TRecord>` is a separate refactor about standardizing all contexts on shared services (`modelProvider`, `cache`, etc.) — out of scope here, deferred.
 - Refactor `Pipeline` to drop its container reference and remove `Pipeline.run()`. Pipeline becomes pure config + `accepts(record)`. Add public `transformerTokens` getter for the runner to consume.
 - Refactor `PipelineBuilder` to drop the `container` field from its config. The runner is the only thing that ever holds a container reference.
 - Build `DdbScanner` (wraps `SourceDynamoDbClient.scan` + `MigrationConfig.pipeline.segments`).
 - Build `DdbProcessor` (wraps `DdbCommandExecutor.execute` + `DdbTransformContextFactory.create`).
 - Add `ContainerToken` abstraction at `src/base/`. One-line `bootstrap.ts` registration so `PipelineRunner` can inject it.
-- Update test fixtures: `__tests__/domain/pipeline/fixtures/fakes.ts` `FakeContext` already has `commands: Commands` so the new constraint passes; `FakeProcessor` doesn't change shape but the type system now enforces what was previously informal.
+- Update test fixtures: `FakeContext` already has `commands: Commands` so the minimal `{ readonly commands: Commands }` constraint passes; no shape change needed in `__tests__/domain/pipeline/fixtures/types.ts` or `fakes.ts`.
 
 ### Out of scope (deferred to future plans)
 
@@ -353,7 +353,7 @@ This integration test is the proof that the merge-group routing works end-to-end
 The implementation plan will sequence the work roughly as:
 
 1. `ContainerToken` + bootstrap line.
-2. Tighten `Processor.Interface<TRecord, TContext extends BaseTransformContext.Interface<TRecord>>` constraint. Update Processor abstraction + the existing `Processor.test.ts` (TestContext → conform to BaseTransformContext.Interface or add a minimal adapter). Update `fakes.ts` only if `FakeContext` needs adjustments.
+2. Tighten `Processor.Interface<TRecord, TContext extends { readonly commands: Commands }>` constraint. Update Processor abstraction + the existing `Processor.test.ts` `TestContext` (add `commands: Commands` field). `FakeContext` already satisfies the constraint — no change needed.
 3. Refactor `Pipeline` (drop container, delete `run()`, expose `transformerTokens`). Update Pipeline tests.
 4. Refactor `PipelineBuilder` (drop container from config). Update PipelineBuilder tests + integration test.
 5. Rewrite `PipelineRunner` (factory + register + run). Add tests + new `createPipelineRunnerContainer` helper.
