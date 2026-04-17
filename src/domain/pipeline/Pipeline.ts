@@ -46,6 +46,15 @@ export class Pipeline<TRecord = unknown, TContext = unknown, TShard = unknown> {
         return this.config.filters.length > 0;
     }
 
+    public accepts(record: TRecord): boolean {
+        for (const filter of this.config.filters) {
+            if (!filter.check(record)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     protected getContainer(): Container {
         return this.container;
     }

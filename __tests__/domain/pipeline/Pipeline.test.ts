@@ -95,3 +95,72 @@ describe("Pipeline — construction + getters", () => {
         expect(pipeline.hasFilter).toBe(true);
     });
 });
+
+describe("Pipeline.accepts()", () => {
+    it("returns true when no filters are present", () => {
+        const container = makeContainer();
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            {
+                name: "p",
+                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+                filters: [],
+                transformers: [],
+                beforeHooks: [],
+                afterHooks: []
+            },
+            container
+        );
+        expect(pipeline.accepts({ id: "x", type: "foo" })).toBe(true);
+    });
+
+    it("returns true only when every filter passes", () => {
+        const container = makeContainer();
+        const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
+        const notDeleted = createFilter<FakeRecord>(r => r.payload?.deleted !== true);
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            {
+                name: "p",
+                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+                filters: [isFoo, notDeleted],
+                transformers: [],
+                beforeHooks: [],
+                afterHooks: []
+            },
+            container
+        );
+
+        expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
+        expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
+        expect(pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(false);
+    });
+
+    it("short-circuits on first failing filter", () => {
+        const container = makeContainer();
+        const calls: string[] = [];
+        const first = createFilter<FakeRecord>(r => {
+            calls.push(`first:${r.id}`);
+            return false;
+        });
+        const second = createFilter<FakeRecord>(r => {
+            calls.push(`second:${r.id}`);
+            return true;
+        });
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            {
+                name: "p",
+                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+                filters: [first, second],
+                transformers: [],
+                beforeHooks: [],
+                afterHooks: []
+            },
+            container
+        );
+
+        expect(pipeline.accepts({ id: "r1", type: "x" })).toBe(false);
+        expect(calls).toEqual(["first:r1"]);
+    });
+});
