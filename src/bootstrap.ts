@@ -21,6 +21,7 @@ import { TransformContextFeature } from "./features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "./features/PipelineRunner/index.ts";
 import { DdbCommandExecutorFeature } from "./features/DdbCommandExecutor/index.ts";
 import { OsCommandExecutorFeature } from "./features/OsCommandExecutor/index.ts";
+import { OsRecordDecompressorFeature } from "./features/OsRecordDecompressor/index.ts";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -102,6 +103,7 @@ export function bootstrap(options: BootstrapOptions): Container {
         DdbCommandExecutorFeature.register(container);
     } else {
         OsCommandExecutorFeature.register(container);
+        OsRecordDecompressorFeature.register(container);
     }
 
     return container;

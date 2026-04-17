@@ -1,17 +1,17 @@
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { DynamoDBClient } from "../../database/dynamodb-client.ts";
-import { createLogger } from "../../utils/logger.ts";
-import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "../../utils/tenants.ts";
-import { MigrationConfig, PutRecordCommand } from "../../core/types.ts";
-import { ModelProvider } from "../../models/model-provider.ts";
-import { MigrationRunner } from "../../core/runner.ts";
-import { loadPreset } from "../../core/preset-loader.ts";
-import { decompressOsRecord } from "../../opensearch/decompress-record.ts";
-import { executeOsCommands, type OsCommandItem } from "../../opensearch/executor.ts";
-import { createOpenSearchClient, type Client } from "../../opensearch/client.ts";
-import { isTransformedRecord } from "../../utils/record-guards.ts";
-import { loadConfig } from "../../features/MigrationConfig/loadConfig.ts";
+import { join } from "node:path";
+import { bootstrap } from "~/bootstrap.ts";
+import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
+import { Logger } from "~/features/Logger/index.ts";
+import { SourceDynamoDbClient } from "~/features/DynamoDbClient/index.ts";
+import { ModelProvider } from "~/features/ModelProvider/index.ts";
+import { TenantLocales } from "~/features/TenantLocales/index.ts";
+import { PresetLoader } from "~/features/PresetLoader/index.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { OsCommandExecutor } from "~/features/OsCommandExecutor/index.ts";
+import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
+import { FileTool } from "~/features/FileTool/index.ts";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 interface ProcessOsSegmentArgs {
     runId: string;
@@ -20,15 +20,18 @@ interface ProcessOsSegmentArgs {
     config: string;
 }
 
+const BATCH_SIZE = 100;
+const PROGRESS_LOG_EVERY = 1000;
+
 export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
     const config = await loadConfig(argv.config);
     if (config.storage !== "os") {
         throw new Error(`process-os-segment requires storage: "os". Got: "${config.storage}"`);
     }
 
-    const logger = createLogger({
-        msgPrefix: `[os-segment #${argv.segment}] `
-    });
+    const container = bootstrap({ config });
+
+    const logger = container.resolve(Logger).child(`[os-segment #${argv.segment}] `);
 
     logger.info(
         `Starting OS segment ${argv.segment} of ${argv.total} (${Math.round(
@@ -36,108 +39,82 @@ export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
         )}%)`
     );
 
-    const sourceDatabase = new DynamoDBClient({
-        region: config.source.region,
-        credentials: config.source.credentials
-    });
-
-    const targetDatabase = new DynamoDBClient({
-        region: config.target.region,
-        credentials: config.target.credentials
-    });
-
-    const osClient = createOpenSearchClient({
-        endpoint: config.target.opensearch.endpoint,
-        region: config.target.region,
-        service: config.target.opensearch.service,
-        credentials: config.target.credentials
-    });
-
-    const touchedIndexes = new Map<string, string>();
-
+    const tenantLocales = container.resolve(TenantLocales);
     logger.info("Fetching tenants and default locales...");
-    const tenantLocales = await fetchTenantsWithLocales(
-        sourceDatabase,
-        config.source.dynamodb.tableName
-    );
-    logger.info(`Found ${tenantLocales.size} tenants`);
+    await tenantLocales.preload();
+    logger.info(`Found ${tenantLocales.getMap().size} tenants`);
 
+    const modelProvider = container.resolve(ModelProvider);
     logger.info("Preloading models...");
-    const modelProvider = new ModelProvider(
-        sourceDatabase,
-        config.source.dynamodb.tableName,
-        config.pipeline.modelsDir
-    );
-    await modelProvider.preloadModels(tenantLocales);
+    await modelProvider.preloadModels(tenantLocales.getMap());
 
-    const migrationConfig: MigrationConfig = {
-        sourcePrimaryTable: config.source.dynamodb.tableName,
-        targetPrimaryTable: config.target.opensearch.tableName,
-        sourceFmBucket: "",
-        targetFmBucket: "",
-        modelProvider
-    };
-
+    const presetLoader = container.resolve(PresetLoader);
     logger.info(`Loading preset: ${config.pipeline.preset}`);
-    const preset = await loadPreset(config.pipeline.preset);
+    const preset = await presetLoader.load(config.pipeline.preset);
     logger.info(`Loaded preset: "${preset.name}" - ${preset.description}`);
 
-    const runner = new MigrationRunner(migrationConfig, sourceDatabase);
-    preset.configure(runner, migrationConfig, sourceDatabase);
+    const runner = container.resolve(PipelineRunner);
+    preset.configure(runner);
+
+    const sourceDb = container.resolve(SourceDynamoDbClient);
+    const decompressor = container.resolve(OsRecordDecompressor);
+    const executor = container.resolve(OsCommandExecutor);
+    const fileTool = container.resolve(FileTool);
+
+    const touchedIndexes = new Map<string, string>();
+    const items: OsCommandExecutor.Item[] = [];
 
     let processedCount = 0;
     let migratedCount = 0;
     let skippedCount = 0;
-    const batchSize = 100;
 
-    const batch: Array<{
-        record: Record<string, unknown>;
-        metadata: { index: string; _ct: string; _md: string };
-        locale: string;
-    }> = [];
+    const flush = async (): Promise<void> => {
+        if (items.length === 0) {
+            return;
+        }
+        await executor.execute(items, touchedIndexes);
+        migratedCount += items.length;
+        items.length = 0;
+    };
 
     logger.info(`Scanning OS table: ${config.source.opensearch.tableName}...`);
 
-    for await (const record of sourceDatabase.scan(config.source.opensearch.tableName, {
+    for await (const osRecord of sourceDb.scan(config.source.opensearch.tableName, {
         segment: argv.segment,
         totalSegments: argv.total
     })) {
         processedCount++;
 
-        const decompressed = await decompressOsRecord(record);
+        const decompressed = await decompressor.decompress(osRecord);
         if (!decompressed) {
             skippedCount++;
             continue;
         }
 
-        if (!isDefaultLocaleRecord(decompressed.record, tenantLocales)) {
+        if (!tenantLocales.isDefaultLocaleRecord(decompressed.record)) {
             skippedCount++;
             continue;
         }
 
-        const locale = extractLocaleFromPk(decompressed.record.PK as string) || "en-US";
+        const commands = await runner.processRecord(decompressed.record as BaseRecord);
+        const puts = commands.get<PutRecord>(PutRecord.key);
+        if (puts.length === 0) {
+            skippedCount++;
+            continue;
+        }
 
-        batch.push({
-            record: decompressed.record,
-            metadata: decompressed.metadata,
-            locale
-        });
+        for (const putCmd of puts) {
+            items.push({
+                record: putCmd.record as BaseRecord,
+                metadata: decompressed.metadata,
+                locale: decompressed.locale
+            });
+        }
 
-        if (batch.length >= batchSize) {
-            const migrated = await processOsBatch(
-                batch,
-                runner,
-                targetDatabase,
-                config.target.opensearch.tableName,
-                osClient,
-                touchedIndexes,
-                logger
-            );
-            migratedCount += migrated;
-            skippedCount += batch.length - migrated;
-            batch.length = 0;
+        if (items.length >= BATCH_SIZE) {
+            await flush();
 
-            if (processedCount % 1000 === 0) {
+            if (processedCount % PROGRESS_LOG_EVERY === 0) {
                 logger.info(
                     `Progress: ${processedCount} processed, ${migratedCount} migrated, ${skippedCount} skipped`
                 );
@@ -145,86 +122,21 @@ export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
         }
     }
 
-    if (batch.length > 0) {
-        const migrated = await processOsBatch(
-            batch,
-            runner,
-            targetDatabase,
-            config.target.opensearch.tableName,
-            osClient,
-            touchedIndexes,
-            logger
-        );
-        migratedCount += migrated;
-        skippedCount += batch.length - migrated;
-    }
+    await flush();
 
     logger.info(
         `OS segment ${argv.segment} completed: ${processedCount} processed, ${migratedCount} migrated, ${skippedCount} skipped`
     );
 
     if (touchedIndexes.size > 0) {
-        const transferDir = join(process.cwd(), ".transfer", argv.runId);
-        await mkdir(transferDir, { recursive: true });
-
+        const filePath = join(
+            process.cwd(),
+            ".transfer",
+            argv.runId,
+            `segment-${argv.segment}-indexes.json`
+        );
         const indexData = Object.fromEntries(touchedIndexes);
-        const filePath = join(transferDir, `segment-${argv.segment}-indexes.json`);
-        await writeFile(filePath, JSON.stringify(indexData, null, 2));
+        fileTool.writeFile(filePath, JSON.stringify(indexData, null, 2));
         logger.info(`Wrote ${touchedIndexes.size} touched indexes to ${filePath}`);
     }
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-async function processOsBatch(
-    batch: Array<{
-        record: Record<string, unknown>;
-        metadata: { index: string; _ct: string; _md: string };
-        locale: string;
-    }>,
-    runner: MigrationRunner,
-    targetDatabase: DynamoDBClient,
-    targetTable: string,
-    osClient: Client,
-    touchedIndexes: Map<string, string>,
-    logger: { warn: (msg: string) => void }
-): Promise<number> {
-    const osItems: OsCommandItem[] = [];
-
-    for (const item of batch) {
-        const commands = await runner.processRecord(item.record);
-
-        for (const cmd of commands) {
-            if (cmd.type === "PUT_RECORD") {
-                const record = (cmd as PutRecordCommand).record;
-                if (!isTransformedRecord(record)) {
-                    logger.warn(
-                        `Skipping record with invalid shape after pipeline: PK=${record.PK}, SK=${record.SK}`
-                    );
-                    continue;
-                }
-                osItems.push({
-                    record,
-                    metadata: item.metadata,
-                    locale: item.locale
-                });
-            }
-        }
-    }
-
-    await executeOsCommands(osItems, {
-        database: targetDatabase,
-        targetTable,
-        osClient,
-        touchedIndexes
-    });
-
-    return osItems.length;
-}
-
-function extractLocaleFromPk(pk: string): string | null {
-    const match = pk.match(/#L#([^#]+)#/);
-    return match ? match[1] : null;
 }

@@ -19,6 +19,7 @@ import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/i
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { OsCommandExecutorFeature } from "../../src/features/OsCommandExecutor/index.ts";
+import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
 import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockOpenSearchClient } from "../features/OpenSearchClient/MockOpenSearchClient.ts";
 
@@ -84,6 +85,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     TransformContextFeature.register(container);
     PipelineRunnerFeature.register(container);
     OsCommandExecutorFeature.register(container);
+    OsRecordDecompressorFeature.register(container);
 
     return container;
 }
