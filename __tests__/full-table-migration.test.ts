@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
-import { createTestRunner } from "../src/utils/test-helpers.ts";
-import { executeCommands } from "../src/core/executor.ts";
-import { MigrationConfig } from "../src/core/types.ts";
-import { ModelProvider } from "../src/models/model-provider.ts";
-import { MockDatabaseClient } from "./mocks/database-client.ts";
-import { MockStorageClient } from "./mocks/storage-client.ts";
+import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
+import { ModelProvider } from "~/features/ModelProvider/index.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { createDdbContainer } from "./containers/index.ts";
+import { MockDynamoDbClient } from "./services/DynamoDbClient/MockDynamoDbClient.ts";
 
 describe("Full Table Migration", () => {
     let inputRecords: Record<string, unknown>[];
@@ -17,61 +18,38 @@ describe("Full Table Migration", () => {
     });
 
     it("should migrate the full dynamo table", async () => {
-        const database = new MockDatabaseClient({
-            "source-table": inputRecords as any[]
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": inputRecords as any[] }
         });
-        const storage = new MockStorageClient();
-        const modelProvider = new ModelProvider(database, "source-table");
+        const runner = container.resolve(PipelineRunner);
+        const executor = container.resolve(DdbCommandExecutor);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        const modelProvider = container.resolve(ModelProvider);
 
-        const config: MigrationConfig = {
-            sourcePrimaryTable: "source-table",
-            targetPrimaryTable: "target-table",
-            sourceFmBucket: "source-bucket",
-            targetFmBucket: "target-bucket",
-            modelProvider
-        };
-
-        // Preload models from the table itself
         await modelProvider.preloadModels(new Map([["root", "en-US"]]));
+        v5ToV6Preset.configure(runner);
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processAll(inputRecords);
-        await executeCommands(commands, { database, storage });
+        const commands = await runner.processAll(inputRecords as any);
+        await executor.execute(commands);
 
-        const migratedRecords = database.batchPutRecords;
+        const migratedRecords = targetDb.batchPutRecords;
 
-        // Write migrated output
         const outputPath = join(__dirname, "fixtures/full-table-migrated.json");
         await writeFile(outputPath, JSON.stringify(migratedRecords, null, 2));
 
-        // Basic sanity checks
         expect(migratedRecords.length).toBeGreaterThan(0);
 
-        // Every migrated record should have a TYPE
-        for (const record of migratedRecords) {
+        for (const record of migratedRecords as any[]) {
             expect(record.TYPE).toBeDefined();
-        }
-
-        // No migrated record should have webinyVersion at root
-        for (const record of migratedRecords) {
             expect(record.webinyVersion).toBeUndefined();
         }
 
-        // All CMS entries should have GSI_TENANT
-        const cmsEntries = migratedRecords.filter(
+        const cmsEntries = (migratedRecords as any[]).filter(
             r => typeof r.TYPE === "string" && (r.TYPE as string).startsWith("cms.entry")
         );
         for (const entry of cmsEntries) {
             expect(entry.GSI_TENANT).toBeDefined();
-        }
-
-        // No CMS entry PK should contain locale segment
-        for (const entry of cmsEntries) {
             expect(entry.PK).not.toContain("#L#en-US#");
-        }
-
-        // All CMS entries should be wrapped in data envelope
-        for (const entry of cmsEntries) {
             expect(entry.data).toBeDefined();
             expect(entry.data.values).toBeDefined();
         }
@@ -79,6 +57,5 @@ describe("Full Table Migration", () => {
         console.log(
             `Migrated ${migratedRecords.length} records from ${inputRecords.length} input records`
         );
-        console.log(`Output written to ${outputPath}`);
     });
 });

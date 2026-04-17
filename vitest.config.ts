@@ -17,16 +17,7 @@ export default defineConfig({
         // with the new TransformPipeline. They'll be ported alongside old runner removal.
         exclude: [
             "**/node_modules/**",
-            "__tests__/batch-processing.test.ts",
-            "__tests__/cms-entries.test.ts",
-            "__tests__/cms-model-field-attributes.test.ts",
-            "__tests__/file-manager-metadata.test.ts",
-            "__tests__/full-table-migration.test.ts",
-            "__tests__/global-transformations.test.ts",
-            "__tests__/nested-pipeline.test.ts",
             "__tests__/os-table-migration.test.ts",
-            "__tests__/preset-pipelines.test.ts",
-            "__tests__/record-filtering.test.ts",
             "__tests__/integration/os-migration.test.ts"
         ],
         coverage: {

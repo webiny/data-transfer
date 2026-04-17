@@ -1,89 +1,71 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { TransformPipeline } from "@/src/core/pipeline.ts";
-import { Transformer } from "@/src/core/transformer.ts";
-import { TransformContext, MigrationConfig } from "@/src/core/types.ts";
-import { ModelProvider } from "@/src/models/model-provider.ts";
-import { MockDatabaseClient } from "./mocks/database-client.ts";
+import { describe, it, expect } from "vitest";
+import { TransformPipeline } from "~/domain/transform/Pipeline.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
+import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
+import { DdbTransformContextFactory } from "~/features/TransformContext/index.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
+import { createDdbContainer } from "./containers/index.ts";
 
 describe("Nested Pipeline Execution", () => {
-    let database: MockDatabaseClient;
-    let config: MigrationConfig;
-    let modelProvider: ModelProvider;
-
-    beforeEach(() => {
-        database = new MockDatabaseClient();
-        modelProvider = new ModelProvider(database, "source-table");
-        config = {
-            sourcePrimaryTable: "source-table",
-            targetPrimaryTable: "target-table",
-            sourceFmBucket: "source-bucket",
-            targetFmBucket: "target-bucket",
-            modelProvider
-        };
-    });
-
     it("should execute nested pipeline on multiple records and merge commands", async () => {
-        // Create a simple nested pipeline that adds a property
-        const nestedTransformer: Transformer = {
+        const container = createDdbContainer();
+        const factory = container.resolve(DdbTransformContextFactory);
+
+        const nestedTransformer: Transformer<DdbTransformContext.Interface> = {
             name: "addNestedFlag",
-            transform(ctx: TransformContext) {
+            transform(ctx) {
                 ctx.record.nestedProcessed = true;
             }
         };
 
         const nestedPipeline = new TransformPipeline().use(nestedTransformer);
 
-        // Create parent transformer that invokes nested pipeline
-        const parentTransformer: Transformer = {
+        const parentTransformer: Transformer<DdbTransformContext.Interface> = {
             name: "processRelatedRecords",
-            async transform(ctx: TransformContext) {
-                // Simulate finding related records
+            async transform(ctx) {
                 const relatedRecords = [
                     { PK: "RELATED#1", SK: "A", TYPE: "related", data: "record1" },
                     { PK: "RELATED#2", SK: "A", TYPE: "related", data: "record2" }
                 ];
-
-                // Execute nested pipeline on related records
                 const commands = await ctx.executePipeline(nestedPipeline, relatedRecords);
-
-                // Verify commands were returned
-                expect(commands.length).toBe(2);
-                expect(commands[0].type).toBe("PUT_RECORD");
-                expect(commands[1].type).toBe("PUT_RECORD");
+                expect(commands.size()).toBe(2);
+                expect(commands.get(PutRecord.key)).toHaveLength(2);
             }
         };
 
         const parentPipeline = new TransformPipeline().use(parentTransformer);
 
-        // Execute parent pipeline
-        const parentRecord = { PK: "PARENT#1", SK: "A", TYPE: "parent" };
-        const result = await parentPipeline.run(parentRecord, config, database);
+        const parentRecord = {
+            PK: "PARENT#1",
+            SK: "A",
+            _et: "x",
+            _ct: "x",
+            _md: "x",
+            TYPE: "parent"
+        } as any;
+        const result = await parentPipeline.run(parentRecord, factory);
 
         expect(result).toBeTruthy();
+        // Parent + 2 nested records
+        expect(result!.commands.get(PutRecord.key)).toHaveLength(3);
 
-        // Parent pipeline should have 3 commands:
-        // 1. The parent record itself
-        // 2-3. The two related records from nested pipeline
-        expect(result!.commands.length).toBe(3);
-
-        // Verify parent record command
-        const parentCommand = result!.commands[0];
-        expect(parentCommand.type).toBe("PUT_RECORD");
-        expect((parentCommand as any).record.PK).toBe("RELATED#1");
-
-        // Verify nested records were processed with flag
-        const nestedCommand1 = result!.commands[0];
-        expect((nestedCommand1 as any).record.nestedProcessed).toBe(true);
-
-        const nestedCommand2 = result!.commands[1];
-        expect((nestedCommand2 as any).record.nestedProcessed).toBe(true);
+        const nestedPuts = result!.commands
+            .get<PutRecord>(PutRecord.key)
+            .filter(c => (c.record as any).PK.startsWith("RELATED"));
+        expect(nestedPuts).toHaveLength(2);
+        for (const put of nestedPuts) {
+            expect((put.record as any).nestedProcessed).toBe(true);
+        }
     });
 
     it("should handle nested pipeline with S3 copy commands", async () => {
-        // Nested pipeline that copies files
-        const fileCopyTransformer: Transformer = {
+        const container = createDdbContainer();
+        const factory = container.resolve(DdbTransformContextFactory);
+
+        const fileCopyTransformer: Transformer<DdbTransformContext.Interface> = {
             name: "copyFileMetadata",
-            transform(ctx: TransformContext) {
+            transform(ctx) {
                 const fileKey = ctx.record.key as string;
                 ctx.copyFile(fileKey, `migrated/${fileKey}`);
             }
@@ -91,87 +73,95 @@ describe("Nested Pipeline Execution", () => {
 
         const nestedPipeline = new TransformPipeline().use(fileCopyTransformer);
 
-        // Parent transformer
-        const parentTransformer: Transformer = {
+        const parentTransformer: Transformer<DdbTransformContext.Interface> = {
             name: "processFileReferences",
-            async transform(ctx: TransformContext) {
+            async transform(ctx) {
                 const fileRecords = [
                     { PK: "FILE#1", SK: "A", key: "file1.jpg" },
                     { PK: "FILE#2", SK: "A", key: "file2.jpg" }
                 ];
-
                 await ctx.executePipeline(nestedPipeline, fileRecords);
             }
         };
 
         const parentPipeline = new TransformPipeline().use(parentTransformer);
 
-        const parentRecord = { PK: "ENTRY#1", SK: "A", TYPE: "entry" };
-        const result = await parentPipeline.run(parentRecord, config, database);
+        const parentRecord = {
+            PK: "ENTRY#1",
+            SK: "A",
+            _et: "x",
+            _ct: "x",
+            _md: "x",
+            TYPE: "entry"
+        } as any;
+        const result = await parentPipeline.run(parentRecord, factory);
 
         expect(result).toBeTruthy();
 
-        // Should have: 2 PUT_RECORD (files) + 2 S3_COPY + 1 PUT_RECORD (parent)
-        expect(result!.commands.length).toBe(5);
-
-        // Verify S3 copy commands exist
-        const s3Commands = result!.commands.filter(cmd => cmd.type === "S3_COPY");
-        expect(s3Commands.length).toBe(2);
-        expect((s3Commands[0] as any).targetKey).toBe("migrated/file1.jpg");
-        expect((s3Commands[1] as any).targetKey).toBe("migrated/file2.jpg");
+        const s3Commands = result!.commands.get<S3Copy>(S3Copy.key);
+        expect(s3Commands).toHaveLength(2);
+        expect(s3Commands[0].targetKey).toBe("migrated/file1.jpg");
+        expect(s3Commands[1].targetKey).toBe("migrated/file2.jpg");
     });
 
     it("should handle empty record array", async () => {
+        const container = createDdbContainer();
+        const factory = container.resolve(DdbTransformContextFactory);
+
         const nestedPipeline = new TransformPipeline();
 
-        const parentTransformer: Transformer = {
+        const parentTransformer: Transformer<DdbTransformContext.Interface> = {
             name: "processNoRecords",
-            async transform(ctx: TransformContext) {
+            async transform(ctx) {
                 const commands = await ctx.executePipeline(nestedPipeline, []);
-                expect(commands.length).toBe(0);
+                expect(commands.size()).toBe(0);
             }
         };
 
         const parentPipeline = new TransformPipeline().use(parentTransformer);
 
-        const result = await parentPipeline.run({ PK: "TEST#1", SK: "A" }, config, database);
+        const result = await parentPipeline.run(
+            { PK: "TEST#1", SK: "A", _et: "x", _ct: "x", _md: "x", TYPE: "x" } as any,
+            factory
+        );
 
-        // Only parent record command
-        expect(result!.commands.length).toBe(1);
+        expect(result!.commands.get(PutRecord.key)).toHaveLength(1);
     });
 
     it("should skip records that don't match nested pipeline filters", async () => {
-        // Nested pipeline with filter
+        const container = createDdbContainer();
+        const factory = container.resolve(DdbTransformContextFactory);
+
         const nestedPipeline = new TransformPipeline()
             .filter(record => record.TYPE === "accepted")
             .use({
                 name: "addFlag",
-                transform(ctx: TransformContext) {
+                transform(ctx) {
                     ctx.record.processed = true;
                 }
             });
 
-        const parentTransformer: Transformer = {
+        const parentTransformer: Transformer<DdbTransformContext.Interface> = {
             name: "processFiltered",
-            async transform(ctx: TransformContext) {
+            async transform(ctx) {
                 const records = [
                     { PK: "REC#1", SK: "A", TYPE: "accepted" },
                     { PK: "REC#2", SK: "A", TYPE: "rejected" },
                     { PK: "REC#3", SK: "A", TYPE: "accepted" }
                 ];
-
                 const commands = await ctx.executePipeline(nestedPipeline, records);
-
-                // Only 2 records should be processed (rejected is filtered out)
-                expect(commands.length).toBe(2);
+                expect(commands.size()).toBe(2);
             }
         };
 
         const parentPipeline = new TransformPipeline().use(parentTransformer);
 
-        const result = await parentPipeline.run({ PK: "PARENT#1", SK: "A" }, config, database);
+        const result = await parentPipeline.run(
+            { PK: "PARENT#1", SK: "A", _et: "x", _ct: "x", _md: "x", TYPE: "x" } as any,
+            factory
+        );
 
         // Parent + 2 accepted nested records
-        expect(result!.commands.length).toBe(3);
+        expect(result!.commands.get(PutRecord.key)).toHaveLength(3);
     });
 });

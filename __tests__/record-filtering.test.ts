@@ -1,36 +1,17 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { createTestRunner } from "../src/utils/test-helpers.ts";
-import { MigrationConfig } from "../src/core/types.ts";
-import { ModelProvider } from "../src/models/model-provider.ts";
-import { MockDatabaseClient } from "./mocks/database-client.ts";
-import { MockStorageClient } from "./mocks/storage-client.ts";
+import { describe, it, expect } from "vitest";
+import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { createDdbContainer } from "./containers/index.ts";
 import { v5UnknownRecord } from "./fixtures/v5-records.ts";
 
 describe("Record Filtering", () => {
-    let database: MockDatabaseClient;
-    let storage: MockStorageClient;
-    let config: MigrationConfig;
-    let modelProvider: ModelProvider;
-
-    beforeEach(() => {
-        database = new MockDatabaseClient();
-        storage = new MockStorageClient();
-        modelProvider = new ModelProvider(database, "source-table");
-        config = {
-            sourcePrimaryTable: "source-table",
-            targetPrimaryTable: "target-table",
-            sourceFmBucket: "source-bucket",
-            targetFmBucket: "target-bucket",
-            modelProvider
-        };
-    });
-
     it("should skip records without matching pipeline", async () => {
-        const runner = createTestRunner(config, database);
+        const container = createDdbContainer();
+        const runner = container.resolve(PipelineRunner);
+        v5ToV6Preset.configure(runner);
 
-        const commands = await runner.processRecord(v5UnknownRecord);
+        const commands = await runner.processRecord(v5UnknownRecord as any);
 
-        // Should return empty commands array (record skipped)
-        expect(commands).toHaveLength(0);
+        expect(commands.size()).toBe(0);
     });
 });

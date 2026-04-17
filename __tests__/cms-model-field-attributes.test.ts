@@ -1,40 +1,39 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { createTestRunner } from "../src/utils/test-helpers.ts";
-import { executeCommands } from "../src/core/executor.ts";
-import { MigrationConfig } from "../src/core/types.ts";
-import { ModelProvider } from "../src/models/model-provider.ts";
-import { MockDatabaseClient } from "./mocks/database-client.ts";
-import { MockStorageClient } from "./mocks/storage-client.ts";
-import { DatabaseRecord } from "./database/interface.ts";
+import { describe, it, expect } from "vitest";
+import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { createDdbContainer } from "./containers/index.ts";
+import { MockDynamoDbClient } from "./services/DynamoDbClient/MockDynamoDbClient.ts";
+
+function modelRecord(fields: any[]): any {
+    return {
+        PK: "T#root#L#en-US#CMS#CM",
+        SK: "testModel",
+        TYPE: "cms.model",
+        modelId: "testModel",
+        tenant: "root",
+        locale: "en-US",
+        fields
+    };
+}
+
+async function runModel(model: any) {
+    const container = createDdbContainer();
+    const runner = container.resolve(PipelineRunner);
+    const executor = container.resolve(DdbCommandExecutor);
+    const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+    v5ToV6Preset.configure(runner);
+
+    const commands = await runner.processRecord(model);
+    await executor.execute(commands);
+    return { targetDb, runner, executor };
+}
 
 describe("CMS Model Field Attributes", () => {
-    let database: MockDatabaseClient;
-    let storage: MockStorageClient;
-    let config: MigrationConfig;
-    let modelProvider: ModelProvider;
-
-    beforeEach(() => {
-        database = new MockDatabaseClient();
-        storage = new MockStorageClient();
-        modelProvider = new ModelProvider(database, "source-table");
-        config = {
-            sourcePrimaryTable: "source-table",
-            targetPrimaryTable: "target-table",
-            sourceFmBucket: "source-bucket",
-            targetFmBucket: "target-bucket",
-            modelProvider
-        };
-    });
-
     it("should rename helpText to description at field level", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "title",
                     id: "field1",
@@ -42,29 +41,17 @@ describe("CMS Model Field Attributes", () => {
                     storageId: "text@field1",
                     helpText: "Enter your title"
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const field = migratedRecord.data.fields[0];
-
+        const field = (targetDb.batchPutRecords[0] as any).data.fields[0];
         expect(field.note).toBe("Enter your title");
         expect(field.helpText).toBeUndefined();
     });
 
     it("should rename placeholderText to placeholder at field level", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "title",
                     id: "field1",
@@ -72,29 +59,17 @@ describe("CMS Model Field Attributes", () => {
                     storageId: "text@field1",
                     placeholderText: "e.g. My Article"
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const field = migratedRecord.data.fields[0];
-
+        const field = (targetDb.batchPutRecords[0] as any).data.fields[0];
         expect(field.placeholder).toBe("e.g. My Article");
         expect(field.placeholderText).toBeUndefined();
     });
 
     it("should rename both attributes simultaneously", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "title",
                     id: "field1",
@@ -103,16 +78,10 @@ describe("CMS Model Field Attributes", () => {
                     helpText: "Enter your title",
                     placeholderText: "e.g. My Article"
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const field = migratedRecord.data.fields[0];
-
+        const field = (targetDb.batchPutRecords[0] as any).data.fields[0];
         expect(field.note).toBe("Enter your title");
         expect(field.placeholder).toBe("e.g. My Article");
         expect(field.helpText).toBeUndefined();
@@ -120,14 +89,8 @@ describe("CMS Model Field Attributes", () => {
     });
 
     it("should rename attributes in object nested fields", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "metadata",
                     id: "field2",
@@ -146,17 +109,10 @@ describe("CMS Model Field Attributes", () => {
                         ]
                     }
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const objectField = migratedRecord.data.fields[0];
-        const nestedField = objectField.settings.fields[0];
-
+        const nestedField = (targetDb.batchPutRecords[0] as any).data.fields[0].settings.fields[0];
         expect(nestedField.note).toBe("Author name");
         expect(nestedField.placeholder).toBe("John Doe");
         expect(nestedField.helpText).toBeUndefined();
@@ -164,14 +120,8 @@ describe("CMS Model Field Attributes", () => {
     });
 
     it("should rename attributes in dynamic zone template fields", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "content",
                     id: "field4",
@@ -196,17 +146,11 @@ describe("CMS Model Field Attributes", () => {
                         ]
                     }
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const dzField = migratedRecord.data.fields[0];
-        const templateField = dzField.settings.templates[0].fields[0];
-
+        const templateField = (targetDb.batchPutRecords[0] as any).data.fields[0].settings
+            .templates[0].fields[0];
         expect(templateField.note).toBe("Rich text content");
         expect(templateField.placeholder).toBe("Start typing...");
         expect(templateField.helpText).toBeUndefined();
@@ -214,14 +158,8 @@ describe("CMS Model Field Attributes", () => {
     });
 
     it("should handle deeply nested fields (object in dynamic zone)", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "content",
                     id: "field1",
@@ -256,18 +194,11 @@ describe("CMS Model Field Attributes", () => {
                         ]
                     }
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const dzField = migratedRecord.data.fields[0];
-        const templateObjectField = dzField.settings.templates[0].fields[0];
-        const deeplyNestedField = templateObjectField.settings.fields[0];
-
+        const deeplyNestedField = (targetDb.batchPutRecords[0] as any).data.fields[0].settings
+            .templates[0].fields[0].settings.fields[0];
         expect(deeplyNestedField.note).toBe("Card title text");
         expect(deeplyNestedField.placeholder).toBe("Enter title");
         expect(deeplyNestedField.helpText).toBeUndefined();
@@ -275,14 +206,8 @@ describe("CMS Model Field Attributes", () => {
     });
 
     it("should preserve existing description/placeholder if already present", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "title",
                     id: "field1",
@@ -291,33 +216,19 @@ describe("CMS Model Field Attributes", () => {
                     helpText: "Old help text",
                     placeholderText: "Old placeholder"
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const field = migratedRecord.data.fields[0];
-
-        // Existing values should be preserved
+        const field = (targetDb.batchPutRecords[0] as any).data.fields[0];
         expect(field.note).toBe("Old help text");
         expect(field.placeholder).toBe("Old placeholder");
-        // Old attributes should be deleted
         expect(field.helpText).toBeUndefined();
         expect(field.placeholderText).toBeUndefined();
     });
 
     it("should handle null values correctly", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "title",
                     id: "field1",
@@ -326,17 +237,10 @@ describe("CMS Model Field Attributes", () => {
                     helpText: null,
                     placeholderText: null
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const field = migratedRecord.data.fields[0];
-
-        // Null values should be renamed
+        const field = (targetDb.batchPutRecords[0] as any).data.fields[0];
         expect(field.note).toBeNull();
         expect(field.placeholder).toBeNull();
         expect(field.helpText).toBeUndefined();
@@ -344,14 +248,8 @@ describe("CMS Model Field Attributes", () => {
     });
 
     it("should handle fields without the attributes (no-op)", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
+        const { targetDb } = await runModel(
+            modelRecord([
                 {
                     fieldId: "title",
                     id: "field1",
@@ -359,81 +257,52 @@ describe("CMS Model Field Attributes", () => {
                     storageId: "text@field1",
                     label: "Title"
                 }
-            ]
-        };
+            ])
+        );
 
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        const field = migratedRecord.data.fields[0];
-
-        // No attributes should be added
+        const field = (targetDb.batchPutRecords[0] as any).data.fields[0];
         expect(field.description).toBeUndefined();
         expect(field.placeholder).toBeUndefined();
         expect(field.helpText).toBeUndefined();
         expect(field.placeholderText).toBeUndefined();
-        // Original attributes preserved
         expect(field.label).toBe("Title");
     });
 
     it("should handle empty fields array", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: []
-        };
-
-        const runner = createTestRunner(config, database);
-        const commands = await runner.processRecord(model);
-        await executeCommands(commands, { database, storage });
-
-        const migratedRecord = database.batchPutRecords[0];
-        expect(migratedRecord.data.fields).toEqual([]);
+        const { targetDb } = await runModel(modelRecord([]));
+        expect((targetDb.batchPutRecords[0] as any).data.fields).toEqual([]);
     });
 
     it("should be idempotent (running twice produces same result)", async () => {
-        const model: DatabaseRecord = {
-            PK: "T#root#L#en-US#CMS#CM",
-            SK: "testModel",
-            TYPE: "cms.model",
-            modelId: "testModel",
-            tenant: "root",
-            locale: "en-US",
-            fields: [
-                {
-                    fieldId: "title",
-                    id: "field1",
-                    type: "text",
-                    storageId: "text@field1",
-                    helpText: "Enter your title",
-                    placeholderText: "e.g. My Article"
-                }
-            ]
-        };
+        const container = createDdbContainer();
+        const runner = container.resolve(PipelineRunner);
+        const executor = container.resolve(DdbCommandExecutor);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        v5ToV6Preset.configure(runner);
 
-        const runner = createTestRunner(config, database);
+        const model = modelRecord([
+            {
+                fieldId: "title",
+                id: "field1",
+                type: "text",
+                storageId: "text@field1",
+                helpText: "Enter your title",
+                placeholderText: "e.g. My Article"
+            }
+        ]);
 
         // First run
-        const commands1 = await runner.processRecord(model);
-        await executeCommands(commands1, { database, storage });
-        const firstResult = database.batchPutRecords[0];
+        await executor.execute(await runner.processRecord(model));
+        const firstResult = targetDb.batchPutRecords[0];
 
-        // Reset database
-        database.batchPutRecords = [];
+        // Reset
+        targetDb.batchPutRecords.length = 0;
 
-        // Second run (should already be migrated)
+        // Second run
         const alreadyMigrated = JSON.parse(JSON.stringify(firstResult));
-        const commands2 = await runner.processRecord(alreadyMigrated);
-        await executeCommands(commands2, { database, storage });
-        const secondResult = database.batchPutRecords[0];
+        await executor.execute(await runner.processRecord(alreadyMigrated));
+        const secondResult = targetDb.batchPutRecords[0] as any;
 
-        // Results should be identical
         expect(secondResult.data.fields[0].note).toBe("Enter your title");
         expect(secondResult.data.fields[0].placeholder).toBe("e.g. My Article");
         expect(secondResult.data.fields[0].helpText).toBeUndefined();

@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import sharp from "sharp";
-import { createTestRunner } from "../src/utils/test-helpers.ts";
-import { executeCommands } from "../src/core/executor.ts";
-import { MigrationConfig } from "../src/core/types.ts";
-import { ModelProvider } from "../src/models/model-provider.ts";
-import { MockDatabaseClient } from "./mocks/database-client.ts";
-import { MockStorageClient } from "./mocks/storage-client.ts";
+import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { SourceS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
+import { createDdbContainer } from "./containers/index.ts";
+import { MockDynamoDbClient } from "./services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockS3Client } from "./services/S3Client/MockS3Client.ts";
 
 function makeV5FileRecord(
     overrides: {
@@ -13,7 +15,7 @@ function makeV5FileRecord(
         key?: string;
         hasMeta?: boolean;
     } = {}
-) {
+): any {
     const values: Record<string, unknown> = {
         "number@size": 1234,
         "text@aliases": [],
@@ -52,42 +54,33 @@ async function createTestImage(width = 100, height = 50): Promise<Buffer> {
         .toBuffer();
 }
 
+function setup() {
+    const container = createDdbContainer();
+    const runner = container.resolve(PipelineRunner);
+    const executor = container.resolve(DdbCommandExecutor);
+    const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+    const sourceS3 = container.resolve(SourceS3Client) as MockS3Client;
+    v5ToV6Preset.configure(runner);
+    return { runner, executor, targetDb, sourceS3 };
+}
+
+function findEntry(records: Record<string, unknown>[]) {
+    const entry = records.find(r => r.TYPE === "cms.entry.l");
+    expect(entry).toBeDefined();
+    return (entry as any).data.values;
+}
+
 describe("Extract Image Metadata", () => {
-    let database: MockDatabaseClient;
-    let storage: MockStorageClient;
-    let config: MigrationConfig;
-
-    beforeEach(() => {
-        database = new MockDatabaseClient();
-        storage = new MockStorageClient();
-        const modelProvider = new ModelProvider(database, "source-table");
-        config = {
-            sourcePrimaryTable: "source-table",
-            targetPrimaryTable: "target-table",
-            sourceFmBucket: "source-bucket",
-            targetFmBucket: "target-bucket",
-            modelProvider,
-            sourceStorage: storage
-        };
-    });
-
-    function findEntry(records: Record<string, unknown>[]) {
-        const entry = records.find(r => r.TYPE === "cms.entry.l");
-        expect(entry).toBeDefined();
-        return (entry!.data as any).values;
-    }
-
     it("should extract image dimensions for image files", async () => {
+        const { runner, executor, targetDb, sourceS3 } = setup();
         const imageBuffer = await createTestImage(200, 150);
-        storage.putFile("source-bucket", "abc123/test-file.jpg", imageBuffer);
+        sourceS3.putObject("source-bucket", "abc123/test-file.jpg", imageBuffer);
 
         const record = makeV5FileRecord({ contentType: "image/jpeg" });
-        const runner = createTestRunner(config, database);
         const commands = await runner.processRecord(record);
-        await executeCommands(commands, { database, storage });
+        await executor.execute(commands);
 
-        const values = findEntry(database.batchPutRecords);
-
+        const values = findEntry(targetDb.batchPutRecords);
         expect(values["object@meta"]).toBeUndefined();
         expect(values["object@metadata"]).toBeDefined();
 
@@ -99,38 +92,34 @@ describe("Extract Image Metadata", () => {
     });
 
     it("should set empty metadata for non-image files", async () => {
+        const { runner, executor, targetDb } = setup();
         const record = makeV5FileRecord({ contentType: "application/pdf" });
-        const runner = createTestRunner(config, database);
         const commands = await runner.processRecord(record);
-        await executeCommands(commands, { database, storage });
+        await executor.execute(commands);
 
-        const values = findEntry(database.batchPutRecords);
-
+        const values = findEntry(targetDb.batchPutRecords);
         expect(values["object@meta"]).toBeUndefined();
         expect(values["object@metadata"]).toEqual({});
     });
 
     it("should fall back to empty metadata when file is missing from S3", async () => {
-        // Don't put any file in mock storage
+        const { runner, executor, targetDb } = setup();
         const record = makeV5FileRecord({ contentType: "image/png" });
-        const runner = createTestRunner(config, database);
         const commands = await runner.processRecord(record);
-        await executeCommands(commands, { database, storage });
+        await executor.execute(commands);
 
-        const values = findEntry(database.batchPutRecords);
-
+        const values = findEntry(targetDb.batchPutRecords);
         expect(values["object@meta"]).toBeUndefined();
         expect(values["object@metadata"]).toEqual({});
     });
 
     it("should handle records without object@meta", async () => {
+        const { runner, executor, targetDb } = setup();
         const record = makeV5FileRecord({ contentType: "application/pdf", hasMeta: false });
-        const runner = createTestRunner(config, database);
         const commands = await runner.processRecord(record);
-        await executeCommands(commands, { database, storage });
+        await executor.execute(commands);
 
-        const values = findEntry(database.batchPutRecords);
-
+        const values = findEntry(targetDb.batchPutRecords);
         expect(values["object@meta"]).toBeUndefined();
         expect(values["object@metadata"]).toEqual({});
     });
