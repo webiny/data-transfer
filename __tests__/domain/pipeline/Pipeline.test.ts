@@ -1,134 +1,73 @@
 import { describe, it, expect } from "vitest";
-import { Container } from "@webiny/di";
 import type { Abstraction } from "@webiny/di";
 import { Pipeline, Scanner, Processor, createFilter } from "~/domain/pipeline/index.ts";
 import type { PipelineConfig } from "~/domain/pipeline/Pipeline.ts";
-import {
-    FakeScannerImpl,
-    FakeProcessorImpl,
-    FakeHookAImpl,
-    FakeHookBImpl,
-    FakeTransformer,
-    TagTransformerImpl
-} from "./fixtures/fakes.ts";
+import { FakeTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
 
-function makeContainer(): Container {
-    const container = new Container();
-    container.register(FakeScannerImpl).inSingletonScope();
-    container.register(FakeProcessorImpl).inSingletonScope();
-    container.register(TagTransformerImpl).inSingletonScope();
-    container.register(FakeHookAImpl).inSingletonScope();
-    container.register(FakeHookBImpl).inSingletonScope();
-    return container;
+function baseConfig(
+    overrides: Partial<PipelineConfig<FakeRecord, FakeContext, FakeShard>> = {}
+): PipelineConfig<FakeRecord, FakeContext, FakeShard> {
+    return {
+        name: "test-pipeline",
+        scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+        processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+        filters: [],
+        transformers: [],
+        beforeHooks: [],
+        afterHooks: [],
+        ...overrides
+    };
 }
 
 describe("Pipeline — construction + getters", () => {
-    it("exposes name, scanner/processor tokens, and hook tokens", () => {
-        const container = makeContainer();
-        const config: PipelineConfig<FakeRecord, FakeContext, FakeShard> = {
-            name: "test-pipeline",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-            filters: [],
-            transformers: [FakeTransformer],
-            beforeHooks: [],
-            afterHooks: []
-        };
+    it("exposes name, scanner/processor tokens, and empty hook lists", () => {
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            baseConfig({ name: "exposes-tokens", transformers: [FakeTransformer] })
+        );
 
-        const pipeline = new Pipeline(config, container);
-
-        expect(pipeline.name).toBe("test-pipeline");
+        expect(pipeline.name).toBe("exposes-tokens");
         expect(pipeline.scannerToken).toBe(Scanner);
         expect(pipeline.processorToken).toBe(Processor);
         expect(pipeline.beforeHookTokens).toEqual([]);
         expect(pipeline.afterHookTokens).toEqual([]);
     });
 
-    it("stores hook tokens in registration order", () => {
-        const container = makeContainer();
-        const config: PipelineConfig<FakeRecord, FakeContext, FakeShard> = {
-            name: "with-hooks",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-            filters: [],
-            transformers: [],
-            beforeHooks: [],
-            afterHooks: []
-        };
-        const pipeline = new Pipeline(config, container);
+    it("exposes transformerTokens in registration order", () => {
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            baseConfig({ transformers: [FakeTransformer, FakeTransformer] })
+        );
 
-        expect(pipeline.beforeHookTokens).toEqual([]);
-        expect(pipeline.afterHookTokens).toEqual([]);
+        expect(pipeline.transformerTokens).toHaveLength(2);
+        expect(pipeline.transformerTokens[0]).toBe(FakeTransformer);
+        expect(pipeline.transformerTokens[1]).toBe(FakeTransformer);
     });
 
     it("reports hasFilter=false when filters array is empty", () => {
-        const container = makeContainer();
-        const config: PipelineConfig<FakeRecord, FakeContext, FakeShard> = {
-            name: "filterless",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-            filters: [],
-            transformers: [],
-            beforeHooks: [],
-            afterHooks: []
-        };
-        const pipeline = new Pipeline(config, container);
-
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(baseConfig());
         expect(pipeline.hasFilter).toBe(false);
     });
 
     it("reports hasFilter=true when at least one filter exists", () => {
-        const container = makeContainer();
         const filter = createFilter<FakeRecord>(r => r.type === "foo");
-        const config: PipelineConfig<FakeRecord, FakeContext, FakeShard> = {
-            name: "filtered",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-            filters: [filter],
-            transformers: [],
-            beforeHooks: [],
-            afterHooks: []
-        };
-        const pipeline = new Pipeline(config, container);
-
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            baseConfig({ filters: [filter] })
+        );
         expect(pipeline.hasFilter).toBe(true);
     });
 });
 
 describe("Pipeline.accepts()", () => {
     it("returns true when no filters are present", () => {
-        const container = makeContainer();
-        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
-            {
-                name: "p",
-                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-                filters: [],
-                transformers: [],
-                beforeHooks: [],
-                afterHooks: []
-            },
-            container
-        );
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(baseConfig());
         expect(pipeline.accepts({ id: "x", type: "foo" })).toBe(true);
     });
 
     it("returns true only when every filter passes", () => {
-        const container = makeContainer();
         const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
         const notDeleted = createFilter<FakeRecord>(r => r.payload?.deleted !== true);
         const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
-            {
-                name: "p",
-                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-                filters: [isFoo, notDeleted],
-                transformers: [],
-                beforeHooks: [],
-                afterHooks: []
-            },
-            container
+            baseConfig({ filters: [isFoo, notDeleted] })
         );
 
         expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
@@ -137,7 +76,6 @@ describe("Pipeline.accepts()", () => {
     });
 
     it("short-circuits on first failing filter", () => {
-        const container = makeContainer();
         const calls: string[] = [];
         const first = createFilter<FakeRecord>(r => {
             calls.push(`first:${r.id}`);
@@ -148,66 +86,10 @@ describe("Pipeline.accepts()", () => {
             return true;
         });
         const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
-            {
-                name: "p",
-                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-                filters: [first, second],
-                transformers: [],
-                beforeHooks: [],
-                afterHooks: []
-            },
-            container
+            baseConfig({ filters: [first, second] })
         );
 
         expect(pipeline.accepts({ id: "r1", type: "x" })).toBe(false);
         expect(calls).toEqual(["first:r1"]);
-    });
-});
-
-describe("Pipeline.run()", () => {
-    it("runs registered transformers in order against the given context", async () => {
-        const container = makeContainer();
-        // FakeTransformer's default registration in makeContainer is TagTransformer (emits "TAG:${id}").
-        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
-            {
-                name: "run-test",
-                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-                filters: [],
-                transformers: [FakeTransformer],
-                beforeHooks: [],
-                afterHooks: []
-            },
-            container
-        );
-
-        const processor = container.resolve(Processor) as any;
-        const ctx = processor.createContext({ id: "r1", type: "foo" }) as FakeContext;
-        await pipeline.run(ctx);
-
-        expect(ctx.emitted).toEqual(["TAG:r1"]);
-    });
-
-    it("runs zero transformers without error", async () => {
-        const container = makeContainer();
-        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
-            {
-                name: "no-transformers",
-                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
-                filters: [],
-                transformers: [],
-                beforeHooks: [],
-                afterHooks: []
-            },
-            container
-        );
-
-        const processor = container.resolve(Processor) as any;
-        const ctx = processor.createContext({ id: "r1", type: "foo" }) as FakeContext;
-
-        await expect(pipeline.run(ctx)).resolves.toBeUndefined();
-        expect(ctx.emitted).toEqual([]);
     });
 });

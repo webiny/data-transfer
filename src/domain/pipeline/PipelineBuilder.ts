@@ -1,22 +1,24 @@
-import type { Abstraction, Container } from "@webiny/di";
+import type { Abstraction } from "@webiny/di";
 import type { Scanner } from "./abstractions/Scanner.ts";
 import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
 import type { Filter } from "./Filter.ts";
 import { Pipeline, type PipelineConfig } from "./Pipeline.ts";
 
-export interface PipelineBuilderConfig<TRecord, TContext, TShard> {
+export interface PipelineBuilderConfig<TRecord, TContext extends Processor.Context, TShard> {
     name: string;
     scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
     processor: Abstraction<Processor.Interface<TRecord, TContext>>;
-    container: Container;
 }
 
-export class PipelineBuilder<TRecord = unknown, TContext = unknown, TShard = unknown> {
+export class PipelineBuilder<
+    TRecord = unknown,
+    TContext extends Processor.Context = Processor.Context,
+    TShard = unknown
+> {
     private readonly name: string;
     private readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
     private readonly processor: Abstraction<Processor.Interface<TRecord, TContext>>;
-    private readonly container: Container;
 
     private filters: Filter<TRecord>[] = [];
     private filterCalled = false;
@@ -31,7 +33,6 @@ export class PipelineBuilder<TRecord = unknown, TContext = unknown, TShard = unk
         this.name = config.name;
         this.scanner = config.scanner;
         this.processor = config.processor;
-        this.container = config.container;
     }
 
     public filter(input: Filter<TRecord> | Filter<TRecord>[]): this {
@@ -84,6 +85,6 @@ export class PipelineBuilder<TRecord = unknown, TContext = unknown, TShard = unk
             beforeHooks: [...this.beforeHooks],
             afterHooks: [...this.afterHooks]
         };
-        return new Pipeline(pipelineConfig, this.container);
+        return new Pipeline(pipelineConfig);
     }
 }

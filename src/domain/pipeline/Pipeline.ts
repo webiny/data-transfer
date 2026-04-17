@@ -1,10 +1,10 @@
-import type { Abstraction, Container } from "@webiny/di";
+import type { Abstraction } from "@webiny/di";
 import type { Scanner } from "./abstractions/Scanner.ts";
 import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
 import type { Filter } from "./Filter.ts";
 
-export interface PipelineConfig<TRecord, TContext, TShard> {
+export interface PipelineConfig<TRecord, TContext extends Processor.Context, TShard> {
     readonly name: string;
     readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
     readonly processor: Abstraction<Processor.Interface<TRecord, TContext>>;
@@ -14,11 +14,12 @@ export interface PipelineConfig<TRecord, TContext, TShard> {
     readonly afterHooks: readonly Abstraction<Hook.Interface>[];
 }
 
-export class Pipeline<TRecord = unknown, TContext = unknown, TShard = unknown> {
-    public constructor(
-        private readonly config: PipelineConfig<TRecord, TContext, TShard>,
-        private readonly container: Container
-    ) {
+export class Pipeline<
+    TRecord = unknown,
+    TContext extends Processor.Context = Processor.Context,
+    TShard = unknown
+> {
+    public constructor(private readonly config: PipelineConfig<TRecord, TContext, TShard>) {
         Object.freeze(this);
     }
 
@@ -42,6 +43,10 @@ export class Pipeline<TRecord = unknown, TContext = unknown, TShard = unknown> {
         return this.config.afterHooks;
     }
 
+    public get transformerTokens(): readonly Abstraction<unknown>[] {
+        return this.config.transformers;
+    }
+
     public get hasFilter(): boolean {
         return this.config.filters.length > 0;
     }
@@ -53,26 +58,5 @@ export class Pipeline<TRecord = unknown, TContext = unknown, TShard = unknown> {
             }
         }
         return true;
-    }
-
-    public async run(ctx: TContext): Promise<void> {
-        for (const token of this.config.transformers) {
-            const transformer = this.container.resolve(
-                token as Abstraction<{ transform(ctx: TContext): void | Promise<void> }>
-            );
-            await transformer.transform(ctx);
-        }
-    }
-
-    protected getContainer(): Container {
-        return this.container;
-    }
-
-    protected getFilters(): readonly Filter<TRecord>[] {
-        return this.config.filters;
-    }
-
-    protected getTransformerTokens(): readonly Abstraction<unknown>[] {
-        return this.config.transformers;
     }
 }
