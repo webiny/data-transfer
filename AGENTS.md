@@ -10,6 +10,8 @@ This tool transfers Webiny data between environments. Current use case is v5-to-
 
 **Long-term vision:** `docs/design/generic-pipeline-framework.md` is the living design doc covering three layers of future work: (1) short-term handler unification for DDB+OS, (2) medium-term pipeline-centric refactor where each pipeline binds its own scanner/processor (see `src/presets/example.ts` for the target API), (3) long-term interactive CLI orchestration with per-pipeline progress, resume-on-failure, and a fully source-agnostic framework (MySQL, S3-direct, etc.). Read it before any big refactor to scanner/preprocessor/executor abstractions or before touching the `run` command's orchestration loop.
 
+> **Pipeline-centric model — current state (2026-04-17):** decisions are locked in `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" section, including a same-day **revision note** that changes the merge-group key from `(scanner, processor)` to **scanner only** and switches match semantics from "first-match wins" to **"all matches run"**. Filters are mandatory, enforced at `PipelineBuilder.build()`. The first concrete implementation step is `docs/superpowers/plans/2026-04-17-pipeline-builder.md` (TDD plan, 14 tasks, scope: builder primitives only — no runner integration, no preset migration). Read both docs before working on `src/domain/pipeline/`, `src/features/PipelineRunner/`, or any new scanner/processor abstraction.
+
 **Package name:** `@webiny/data-transfer`
 
 **User installation:** `npm install @webiny/data-transfer` (published to npm)
