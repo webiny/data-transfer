@@ -55,6 +55,15 @@ export class Pipeline<TRecord = unknown, TContext = unknown, TShard = unknown> {
         return true;
     }
 
+    public async run(ctx: TContext): Promise<void> {
+        for (const token of this.config.transformers) {
+            const transformer = this.container.resolve(
+                token as Abstraction<{ transform(ctx: TContext): void | Promise<void> }>
+            );
+            await transformer.transform(ctx);
+        }
+    }
+
     protected getContainer(): Container {
         return this.container;
     }

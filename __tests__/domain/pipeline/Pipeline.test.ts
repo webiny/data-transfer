@@ -164,3 +164,50 @@ describe("Pipeline.accepts()", () => {
         expect(calls).toEqual(["first:r1"]);
     });
 });
+
+describe("Pipeline.run()", () => {
+    it("runs registered transformers in order against the given context", async () => {
+        const container = makeContainer();
+        // FakeTransformer's default registration in makeContainer is TagTransformer (emits "TAG:${id}").
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            {
+                name: "run-test",
+                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+                filters: [],
+                transformers: [FakeTransformer],
+                beforeHooks: [],
+                afterHooks: []
+            },
+            container
+        );
+
+        const processor = container.resolve(Processor) as any;
+        const ctx = processor.createContext({ id: "r1", type: "foo" }) as FakeContext;
+        await pipeline.run(ctx);
+
+        expect(ctx.emitted).toEqual(["TAG:r1"]);
+    });
+
+    it("runs zero transformers without error", async () => {
+        const container = makeContainer();
+        const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
+            {
+                name: "no-transformers",
+                scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+                processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+                filters: [],
+                transformers: [],
+                beforeHooks: [],
+                afterHooks: []
+            },
+            container
+        );
+
+        const processor = container.resolve(Processor) as any;
+        const ctx = processor.createContext({ id: "r1", type: "foo" }) as FakeContext;
+
+        await expect(pipeline.run(ctx)).resolves.toBeUndefined();
+        expect(ctx.emitted).toEqual([]);
+    });
+});
