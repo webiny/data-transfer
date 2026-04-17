@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { OpenSearchClient } from "../../../src/features/OpenSearchClient/index.ts";
+import { OpenSearchClient } from "../../../src/services/OpenSearchClient/index.ts";
 import { MockOpenSearchClient } from "./MockOpenSearchClient.ts";
 import { createOsContainer } from "../../containers/index.ts";
 

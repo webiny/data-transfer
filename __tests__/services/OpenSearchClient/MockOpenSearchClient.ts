@@ -1,4 +1,4 @@
-import { OpenSearchClient } from "../../../src/features/OpenSearchClient/abstractions/OpenSearchClient.ts";
+import { OpenSearchClient } from "../../../src/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 
 export class MockOpenSearchClient implements OpenSearchClient.Interface {
     private indexes: Map<

@@ -1,6 +1,6 @@
 import { createAbstraction } from "~/base/index.ts";
 import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
-import type { Cache } from "~/features/Cache/abstractions/Cache.ts";
+import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 

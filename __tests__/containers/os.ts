@@ -1,16 +1,16 @@
 import { Container } from "@webiny/di";
 import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
-import { LoggerFeature } from "../../src/features/Logger/index.ts";
-import { CacheFeature } from "../../src/features/Cache/index.ts";
-import { GzipCompressionFeature } from "../../src/features/GzipCompression/index.ts";
-import { DirectoryToolFeature } from "../../src/features/DirectoryTool/index.ts";
-import { FileToolFeature } from "../../src/features/FileTool/index.ts";
+import { LoggerFeature } from "../../src/tools/Logger/index.ts";
+import { CacheFeature } from "../../src/tools/Cache/index.ts";
+import { GzipCompressionFeature } from "../../src/tools/GzipCompression/index.ts";
+import { DirectoryToolFeature } from "../../src/tools/DirectoryTool/index.ts";
+import { FileToolFeature } from "../../src/tools/FileTool/index.ts";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
-} from "../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { OpenSearchClient } from "../../src/features/OpenSearchClient/abstractions/OpenSearchClient.ts";
+} from "../../src/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { OpenSearchClient } from "../../src/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { PresetLoaderFeature } from "../../src/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts";
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
@@ -20,8 +20,8 @@ import { TransformContextFeature } from "../../src/features/TransformContext/ind
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { OsCommandExecutorFeature } from "../../src/features/OsCommandExecutor/index.ts";
 import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
-import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
-import { MockOpenSearchClient } from "../features/OpenSearchClient/MockOpenSearchClient.ts";
+import { MockDynamoDbClient } from "../servic../../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockOpenSearchClient } from "../servic../../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 

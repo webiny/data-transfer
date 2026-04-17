@@ -1,9 +1,9 @@
 import { resolve, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Container } from "@webiny/di";
-import { LoggerFeature } from "~/features/Logger/index.ts";
-import { DirectoryTool, DirectoryToolFeature } from "~/features/DirectoryTool/index.ts";
-import { FileTool, FileToolFeature } from "~/features/FileTool/index.ts";
+import { LoggerFeature } from "~/tools/Logger/index.ts";
+import { DirectoryTool, DirectoryToolFeature } from "~/tools/DirectoryTool/index.ts";
+import { FileTool, FileToolFeature } from "~/tools/FileTool/index.ts";
 
 export async function handler(folderName: string): Promise<void> {
     const container = new Container();

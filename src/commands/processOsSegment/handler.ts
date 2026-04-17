@@ -1,15 +1,15 @@
 import { join } from "node:path";
 import { bootstrap } from "~/bootstrap.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
-import { Logger } from "~/features/Logger/index.ts";
-import { SourceDynamoDbClient } from "~/features/DynamoDbClient/index.ts";
+import { Logger } from "~/tools/Logger/index.ts";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/index.ts";
 import { ModelProvider } from "~/features/ModelProvider/index.ts";
 import { TenantLocales } from "~/features/TenantLocales/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { OsCommandExecutor } from "~/features/OsCommandExecutor/index.ts";
 import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
-import { FileTool } from "~/features/FileTool/index.ts";
+import { FileTool } from "~/tools/FileTool/index.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 

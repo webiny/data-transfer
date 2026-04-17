@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { Container } from "@webiny/di";
-import { Cache, CacheFeature } from "../../../src/features/Cache/index.ts";
+import { Cache, CacheFeature } from "../../../src/tools/Cache/index.ts";
 
 describe("Cache", () => {
     describe("InMemoryCache", () => {

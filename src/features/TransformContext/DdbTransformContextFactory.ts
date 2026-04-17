@@ -7,11 +7,11 @@ import {
     DdbTransformContext as DdbTransformContextAbstraction,
     DdbTransformContextFactory as DdbTransformContextFactoryAbstraction
 } from "./abstractions/DdbTransformContext.ts";
-import { SourceDynamoDbClient } from "~/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { SourceS3Client } from "~/features/S3Client/abstractions/S3Client.ts";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { SourceS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { Cache } from "~/features/Cache/abstractions/Cache.ts";
+import { Cache } from "~/tools/Cache/abstractions/Cache.ts";
 
 class DdbTransformContextFactoryImpl implements DdbTransformContextFactoryAbstraction.Interface {
     public constructor(

@@ -3,7 +3,7 @@ import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { FileTool } from "../../../src/features/FileTool/index.ts";
+import { FileTool } from "../../../src/tools/FileTool/index.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 
 describe("FileTool Feature", () => {

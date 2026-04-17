@@ -1,19 +1,19 @@
 import { Container } from "@webiny/di";
 import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
-import { LoggerFeature } from "../../src/features/Logger/index.ts";
-import { CacheFeature } from "../../src/features/Cache/index.ts";
-import { GzipCompressionFeature } from "../../src/features/GzipCompression/index.ts";
-import { DirectoryToolFeature } from "../../src/features/DirectoryTool/index.ts";
-import { FileToolFeature } from "../../src/features/FileTool/index.ts";
+import { LoggerFeature } from "../../src/tools/Logger/index.ts";
+import { CacheFeature } from "../../src/tools/Cache/index.ts";
+import { GzipCompressionFeature } from "../../src/tools/GzipCompression/index.ts";
+import { DirectoryToolFeature } from "../../src/tools/DirectoryTool/index.ts";
+import { FileToolFeature } from "../../src/tools/FileTool/index.ts";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
-} from "../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
+} from "../../src/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import {
     SourceS3Client,
     TargetS3Client
-} from "../../src/features/S3Client/abstractions/S3Client.ts";
+} from "../../src/services/S3Client/abstractions/S3Client.ts";
 import { PresetLoaderFeature } from "../../src/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts";
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
@@ -22,8 +22,8 @@ import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/i
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { DdbCommandExecutorFeature } from "../../src/features/DdbCommandExecutor/index.ts";
-import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
-import { MockS3Client } from "../features/S3Client/MockS3Client.ts";
+import { MockDynamoDbClient } from "../servic../../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockS3Client } from "../servic../../services/S3Client/MockS3Client.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 

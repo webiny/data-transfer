@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { PinoLogger } from "../../../src/features/Logger/PinoLogger.ts";
+import { PinoLogger } from "../../../src/tools/Logger/PinoLogger.ts";
 
 const captureStdout = (): { lines: string[]; restore: () => void } => {
     const lines: string[] = [];

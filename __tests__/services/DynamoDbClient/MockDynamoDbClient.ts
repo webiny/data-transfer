@@ -1,4 +1,4 @@
-import { SourceDynamoDbClient } from "../../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { SourceDynamoDbClient } from "../../../src/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import type { BaseRecord } from "../../../src/domain/transform/types/records.ts";
 
 /**

@@ -1,9 +1,9 @@
 import { readdir, readFile, rm } from "fs/promises";
 import { join } from "path";
-import { AfterTransferHook } from "../../TransferLifecycle/abstractions/TransferLifecycle.ts";
-import { TransferContext } from "../../TransferLifecycle/abstractions/TransferContext.ts";
+import { AfterTransferHook } from "~/features/TransferLifecycle/abstractions/TransferLifecycle.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { OpenSearchClient } from "../abstractions/OpenSearchClient.ts";
-import { Logger } from "../../Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 class EnableRefreshHookImpl implements AfterTransferHook.Interface {
     public constructor(

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SourceS3Client, TargetS3Client } from "../../../src/features/S3Client/index.ts";
+import { SourceS3Client, TargetS3Client } from "../../../src/services/S3Client/index.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 
 describe("S3Client Feature", () => {

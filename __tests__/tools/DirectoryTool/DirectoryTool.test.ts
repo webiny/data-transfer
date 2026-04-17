@@ -3,7 +3,7 @@ import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { DirectoryTool } from "../../../src/features/DirectoryTool/index.ts";
+import { DirectoryTool } from "../../../src/tools/DirectoryTool/index.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 
 describe("DirectoryTool Feature", () => {

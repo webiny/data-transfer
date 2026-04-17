@@ -1,8 +1,8 @@
 import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration";
-import { Logger } from "~/features/Logger/abstractions/Logger.ts";
-import { TargetDynamoDbClient } from "~/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { OpenSearchClient } from "~/features/OpenSearchClient/abstractions/OpenSearchClient.ts";
-import { GzipCompression } from "~/features/GzipCompression/abstractions/GzipCompression.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
+import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { OsCommandExecutor as OsCommandExecutorAbstraction } from "./abstractions/OsCommandExecutor.ts";
 

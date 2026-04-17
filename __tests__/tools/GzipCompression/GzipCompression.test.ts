@@ -3,7 +3,7 @@ import { Container } from "@webiny/di";
 import {
     GzipCompression,
     GzipCompressionFeature
-} from "../../../src/features/GzipCompression/index.ts";
+} from "../../../src/tools/GzipCompression/index.ts";
 
 describe("GzipCompression", () => {
     let gzip: GzipCompression.Interface;

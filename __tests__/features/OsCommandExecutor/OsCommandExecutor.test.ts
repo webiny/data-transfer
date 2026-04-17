@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { OsCommandExecutor } from "~/features/OsCommandExecutor/index.ts";
-import { TargetDynamoDbClient } from "~/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { OpenSearchClient } from "~/features/OpenSearchClient/abstractions/OpenSearchClient.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { createOsContainer } from "../../containers/index.ts";
-import { MockDynamoDbClient } from "../DynamoDbClient/MockDynamoDbClient.ts";
-import { MockOpenSearchClient } from "../OpenSearchClient/MockOpenSearchClient.ts";
+import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockOpenSearchClient } from "../../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 function makeItem(overrides: Partial<OsCommandExecutor.Item> = {}): OsCommandExecutor.Item {
     return {

@@ -1,7 +1,7 @@
 import { bootstrap } from "~/bootstrap.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
-import { Logger } from "~/features/Logger/index.ts";
-import { SourceDynamoDbClient } from "~/features/DynamoDbClient/index.ts";
+import { Logger } from "~/tools/Logger/index.ts";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/index.ts";
 import { ModelProvider } from "~/features/ModelProvider/index.ts";
 import { TenantLocales } from "~/features/TenantLocales/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";

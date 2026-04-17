@@ -1,14 +1,14 @@
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
-import { bootstrap } from "../../bootstrap.ts";
-import { loadConfig } from "../../features/MigrationConfig/loadConfig.ts";
-import { Logger } from "../../features/Logger/index.ts";
-import { MigrationConfig } from "../../features/MigrationConfig/index.ts";
+import { bootstrap } from "~/bootstrap.ts";
+import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
+import { Logger } from "~/tools/Logger/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
 import {
     BeforeTransferHook,
     AfterTransferHook,
     TransferContext
-} from "../../features/TransferLifecycle/index.ts";
+} from "~/features/TransferLifecycle/index.ts";
 
 export async function handler(configPath: string): Promise<void> {
     const config = await loadConfig(configPath);

@@ -1,9 +1,9 @@
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
-import { TargetDynamoDbClient } from "~/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { TargetS3Client } from "~/features/S3Client/abstractions/S3Client.ts";
-import { Logger } from "~/features/Logger/abstractions/Logger.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { DdbCommandExecutor as DdbCommandExecutorAbstraction } from "./abstractions/DdbCommandExecutor.ts";
 
 const KNOWN_KEYS = new Set<string>([PutRecord.key, S3Copy.key]);

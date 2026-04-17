@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
-import { TargetDynamoDbClient } from "~/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { TargetS3Client } from "~/features/S3Client/abstractions/S3Client.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
 import type { Command } from "~/domain/transform/commands/Command.ts";
 import { createDdbContainer } from "../../containers/index.ts";
-import { MockDynamoDbClient } from "../DynamoDbClient/MockDynamoDbClient.ts";
-import { MockS3Client } from "../S3Client/MockS3Client.ts";
+import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
 
 describe("DdbCommandExecutor", () => {
     describe("DI registration", () => {

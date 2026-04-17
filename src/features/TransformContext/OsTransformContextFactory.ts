@@ -6,10 +6,10 @@ import {
     OsTransformContext as OsTransformContextAbstraction,
     OsTransformContextFactory as OsTransformContextFactoryAbstraction
 } from "./abstractions/OsTransformContext.ts";
-import { SourceDynamoDbClient } from "~/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { Cache } from "~/features/Cache/abstractions/Cache.ts";
+import { Cache } from "~/tools/Cache/abstractions/Cache.ts";
 
 class OsTransformContextFactoryImpl implements OsTransformContextFactoryAbstraction.Interface {
     public constructor(

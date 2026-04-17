@@ -5,7 +5,7 @@ import {
     TargetDynamoDbClient,
     DynamoDbClientConfig,
     DynamoDbClientFeature
-} from "../../../src/features/DynamoDbClient/index.ts";
+} from "../../../src/services/DynamoDbClient/index.ts";
 import { MockDynamoDbClient } from "./MockDynamoDbClient.ts";
 
 describe("DynamoDbClient Feature", () => {

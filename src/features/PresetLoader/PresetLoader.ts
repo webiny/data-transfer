@@ -3,7 +3,7 @@ import { resolve, isAbsolute } from "node:path";
 import { existsSync } from "node:fs";
 import type { MigrationPreset } from "~/domain/transform/Preset.ts";
 import { PresetLoader as PresetLoaderAbstraction } from "./abstractions/PresetLoader.ts";
-import { Logger } from "../Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 const BUILT_IN_PRESETS = new Map<string, string>([
     ["v5-to-v6", fileURLToPath(new URL("../../presets/v5-to-v6-ddb.ts", import.meta.url))],

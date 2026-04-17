@@ -1,5 +1,5 @@
-import { Logger } from "~/features/Logger/abstractions/Logger.ts";
-import { GzipCompression } from "~/features/GzipCompression/abstractions/GzipCompression.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { OsRecordDecompressor as OsRecordDecompressorAbstraction } from "./abstractions/OsRecordDecompressor.ts";
 
 const DEFAULT_LOCALE = "en-US";
