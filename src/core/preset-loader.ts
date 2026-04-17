@@ -1,5 +1,5 @@
 import { MigrationPreset } from "./types.ts";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { resolve, isAbsolute } from "node:path";
 import { existsSync } from "node:fs";
 
@@ -8,8 +8,8 @@ import { existsSync } from "node:fs";
 // ============================================================================
 
 const BUILT_IN_PRESETS = new Map<string, string>([
-    ["v5-to-v6", new URL("../presets/v5-to-v6-ddb.ts", import.meta.url).pathname],
-    ["v5-to-v6-os", new URL("../presets/v5-to-v6-os.ts", import.meta.url).pathname]
+    ["v5-to-v6", fileURLToPath(new URL("../presets/v5-to-v6-ddb.ts", import.meta.url))],
+    ["v5-to-v6-os", fileURLToPath(new URL("../presets/v5-to-v6-os.ts", import.meta.url))]
 ]);
 
 /**

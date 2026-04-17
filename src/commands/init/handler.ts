@@ -1,4 +1,4 @@
-import { cp, readFile, writeFile, access, mkdir } from "node:fs/promises";
+import { cp, readFile, writeFile, access, mkdir, unlink } from "node:fs/promises";
 import { resolve, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,8 +31,6 @@ export async function handler(folderName: string): Promise<void> {
     const packageJson = tplContent.replace("{{PROJECT_NAME}}", basename(folderName));
     await writeFile(join(targetDir, "package.json"), packageJson, "utf-8");
 
-    // Remove the template file after processing
-    const { unlink } = await import("node:fs/promises");
     await unlink(tplPath);
 
     console.log(`\nCreated "${folderName}" with the following structure:\n`);

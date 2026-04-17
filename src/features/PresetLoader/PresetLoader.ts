@@ -1,4 +1,4 @@
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { resolve, isAbsolute } from "node:path";
 import { existsSync } from "node:fs";
 import type { MigrationPreset } from "~/domain/transform/Preset.ts";
@@ -6,8 +6,8 @@ import { PresetLoader as PresetLoaderAbstraction } from "./abstractions/PresetLo
 import { Logger } from "../Logger/abstractions/Logger.ts";
 
 const BUILT_IN_PRESETS = new Map<string, string>([
-    ["v5-to-v6", new URL("../../presets/v5-to-v6-ddb.ts", import.meta.url).pathname],
-    ["v5-to-v6-os", new URL("../../presets/v5-to-v6-os.ts", import.meta.url).pathname]
+    ["v5-to-v6", fileURLToPath(new URL("../../presets/v5-to-v6-ddb.ts", import.meta.url))],
+    ["v5-to-v6-os", fileURLToPath(new URL("../../presets/v5-to-v6-os.ts", import.meta.url))]
 ]);
 
 class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
