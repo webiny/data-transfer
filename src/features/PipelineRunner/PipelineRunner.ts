@@ -4,16 +4,13 @@ import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.ts";
 import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
     type PipelineRunnerFactoryInput
 } from "./abstractions/PipelineRunner.ts";
-
-interface ITransformer<TContext> {
-    transform(ctx: TContext): void | Promise<void>;
-}
 
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     private mergeGroups: Map<
@@ -127,9 +124,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 const processor = pipelineToProcessor.get(pipeline)!;
                 const ctx = processor.createContext(record);
                 for (const token of pipeline.transformerTokens) {
-                    const transformer = this.container.resolve(
-                        token as Abstraction<ITransformer<Processor.Context>>
-                    );
+                    const transformer = this.container.resolve(token);
                     await transformer.transform(ctx);
                 }
                 let buffer = processorBuffers.get(processor);

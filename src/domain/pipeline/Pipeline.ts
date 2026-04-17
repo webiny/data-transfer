@@ -2,6 +2,7 @@ import type { Abstraction } from "@webiny/di";
 import type { Scanner } from "./abstractions/Scanner.ts";
 import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
+import type { Transformer } from "./abstractions/Transformer.ts";
 import type { Filter } from "./Filter.ts";
 
 export interface PipelineConfig<TRecord, TContext extends Processor.Context, TShard> {
@@ -9,7 +10,7 @@ export interface PipelineConfig<TRecord, TContext extends Processor.Context, TSh
     readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
     readonly processor: Abstraction<Processor.Interface<TRecord, TContext>>;
     readonly filters: readonly Filter<TRecord>[];
-    readonly transformers: readonly Abstraction<unknown>[];
+    readonly transformers: readonly Abstraction<Transformer.Interface<TContext>>[];
     readonly beforeHooks: readonly Abstraction<Hook.Interface>[];
     readonly afterHooks: readonly Abstraction<Hook.Interface>[];
 }
@@ -43,7 +44,7 @@ export class Pipeline<
         return this.config.afterHooks;
     }
 
-    public get transformerTokens(): readonly Abstraction<unknown>[] {
+    public get transformerTokens(): readonly Abstraction<Transformer.Interface<TContext>>[] {
         return this.config.transformers;
     }
 

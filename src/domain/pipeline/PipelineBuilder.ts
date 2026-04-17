@@ -2,6 +2,7 @@ import type { Abstraction } from "@webiny/di";
 import type { Scanner } from "./abstractions/Scanner.ts";
 import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
+import type { Transformer } from "./abstractions/Transformer.ts";
 import type { Filter } from "./Filter.ts";
 import { Pipeline, type PipelineConfig } from "./Pipeline.ts";
 
@@ -22,7 +23,7 @@ export class PipelineBuilder<
 
     private filters: Filter<TRecord>[] = [];
     private filterCalled = false;
-    private transformers: Abstraction<unknown>[] = [];
+    private transformers: Abstraction<Transformer.Interface<TContext>>[] = [];
     private beforeHooks: Abstraction<Hook.Interface>[] = [];
     private afterHooks: Abstraction<Hook.Interface>[] = [];
 
@@ -54,7 +55,7 @@ export class PipelineBuilder<
         return this;
     }
 
-    public use(token: Abstraction<unknown>): this {
+    public use(token: Abstraction<Transformer.Interface<TContext>>): this {
         this.transformers.push(token);
         return this;
     }
