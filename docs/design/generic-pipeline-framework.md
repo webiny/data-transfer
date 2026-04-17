@@ -516,7 +516,10 @@ namespace Hook {
     }
 }
 
-type Filter<TRecord> = { kind: "fn"; fn: (record: TRecord) => boolean };
+interface Filter<TRecord> {
+    readonly kind: "filter";
+    readonly check: (record: TRecord) => boolean;
+}
 ```
 
 - **Scanner** is DI-registered, source-scoped. `TRecord` is fixed by scanner. `TShard` is JSON-serializable (crosses process boundary).
