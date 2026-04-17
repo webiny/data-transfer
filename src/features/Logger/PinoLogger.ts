@@ -7,6 +7,10 @@ type LogTransport = "pretty" | "json";
 interface PinoLoggerParams {
     logLevel: LevelWithSilentOrString;
     transport?: LogTransport;
+    /** Internal: prefix prepended to every message (used by child loggers) */
+    prefix?: string;
+    /** Internal: reuse parent pino instance (used by child loggers) */
+    pinoLogger?: pino.Logger;
 }
 
 type JsonLogType = "debug" | "info" | "warn" | "error" | "fatal" | "done";
@@ -43,12 +47,18 @@ const createJsonDestination = (): Writable => {
 export class PinoLogger implements Logger.Interface {
     private readonly logger: pino.Logger;
     private readonly transport?: LogTransport;
+    private readonly prefix: string;
 
     public constructor(params: PinoLoggerParams) {
-        const base = {
-            level: params.logLevel
-        };
         this.transport = params.transport;
+        this.prefix = params.prefix ?? "";
+
+        if (params.pinoLogger) {
+            this.logger = params.pinoLogger;
+            return;
+        }
+
+        const base = { level: params.logLevel };
 
         if (this.transport === "json") {
             this.logger = pino(base, createJsonDestination());
@@ -69,30 +79,40 @@ export class PinoLogger implements Logger.Interface {
     }
 
     public debug(message: string, ...args: unknown[]): void {
-        this.logger.debug(message, ...(args as any[]));
+        this.logger.debug(this.prefix + message, ...(args as any[]));
     }
 
     public info(message: string, ...args: unknown[]): void {
-        this.logger.info(message, ...(args as any[]));
+        this.logger.info(this.prefix + message, ...(args as any[]));
     }
 
     public warn(message: string, ...args: unknown[]): void {
-        this.logger.warn(message, ...(args as any[]));
+        this.logger.warn(this.prefix + message, ...(args as any[]));
     }
 
     public error(message: string, ...args: unknown[]): void {
-        this.logger.error(message, ...(args as any[]));
+        this.logger.error(this.prefix + message, ...(args as any[]));
     }
 
     public fatal(message: string, ...args: unknown[]): void {
-        this.logger.fatal(message, ...(args as any[]));
+        this.logger.fatal(this.prefix + message, ...(args as any[]));
     }
 
     public done(message: string): void {
+        const prefixed = this.prefix + message;
         if (this.transport === "json") {
-            this.logger.info({ _done: true }, message);
+            this.logger.info({ _done: true }, prefixed);
             return;
         }
-        this.logger.info(message);
+        this.logger.info(prefixed);
+    }
+
+    public child(prefix: string): Logger.Interface {
+        return new PinoLogger({
+            logLevel: this.logger.level as LevelWithSilentOrString,
+            transport: this.transport,
+            prefix: this.prefix + prefix,
+            pinoLogger: this.logger
+        });
     }
 }

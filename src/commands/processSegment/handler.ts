@@ -1,13 +1,13 @@
-import { DynamoDBClient } from "../../database/dynamodb-client.ts";
-import { S3Client } from "../../storage/s3-client.ts";
-import { executeCommands } from "../../core/executor.ts";
-import { createLogger } from "../../utils/logger.ts";
-import { fetchTenantsWithLocales, isDefaultLocaleRecord } from "../../utils/tenants.ts";
-import { MigrationConfig } from "../../core/types.ts";
-import { ModelProvider } from "../../models/model-provider.ts";
-import { MigrationRunner } from "../../core/runner.ts";
-import { loadPreset } from "../../core/preset-loader.ts";
-import { loadConfig } from "../../features/MigrationConfig/loadConfig.ts";
+import { bootstrap } from "~/bootstrap.ts";
+import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
+import { Logger } from "~/features/Logger/index.ts";
+import { SourceDynamoDbClient } from "~/features/DynamoDbClient/index.ts";
+import { ModelProvider } from "~/features/ModelProvider/index.ts";
+import { TenantLocales } from "~/features/TenantLocales/index.ts";
+import { PresetLoader } from "~/features/PresetLoader/index.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 interface ProcessSegmentArgs {
     runId: string;
@@ -16,15 +16,18 @@ interface ProcessSegmentArgs {
     config: string;
 }
 
+const BATCH_SIZE = 100;
+const PROGRESS_LOG_EVERY = 1000;
+
 export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const config = await loadConfig(argv.config);
     if (config.storage !== "ddb") {
         throw new Error(`process-segment requires storage: "ddb". Got: "${config.storage}"`);
     }
 
-    const logger = createLogger({
-        msgPrefix: `[segment #${argv.segment}] `
-    });
+    const container = bootstrap({ config });
+
+    const logger = container.resolve(Logger).child(`[segment #${argv.segment}] `);
 
     logger.info(
         `Starting segment ${argv.segment} of ${argv.total} (${Math.round(
@@ -32,94 +35,64 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
         )}%)`
     );
 
-    const sourceDatabase = new DynamoDBClient({
-        region: config.source.region,
-        credentials: config.source.credentials
-    });
-
-    const targetDatabase = new DynamoDBClient({
-        region: config.target.region,
-        credentials: config.target.credentials
-    });
-
-    const targetStorage = new S3Client({
-        region: config.target.region,
-        credentials: config.target.credentials
-    });
-
-    const sourceStorage = new S3Client({
-        region: config.source.region,
-        credentials: config.source.credentials
-    });
-
+    const tenantLocales = container.resolve(TenantLocales);
     logger.info("Fetching tenants and default locales...");
-    const tenantLocales = await fetchTenantsWithLocales(
-        sourceDatabase,
-        config.source.dynamodb.tableName
-    );
-    logger.info(`Found ${tenantLocales.size} tenants`);
+    await tenantLocales.preload();
+    logger.info(`Found ${tenantLocales.getMap().size} tenants`);
 
+    const modelProvider = container.resolve(ModelProvider);
     logger.info("Preloading models...");
-    const modelProvider = new ModelProvider(
-        sourceDatabase,
-        config.source.dynamodb.tableName,
-        config.pipeline.modelsDir
-    );
-    await modelProvider.preloadModels(tenantLocales);
+    await modelProvider.preloadModels(tenantLocales.getMap());
 
-    const migrationConfig: MigrationConfig = {
-        sourcePrimaryTable: config.source.dynamodb.tableName,
-        targetPrimaryTable: config.target.dynamodb.tableName,
-        sourceFmBucket: config.source.s3.bucket,
-        targetFmBucket: config.target.s3.bucket,
-        modelProvider,
-        sourceStorage
-    };
-
+    const presetLoader = container.resolve(PresetLoader);
     logger.info(`Loading preset: ${config.pipeline.preset}`);
-    const preset = await loadPreset(config.pipeline.preset);
+    const preset = await presetLoader.load(config.pipeline.preset);
     logger.info(`Loaded preset: "${preset.name}" - ${preset.description}`);
 
-    const runner = new MigrationRunner(migrationConfig, sourceDatabase);
-    preset.configure(runner, migrationConfig, sourceDatabase);
+    const runner = container.resolve(PipelineRunner);
+    preset.configure(runner);
+
+    const executor = container.resolve(DdbCommandExecutor);
+    const sourceDb = container.resolve(SourceDynamoDbClient);
 
     let processedCount = 0;
     let migratedCount = 0;
     let skippedCount = 0;
-    const batchSize = 100;
-    const recordBatch: Array<Record<string, unknown>> = [];
+    const recordBatch: BaseRecord[] = [];
+
+    const flush = async (): Promise<void> => {
+        if (recordBatch.length === 0) {
+            return;
+        }
+        const commands = await runner.processAll(recordBatch);
+        if (commands.size() > 0) {
+            await executor.execute(commands);
+            migratedCount += recordBatch.length;
+        } else {
+            skippedCount += recordBatch.length;
+        }
+        recordBatch.length = 0;
+    };
 
     logger.info("Scanning table segment...");
 
-    for await (const record of sourceDatabase.scan(config.source.dynamodb.tableName, {
+    for await (const record of sourceDb.scan(config.source.dynamodb.tableName, {
         segment: argv.segment,
         totalSegments: argv.total
     })) {
         processedCount++;
 
-        if (!isDefaultLocaleRecord(record, tenantLocales)) {
+        if (!tenantLocales.isDefaultLocaleRecord(record)) {
             skippedCount++;
             continue;
         }
 
         recordBatch.push(record);
 
-        if (recordBatch.length >= batchSize) {
-            const commands = await runner.processAll(recordBatch);
+        if (recordBatch.length >= BATCH_SIZE) {
+            await flush();
 
-            if (commands.length > 0) {
-                await executeCommands(commands, {
-                    database: targetDatabase,
-                    storage: targetStorage
-                });
-                migratedCount += recordBatch.length;
-            } else {
-                skippedCount += recordBatch.length;
-            }
-
-            recordBatch.length = 0;
-
-            if (processedCount % 1000 === 0) {
+            if (processedCount % PROGRESS_LOG_EVERY === 0) {
                 logger.info(
                     `Progress: ${processedCount} processed, ${migratedCount} migrated, ${skippedCount} skipped`
                 );
@@ -127,16 +100,7 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
         }
     }
 
-    if (recordBatch.length > 0) {
-        const commands = await runner.processAll(recordBatch);
-
-        if (commands.length > 0) {
-            await executeCommands(commands, { database: targetDatabase, storage: targetStorage });
-            migratedCount += recordBatch.length;
-        } else {
-            skippedCount += recordBatch.length;
-        }
-    }
+    await flush();
 
     logger.info(
         `Segment ${argv.segment} completed: ${processedCount} processed, ${migratedCount} migrated, ${skippedCount} skipped`

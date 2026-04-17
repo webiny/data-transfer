@@ -1,9 +1,14 @@
-import { createAbstraction } from "@/src/base/index.ts";
+import { createAbstraction } from "~/base/index.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 // ============================================================================
 // Types
 // ============================================================================
 
+/**
+ * Minimal DynamoDB record shape — only PK+SK guaranteed.
+ * Used for queries and writes where we don't assume Webiny's extra fields.
+ */
 export interface DatabaseRecord {
     PK: string;
     SK: string;
@@ -25,7 +30,8 @@ export interface QueryOptions {
 }
 
 export interface IDynamoDbClient {
-    scan<T extends DatabaseRecord>(tableName: string, options?: ScanOptions): AsyncIterable<T>;
+    /** Scans emit Webiny records — all have PK, SK, _et, _ct, _md, TYPE */
+    scan(tableName: string, options?: ScanOptions): AsyncIterable<BaseRecord>;
     query<T extends DatabaseRecord>(
         tableName: string,
         pk: string,

@@ -1,4 +1,4 @@
-import { createAbstraction } from "@/src/base/index.ts";
+import { createAbstraction } from "~/base/index.ts";
 
 interface ILogger {
     debug(message: string, ...args: unknown[]): void;
@@ -7,6 +7,8 @@ interface ILogger {
     error(message: string, ...args: unknown[]): void;
     fatal(message: string, ...args: unknown[]): void;
     done(message: string): void;
+    /** Create a child logger that prepends `prefix` to every message */
+    child(prefix: string): ILogger;
 }
 
 export const Logger = createAbstraction<ILogger>("Base/Logger");

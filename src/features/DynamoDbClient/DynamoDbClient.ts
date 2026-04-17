@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 const BATCH_SIZE = 25;
 const MAX_RETRIES = 3;
@@ -28,10 +29,10 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         });
     }
 
-    public async *scan<T extends SourceDynamoDbClient.Record>(
+    public async *scan(
         tableName: string,
         options?: SourceDynamoDbClient.Scan
-    ): AsyncIterable<T> {
+    ): AsyncIterable<BaseRecord> {
         let lastEvaluatedKey: Record<string, unknown> | undefined;
 
         do {
@@ -48,7 +49,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
 
             if (response.Items) {
                 for (const item of response.Items) {
-                    yield item as T;
+                    yield item as BaseRecord;
                 }
             }
 

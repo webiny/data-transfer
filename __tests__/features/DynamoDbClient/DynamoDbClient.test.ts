@@ -161,8 +161,8 @@ describe("DynamoDbClient Feature", () => {
             }
 
             const results: CmsRecord[] = [];
-            for await (const record of client.scan<CmsRecord>("test-table")) {
-                results.push(record);
+            for await (const record of client.scan("test-table")) {
+                results.push(record as CmsRecord);
             }
 
             expect(results[0].TYPE).toBe("cms.entry.l");
