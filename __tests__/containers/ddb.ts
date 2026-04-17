@@ -10,7 +10,10 @@ import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
 } from "../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { S3ClientConfig, S3ClientFeature } from "../../src/features/S3Client/index.ts";
+import {
+    SourceS3Client,
+    TargetS3Client
+} from "../../src/features/S3Client/abstractions/S3Client.ts";
 import { PresetLoaderFeature } from "../../src/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts";
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
@@ -18,7 +21,9 @@ import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts"
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
+import { DdbCommandExecutorFeature } from "../../src/features/DdbCommandExecutor/index.ts";
 import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockS3Client } from "../features/S3Client/MockS3Client.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 
@@ -66,12 +71,9 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     container.registerInstance(SourceDynamoDbClient, sourceDb);
     container.registerInstance(TargetDynamoDbClient, targetDb);
 
-    // S3
-    container.registerInstance(S3ClientConfig, {
-        source: { region: "us-east-1", credentials: DEFAULT_CREDS },
-        target: { region: "eu-central-1", credentials: DEFAULT_CREDS }
-    });
-    S3ClientFeature.register(container);
+    // S3 — mock instances
+    container.registerInstance(SourceS3Client, new MockS3Client());
+    container.registerInstance(TargetS3Client, new MockS3Client());
 
     // Pipeline
     PresetLoaderFeature.register(container);
@@ -81,6 +83,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
     PipelineRunnerFeature.register(container);
+    DdbCommandExecutorFeature.register(container);
 
     return container;
 }

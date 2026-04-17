@@ -19,6 +19,7 @@ import { WorkerSpawnerFeature } from "./features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
 import { TransformContextFeature } from "./features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "./features/PipelineRunner/index.ts";
+import { DdbCommandExecutorFeature } from "./features/DdbCommandExecutor/index.ts";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -94,6 +95,11 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     // Pipeline runner (depends on BaseTransformContextFactory)
     PipelineRunnerFeature.register(container);
+
+    // Command executor (ddb mode only — depends on TargetS3Client)
+    if (config.storage === "ddb") {
+        DdbCommandExecutorFeature.register(container);
+    }
 
     return container;
 }
