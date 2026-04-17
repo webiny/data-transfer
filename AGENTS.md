@@ -80,23 +80,34 @@ src/
 │   └── processOsSegment/     # OS worker command
 │       ├── handler.ts
 │       └── register.ts
+├── domain/                   # Plain domain primitives (not DI)
+│   └── transform/
+│       ├── types/            # BaseRecord, DdbRecord, OsRecord
+│       ├── commands/         # Command interface, PutRecord, S3Copy, Commands collection
+│       ├── Transformer.ts    # Transformer<TCtx> interface (generic over context)
+│       ├── Pipeline.ts       # TransformPipeline class with run(record, contextFactory)
+│       ├── PipelineBuilder.ts
+│       ├── filters.ts        # byType, isCmsEntry, isCmsModel, etc.
+│       └── Preset.ts         # MigrationPreset interface (configure(runner))
 ├── features/                 # DI features (see Feature Structure below)
 │   ├── Cache/
+│   ├── DdbCommandExecutor/   # Executes PUT/S3_COPY commands (ddb mode only)
 │   ├── DirectoryTool/        # Sync directory operations (create, readDir, remove, copy)
 │   ├── DynamoDbClient/
 │   ├── FileTool/             # Sync file operations (readFile, writeFile, remove, copy)
 │   ├── GzipCompression/
-│   ├── Logger/
+│   ├── Logger/               # Has child(prefix) for scoped log prefixes
 │   ├── MigrationConfig/
 │   ├── ModelProvider/
 │   ├── OpenSearchClient/
+│   ├── PipelineRunner/       # Registers pipelines, processes records (first-match wins)
 │   ├── PresetLoader/         # Loads built-in or custom presets by name/path
 │   ├── S3Client/             # SourceS3Client + TargetS3Client (ddb mode only)
 │   ├── TenantLocales/
 │   ├── TransferLifecycle/
 │   ├── TransformContext/     # DdbTransformContextFactory + OsTransformContextFactory
-│   └── WorkerSpawner/       # Spawns child processes for parallel segment processing
-├── core/                     # Pipeline, runner, executor, context (legacy, being migrated)
+│   └── WorkerSpawner/        # Spawns child processes for parallel segment processing
+├── core/                     # Legacy pipeline/runner/executor — being deleted
 ├── transformers/             # Record transformers (wrapInData, removeLocale, etc.)
 ├── presets/                  # Migration presets (v5-to-v6-ddb, v5-to-v6-os)
 ├── opensearch/               # OS executor, decompress (legacy, partially migrated)
@@ -272,7 +283,9 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 | WorkerSpawner          | `WorkerSpawner`                                           | Singleton            | Spawns child processes via execa. Deps: Logger                                      |
 | TransferLifecycle      | `BeforeTransferHook`, `AfterTransferHook`                 | Composite            | Collects all registered hooks                                                       |
 | TransferContext        | `TransferContext`                                         | Instance             | Holds runId, registered by CLI before hooks                                         |
-| TransformContext       | `DdbTransformContextFactory`, `OsTransformContextFactory` | Singleton            | Mode-conditional. Creates per-record contexts with commands, cache, modelProvider   |
+| TransformContext       | `DdbTransformContextFactory`, `OsTransformContextFactory` | Singleton            | Mode-conditional. Also registers active factory under `BaseTransformContextFactory` |
+| PipelineRunner         | `PipelineRunner`                                          | Singleton            | Registers pipelines, processes records via `BaseTransformContextFactory`            |
+| DdbCommandExecutor     | `DdbCommandExecutor`                                      | Singleton            | DDB mode only. Dispatches PUT_RECORD and S3_COPY commands in parallel               |
 
 ## Architecture Decisions
 
@@ -305,62 +318,63 @@ Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
 
 ## Files to Delete (after full DI migration)
 
-These files contain old code still used by command handlers (not yet migrated to DI):
+These files contain legacy code pending removal (see "Next Steps" for order):
 
-- `src/config/` — replaced by `MigrationConfig` feature (currently re-exports)
+- `src/config/` — replaced by `MigrationConfig` feature (currently still re-exports)
 - `src/database/` — replaced by `DynamoDbClient` feature
+- `src/core/` — pipeline, runner, context, executor, transformer, types, preset-loader (replaced by `~/domain/transform/` + `PipelineRunner` + `DdbCommandExecutor`)
 - `src/utils/logger.ts` — replaced by `Logger` feature
 - `src/utils/gzip-compression.ts` — replaced by `GzipCompression` feature
 - `src/utils/tenants.ts` — replaced by `TenantLocales` feature
+- `src/utils/test-helpers.ts` — legacy test helper, should become unused after test migration
 - `src/models/` — replaced by `ModelProvider` feature
+- `src/storage/` — replaced by `S3Client` feature
 - `src/opensearch/client.ts` — replaced by `OpenSearchClient` feature
 - `src/opensearch/lifecycle.ts` — replaced by `TransferLifecycle` + OS hooks
-- `__tests__/mocks/database-client.ts` — replaced by `MockDynamoDbClient` in `__tests__/features/DynamoDbClient/`
+- `src/opensearch/executor.ts` — pending migration to a new `OsCommandExecutor` feature
+- `__tests__/mocks/database-client.ts`, `__tests__/mocks/storage-client.ts` — replaced by mocks under `__tests__/features/*/`
 
 ## Next Steps (for future agents)
 
-### Priority 1: Migrate core pipeline to DI
+### Priority 1: Migrate OS handler (`processOsSegment`)
 
-The `TransformContext` factories are done. Remaining core components:
+`src/commands/processSegment/handler.ts` is fully DI. `src/commands/processOsSegment/handler.ts` still uses legacy code. Migrate it similarly:
 
-- **`TransformPipeline`** (`src/core/pipeline.ts`) — currently a class with `filter()`, `use()`, `accepts()`, `run()`. It calls `createContext()` (legacy) internally. Needs to accept a `TransformContextFactory` instead. The `PipelineBuilder` in `src/core/pipelines.ts` builds pipelines and should also be migrated.
-- **`MigrationRunner`** (`src/core/runner.ts`) — holds an array of pipelines, iterates records through them. Depends on `TransformPipeline`, the legacy `MigrationConfig` (core type), and `DatabaseClient`. Should become a DI feature that resolves the context factory.
-- **`executeCommands`** (`src/core/executor.ts`) — takes commands + legacy `DatabaseClient`/`StorageClient`, groups PUT by table, runs S3 copies. Should become a DI feature resolving `TargetDynamoDbClient` + `TargetS3Client`.
+- Call `bootstrap({ config })` — OS mode conditional features are already wired
+- Resolve `Logger.child("[os-segment #N] ")`, `TenantLocales`, `ModelProvider`, `PresetLoader`, `PipelineRunner`, `SourceDynamoDbClient`, `OpenSearchClient`
+- The OS flow decompresses records → runs through pipeline → gzips back → writes to target OS table
+- An `OsCommandExecutor` feature likely needs to be added (counterpart to `DdbCommandExecutor`), or the OS executor logic moves into the handler
+- **`OsIndexEnsure` command** was intentionally deferred — revisit when migrating OS handler. See commands/ folder for existing `PutRecord`/`S3Copy`/`Commands` patterns to follow.
 
-**Dependency order:** Pipeline → Runner → Executor (or Executor independently, then Runner)
+### Priority 2: Legacy tests migration
 
-**Key design decisions already made:**
+The following tests are excluded from vitest runs (see `vitest.config.ts`):
+`batch-processing`, `cms-entries`, `cms-model-field-attributes`, `file-manager-metadata`, `file-manager-settings`, `folder-records`, `full-table-migration`, `global-transformations`, `mailer-settings`, `nested-pipeline`, `os-table-migration`, `preset-pipelines`, `record-filtering`, `security-groups-to-roles`, `security-teams`, `integration/os-migration`.
 
-- `BaseTransformContext` in `src/features/TransformContext/abstractions/` has record types (`BaseRecord`, `DdbRecord`, `OsRecord`) and command types (`PutRecordCommand`, `S3CopyCommand`) — all in the `BaseTransformContext` namespace
-- `DdbTransformContext` extends base with `copyFile` + `getFile`; `OsTransformContext` has no S3 methods
-- Context `cache` is `Cache.Interface` (not raw `Map`)
-- Context method is `putRecord` (not `putPrimaryRecord`)
-- Factories are mode-conditional: `DdbTransformContextFactory` registered in ddb mode only (needs `SourceS3Client`), `OsTransformContextFactory` registered in os mode only
+They depend on:
 
-**When migrating Pipeline:**
+- Legacy `MigrationRunner` (`src/core/runner.ts`) — incompatible with new `TransformPipeline.run(record, factory)` signature
+- Legacy `executeCommands` (`src/core/executor.ts`)
+- Legacy `MigrationConfig` type (`src/core/types.ts`)
+- Legacy `MockDatabaseClient` / `MockStorageClient` (`__tests__/mocks/`)
+- `createTestRunner` helper (`src/utils/test-helpers.ts`)
 
-- `TransformPipeline.run()` currently calls `createContext(record, config, database, cache)` — should call `contextFactory.create({ record })` instead
-- The `Transformer` interface (`src/core/transformer.ts`) uses the old `TransformContext` from `src/core/types.ts` — should use `BaseTransformContext.Interface` from the new abstractions
-- Filters (`RecordFilter`) and filter functions (`isCmsEntry`, `isCmsModel`, etc.) are pure functions, no DI needed
+Port pattern: replace `createTestRunner(config, database)` with `createDdbContainer({ sourceRecords: {...} })` from `__tests__/containers/`, resolve `PipelineRunner` + `DdbCommandExecutor`, and configure the preset.
 
-**When migrating Runner:**
+### Priority 3: Delete legacy files
 
-- Currently takes `MigrationConfig` (core) + `DatabaseClient` (legacy) in constructor — should take the context factory via DI
-- `runner.cache` is a plain `Map` — should use DI `Cache`
+After the OS handler migration and legacy tests port, delete:
 
-**When migrating Executor:**
+- `src/core/` — all of it (pipeline, runner, context, executor, transformer, types, preset-loader)
+- `src/database/` — replaced by `DynamoDbClient` feature
+- `src/config/` — replaced by `MigrationConfig` feature
+- `src/utils/logger.ts`, `src/utils/gzip-compression.ts`, `src/utils/tenants.ts`, `src/utils/test-helpers.ts`
+- `src/models/` — replaced by `ModelProvider` feature
+- `src/storage/s3-client.ts`, `src/storage/interface.ts` — replaced by `S3Client` feature
+- `src/opensearch/client.ts`, `src/opensearch/lifecycle.ts`, `src/opensearch/executor.ts` — replaced by `OpenSearchClient` feature + future OS executor
+- `__tests__/mocks/database-client.ts`, `__tests__/mocks/storage-client.ts`
 
-- Currently takes `{ database: DatabaseClient, storage: StorageClient }` — should resolve `TargetDynamoDbClient` + `TargetS3Client` from container
-- OS executor (`src/opensearch/executor.ts`) is separate and has its own migration path
-
-### Priority 2: Migrate command handlers to DI
-
-- `src/commands/processSegment/handler.ts` and `src/commands/processOsSegment/handler.ts` still use legacy imports (old DynamoDBClient, old logger, old tenants util, etc.)
-- They should call `bootstrap({ config })` and resolve features from the container instead of creating instances manually
-- Once migrated, delete all files listed in "Files to Delete" above
-- Most DI features are now ready — after pipeline/runner/executor migration, the handlers just need to resolve and call
-
-### Priority 3: Production-to-dev data transfer
+### Priority 4: Production-to-dev data transfer
 
 - Extend the tool to support production-to-dev data transfer (not just v5-to-v6 migration)
 - May need new presets, new config options, possibly new storage modes
@@ -384,3 +398,8 @@ The `TransformContext` factories are done. Remaining core components:
 - Implementation classes must be private (not exported) — tests resolve from shared container factories
 - Use `FileTool` / `DirectoryTool` for all file system operations in DI code — never import `node:fs` directly in features
 - `modelsDir` is resolved relative to the config file location by `loadConfig` — users write `"./models"` not absolute paths
+- Transform domain types (`BaseRecord`, `Command`, `Commands`, `Transformer`, `TransformPipeline`, filters, `MigrationPreset`) live in `~/domain/transform/` — plain data, not DI. Features consume them.
+- Context factories are mode-conditional. `BaseTransformContextFactory` resolves to the active factory (`registerFactory` in `TransformContext` feature) — dep on it for mode-agnostic code
+- Logger supports `child(prefix: string)` — use for scoped prefixes like `[segment #N]`. Child reuses parent pino instance
+- `DynamoDbClient.scan()` returns `AsyncIterable<BaseRecord>` (stronger type — all Webiny records have PK/SK/\_et/\_ct/\_md/TYPE). `query()`/`batchPut()` keep the lighter `DatabaseRecord` shape.
+- `Commands` collection has `.size()` / `.get(key)` / `.all()` / `.keys()` — no `.length` property
