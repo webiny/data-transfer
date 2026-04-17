@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript strict, `@webiny/di` (`Abstraction`, `Container`, `createAbstraction`), vitest, `~/` path alias (maps to `src/`).
 
-**Design reference:** `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" section captures all 16 grilled decisions this plan implements.
+**Design reference:** `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" section captures all grilled decisions this plan implements. Note in particular the **2026-04-17 revision note**: merge-group key is **scanner only** (not `(scanner, processor)`), match semantics are **"all matches run"** (not first-match), and filters are **always required**, enforced at `PipelineBuilder.build()`. The `Pipeline.accepts()` and `.run()` primitives in this plan stay correct under both models — the merge-group changes only affect the future runner-integration plan. The single change this plan absorbs is the always-required filter rule (see Task 9).
 
 **Out of scope (future plans):**
 - `PipelineRunner.pipeline()` factory and `register()` merge-group grouping/validation.
@@ -1222,14 +1222,18 @@ function makeContainer(): Container {
 }
 
 describe("PipelineBuilder — construction and build()", () => {
-    it("produces a Pipeline with the configured name and tokens", () => {
+    it("produces a Pipeline with the configured name, tokens, and filter", () => {
         const container = makeContainer();
+        const matchAll = createFilter<FakeRecord>(() => true);
+
         const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
             name: "basic",
             scanner: Scanner,
             processor: Processor,
             container
-        }).build();
+        })
+            .filter(matchAll)
+            .build();
 
         expect(pipeline).toBeInstanceOf(Pipeline);
         expect(pipeline.name).toBe("basic");
@@ -1237,7 +1241,7 @@ describe("PipelineBuilder — construction and build()", () => {
         expect(pipeline.processorToken).toBe(Processor);
         expect(pipeline.beforeHookTokens).toEqual([]);
         expect(pipeline.afterHookTokens).toEqual([]);
-        expect(pipeline.hasFilter).toBe(false);
+        expect(pipeline.hasFilter).toBe(true);
     });
 
     it("throws when name is empty", () => {
@@ -1251,6 +1255,18 @@ describe("PipelineBuilder — construction and build()", () => {
                     container
                 })
         ).toThrow(/name/i);
+    });
+
+    it("throws when build() is called without .filter()", () => {
+        const container = makeContainer();
+        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "no-filter",
+            scanner: Scanner,
+            processor: Processor,
+            container
+        });
+
+        expect(() => builder.build()).toThrow(/filter/i);
     });
 });
 ```
@@ -1301,7 +1317,19 @@ export class PipelineBuilder<TRecord = unknown, TContext = unknown, TShard = unk
         this.container = config.container;
     }
 
+    public filter(input: Filter<TRecord>): this {
+        this.filters = [input];
+        this.filterCalled = true;
+        return this;
+    }
+
     public build(): Pipeline<TRecord, TContext, TShard> {
+        if (!this.filterCalled) {
+            throw new Error(
+                `PipelineBuilder "${this.name}": .filter() is required ` +
+                    "(use createFilter(() => true) for an explicit catch-all)."
+            );
+        }
         const pipelineConfig: PipelineConfig<TRecord, TContext, TShard> = {
             name: this.name,
             scanner: this.scanner,
@@ -1344,7 +1372,9 @@ git commit -m "feat: add PipelineBuilder with name validation and build()"
 
 ---
 
-## Task 10: `PipelineBuilder.filter()` — single-call enforcement, single/array input
+## Task 10: `PipelineBuilder.filter()` — array input, single-call + empty-array guards
+
+> Task 9 already introduced a basic `.filter(input: Filter<TRecord>)` accepting a single filter. This task extends it to accept arrays and adds the two validation rules (no double-call, no empty array). Step 3 **replaces** the basic method, it does not add a new one.
 
 **Files:**
 - Modify: `src/domain/pipeline/PipelineBuilder.ts`
@@ -1355,8 +1385,8 @@ git commit -m "feat: add PipelineBuilder with name validation and build()"
 Append to `__tests__/domain/pipeline/PipelineBuilder.test.ts` (imports already include `createFilter` from Task 9):
 
 ```typescript
-describe("PipelineBuilder.filter()", () => {
-    it("accepts a single Filter and stores it on the pipeline", () => {
+describe("PipelineBuilder.filter() — extended rules", () => {
+    it("accepts a single Filter and routes records correctly via accepts()", () => {
         const container = makeContainer();
         const isFoo = createFilter<FakeRecord>((r) => r.type === "foo");
 
@@ -1426,14 +1456,14 @@ describe("PipelineBuilder.filter()", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [ ] **Step 2: Run tests to confirm the new ones fail**
 
 Run: `yarn test __tests__/domain/pipeline/PipelineBuilder.test.ts`
-Expected: FAIL — `.filter` not defined on builder.
+Expected: the single-filter test from Task 10 passes (Task 9's basic `.filter()` handles it). The array, double-call, and empty-array tests FAIL — basic `.filter()` does not accept arrays, does not reject second calls, and accepts empty arrays implicitly.
 
-- [ ] **Step 3: Add `.filter()` to `PipelineBuilder`**
+- [ ] **Step 3: Replace `.filter()` in `PipelineBuilder`**
 
-Add to `src/domain/pipeline/PipelineBuilder.ts`, inside the `PipelineBuilder` class:
+Replace the basic `.filter()` method added in Task 9 with the extended version in `src/domain/pipeline/PipelineBuilder.ts`:
 
 ```typescript
     public filter(input: Filter<TRecord> | Filter<TRecord>[]): this {
@@ -1459,7 +1489,7 @@ Add to `src/domain/pipeline/PipelineBuilder.ts`, inside the `PipelineBuilder` cl
 - [ ] **Step 4: Run tests**
 
 Run: `yarn test __tests__/domain/pipeline/PipelineBuilder.test.ts`
-Expected: PASS (all).
+Expected: PASS (all, including Task 9's basic-filter test).
 
 - [ ] **Step 5: Commit**
 
@@ -1468,7 +1498,7 @@ yarn format:fix
 yarn ts-check
 git add src/domain/pipeline/PipelineBuilder.ts \
         __tests__/domain/pipeline/PipelineBuilder.test.ts
-git commit -m "feat: PipelineBuilder.filter enforces single call, accepts arrays"
+git commit -m "feat: PipelineBuilder.filter accepts arrays and rejects double-call"
 ```
 
 ---
