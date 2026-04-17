@@ -69,7 +69,7 @@ describe("OpenSearchClient Feature", () => {
                 index: { refresh_interval: "1s" }
             });
 
-            const settings = client.getIndexSettings("test-index");
+            const settings = client.peekSettings("test-index");
             expect(settings).toEqual({ refresh_interval: "1s" });
         });
 

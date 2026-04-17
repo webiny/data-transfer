@@ -50,6 +50,17 @@ class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
             body: settings
         });
     }
+
+    public async getIndexSettings(
+        index: string
+    ): Promise<OpenSearchClientAbstraction.SettingsResponse> {
+        const { body } = await this.client.indices.getSettings({ index });
+        const indexBody = (body as Record<string, any>)[index];
+        const refreshInterval = indexBody?.settings?.index?.refresh_interval as string | undefined;
+        return {
+            refreshInterval
+        };
+    }
 }
 
 export const OpenSearchClient = OpenSearchClientAbstraction.createImplementation({

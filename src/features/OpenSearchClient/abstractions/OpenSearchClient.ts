@@ -1,4 +1,4 @@
-import { createAbstraction } from "@/src/base/index.ts";
+import { createAbstraction } from "~/base/index.ts";
 
 // ============================================================================
 // Types
@@ -20,11 +20,16 @@ export interface IndexCreateBody {
     settings?: Record<string, unknown>;
 }
 
+export interface IndexSettingsResponse {
+    refreshInterval?: string;
+}
+
 export interface IOpenSearchClient {
     indexExists(index: string): Promise<boolean>;
     createIndex(index: string, body?: IndexCreateBody): Promise<void>;
     listIndexes(): Promise<IndexInfo[]>;
     putIndexSettings(index: string, settings: IndexSettings): Promise<void>;
+    getIndexSettings(index: string): Promise<IndexSettingsResponse>;
 }
 
 // ============================================================================
@@ -38,4 +43,5 @@ export namespace OpenSearchClient {
     export type Settings = IndexSettings;
     export type Info = IndexInfo;
     export type CreateBody = IndexCreateBody;
+    export type SettingsResponse = IndexSettingsResponse;
 }
