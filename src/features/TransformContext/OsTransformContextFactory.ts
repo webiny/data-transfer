@@ -1,5 +1,6 @@
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { Command } from "~/domain/transform/types/commands.ts";
+import { Commands } from "~/domain/transform/commands/Commands.ts";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { BaseTransformContextFactory } from "./abstractions/BaseTransformContext.ts";
 import {
     OsTransformContext as OsTransformContextAbstraction,
@@ -25,9 +26,10 @@ class OsTransformContextFactoryImpl implements OsTransformContextFactoryAbstract
             throw new Error("OsTransformContextFactory can only be used in os mode");
         }
 
-        const commands: Command[] = [];
+        const commands = new Commands();
         const sourcePrimaryTable = this.config.source.dynamodb.tableName;
         const targetTable = this.config.target.opensearch.tableName;
+        const factory = this;
 
         const ctx: OsTransformContextAbstraction.Interface<any> = {
             record: structuredClone(params.record),
@@ -41,30 +43,26 @@ class OsTransformContextFactoryImpl implements OsTransformContextFactoryAbstract
             },
 
             putRecord: (record: Record<string, unknown>) => {
-                commands.push({
-                    type: "PUT_RECORD",
-                    table: targetTable,
-                    record
-                });
+                commands.add(PutRecord.create({ table: targetTable, record }));
             },
 
             queryRecord: async (pk: string, sk?: string) => {
-                const results = await this.sourceDb.query(sourcePrimaryTable, pk, sk);
+                const results = await factory.sourceDb.query(sourcePrimaryTable, pk, sk);
                 return results.length > 0 ? (results[0] as Record<string, unknown>) : null;
             },
 
             executePipeline: async (pipeline: any, records: Record<string, unknown>[]) => {
-                const allCommands: Command[] = [];
-
+                const merged = new Commands();
                 for (const record of records) {
-                    const result = await pipeline.run(record, this.config, this.sourceDb);
+                    const result = await pipeline.run(record, factory);
                     if (result) {
-                        allCommands.push(...result.commands);
+                        for (const cmd of result.commands.all()) {
+                            merged.add(cmd);
+                            commands.add(cmd);
+                        }
                     }
                 }
-
-                commands.push(...allCommands);
-                return allCommands;
+                return merged;
             }
         };
 

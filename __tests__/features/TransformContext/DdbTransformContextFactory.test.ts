@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DdbTransformContextFactory } from "../../../src/features/TransformContext/index.ts";
+import { PutRecord } from "../../../src/domain/transform/commands/PutRecord.ts";
+import { S3Copy } from "../../../src/domain/transform/commands/S3Copy.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 
 describe("DdbTransformContextFactory", () => {
@@ -59,7 +61,7 @@ describe("DdbTransformContextFactory", () => {
             const factory = container.resolve(DdbTransformContextFactory);
 
             const ctx = factory.create({ record: testRecord });
-            expect(ctx.commands).toEqual([]);
+            expect(ctx.commands.size()).toBe(0);
         });
 
         it("should have modelProvider", () => {
@@ -87,8 +89,8 @@ describe("DdbTransformContextFactory", () => {
             const ctx = factory.create({ record: testRecord });
             ctx.putRecord({ PK: "new", SK: "record" });
 
-            expect(ctx.commands).toHaveLength(1);
-            expect(ctx.commands[0].type).toBe("PUT_RECORD");
+            expect(ctx.commands.size()).toBe(1);
+            expect(ctx.commands.get(PutRecord.key)).toHaveLength(1);
         });
 
         it("copyFile should add an S3_COPY command", () => {
@@ -98,8 +100,8 @@ describe("DdbTransformContextFactory", () => {
             const ctx = factory.create({ record: testRecord });
             ctx.copyFile("source/key.jpg", "target/key.jpg");
 
-            expect(ctx.commands).toHaveLength(1);
-            expect(ctx.commands[0].type).toBe("S3_COPY");
+            expect(ctx.commands.size()).toBe(1);
+            expect(ctx.commands.get(S3Copy.key)).toHaveLength(1);
         });
 
         it("replace should swap the working record", () => {

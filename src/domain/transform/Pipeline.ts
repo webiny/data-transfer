@@ -1,9 +1,13 @@
 import type { BaseRecord } from "./types/records.ts";
-import type { PipelineResult } from "./types/commands.ts";
+import type { Commands } from "./commands/Commands.ts";
 import type { Transformer } from "./Transformer.ts";
 import type { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 export type RecordFilter<T = Record<string, unknown>> = (record: T) => boolean;
+
+export interface PipelineResult {
+    commands: Commands;
+}
 
 export class TransformPipeline<TInput extends Record<string, unknown> = Record<string, unknown>> {
     private transformers: Transformer<any>[] = [];

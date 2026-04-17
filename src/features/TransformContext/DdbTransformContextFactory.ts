@@ -1,5 +1,7 @@
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { Command } from "~/domain/transform/types/commands.ts";
+import { Commands } from "~/domain/transform/commands/Commands.ts";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
+import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
 import { BaseTransformContextFactory } from "./abstractions/BaseTransformContext.ts";
 import {
     DdbTransformContext as DdbTransformContextAbstraction,
@@ -27,11 +29,12 @@ class DdbTransformContextFactoryImpl implements DdbTransformContextFactoryAbstra
             throw new Error("DdbTransformContextFactory can only be used in ddb mode");
         }
 
-        const commands: Command[] = [];
+        const commands = new Commands();
         const sourcePrimaryTable = this.config.source.dynamodb.tableName;
         const targetPrimaryTable = this.config.target.dynamodb.tableName;
         const sourceFmBucket = this.config.source.s3.bucket;
         const targetFmBucket = this.config.target.s3.bucket;
+        const factory = this;
 
         const ctx: DdbTransformContextAbstraction.Interface<any> = {
             record: structuredClone(params.record),
@@ -45,44 +48,41 @@ class DdbTransformContextFactoryImpl implements DdbTransformContextFactoryAbstra
             },
 
             putRecord: (record: Record<string, unknown>) => {
-                commands.push({
-                    type: "PUT_RECORD",
-                    table: targetPrimaryTable,
-                    record
-                });
+                commands.add(PutRecord.create({ table: targetPrimaryTable, record }));
             },
 
             queryRecord: async (pk: string, sk?: string) => {
-                const results = await this.sourceDb.query(sourcePrimaryTable, pk, sk);
+                const results = await factory.sourceDb.query(sourcePrimaryTable, pk, sk);
                 return results.length > 0 ? (results[0] as Record<string, unknown>) : null;
             },
 
             executePipeline: async (pipeline: any, records: Record<string, unknown>[]) => {
-                const allCommands: Command[] = [];
-
+                const merged = new Commands();
                 for (const record of records) {
-                    const result = await pipeline.run(record, this.config, this.sourceDb);
+                    const result = await pipeline.run(record, factory);
                     if (result) {
-                        allCommands.push(...result.commands);
+                        for (const cmd of result.commands.all()) {
+                            merged.add(cmd);
+                            commands.add(cmd);
+                        }
                     }
                 }
-
-                commands.push(...allCommands);
-                return allCommands;
+                return merged;
             },
 
             copyFile: (sourceKey: string, targetKey: string) => {
-                commands.push({
-                    type: "S3_COPY",
-                    sourceBucket: sourceFmBucket,
-                    sourceKey,
-                    targetBucket: targetFmBucket,
-                    targetKey
-                });
+                commands.add(
+                    S3Copy.create({
+                        sourceBucket: sourceFmBucket,
+                        sourceKey,
+                        targetBucket: targetFmBucket,
+                        targetKey
+                    })
+                );
             },
 
             getFile: async (key: string) => {
-                return this.sourceS3.getObject(sourceFmBucket, key);
+                return factory.sourceS3.getObject(sourceFmBucket, key);
             }
         };
 

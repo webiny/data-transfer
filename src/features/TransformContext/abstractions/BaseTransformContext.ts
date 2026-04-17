@@ -2,7 +2,7 @@ import { createAbstraction } from "~/base/index.ts";
 import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
 import type { Cache } from "~/features/Cache/abstractions/Cache.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { Command } from "~/domain/transform/types/commands.ts";
+import type { Commands } from "~/domain/transform/commands/Commands.ts";
 
 // ============================================================================
 // Base Context Interface
@@ -11,13 +11,13 @@ import type { Command } from "~/domain/transform/types/commands.ts";
 interface IBaseTransformContext<TRecord = Record<string, unknown>> {
     record: TRecord;
     readonly original: Readonly<TRecord>;
-    readonly commands: Command[];
+    readonly commands: Commands;
     readonly modelProvider: ModelProvider.Interface;
     readonly cache: Cache.Interface;
     replace<TNew>(newRecord: TNew): void;
     putRecord(record: Record<string, unknown>): void;
     queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
-    executePipeline(pipeline: any, records: Record<string, unknown>[]): Promise<Command[]>;
+    executePipeline(pipeline: any, records: Record<string, unknown>[]): Promise<Commands>;
 }
 
 // ============================================================================

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { TransformPipeline } from "../../../src/domain/transform/Pipeline.ts";
 import type { Transformer } from "../../../src/domain/transform/Transformer.ts";
+import { PutRecord } from "../../../src/domain/transform/commands/PutRecord.ts";
+import { S3Copy } from "../../../src/domain/transform/commands/S3Copy.ts";
 import { DdbTransformContextFactory } from "../../../src/features/TransformContext/index.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 
@@ -65,9 +67,10 @@ describe("TransformPipeline", () => {
             const result = await pipeline.run(baseRecord, factory);
 
             expect(result).not.toBeNull();
-            expect(result!.commands).toHaveLength(1);
-            expect(result!.commands[0].type).toBe("PUT_RECORD");
-            expect((result!.commands[0] as any).record.title).toBe("Modified");
+            expect(result!.commands.size()).toBe(1);
+            const puts = result!.commands.get<PutRecord>(PutRecord.key);
+            expect(puts).toHaveLength(1);
+            expect(puts[0].record.title).toBe("Modified");
         });
 
         it("should emit extra commands from transformers", async () => {
@@ -84,10 +87,9 @@ describe("TransformPipeline", () => {
             const pipeline = new TransformPipeline().use(copyFileTransformer);
             const result = await pipeline.run(baseRecord, factory);
 
-            expect(result!.commands).toHaveLength(2);
-            const types = result!.commands.map(c => c.type);
-            expect(types).toContain("S3_COPY");
-            expect(types).toContain("PUT_RECORD");
+            expect(result!.commands.size()).toBe(2);
+            expect(result!.commands.get(PutRecord.key)).toHaveLength(1);
+            expect(result!.commands.get(S3Copy.key)).toHaveLength(1);
         });
 
         it("should call async transformers and await them", async () => {
@@ -105,7 +107,8 @@ describe("TransformPipeline", () => {
             const pipeline = new TransformPipeline().use(asyncTransformer);
             const result = await pipeline.run(baseRecord, factory);
 
-            expect((result!.commands[0] as any).record.asyncFlag).toBe(true);
+            const puts = result!.commands.get<PutRecord>(PutRecord.key);
+            expect(puts[0].record.asyncFlag).toBe(true);
         });
     });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { PipelineBuilder } from "../../../src/domain/transform/PipelineBuilder.ts";
 import { TransformPipeline } from "../../../src/domain/transform/Pipeline.ts";
 import type { Transformer } from "../../../src/domain/transform/Transformer.ts";
+import { PutRecord } from "../../../src/domain/transform/commands/PutRecord.ts";
 import { DdbTransformContextFactory } from "../../../src/features/TransformContext/index.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 
@@ -57,6 +58,7 @@ describe("PipelineBuilder", () => {
         };
 
         const result = await pipeline.run(record, factory);
-        expect((result!.commands[0] as any).record.tagged).toBe(true);
+        const puts = result!.commands.get<PutRecord>(PutRecord.key);
+        expect(puts[0].record.tagged).toBe(true);
     });
 });
