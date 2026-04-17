@@ -1,5 +1,6 @@
 import { createAbstraction } from "~/base/index.ts";
-import { BaseTransformContext } from "./BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { BaseTransformContext, BaseTransformContextFactory } from "./BaseTransformContext.ts";
 
 // ============================================================================
 // OS Context Interface
@@ -13,13 +14,9 @@ interface IOsTransformContext<
 // OS Factory Interface
 // ============================================================================
 
-interface ICreateParams<T extends BaseTransformContext.BaseRecord> {
-    record: T;
-}
-
-interface IOsTransformContextFactory {
-    create<T extends BaseTransformContext.BaseRecord>(
-        params: ICreateParams<T>
+interface IOsTransformContextFactory extends BaseTransformContextFactory.Interface {
+    create<T extends BaseRecord>(
+        params: BaseTransformContextFactory.CreateParams<T>
     ): IOsTransformContext<T>;
 }
 
@@ -39,5 +36,4 @@ export const OsTransformContextFactory = createAbstraction<IOsTransformContextFa
 
 export namespace OsTransformContextFactory {
     export type Interface = IOsTransformContextFactory;
-    export type CreateParams<T extends BaseTransformContext.BaseRecord> = ICreateParams<T>;
 }

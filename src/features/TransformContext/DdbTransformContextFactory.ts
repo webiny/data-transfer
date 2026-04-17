@@ -1,4 +1,6 @@
-import { BaseTransformContext } from "./abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { Command } from "~/domain/transform/types/commands.ts";
+import { BaseTransformContextFactory } from "./abstractions/BaseTransformContext.ts";
 import {
     DdbTransformContext as DdbTransformContextAbstraction,
     DdbTransformContextFactory as DdbTransformContextFactoryAbstraction
@@ -18,14 +20,14 @@ class DdbTransformContextFactoryImpl implements DdbTransformContextFactoryAbstra
         private readonly cache: Cache.Interface
     ) {}
 
-    public create<T extends BaseTransformContext.BaseRecord>(
-        params: DdbTransformContextFactoryAbstraction.CreateParams<T>
+    public create<T extends BaseRecord>(
+        params: BaseTransformContextFactory.CreateParams<T>
     ): DdbTransformContextAbstraction.Interface<T> {
         if (this.config.storage !== "ddb") {
             throw new Error("DdbTransformContextFactory can only be used in ddb mode");
         }
 
-        const commands: BaseTransformContext.Command[] = [];
+        const commands: Command[] = [];
         const sourcePrimaryTable = this.config.source.dynamodb.tableName;
         const targetPrimaryTable = this.config.target.dynamodb.tableName;
         const sourceFmBucket = this.config.source.s3.bucket;
@@ -56,7 +58,7 @@ class DdbTransformContextFactoryImpl implements DdbTransformContextFactoryAbstra
             },
 
             executePipeline: async (pipeline: any, records: Record<string, unknown>[]) => {
-                const allCommands: BaseTransformContext.Command[] = [];
+                const allCommands: Command[] = [];
 
                 for (const record of records) {
                     const result = await pipeline.run(record, this.config, this.sourceDb);

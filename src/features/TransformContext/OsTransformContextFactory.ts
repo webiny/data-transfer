@@ -1,4 +1,6 @@
-import { BaseTransformContext } from "./abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { Command } from "~/domain/transform/types/commands.ts";
+import { BaseTransformContextFactory } from "./abstractions/BaseTransformContext.ts";
 import {
     OsTransformContext as OsTransformContextAbstraction,
     OsTransformContextFactory as OsTransformContextFactoryAbstraction
@@ -16,14 +18,14 @@ class OsTransformContextFactoryImpl implements OsTransformContextFactoryAbstract
         private readonly cache: Cache.Interface
     ) {}
 
-    public create<T extends BaseTransformContext.BaseRecord>(
-        params: OsTransformContextFactoryAbstraction.CreateParams<T>
+    public create<T extends BaseRecord>(
+        params: BaseTransformContextFactory.CreateParams<T>
     ): OsTransformContextAbstraction.Interface<T> {
         if (this.config.storage !== "os") {
             throw new Error("OsTransformContextFactory can only be used in os mode");
         }
 
-        const commands: BaseTransformContext.Command[] = [];
+        const commands: Command[] = [];
         const sourcePrimaryTable = this.config.source.dynamodb.tableName;
         const targetTable = this.config.target.opensearch.tableName;
 
@@ -52,7 +54,7 @@ class OsTransformContextFactoryImpl implements OsTransformContextFactoryAbstract
             },
 
             executePipeline: async (pipeline: any, records: Record<string, unknown>[]) => {
-                const allCommands: BaseTransformContext.Command[] = [];
+                const allCommands: Command[] = [];
 
                 for (const record of records) {
                     const result = await pipeline.run(record, this.config, this.sourceDb);

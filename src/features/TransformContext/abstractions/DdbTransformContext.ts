@@ -1,5 +1,6 @@
 import { createAbstraction } from "~/base/index.ts";
-import { BaseTransformContext } from "./BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { BaseTransformContext, BaseTransformContextFactory } from "./BaseTransformContext.ts";
 
 // ============================================================================
 // DDB Context Interface
@@ -16,13 +17,9 @@ interface IDdbTransformContext<
 // DDB Factory Interface
 // ============================================================================
 
-interface ICreateParams<T extends BaseTransformContext.BaseRecord> {
-    record: T;
-}
-
-interface IDdbTransformContextFactory {
-    create<T extends BaseTransformContext.BaseRecord>(
-        params: ICreateParams<T>
+interface IDdbTransformContextFactory extends BaseTransformContextFactory.Interface {
+    create<T extends BaseRecord>(
+        params: BaseTransformContextFactory.CreateParams<T>
     ): IDdbTransformContext<T>;
 }
 
@@ -44,5 +41,4 @@ export const DdbTransformContextFactory = createAbstraction<IDdbTransformContext
 
 export namespace DdbTransformContextFactory {
     export type Interface = IDdbTransformContextFactory;
-    export type CreateParams<T extends BaseTransformContext.BaseRecord> = ICreateParams<T>;
 }

@@ -1,5 +1,6 @@
 export {
     BaseTransformContext,
+    BaseTransformContextFactory,
     DdbTransformContext,
     DdbTransformContextFactory,
     OsTransformContext,
