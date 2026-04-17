@@ -53,6 +53,11 @@ export class PipelineBuilder<TRecord = unknown, TContext = unknown, TShard = unk
         return this;
     }
 
+    public use(token: Abstraction<unknown>): this {
+        this.transformers.push(token);
+        return this;
+    }
+
     public build(): Pipeline<TRecord, TContext, TShard> {
         if (!this.filterCalled) {
             throw new Error(

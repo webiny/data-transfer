@@ -174,3 +174,42 @@ describe("PipelineBuilder.filter() — extended rules", () => {
         expect(() => builder.filter([])).not.toThrow(/empty/i);
     });
 });
+
+describe("PipelineBuilder.use()", () => {
+    it("chains the same transformer token twice — run() invokes it twice in order", async () => {
+        const container = makeContainer();
+        // makeContainer registered TagTransformerImpl on the FakeTransformer abstraction
+        // (singleton — one instance). Using the token twice means Pipeline.run will
+        // resolve that same instance twice and invoke transform() twice, each call
+        // pushing onto the context's emitted array.
+        const matchAll = createFilter<FakeRecord>(() => true);
+
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "with-transformers",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        })
+            .filter(matchAll)
+            .use(FakeTransformer)
+            .use(FakeTransformer)
+            .build();
+
+        const processor = container.resolve(Processor) as any;
+        const ctx = processor.createContext({ id: "r1", type: "foo" }) as FakeContext;
+        await pipeline.run(ctx);
+
+        expect(ctx.emitted).toEqual(["TAG:r1", "TAG:r1"]);
+    });
+
+    it("returns the builder for chaining", () => {
+        const container = makeContainer();
+        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "chain",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+            container
+        });
+        expect(builder.use(FakeTransformer)).toBe(builder);
+    });
+});
