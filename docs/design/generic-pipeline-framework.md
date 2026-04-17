@@ -488,6 +488,184 @@ preset-3-content-records
 
 ---
 
+## Resolved design decisions (grilled 2026-04-17)
+
+This section captures concrete design locks from a long grill session. These are not speculation — they are the decisions to implement. Future agents should treat this as ground truth unless a later note supersedes it.
+
+### Core abstractions
+
+Four primitives drive the model:
+
+```typescript
+namespace Scanner {
+    interface Interface<TRecord, TShard> {
+        listShards(): Promise<TShard[]>;
+        scan(shard: TShard): AsyncIterable<TRecord>;
+    }
+}
+
+namespace Processor {
+    interface Interface<TRecord, TContext extends BaseTransformContext.Interface<TRecord>> {
+        execute(commands: Commands): Promise<void>;
+        getShardState(): unknown;
+        createContext(record: TRecord): TContext;
+    }
+}
+
+namespace Hook {
+    interface Interface {
+        run(params: { runId: string; mergeGroupId: string }): Promise<void>;
+    }
+}
+
+type Filter<TRecord> = { kind: "fn"; fn: (record: TRecord) => boolean };
+```
+
+- **Scanner** is DI-registered, source-scoped. `TRecord` is fixed by scanner. `TShard` is JSON-serializable (crosses process boundary).
+- **Processor** is DI-registered, target-scoped. Owns context factory method. `TRecord` must match the scanner's TRecord (enforced by TypeScript via shared generic in the builder).
+- **Hook** is DI-registered. Single `run()` method. Receives runId + mergeGroupId at call time; everything else via constructor injection.
+- **Filter** is a plain function with a brand tag, produced via the `createFilter<TRecord>(fn)` helper.
+
+### `PipelineBuilder` + `Pipeline`
+
+Users never call `new PipelineBuilder(...)` directly. The runner exposes a factory method that internally injects container access:
+
+```typescript
+configure(runner: PipelineRunner.Interface): void {
+    const pipeline = runner.pipeline({
+        name: "ddb-regular",
+        scanner: RegularDynamoDbScanner,
+        processor: RegularDdbProcessor
+    })
+        .filter(isRegularRecord)     // single Filter OR Filter[]
+        .use(NormalizeKeys)          // DI token; multiple .use() calls chain
+        .use(TransformRegular)
+        .beforeExecuteCommands(DisableOsIndexes)   // optional, dedup'd at merge-group level
+        .afterExecuteCommands(ReenableOsIndexes)   // optional, dedup'd at merge-group level
+        .build();
+
+    runner.register(pipeline);
+}
+```
+
+**Builder rules:**
+
+- `.filter(input)` can be called **at most once**. Input is either a single `Filter<TRecord>` or a `Filter<TRecord>[]`. Array filters AND together, short-circuit on first false. Second `.filter()` call throws immediately.
+- `.filter()` with a type-predicate narrows `TRecord` for downstream `.use()` calls.
+- `.use(token)` accepts only DI tokens (not instances). Multiple `.use()` calls chain; registration order is preserved and meaningful (transformers run serially in order).
+- `.beforeExecuteCommands(token)` / `.afterExecuteCommands(token)` take DI tokens for `Hook.Interface` features. Multiple calls allowed.
+- `.build()` requires at minimum `name`, `scanner`, `processor`. Everything else defaults to empty.
+- `.build()` returns a `Pipeline` **class instance** with container baked in (not a frozen data struct — see rationale below).
+
+**Why Pipeline is a class, not a data struct:**
+
+Initial grill concluded "plain frozen object" for serialization benefits. Rejected on reflection — DI tokens don't serialize cleanly, and rehydrating them across process boundaries depends on container registrations being identical, which we can't guarantee. Pipeline instead holds a container reference and resolves tokens on demand. State files persist runtime progress only (`touchedIndexes`, shard counts) — the pipeline definition itself is rebuilt from preset code on resume.
+
+### Pipeline identity
+
+- **Name is required** on every pipeline, passed via builder config.
+- **Uniqueness enforced at `runner.register()` time** — duplicate names across any two pipelines (regardless of merge group) throw.
+- Names are human-readable (`ddb-regular`, `os-content`). Surface in resume UI, state paths, error messages, progress display.
+
+### Merge groups
+
+A **merge group** is a runtime bucket formed implicitly when two or more pipelines share the same scanner and processor DI tokens. Users don't declare merge groups — they emerge from registration.
+
+**Identity:** `mergeGroupId = sanitize(scannerToken.description) + "__" + sanitize(processorToken.description)`. Slashes replaced with dashes for filesystem safety. Human-readable. Example: `Core-DdbScanner__Core-DdbProcessor`.
+
+**Validation at `register()`:**
+
+- If a merge group has exactly one pipeline, that pipeline's filter is optional.
+- If a merge group has two or more pipelines, **every** pipeline in the group must have at least one filter (from `.filter(...)`). Throws with clear error naming filter-less pipelines.
+
+**Runtime semantics (within a group):**
+
+- Scanner runs once per shard (not per pipeline). Single scan, records routed.
+- Each scanned record is evaluated against each pipeline's filter **in registration order**. **First-match wins** — the record runs through that pipeline's transformer chain only. Other pipelines are skipped for that record.
+- Records that match no filter in the group are **silently dropped** (optional `logger.debug(...)` per dropped record, so it's observable when debug logging is on).
+- Commands from matched records accumulate into a shared batch; processor flushes batches.
+- `processor.getShardState()` aggregates state across the whole group (touchedIndexes from all 5 OS pipelines, for example). State is group-level, not pipeline-level.
+
+**Runtime semantics (across groups):**
+
+- Merge groups execute **sequentially in registration order** (order of the first-registered pipeline in each group). Parallel execution is rejected as a default; can be added later as opt-in.
+- Shards within a group run in parallel — one worker per shard.
+
+### Hooks
+
+**When they fire:** per merge-group lifecycle, in the orchestrator process. Not per-batch, not per-shard, not per-worker.
+
+Sequence for each merge group:
+1. Deduplicated before-hooks run in registration order (sequentially).
+2. Workers spawn, one per shard. Each worker: scans, routes, transforms, batches, flushes via processor, writes shard state file at end.
+3. If all workers succeed → deduplicated after-hooks run in reverse-registration order (LIFO, sequentially).
+4. If any worker fails → **after-hooks do NOT run**. Pipeline marked `failed`. User reruns to recover (before-hooks must be idempotent).
+
+**Deduplication:** within a merge group, hooks with the same DI token deduplicate. 5 OS pipelines each declaring `.beforeExecuteCommands(DisableOsIndexes)` → `DisableOsIndexes` runs once, not five times.
+
+**Across groups:** a hook token shared between two merge groups fires once per group (not once globally). Groups are independent lifecycles.
+
+**Error policy:**
+
+- Before-hook throws → merge group aborts (no workers spawned), run continues with next group.
+- Worker throws → pipeline marked `failed`, after-hook skipped, run continues with next group.
+- After-hook throws → pipeline marked `failed`, run continues with next group. User fixes and reruns whole pipeline.
+
+**Idempotency requirement:** before-hooks must be idempotent because the user's recovery model is rerun. `DisableOsIndexes` must be safe to call twice (second call: no-op or re-disable gracefully).
+
+### Filters
+
+- Produced via `createFilter<TRecord>(fn: (r: TRecord) => boolean): Filter<TRecord>`. Branded return type prevents passing random functions to `.filter()`.
+- Filters are **pure functions**, not DI features. Rationale: every existing filter in `src/domain/transform/filters.ts` is a pure predicate; no DI needs today. The one DI-touching gate (`tenantLocales.isDefaultLocaleRecord`) is currently inline in the handler, not a registered filter. When we migrate it, the preset's `configure` can close over a resolved `TenantLocales` instance.
+- If future demand requires DI-enabled filters, a second `createFilter({ deps, check })` form can be added non-breakingly.
+- Transformers and hooks stay DI classes — they have more complex dependencies and more ceremony is justified.
+
+### Context lifecycle
+
+- Context is **created per-record** by `processor.createContext(record)`. One fresh context per scanned record.
+- Context holds: `record` (mutable), `original` (readonly snapshot), `commands` (buffer for this record), plus DI-resolved deps (`modelProvider`, `cache`, target-specific emitters).
+- Transformers run sequentially on the context, each mutating or emitting commands.
+- After all transformers finish, commands are extracted from the context and merged into the worker's batch. Context is discarded.
+- Batching is the **worker framework's** responsibility, not the processor's. Worker accumulates N records' commands, calls `processor.execute(batch)` when threshold hit.
+
+### State persistence
+
+- Workers write `.transfer/<runId>/<mergeGroupId>/<shard>.json` at end of shard.
+- Content: JSON output of `processor.getShardState()`. Processor-defined shape (OS: `{ touchedIndexes: Record<string, number> }`; DDB: `{}` or minimal stats).
+- After-hooks read all shard-state files for their merge group and act on aggregated state.
+- Processor itself never touches the filesystem — worker framework owns file I/O. Separation of concerns: processor owns *what* the state is; framework owns *where/when* to persist.
+
+### Summary of concrete changes needed to implement this
+
+**New in `src/domain/transform/`:**
+
+- `Pipeline.ts` — class with container-held reference, exposes tokens + accepts/run methods.
+- `PipelineBuilder.ts` — internal builder; exposed only through `runner.pipeline()` factory.
+- `Filter.ts` — `Filter<T>` type + `createFilter` helper.
+
+**New abstractions (shapes, not implementations yet):**
+
+- `Scanner` abstraction namespace.
+- `Processor` abstraction namespace.
+- `Hook` abstraction namespace.
+
+**Changes to `src/features/PipelineRunner/`:**
+
+- Adds `pipeline(...)` factory method.
+- Adds `register()` with merge-group grouping + validation.
+- Internal state: `pipelinesByName: Map`, `mergeGroups: Map<groupId, PipelineGroup>`, registration order preserved.
+
+**Deferred until later PRs:**
+
+- Real `DdbScanner`, `OsScanner`, `DdbProcessor`, `OsProcessor` implementations.
+- Handler unification (the current `processSegment` / `processOsSegment` stay unchanged for now).
+- Preset migration (v5-to-v6-ddb, v5-to-v6-os stay on current API).
+- Interactive orchestration & resume state layer.
+
+This lets us build and TDD the builder in isolation — pure domain code, fake scanners/processors in tests, no DI surgery yet.
+
+---
+
 ## Recommendation
 
 **Short-term (Webiny only):** Either unify now via `SegmentStrategy` OR accept the small duplication between the two handlers and extract only the preamble into `__tests__/containers`-style shared helpers in `src/commands/`. Either is defensible.
