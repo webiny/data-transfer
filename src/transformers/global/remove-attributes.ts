@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Removes deprecated/obsolete attributes globally:
@@ -9,7 +9,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const removeAttributes: Transformer = {
     name: "removeAttributes",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         // Remove from data envelope

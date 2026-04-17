@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 // Reserved top-level attributes that should NOT be wrapped in data
 const RESERVED_ATTRIBUTES = new Set([
@@ -23,7 +23,7 @@ const RESERVED_ATTRIBUTES = new Set([
  */
 export const wrapInData: Transformer = {
     name: "wrapInData",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         // If data already exists, don't wrap again

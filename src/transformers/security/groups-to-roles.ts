@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Transforms Security Groups to Roles
@@ -8,7 +8,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const groupsToRoles: Transformer = {
     name: "groupsToRoles",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         // Only process security.group records

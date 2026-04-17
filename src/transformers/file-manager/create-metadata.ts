@@ -1,13 +1,13 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 
 /**
  * Creates file metadata records in KeyValue format for file entries
  * and emits S3 copy commands to move files to new location
  */
-export const createFileMetadata: Transformer = {
+export const createFileMetadata: Transformer<DdbTransformContext.Interface> = {
     name: "createFileMetadata",
-    transform(ctx: TransformContext) {
+    transform(ctx: DdbTransformContext.Interface) {
         const { record } = ctx;
 
         if (record.data && typeof record.data === "object") {
@@ -65,7 +65,7 @@ export const createFileMetadata: Transformer = {
                 _md: new Date().toISOString()
             };
 
-            ctx.putPrimaryRecord(metadataRecord);
+            ctx.putRecord(metadataRecord);
         }
     }
 };

@@ -12,6 +12,7 @@ export function createTestRunner(
     database: DatabaseClient
 ): MigrationRunner {
     const runner = new MigrationRunner(config, database);
-    v5ToV6Preset.configure(runner, config, database);
+    // Legacy adapter: new preset takes 1 arg; old runner has compatible register() method
+    v5ToV6Preset.configure(runner as any);
     return runner;
 }

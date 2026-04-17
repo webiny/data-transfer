@@ -1,12 +1,12 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Removes the tenant attribute from security role records
  */
 export const removeTenantAttribute: Transformer = {
     name: "removeTenantAttribute",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         delete ctx.record.tenant;
     }
 };

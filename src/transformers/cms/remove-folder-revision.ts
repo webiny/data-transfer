@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Handles folder location transformations:
@@ -10,7 +10,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const removeFolderRevision: Transformer = {
     name: "removeFolderRevision",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         // Extract data envelope

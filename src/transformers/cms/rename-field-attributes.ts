@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { ModelField, Template } from "../../models/types.ts";
 
 /**
@@ -9,7 +9,7 @@ import { ModelField, Template } from "../../models/types.ts";
  */
 export const renameFieldAttributes: Transformer = {
     name: "renameFieldAttributes",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         const data = record.data as Record<string, unknown> | undefined;

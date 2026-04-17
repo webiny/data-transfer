@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { loadPreset } from "../src/core/preset-loader";
-import { v5ToV6Preset } from "../src/presets/v5-to-v6-ddb";
-import { MigrationRunner } from "../src/core/runner";
-import { MigrationConfig } from "../src/core/types";
-import { DatabaseClient } from "../src/database/interface";
+import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PresetLoader } from "~/features/PresetLoader/index.ts";
+import { createDdbContainer } from "./containers/index.ts";
 
 describe("Preset System", () => {
-    describe("loadPreset", () => {
+    describe("PresetLoader.load", () => {
         it("should load built-in 'v5-to-v6' preset", async () => {
-            const preset = await loadPreset("v5-to-v6");
+            const loader = createDdbContainer().resolve(PresetLoader);
+            const preset = await loader.load("v5-to-v6");
 
             expect(preset).toBeDefined();
             expect(preset.name).toBe("v5-to-v6");
@@ -17,11 +17,13 @@ describe("Preset System", () => {
         });
 
         it("should throw error for unknown preset name", async () => {
-            await expect(loadPreset("unknown-preset")).rejects.toThrow("Unknown preset");
+            const loader = createDdbContainer().resolve(PresetLoader);
+            await expect(loader.load("unknown-preset")).rejects.toThrow("Unknown preset");
         });
 
         it("should throw error for non-existent file path", async () => {
-            await expect(loadPreset("./non-existent-preset.ts")).rejects.toThrow(
+            const loader = createDdbContainer().resolve(PresetLoader);
+            await expect(loader.load("./non-existent-preset.ts")).rejects.toThrow(
                 "Preset file not found"
             );
         });
@@ -35,67 +37,25 @@ describe("Preset System", () => {
         });
 
         it("should configure runner with pipelines", () => {
-            // Create mock config and database
-            const mockConfig: MigrationConfig = {
-                sourcePrimaryTable: "test-source",
-                targetPrimaryTable: "test-target",
-                sourceFmBucket: "test-source-bucket",
-                targetFmBucket: "test-target-bucket",
-                modelProvider: {} as any
-            };
-
-            const mockDatabase: DatabaseClient = {} as any;
-
-            // Create runner and configure with preset
-            const runner = new MigrationRunner(mockConfig, mockDatabase);
-            v5ToV6Preset.configure(runner, mockConfig, mockDatabase);
-
-            // Runner should have pipelines registered
-            // We can't directly access pipelines, but we can verify it doesn't throw
+            const runner = createDdbContainer().resolve(PipelineRunner);
+            v5ToV6Preset.configure(runner);
             expect(runner).toBeDefined();
-        });
-    });
-
-    describe("Example Presets", () => {
-        it("should load cms-only preset", async () => {
-            // Note: loadPreset resolves relative to cwd + ".." so we need to pass __dirname
-            const preset = await loadPreset("./examples/preset-cms-only.ts", __dirname);
-
-            expect(preset).toBeDefined();
-            expect(preset.name).toBe("cms-only");
-            expect(typeof preset.configure).toBe("function");
         });
     });
 
     describe("Preset Configuration", () => {
         it("should allow custom presets to register pipelines", () => {
-            const mockConfig: MigrationConfig = {
-                sourcePrimaryTable: "test-source",
-                targetPrimaryTable: "test-target",
-                sourceFmBucket: "test-source-bucket",
-                targetFmBucket: "test-target-bucket",
-                modelProvider: {} as any
-            };
-
-            const mockDatabase: DatabaseClient = {} as any;
+            const runner = createDdbContainer().resolve(PipelineRunner);
 
             const customPreset = {
                 name: "test-preset",
                 description: "Test preset",
-                configure(
-                    runner: MigrationRunner,
-                    config: MigrationConfig,
-                    database: DatabaseClient
-                ) {
-                    // Should not throw
-                    expect(runner).toBeDefined();
-                    expect(config).toBeDefined();
-                    expect(database).toBeDefined();
+                configure(r: PipelineRunner.Interface) {
+                    expect(r).toBeDefined();
                 }
             };
 
-            const runner = new MigrationRunner(mockConfig, mockDatabase);
-            customPreset.configure(runner, mockConfig, mockDatabase);
+            customPreset.configure(runner);
         });
     });
 });

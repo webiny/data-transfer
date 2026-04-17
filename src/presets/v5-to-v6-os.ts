@@ -1,6 +1,7 @@
-import { MigrationRunner } from "../core/runner.ts";
-import { MigrationPreset } from "../core/types.ts";
-import { PipelineBuilder, isCmsEntry } from "../core/pipelines.ts";
+import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import type { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import { PipelineBuilder } from "~/domain/transform/PipelineBuilder.ts";
+import { isCmsEntry } from "~/domain/transform/filters.ts";
 
 // Import global transformers
 import { wrapInData } from "../transformers/global/wrap-in-data.ts";
@@ -33,7 +34,7 @@ import { removeFolderRevision } from "../transformers/cms/remove-folder-revision
 export const v5ToV6OsPreset: MigrationPreset = {
     name: "v5-to-v6-os",
     description: "Webiny v5 to v6 OpenSearch migration — CMS entries",
-    configure(runner: MigrationRunner): void {
+    configure(runner: PipelineRunner.Interface): void {
         const cmsEntries = new PipelineBuilder()
             .filter(isCmsEntry)
             .use(wrapInData)

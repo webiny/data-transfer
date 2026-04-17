@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Removes #0001 revision from data.id and data.parentId in FLP records.
@@ -7,7 +7,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const updateFlpIds: Transformer = {
     name: "updateFlpIds",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         if (record.data && typeof record.data === "object") {

@@ -1,4 +1,5 @@
-import { PipelineBuilder, isCmsModel } from "../../core/pipelines.ts";
+import { PipelineBuilder } from "~/domain/transform/PipelineBuilder.ts";
+import { isCmsModel } from "~/domain/transform/filters.ts";
 import { wrapInData } from "../../transformers/global/wrap-in-data.ts";
 import { addGsiTenant } from "../../transformers/global/add-gsi-tenant.ts";
 import { removeLocale } from "../../transformers/global/remove-locale.ts";

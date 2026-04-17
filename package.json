@@ -16,7 +16,8 @@
     "test:coverage": "vitest run --coverage --coverage.include=\"src/**/**\"",
     "test:watch": "vitest",
     "format": "oxfmt",
-    "format:fix": "oxfmt"
+    "format:fix": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "keywords": [
     "webiny",

@@ -1,9 +1,7 @@
-import type { MigrationPreset, MigrationConfig } from "@/src/core/types.js";
-import { MigrationRunner } from "@/src/core/runner.ts";
-import { DatabaseClient } from "@/src/database/interface.ts";
-import { PipelineBuilder, isCmsModel, isCmsEntry, isFmFile } from "@/src/core/pipelines.ts";
-import { Transformer } from "@/src/core/transformer.js";
-import { TransformContext } from "@/src/core/types.js";
+import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import type { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 
 // Import transformers
 import { wrapInData } from "@/src/transformers/global/wrap-in-data.ts";
@@ -23,9 +21,9 @@ import { CmsEntryPipeline } from "@/src/presets/v5-to-v6/CmsEntryPipeline.js";
 // ============================================================================
 // Migrate specific model with referenced files
 // ============================================================================
-export const copyPartnerFiles: Transformer = {
+export const copyPartnerFiles: Transformer<DdbTransformContext.Interface> = {
     name: "copyPartnerFiles",
-    async transform(ctx: TransformContext) {
+    async transform(ctx: DdbTransformContext.Interface) {
         if (ctx.record.TYPE !== "cms.entry.l") {
             return;
         }
@@ -62,7 +60,7 @@ const PARTNER_MODEL_ID = "partner";
 export const preset: MigrationPreset = {
     name: "v5-cms-model-with-files",
     description: "Migrate specific model with referenced files from v5 to v6",
-    configure(runner: MigrationRunner): void {
+    configure(runner: PipelineRunner.Interface): void {
         const modelPipeline = new CmsModelPipeline()
             .filter(record => record.modelId === PARTNER_MODEL_ID)
             .build();

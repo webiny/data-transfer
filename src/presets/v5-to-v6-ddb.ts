@@ -1,6 +1,12 @@
-import { MigrationRunner } from "../core/runner.ts";
-import { MigrationPreset } from "../core/types.ts";
-import { PipelineBuilder, isFlpRecord, isSecurityTeam } from "../core/pipelines.ts";
+import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import type { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import { PipelineBuilder } from "~/domain/transform/PipelineBuilder.ts";
+import {
+    byType,
+    isBuiltInSecurityRole,
+    isFlpRecord,
+    isSecurityTeam
+} from "~/domain/transform/filters.ts";
 
 // Import global transformers
 import { wrapInData } from "../transformers/global/wrap-in-data.ts";
@@ -20,8 +26,6 @@ import { migrateMailerSettings } from "../transformers/mailer/migrate-settings.t
 // Import Security transformers
 import { groupsToRoles } from "../transformers/security/groups-to-roles.ts";
 import { transformPermissions } from "../transformers/security/transform-permissions.ts";
-import { isBuiltInSecurityRole } from "../core/pipelines.ts";
-import { byType } from "../core/pipelines.ts";
 import { CmsEntryPipeline } from "./v5-to-v6/CmsEntryPipeline.ts";
 import { CmsModelPipeline } from "./v5-to-v6/CmsModelPipeline.ts";
 import { FmFilePipeline } from "./v5-to-v6/FmFilePipeline.ts";
@@ -46,7 +50,7 @@ import { FmFilePipeline } from "./v5-to-v6/FmFilePipeline.ts";
 export const v5ToV6Preset: MigrationPreset = {
     name: "v5-to-v6",
     description: "Webiny v5 to v6 migration with all necessary transformations",
-    configure(runner: MigrationRunner): void {
+    configure(runner: PipelineRunner.Interface): void {
         // ========================================================================
         // File Manager Settings
         // ========================================================================

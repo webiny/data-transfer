@@ -1,7 +1,7 @@
-import type { MigrationPreset, MigrationConfig } from "@/src/core/types.js";
-import { MigrationRunner } from "@/src/core/runner.ts";
-import { DatabaseClient } from "@/src/database/interface.ts";
-import { PipelineBuilder, isCmsModel, isCmsEntry } from "@/src/core/pipelines.ts";
+import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import type { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import { PipelineBuilder } from "~/domain/transform/PipelineBuilder.ts";
+import { isCmsModel, isCmsEntry } from "~/domain/transform/filters.ts";
 
 // Import transformers
 import { wrapInData } from "@/src/transformers/global/wrap-in-data.ts";
@@ -22,7 +22,7 @@ import { transformModelGroup } from "@/src/transformers/cms/transform-model-grou
 export const preset: MigrationPreset = {
     name: "cms-only",
     description: "Migrate only CMS models and entries",
-    configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient): void {
+    configure(runner: PipelineRunner.Interface): void {
         // CMS Models pipeline
         const cmsModels = new PipelineBuilder()
             .filter(isCmsModel)

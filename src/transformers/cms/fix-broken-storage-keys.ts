@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { getCorrectStorageId } from "../../models/field-utils.ts";
 import { visitFields } from "../../utils/field-visitor.ts";
 
@@ -20,7 +20,7 @@ import { visitFields } from "../../utils/field-visitor.ts";
  */
 export const fixBrokenStorageKeys: Transformer = {
     name: "fixBrokenStorageKeys",
-    async transform(ctx: TransformContext) {
+    async transform(ctx: BaseTransformContext.Interface) {
         if (!ctx.modelProvider) {
             throw new Error("ModelProvider is required for fixBrokenStorageKeys");
         }

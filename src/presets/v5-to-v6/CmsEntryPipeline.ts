@@ -1,4 +1,5 @@
-import { PipelineBuilder, isCmsEntry } from "../../core/pipelines.ts";
+import { PipelineBuilder } from "~/domain/transform/PipelineBuilder.ts";
+import { isCmsEntry } from "~/domain/transform/filters.ts";
 
 // Import transformers
 import { wrapInData } from "../../transformers/global/wrap-in-data.ts";

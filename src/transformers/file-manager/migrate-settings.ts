@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Migrates File Manager settings from old format to KeyValue format.
@@ -7,7 +7,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const migrateFileManagerSettings: Transformer = {
     name: "migrateFileManagerSettings",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record, original } = ctx;
 
         // Only process if this is a File Manager settings record

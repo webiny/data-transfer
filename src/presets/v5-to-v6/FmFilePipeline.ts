@@ -1,4 +1,4 @@
-import { isFmFile } from "../../core/pipelines.ts";
+import { isFmFile } from "~/domain/transform/filters.ts";
 import { createFileMetadata } from "../../transformers/file-manager/create-metadata.ts";
 import { extractImageMetadata } from "../../transformers/file-manager/extract-image-metadata.ts";
 import { CmsEntryPipeline } from "./CmsEntryPipeline.js";

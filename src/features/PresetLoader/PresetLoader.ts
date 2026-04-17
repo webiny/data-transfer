@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { resolve, isAbsolute } from "node:path";
 import { existsSync } from "node:fs";
-import type { MigrationPreset } from "@/src/core/types.ts";
+import type { MigrationPreset } from "~/domain/transform/Preset.ts";
 import { PresetLoader as PresetLoaderAbstraction } from "./abstractions/PresetLoader.ts";
 import { Logger } from "../Logger/abstractions/Logger.ts";
 

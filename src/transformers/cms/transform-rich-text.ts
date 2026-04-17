@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { GzipCompression } from "../../utils/gzip-compression.ts";
 import { LexicalRenderer } from "../../utils/LexicalRenderer.ts";
 import { visitFields } from "../../utils/field-visitor.ts";
@@ -25,7 +25,7 @@ const lexicalRenderer = new LexicalRenderer();
  */
 export const transformRichText: Transformer = {
     name: "transformRichText",
-    async transform(ctx: TransformContext) {
+    async transform(ctx: BaseTransformContext.Interface) {
         if (!ctx.modelProvider) {
             return; // Model provider required
         }

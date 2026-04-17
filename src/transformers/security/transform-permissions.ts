@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Transforms security role permissions to v6 format:
@@ -10,7 +10,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const transformPermissions: Transformer = {
     name: "transformPermissions",
-    async transform(ctx: TransformContext) {
+    async transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         // Extract data envelope

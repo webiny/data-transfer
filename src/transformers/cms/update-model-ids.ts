@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 const MODEL_ID_MAP: Record<string, string> = {
     fmFile: "wbyFmFile",
@@ -16,7 +16,7 @@ const MODEL_ID_MAP: Record<string, string> = {
  */
 export const updateModelIds: Transformer = {
     name: "updateModelIds",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         // Update modelId in keys (PK, SK, GSI keys)

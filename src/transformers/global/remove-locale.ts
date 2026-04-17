@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Removes locale codes (e.g., L#en-US#) from PK, SK, and GSI keys,
@@ -7,7 +7,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const removeLocale: Transformer = {
     name: "removeLocale",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         // Keys that might contain locale codes

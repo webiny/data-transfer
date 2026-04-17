@@ -1,5 +1,5 @@
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Removes duplicate #CME# from PK
@@ -8,7 +8,7 @@ import { TransformContext } from "../../core/types.ts";
  */
 export const fixCmePk: Transformer = {
     name: "fixCmePk",
-    transform(ctx: TransformContext) {
+    transform(ctx: BaseTransformContext.Interface) {
         const { record } = ctx;
 
         if (typeof record.PK === "string" && record.PK.includes("#CME#CME#")) {

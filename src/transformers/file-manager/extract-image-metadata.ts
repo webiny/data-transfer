@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import ExifReader from "exifreader";
-import { Transformer } from "../../core/transformer.ts";
-import { TransformContext } from "../../core/types.ts";
+import type { Transformer } from "~/domain/transform/Transformer.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 
 const CACHE_PREFIX = "imageMetadata:";
 
@@ -10,9 +10,9 @@ const CACHE_PREFIX = "imageMetadata:";
  * For raster images, reads the file from S3 and extracts dimensions, EXIF, and IPTC.
  * Results are cached by fileId via ctx.cache so each file is only fetched once.
  */
-export const extractImageMetadata: Transformer = {
+export const extractImageMetadata: Transformer<DdbTransformContext.Interface> = {
     name: "extractImageMetadata",
-    async transform(ctx: TransformContext) {
+    async transform(ctx: DdbTransformContext.Interface) {
         const { record } = ctx;
 
         const data = record.data as Record<string, unknown> | undefined;
@@ -99,7 +99,7 @@ function getFileId(data: Record<string, unknown>): string | undefined {
 
 /** Check source DB for an existing KV metadata record (subsequent migration run). */
 async function resolveFileKeyFromDb(
-    ctx: TransformContext,
+    ctx: DdbTransformContext.Interface,
     data: Record<string, unknown>
 ): Promise<string | undefined> {
     const fileId = getFileId(data);
