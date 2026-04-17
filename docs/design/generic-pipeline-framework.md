@@ -266,6 +266,57 @@ export const example: MigrationPreset = {
 - `preset.finalize` → per-pipeline `.afterExecuteCommands()` (already there).
 - `preset.preload` → still useful at preset level, since multiple pipelines often share preloaded state (tenant locales, model definitions).
 
+### Pipeline merging & filter validation
+
+When a preset registers multiple pipelines with the **same scanner + same processor** combination, the runner should merge them into a single scan pass. Scanning a DDB table twice to run two separate pipelines is wasted I/O — one scan can feed both pipelines, with each pipeline's filter selecting the records it cares about.
+
+**Validation rule (enforced at `.build()` / `runner.register()` time, not at runtime):**
+
+> If two or more pipelines share the same `{ scanner, processor }` combination, **every** pipeline in that group MUST declare a `.filter(...)`. If any pipeline in the group lacks a filter, `runner.register()` throws with a clear error.
+
+Reason: a filter-less pipeline is a catch-all. If a catch-all coexists with a filtered pipeline on the same source, every record matches both — the runner cannot decide which pipeline's transforms to apply. That's a silent data corruption bug waiting to happen. Fail loudly at configuration time.
+
+**Example — valid:**
+```typescript
+// Both filtered → unambiguous
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    .filter(isRegularRecord)
+    .use(transformRegular)
+    .build();
+
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    .filter(isReferenceRecord)
+    .use(transformReference)
+    .build();
+```
+
+**Example — invalid:**
+```typescript
+// Second pipeline is filter-less → throws at register()
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    .filter(isRegularRecord)
+    .use(transformRegular)
+    .build();
+
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    // no .filter() — which records does this apply to? ambiguous
+    .use(transformEverything)
+    .build();
+```
+
+**Single-pipeline case:** A filter is still optional when only one pipeline uses a given scanner+processor combo — "all records from this scanner go through this pipeline" is unambiguous.
+
+**Implementation sketch:**
+- `PipelineRunner.register(pipeline)` groups pipelines by `{ scannerToken, processorToken }` key.
+- A finalization step (either on each `register` call or on a later `.freeze()` / first `.scan()`) walks the groups: for each group with `size > 1`, assert `every(p => p.hasFilter)`.
+- On execution: scanner yields records once; the runner evaluates filters in order and routes each record to the first matching pipeline's transform chain. (Alternative: run all matching pipelines' transforms — but that contradicts the "unambiguous" goal. First-match is safer.)
+
+**Open question:** what if two filters both match the same record? That's a filter overlap, different concern from the filter-less catch-all. Two reasonable policies:
+1. **Strict (first-match wins):** document the rule, tell authors to write disjoint filters. Cheap, no runtime cost.
+2. **Detection (runtime):** runner logs a warning when a record matches >1 filter in a group. Costs one extra filter eval per record.
+
+Recommendation: strict first-match. Detection adds cost for a class of bug that careful filter authoring avoids. Can always add `--strict-filters` mode later if it turns out to bite.
+
 ### What `PipelineBuilder` does NOT commit to
 
 The builder from the example suggests an API shape, not a full type contract. Open questions:
@@ -273,6 +324,7 @@ The builder from the example suggests an API shape, not a full type contract. Op
 - Does `scanner: OSTableScanner` pass a class (DI token) or an instance? Probably a DI token, resolved via `container.resolve()` inside `.build()` so the pipeline ends up holding a concrete scanner.
 - Does `processor` mean "command executor" (DDB/OS-flavored flusher) or "preprocessor" (decompress raw record)? In the example they're distinct concepts — in the current codebase `OsRecordDecompressor` does preprocessing, `DdbCommandExecutor`/`OsCommandExecutor` does flushing. Likely both roles merge into the scanner+processor pair: scanner yields domain records, processor owns flush + hooks.
 - How do `.beforeExecuteCommands` / `.afterExecuteCommands` fire? Once per batch? Once per segment? Once per run? Probably per-segment (matching current OS `touchedIndexes` persist lifecycle), but this needs pinning down.
+- What identity test decides "same scanner/processor"? DI token equality is simplest — `scanner: DdbScanner` refers to the token, two pipelines passing the same token are in the same group. Works as long as presets don't pass different configured instances of conceptually the same scanner.
 
 ---
 
