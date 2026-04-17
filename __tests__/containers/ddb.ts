@@ -17,6 +17,7 @@ import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts"
 import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts";
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
+import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
@@ -79,6 +80,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
+    PipelineRunnerFeature.register(container);
 
     return container;
 }

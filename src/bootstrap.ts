@@ -18,6 +18,7 @@ import { PresetLoaderFeature } from "./features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "./features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
 import { TransformContextFeature } from "./features/TransformContext/index.ts";
+import { PipelineRunnerFeature } from "./features/PipelineRunner/index.ts";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -90,6 +91,9 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     // Transform context factory (mode-specific)
     TransformContextFeature.register(container);
+
+    // Pipeline runner (depends on BaseTransformContextFactory)
+    PipelineRunnerFeature.register(container);
 
     return container;
 }
