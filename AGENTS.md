@@ -8,7 +8,7 @@ This document is read by AI agents (Claude Code, Copilot, Codex, etc.) when work
 
 This tool transfers Webiny data between environments. Current use case is v5-to-v6 migration, but it will also support production-to-dev data transfer for testing/development. Name things generically ("transfer" not "migration") where possible.
 
-**Long-term vision:** `docs/design/generic-pipeline-framework.md` captures an exploration of making the tool source-agnostic (MySQL, S3-direct, etc.) rather than hardcoded to DDB+OS. Read it before any big refactor to scanner/preprocessor/executor abstractions.
+**Long-term vision:** `docs/design/generic-pipeline-framework.md` is the living design doc covering three layers of future work: (1) short-term handler unification for DDB+OS, (2) medium-term pipeline-centric refactor where each pipeline binds its own scanner/processor (see `src/presets/example.ts` for the target API), (3) long-term interactive CLI orchestration with per-pipeline progress, resume-on-failure, and a fully source-agnostic framework (MySQL, S3-direct, etc.). Read it before any big refactor to scanner/preprocessor/executor abstractions or before touching the `run` command's orchestration loop.
 
 **Package name:** `@webiny/data-transfer`
 

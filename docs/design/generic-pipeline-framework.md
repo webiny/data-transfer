@@ -197,13 +197,256 @@ Per-preset builder functions. No generic config shape.
 - What about presets that need their own DI services (e.g., a MySQLClient)? The preset file could register its own feature in bootstrap BEFORE the handler resolves anything. Requires a preset lifecycle hook `registerServices(container)`.
 - Testing story — today `createDdbContainer` / `createOsContainer` give us a full container for tests. A generic framework needs per-preset test containers, OR a builder that composes them.
 
+## Pipeline-centric refinement (from `src/presets/example.ts`)
+
+After the above was written, Bruno sketched `src/presets/example.ts` to make the ergonomics concrete. That sketch clarifies a better decomposition than "preset owns one source/target":
+
+**One preset can register multiple pipelines, each with its OWN source and processor.** Scanner/processor binding moves from preset level to pipeline level.
+
+```typescript
+export const example: MigrationPreset = {
+    name: "example",
+    description: "Example complex preset",
+    configure(runner: PipelineRunner.Interface): void {
+        const regularPipeline = new PipelineBuilder({
+            processor: RegularProcessor,
+            scanner: RegularDynamoDbTableScanner
+        })
+            .filter(someFilterWhichOnlyWorksOnDynamoDbRegularRecord)
+            .use(someTransformation)
+            .use(someOtherTransformation)
+            .build();
+
+        const s3Pipeline = new PipelineBuilder({
+            processor: S3Processor,
+            scanner: S3Scanner
+        })
+            .filter(filterFile)
+            .use(someS3Transformation)
+            .build();
+
+        const osPipeline = new PipelineBuilder({
+            processor: OSProcessor,
+            scanner: OSTableScanner
+        })
+            .filter(filterOsRecord)
+            .use(someOsTransformation)
+            .beforeExecuteCommands(DisableOsIndexesWhichAreGettingTouched)
+            .afterExecuteCommands(ReenableOsIndexes)
+            .build();
+
+        runner.register(regularPipeline)
+              .register(s3Pipeline)
+              .register(osPipeline);
+    }
+};
+```
+
+### Why this is better
+
+1. **Type safety through scanner binding.** `PipelineBuilder({ scanner: OSTableScanner })` fixes `TRecord` to `OsRecord`. Filters and transformers attached after that point are statically typechecked against `OsRecord`. Can't accidentally put a DDB-only filter on an OS pipeline.
+
+2. **Multi-source presets become trivial.** A single "v5-to-v6 full migration" preset can register:
+   - DDB regular records pipeline
+   - OS records pipeline
+   - S3 file copy pipeline
+   - (future) MySQL backup pipeline
+
+   These run in parallel (or staged) under one preset — no need to split into three presets that the user has to invoke separately.
+
+3. **Per-pipeline lifecycle hooks.** `beforeExecuteCommands` / `afterExecuteCommands` attach to the pipeline that needs them — OS pipeline disables indexes; DDB pipeline doesn't care. No shared "strategy.finalize" surface area that has to know about every pipeline's quirks.
+
+4. **`Source`/`Target` abstractions collapse into `Scanner` + `Processor`.** The pipeline is the unit that binds them. Preset is just a registration shell.
+
+### Implications for the generic framework
+
+- `Preset<TRecord, TShard>` from the earlier section becomes `Pipeline<TRecord, TShard>`. The preset-level generics go away — it's just a list of pipelines, each with its own generics.
+- `preset.source` / `preset.target` → `pipeline.scanner` / `pipeline.processor`.
+- `preset.filter` → per-pipeline `.filter()` on the builder (already there in the example).
+- `preset.finalize` → per-pipeline `.afterExecuteCommands()` (already there).
+- `preset.preload` → still useful at preset level, since multiple pipelines often share preloaded state (tenant locales, model definitions).
+
+### What `PipelineBuilder` does NOT commit to
+
+The builder from the example suggests an API shape, not a full type contract. Open questions:
+
+- Does `scanner: OSTableScanner` pass a class (DI token) or an instance? Probably a DI token, resolved via `container.resolve()` inside `.build()` so the pipeline ends up holding a concrete scanner.
+- Does `processor` mean "command executor" (DDB/OS-flavored flusher) or "preprocessor" (decompress raw record)? In the example they're distinct concepts — in the current codebase `OsRecordDecompressor` does preprocessing, `DdbCommandExecutor`/`OsCommandExecutor` does flushing. Likely both roles merge into the scanner+processor pair: scanner yields domain records, processor owns flush + hooks.
+- How do `.beforeExecuteCommands` / `.afterExecuteCommands` fire? Once per batch? Once per segment? Once per run? Probably per-segment (matching current OS `touchedIndexes` persist lifecycle), but this needs pinning down.
+
+---
+
+## Interactive orchestration & resume
+
+The pipeline-centric model unlocks a user-facing workflow that's not possible today: **a preset with N pipelines can be guided, paused, and resumed.**
+
+### Problem
+
+Realistic Webiny customer migrations will have 10+ presets (per environment, per tenant slice), each with 1–5 pipelines. Running everything in one `yarn start run` invocation means:
+
+- No visibility into which pipeline is at what progress.
+- A failure at pipeline 4 of 5 in preset 3 of 10 throws the entire run away.
+- No way to cherry-pick "just rerun the OS pipeline from preset 7".
+
+The user wants an inquirer-driven CLI that guides through this interactively and resumes cleanly from partial state.
+
+### User-facing flow sketch
+
+```
+$ yarn start run --config migration.json
+
+Loaded config: 10 presets, 27 pipelines total.
+
+? Previous run detected (run-2026-04-17-143022). What do you want to do?
+  > Resume failed pipelines only (3 failed, 24 done)
+    Resume from specific preset
+    Restart everything (fresh run)
+    Inspect state without running
+
+? Select preset to resume: (Use arrow keys)
+  > [✓] preset-1-tenant-roots       (3/3 pipelines done)
+    [✓] preset-2-tenant-security    (5/5 pipelines done)
+  > [✗] preset-3-content-records    (2/4 pipelines done, 1 failed)
+    [⏸] preset-4-media               (0/5 pipelines, pending)
+    ...
+
+? Preset "preset-3-content-records" — what to run?
+    [✓] pipeline-ddb-regular         (done — shard 7/8)
+    [✓] pipeline-ddb-refs            (done)
+  > [✗] pipeline-os-content          (failed at shard 3/8 — "OS index full")
+    [⏸] pipeline-s3-assets           (pending)
+
+  > Resume failed pipeline from shard 3
+    Rerun failed pipeline from scratch
+    Skip this pipeline, run pending ones
+    Abort
+
+Running pipeline-os-content on shard 3... [####      ] 37%
+```
+
+### State model
+
+Persisted to `.transfer/<runId>/state.json`:
+
+```typescript
+interface RunState {
+    runId: string;
+    configHash: string;          // invalidate if config changed mid-run
+    startedAt: string;
+    presets: PresetState[];
+}
+
+interface PresetState {
+    name: string;
+    status: "pending" | "running" | "done" | "failed" | "partial";
+    pipelines: PipelineState[];
+}
+
+interface PipelineState {
+    name: string;
+    status: "pending" | "running" | "done" | "failed";
+    startedAt?: string;
+    finishedAt?: string;
+    error?: { message: string; shard?: unknown };
+    shards: ShardState[];            // populated after scanner.listShards()
+    touchedIndexes?: Record<string, number>;  // OS-specific, merged from workers
+}
+
+interface ShardState {
+    shard: unknown;                  // opaque — scanner defines
+    status: "pending" | "running" | "done" | "failed";
+    recordsProcessed?: number;
+    startedAt?: string;
+    finishedAt?: string;
+}
+```
+
+Written atomically after each state change (file-per-segment worker writes its shard state; orchestrator merges into root `state.json` on worker exit). This is the same pattern as `segment-N-indexes.json` today — already proven.
+
+### Resume granularity — the one real decision
+
+**Pipeline-level (recommended first):**
+- Pipeline either completed or didn't. Failed = rerun the whole pipeline.
+- State flag per pipeline: `done | failed | pending`.
+- Simple to implement: orchestrator reads state, skips `done` pipelines.
+- Idempotency requirement: transforms must be idempotent at the pipeline level, which the current DDB+OS work already assumes (target PK/SK overwrites).
+
+**Shard-level (future, if needed):**
+- Pipeline's shards individually checkpointed.
+- Resumes mid-pipeline at the last completed shard boundary.
+- Costs:
+  - Shard cursor written to `state.json` on every worker completion (already happens today for segments, just not exposed).
+  - Partial-batch semantics: what if pipeline failed mid-batch inside shard 5? Either (a) re-process shard 5 fully (idempotent assumption stronger), or (b) checkpoint inside shards (major complexity — per-record cursor).
+  - Retry classification: was the failure transient (network blip, retry same shard) or fatal (bad data, don't retry)?
+
+**Record-level (reject):** Not worth it. Per-record cursors explode state size, retries get ambiguous, and users don't actually want this granularity — they want "don't redo the 6 hours that already worked".
+
+Recommendation: ship pipeline-level resume. Promote to shard-level only when real customer feedback shows pipelines running long enough (>1h) that pipeline-level reruns are unacceptable.
+
+### Orchestrator changes
+
+Today: `run` command = spawn N workers with `--segment` / `--total`, wait for all, done.
+
+With interactive orchestration:
+
+1. **Plan phase.** Load config → load all presets → for each preset, invoke `configure(runner)` in a dry-run mode that collects pipelines without running them. Build the initial `RunState`.
+2. **Resume detection.** If `.transfer/<mostRecentRunId>/state.json` exists and `configHash` matches, offer to resume. Otherwise fresh run.
+3. **Interactive selection** (inquirer). User picks preset → pipeline → action. Or `--non-interactive` flag auto-chooses "resume all failed + pending".
+4. **Execution.** For the selected pipeline(s), call `scanner.listShards()` → spawn worker per shard → workers update their `ShardState` via segment-file writes → orchestrator polls and renders progress (existing `cli-progress` integrates).
+5. **State update.** On worker exit, orchestrator merges shard state into pipeline state. On all shards done, pipeline marked `done`. On any failure, pipeline marked `failed` with error details.
+6. **Loop back to step 3** until user exits or all pipelines `done`.
+
+### Non-interactive mode
+
+For CI / scripted usage, flags that bypass prompts:
+
+- `--resume-failed` — rerun only pipelines in `failed` state
+- `--resume-from <preset>[:<pipeline>]` — start here, run everything after
+- `--only <preset>[:<pipeline>]` — run just this one
+- `--fresh` — ignore existing state, start from scratch (confirmation required)
+
+These mirror the inquirer choices so any interactive session can be replayed as a non-interactive command.
+
+### Progress display
+
+Each pipeline gets its own progress row. The existing `cli-progress` + `TransferLifecycle` machinery supports this — just needs to emit events per-pipeline, not globally.
+
+```
+preset-3-content-records
+  pipeline-ddb-regular  [##########] 100%  12,432 records
+  pipeline-os-content   [####      ] 37%    4,811 records
+  pipeline-s3-assets    [          ] 0%     pending
+```
+
+### What has to be wired up
+
+- `MigrationPreset.configure(runner)` already registers pipelines — that's the plan phase primitive we need. No preset change required.
+- `Pipeline` needs a `name` field so state can reference it.
+- `Scanner.listShards()` becomes a public method (today `segments` is a top-level config option — needs to move onto the scanner).
+- `.transfer/` directory convention stays; `state.json` is a new file alongside the per-segment files.
+- Inquirer is a new dependency (`@inquirer/prompts`). Small addition.
+- Orchestrator rewrites its main loop around the state machine above.
+
+### What this does NOT require
+
+- No changes to `PipelineRunner` record processing.
+- No changes to filter / transformer / command code.
+- No changes to DI container wiring.
+- No changes to worker command internals — workers still get `--shard` / `--runId`, just with state-file side effects added.
+
+---
+
 ## Recommendation
 
 **Short-term (Webiny only):** Either unify now via `SegmentStrategy` OR accept the small duplication between the two handlers and extract only the preamble into `__tests__/containers`-style shared helpers in `src/commands/`. Either is defensible.
 
-**Long-term (generic framework):** Do this AFTER v5-to-v6 ships and we have real user feedback. Premature generalization before even one non-Webiny user exists is a big risk — the abstractions designed today will be wrong tomorrow.
+**Medium-term (pipeline-centric refactor):** Move to `PipelineBuilder` API from Bruno's example. This is a real refactor — the payoff is type safety, multi-source presets, and it unblocks interactive orchestration. Do this BEFORE the interactive-CLI work, because the pipeline-as-unit-of-progress assumption is what makes the state model clean.
 
-**Concrete next step:** if the user writes an `example-preset.ts` that targets MySQL or S3-direct, that's the input needed to validate this design. Let that preset drive which abstractions are actually needed, rather than designing in the abstract.
+**Long-term (interactive orchestration & resume):** Build once the pipeline-centric refactor lands. Start with pipeline-level resume; defer shard-level until customer feedback shows it's needed.
+
+**Long-term (fully generic framework):** Do this AFTER v5-to-v6 ships and we have real non-Webiny user feedback. Premature generalization before even one non-Webiny user exists is a big risk — the abstractions designed today will be wrong tomorrow.
+
+**Concrete next step:** keep `src/presets/example.ts` as the API target. Next PR after DI stabilization is introducing `PipelineBuilder` in `src/domain/transform/` with scanner/processor binding, then migrating one existing preset (v5-to-v6-ddb is the obvious pilot) to the new API.
 
 ---
 
