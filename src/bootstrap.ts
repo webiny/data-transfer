@@ -1,4 +1,5 @@
 import { Container } from "@webiny/di";
+import { ContainerToken } from "~/base/index.ts";
 import { MigrationConfig, MigrationConfigFeature } from "~/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "~/tools/Logger/index.ts";
 import { CacheFeature } from "~/tools/Cache/index.ts";
@@ -31,6 +32,7 @@ export interface BootstrapOptions {
 export function bootstrap(options: BootstrapOptions): Container {
     const { config } = options;
     const container = new Container();
+    container.registerInstance(ContainerToken, container);
 
     // Config
     MigrationConfigFeature.register(container, { config });
