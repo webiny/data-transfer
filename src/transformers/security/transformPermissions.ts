@@ -1,4 +1,4 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
@@ -8,9 +8,9 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
  * - Flattens cms.contentModel models from locale object to array
  * - Transforms cms.contentModelGroup groups from IDs to slugs
  */
-export const transformPermissions: Transformer = {
-    name: "transformPermissions",
-    async transform(ctx: BaseTransformContext.Interface) {
+export const transformPermissions = createTransformer<BaseTransformContext.Interface>(
+    "transformPermissions",
+    async ctx => {
         const { record } = ctx;
 
         // Extract data envelope
@@ -75,7 +75,7 @@ export const transformPermissions: Transformer = {
 
         data.permissions = transformedPermissions;
     }
-};
+);
 
 function extractDefaultLocale(pk: string): string {
     // Extract locale from PK like "T#root#L#en-US#GROUP#..."

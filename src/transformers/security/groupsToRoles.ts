@@ -1,4 +1,4 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
@@ -6,9 +6,9 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
  * - Changes GROUP -> ROLE in keys and TYPE
  * - Changes GROUPS -> ROLES in GSI keys
  */
-export const groupsToRoles: Transformer = {
-    name: "groupsToRoles",
-    transform(ctx: BaseTransformContext.Interface) {
+export const groupsToRoles = createTransformer<BaseTransformContext.Interface>(
+    "groupsToRoles",
+    ctx => {
         const { record } = ctx;
 
         // Only process security.group records
@@ -45,4 +45,4 @@ export const groupsToRoles: Transformer = {
             }
         }
     }
-};
+);

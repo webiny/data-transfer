@@ -24,8 +24,8 @@ import { updateFlpIds } from "../transformers/folders/updateFlpIds.ts";
 import { migrateMailerSettings } from "../transformers/mailer/migrateMailerSettings.ts";
 
 // Import Security transformers
-import { groupsToRoles } from "../transformers/security/groups-to-roles.ts";
-import { transformPermissions } from "../transformers/security/transform-permissions.ts";
+import { groupsToRoles } from "../transformers/security/groupsToRoles.ts";
+import { transformPermissions } from "../transformers/security/transformPermissions.ts";
 import { CmsEntryPipeline } from "./v5-to-v6/CmsEntryPipeline.ts";
 import { CmsModelPipeline } from "./v5-to-v6/CmsModelPipeline.ts";
 import { FmFilePipeline } from "./v5-to-v6/FmFilePipeline.ts";
