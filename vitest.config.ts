@@ -17,10 +17,6 @@ export default defineConfig({
             // Legacy tests using the removed PipelineRunner.processRecord/processAll APIs
             // and TransformPipeline. Will be ported (or deleted) as part of preset migration
             // and worker-integration plans. Re-enable each test once its consumer is migrated.
-            "__tests__/cms-entries.test.ts",
-            "__tests__/cms-model-field-attributes.test.ts",
-            "__tests__/file-manager-metadata.test.ts",
-            "__tests__/file-manager-settings.test.ts",
             "__tests__/folder-records.test.ts",
             "__tests__/full-table-migration.test.ts",
             "__tests__/integration/os-migration.test.ts",

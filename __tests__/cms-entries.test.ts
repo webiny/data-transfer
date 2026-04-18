@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
 import { ModelProvider } from "~/features/ModelProvider/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { GzipCompression } from "~/tools/GzipCompression/index.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { createDdbContainer } from "./containers/index.ts";
 import { MockDynamoDbClient } from "./services/DynamoDbClient/MockDynamoDbClient.ts";
 import {
@@ -16,84 +16,117 @@ import {
     v5BlogPostModel
 } from "./fixtures/v5-records.ts";
 
-function setup(withModel = false) {
-    const sourceRecords = withModel ? { "source-table": [v5BlogPostModel as any] } : undefined;
-    const container = createDdbContainer({ sourceRecords });
-    const runner = container.resolve(PipelineRunner);
-    const executor = container.resolve(DdbCommandExecutor);
-    const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
-    v5ToV6Preset.configure(runner);
-    return { container, runner, executor, targetDb };
+interface CmsEntryWrapped extends BaseRecord {
+    GSI_TENANT?: string;
+    GSI1_PK?: string;
+    webinyVersion?: string;
+    data: {
+        modelId?: string;
+        webinyVersion?: string;
+        location?: { folderId?: string };
+        values?: Record<string, unknown>;
+        scope?: string;
+        value?: Record<string, unknown>;
+        [key: string]: unknown;
+    };
+}
+
+interface CompressedField {
+    compression: string;
+    value: string;
+}
+
+interface RichTextPayload {
+    state?: string;
+    html?: string;
+    [key: string]: unknown;
 }
 
 describe("CMS Entries", () => {
     it("should transform CMS file entries", async () => {
-        const { runner, executor, targetDb } = setup();
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": [v5CmsFileEntry as BaseRecord] }
+        });
+        const runner = container.resolve(PipelineRunner);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        v5ToV6Preset.configure(runner);
 
-        const commands = await runner.processRecord(v5CmsFileEntry as any);
-        await executor.execute(commands);
+        await runner.run();
 
         const migratedRecords = targetDb.batchPutRecords;
         expect(migratedRecords.length).toBeGreaterThanOrEqual(1);
 
-        const migratedEntry = migratedRecords.find((r: any) => r.TYPE === "cms.entry.l") as any;
+        const migratedEntry = migratedRecords.find(
+            r => (r as BaseRecord).TYPE === "cms.entry.l"
+        ) as CmsEntryWrapped | undefined;
         expect(migratedEntry).toBeDefined();
+        const entry = migratedEntry as CmsEntryWrapped;
 
-        expect(migratedEntry.PK).not.toContain("#L#en-US#");
-        expect(migratedEntry.PK).toBe("T#root#CMS#CME#67dadc3209fa5e0002e5523f");
-        expect(migratedEntry.PK).not.toContain("#CME#CME#");
-        const cmeCount = (migratedEntry.PK.match(/#CME#/g) || []).length;
+        expect(entry.PK).not.toContain("#L#en-US#");
+        expect(entry.PK).toBe("T#root#CMS#CME#67dadc3209fa5e0002e5523f");
+        expect(entry.PK).not.toContain("#CME#CME#");
+        const cmeCount = (entry.PK.match(/#CME#/g) || []).length;
         expect(cmeCount).toBe(1);
 
-        expect(migratedEntry.data.modelId).toBe("wbyFmFile");
-        expect(migratedEntry.GSI_TENANT).toBe("root");
-        expect(migratedEntry.GSI1_PK).toBe("T#root#CMS#CME#M#wbyFmFile#L");
-        expect(migratedEntry.GSI1_PK).not.toContain("#L#en-US#");
+        expect(entry.data.modelId).toBe("wbyFmFile");
+        expect(entry.GSI_TENANT).toBe("root");
+        expect(entry.GSI1_PK).toBe("T#root#CMS#CME#M#wbyFmFile#L");
+        expect(entry.GSI1_PK).not.toContain("#L#en-US#");
 
-        expect(migratedEntry.data).toBeDefined();
-        expect(migratedEntry.data.values).toBeDefined();
-        expect(migratedEntry.data.location).toBeDefined();
-        expect(migratedEntry.data.location.folderId).toBe("root");
-        expect(migratedEntry.data.values["object@location"]).toBeUndefined();
-        expect(migratedEntry.data.values["text@name"]).toBe("NumbersGrid3.png");
-        expect(migratedEntry.data.values["text@key"]).toBe(
-            "67dadc3209fa5e0002e5523f/NumbersGrid3.png"
-        );
-        expect(migratedEntry.data.values["text@type"]).toBe("image/png");
-        expect(migratedEntry.data.values["number@size"]).toBe(131309);
-        expect(migratedEntry.webinyVersion).toBeUndefined();
-        expect(migratedEntry.data.webinyVersion).toBeUndefined();
+        expect(entry.data).toBeDefined();
+        expect(entry.data.values).toBeDefined();
+        const location = entry.data.location as { folderId?: string };
+        expect(location).toBeDefined();
+        expect(location.folderId).toBe("root");
+        const values = entry.data.values as Record<string, unknown>;
+        expect(values["object@location"]).toBeUndefined();
+        expect(values["text@name"]).toBe("NumbersGrid3.png");
+        expect(values["text@key"]).toBe("67dadc3209fa5e0002e5523f/NumbersGrid3.png");
+        expect(values["text@type"]).toBe("image/png");
+        expect(values["number@size"]).toBe(131309);
+        expect(entry.webinyVersion).toBeUndefined();
+        expect(entry.data.webinyVersion).toBeUndefined();
     });
 
     it("should create file metadata record", async () => {
-        const { runner, executor, targetDb } = setup();
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": [v5CmsFileEntry as BaseRecord] }
+        });
+        const runner = container.resolve(PipelineRunner);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        v5ToV6Preset.configure(runner);
 
-        const commands = await runner.processRecord(v5CmsFileEntry as any);
-        await executor.execute(commands);
+        await runner.run();
 
         const metadataRecord = targetDb.batchPutRecords.find(
-            (r: any) => r.TYPE === "KeyValueStore"
-        ) as any;
+            r => (r as BaseRecord).TYPE === "KeyValueStore"
+        ) as CmsEntryWrapped | undefined;
 
         expect(metadataRecord).toBeDefined();
-        expect(metadataRecord.PK).toContain("FileManager/File/");
-        expect(metadataRecord.PK).toContain("/Metadata");
-        expect(metadataRecord.data.scope).toBe("global");
-        expect(metadataRecord.data.value.contentType).toBe("image/png");
-        expect(metadataRecord.data.value.size).toBe(131309);
-        expect(metadataRecord.data.value.bucketKey).toBe(
+        const meta = metadataRecord as CmsEntryWrapped;
+        expect(meta.PK).toContain("FileManager/File/");
+        expect(meta.PK).toContain("/Metadata");
+        expect(meta.data.scope).toBe("global");
+        const value = meta.data.value as Record<string, unknown>;
+        expect(value.contentType).toBe("image/png");
+        expect(value.size).toBe(131309);
+        expect(value.bucketKey).toBe(
             "tenants/root/files/67dadc3209fa5e0002e5523f/NumbersGrid3.png"
         );
     });
 
     it("should remove duplicate #CME# from PK", async () => {
-        const { runner, executor, targetDb } = setup();
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": [v5CmsEntryWithDuplicateCme as BaseRecord] }
+        });
+        const runner = container.resolve(PipelineRunner);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        v5ToV6Preset.configure(runner);
 
-        const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme as any);
-        await executor.execute(commands);
+        await runner.run();
 
         expect(targetDb.batchPutRecords).toHaveLength(1);
-        const migratedRecord = targetDb.batchPutRecords[0] as any;
+        const migratedRecord = targetDb.batchPutRecords[0] as BaseRecord;
 
         expect(migratedRecord.PK).toContain("#CME#");
         expect(migratedRecord.PK).not.toContain("#CME#CME#");
@@ -102,24 +135,38 @@ describe("CMS Entries", () => {
     });
 
     it("should update modelIds in keys and data", async () => {
-        const { runner, executor, targetDb } = setup();
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": [v5CmsEntryWithDuplicateCme as BaseRecord] }
+        });
+        const runner = container.resolve(PipelineRunner);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        v5ToV6Preset.configure(runner);
 
-        const commands = await runner.processRecord(v5CmsEntryWithDuplicateCme as any);
-        await executor.execute(commands);
+        await runner.run();
 
-        const migratedRecord = targetDb.batchPutRecords[0] as any;
+        const migratedRecord = targetDb.batchPutRecords[0] as CmsEntryWrapped;
         expect(migratedRecord.data.modelId).toBe("wbyAcoFolder");
-        expect(migratedRecord.data.values["text@parentId"]).toBe("696f439b9b76ee0002969341");
+        const values = migratedRecord.data.values as Record<string, unknown>;
+        expect(values["text@parentId"]).toBe("696f439b9b76ee0002969341");
     });
 
     it("should process all CMS entry types (cms.entry, cms.entry.l, cms.entry.p)", async () => {
-        const { runner, executor, targetDb } = setup();
+        const container = createDdbContainer({
+            sourceRecords: {
+                "source-table": [
+                    v5CmsFileEntry as BaseRecord,
+                    v5CmsEntryLatest as BaseRecord,
+                    v5CmsEntryPublished as BaseRecord
+                ]
+            }
+        });
+        const runner = container.resolve(PipelineRunner);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        v5ToV6Preset.configure(runner);
 
-        await executor.execute(await runner.processRecord(v5CmsFileEntry as any));
-        await executor.execute(await runner.processRecord(v5CmsEntryLatest as any));
-        await executor.execute(await runner.processRecord(v5CmsEntryPublished as any));
+        await runner.run();
 
-        const migratedRecords = targetDb.batchPutRecords as any[];
+        const migratedRecords = targetDb.batchPutRecords as CmsEntryWrapped[];
 
         const entryLRecord = migratedRecords.find(
             r => r.TYPE === "cms.entry.l" && r.data.modelId === "wbyFmFile"
@@ -134,40 +181,56 @@ describe("CMS Entries", () => {
         expect(entryLRecord).toBeDefined();
         expect(entryRecord).toBeDefined();
         expect(entryPRecord).toBeDefined();
-        expect(entryLRecord.PK).not.toContain("#L#en-US#");
-        expect(entryRecord.PK).not.toContain("#L#en-US#");
-        expect(entryPRecord.PK).not.toContain("#L#en-US#");
-        expect(entryLRecord.GSI_TENANT).toBe("root");
-        expect(entryRecord.GSI_TENANT).toBe("root");
-        expect(entryPRecord.GSI_TENANT).toBe("root");
-        expect(entryLRecord.data).toBeDefined();
-        expect(entryRecord.data).toBeDefined();
-        expect(entryPRecord.data).toBeDefined();
-        expect(entryLRecord.data.values).toBeDefined();
-        expect(entryRecord.data.values).toBeDefined();
-        expect(entryPRecord.data.values).toBeDefined();
+        const latest = entryLRecord as CmsEntryWrapped;
+        const normal = entryRecord as CmsEntryWrapped;
+        const published = entryPRecord as CmsEntryWrapped;
+        expect(latest.PK).not.toContain("#L#en-US#");
+        expect(normal.PK).not.toContain("#L#en-US#");
+        expect(published.PK).not.toContain("#L#en-US#");
+        expect(latest.GSI_TENANT).toBe("root");
+        expect(normal.GSI_TENANT).toBe("root");
+        expect(published.GSI_TENANT).toBe("root");
+        expect(latest.data).toBeDefined();
+        expect(normal.data).toBeDefined();
+        expect(published.data).toBeDefined();
+        expect(latest.data.values).toBeDefined();
+        expect(normal.data.values).toBeDefined();
+        expect(published.data.values).toBeDefined();
     });
 
     it("should transform rich-text fields recursively", async () => {
-        const { container, runner, executor, targetDb } = setup(true);
+        const container = createDdbContainer({
+            sourceRecords: {
+                "source-table": [
+                    v5BlogPostModel as BaseRecord,
+                    v5CmsEntryWithRichText as BaseRecord
+                ]
+            }
+        });
+        const runner = container.resolve(PipelineRunner);
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
         const modelProvider = container.resolve(ModelProvider);
         await modelProvider.preloadModels(new Map([["root", "en-US"]]));
+        v5ToV6Preset.configure(runner);
 
-        const commands = await runner.processRecord(v5CmsEntryWithRichText as any);
-        await executor.execute(commands);
+        await runner.run();
 
-        expect(targetDb.batchPutRecords).toHaveLength(1);
+        const entryRecords = targetDb.batchPutRecords.filter(
+            r => (r as BaseRecord).TYPE === "cms.entry.l"
+        ) as CmsEntryWrapped[];
+        expect(entryRecords).toHaveLength(1);
 
-        const migratedRecord = targetDb.batchPutRecords[0] as any;
-        const values = migratedRecord.data.values;
+        const migratedRecord = entryRecords[0];
+        const values = migratedRecord.data.values as Record<string, unknown>;
 
         const gzip = container.resolve(GzipCompression);
 
-        expect(values["rich-text@8m79z9nx"]).toBeDefined();
-        expect(values["rich-text@8m79z9nx"].compression).toBe("gzip");
-        expect(values["rich-text@8m79z9nx"].value).toBeDefined();
+        const topLevel = values["rich-text@8m79z9nx"] as CompressedField;
+        expect(topLevel).toBeDefined();
+        expect(topLevel.compression).toBe("gzip");
+        expect(topLevel.value).toBeDefined();
 
-        const topLevelRTE = (await gzip.decompress(values["rich-text@8m79z9nx"])) as any;
+        const topLevelRTE = (await gzip.decompress(topLevel)) as RichTextPayload;
         expect(topLevelRTE).toBeDefined();
         expect(topLevelRTE.state).toBeDefined();
         expect(topLevelRTE.html).toBeDefined();
@@ -175,20 +238,22 @@ describe("CMS Entries", () => {
         expect(typeof topLevelRTE.html).toBe("string");
         expect(topLevelRTE.state).toContain('"root"');
 
-        const dzArray = values["dynamicZone@nfyelol7"];
+        const dzArray = values["dynamicZone@nfyelol7"] as Record<string, unknown>[];
         expect(Array.isArray(dzArray)).toBe(true);
-        expect(dzArray[0]["rich-text@xip2xhvz"]).toBeDefined();
-        expect(dzArray[0]["rich-text@xip2xhvz"].compression).toBe("gzip");
+        const dzField = dzArray[0]["rich-text@xip2xhvz"] as CompressedField;
+        expect(dzField).toBeDefined();
+        expect(dzField.compression).toBe("gzip");
 
-        const dzRTE = (await gzip.decompress(dzArray[0]["rich-text@xip2xhvz"])) as any;
+        const dzRTE = (await gzip.decompress(dzField)) as RichTextPayload;
         expect(dzRTE.state).toContain('"root"');
 
-        const objArray = values["object@f0baxz0w"];
+        const objArray = values["object@f0baxz0w"] as Record<string, unknown>[];
         expect(Array.isArray(objArray)).toBe(true);
-        expect(objArray[0]["rich-text@5fzaks3u"]).toBeDefined();
-        expect(objArray[0]["rich-text@5fzaks3u"].compression).toBe("gzip");
+        const objField = objArray[0]["rich-text@5fzaks3u"] as CompressedField;
+        expect(objField).toBeDefined();
+        expect(objField.compression).toBe("gzip");
 
-        const objArrayRTE = (await gzip.decompress(objArray[0]["rich-text@5fzaks3u"])) as any;
+        const objArrayRTE = (await gzip.decompress(objField)) as RichTextPayload;
         expect(objArrayRTE.state).toContain('"root"');
     });
 });
