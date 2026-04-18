@@ -19,8 +19,7 @@ import {
     FakeProcessorImpl,
     FakeHookAImpl,
     FakeHookBImpl,
-    FakeTransformer,
-    TagTransformerImpl,
+    tagTransformer,
     FakeProcessor,
     FakeScanner
 } from "../../domain/pipeline/fixtures/fakes.ts";
@@ -68,7 +67,6 @@ function makeContainer(options: { runId?: string } = {}): {
     container.registerInstance(TransferContext, { runId: options.runId ?? "test-run-id" });
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
-    container.register(TagTransformerImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();
     container.register(FakeHookBImpl).inSingletonScope();
     PipelineRunnerFeature.register(container);
@@ -95,7 +93,7 @@ function buildPipeline(
     });
     builder.filter(createFilter<FakeRecord>(extras.filterFn ?? (() => true)));
     if (extras.useTransformer) {
-        builder.use(FakeTransformer);
+        builder.use(tagTransformer);
     }
     if (extras.beforeHook) {
         builder.beforeExecuteCommands(extras.beforeHook);
@@ -178,22 +176,10 @@ describe("PipelineRunner.run()", () => {
             { id: "r2", type: "foo" }
         ];
 
-        // Inline emitting transformer: register a token-backed class that pushes a
-        // command into ctx.commands per record.
-        interface IEmitTransformer {
-            transform(ctx: FakeContext): void;
-        }
-        class EmitTransformer implements IEmitTransformer {
-            public transform(ctx: FakeContext): void {
-                ctx.commands.add({ key: "TEST_CMD" });
-            }
-        }
-        const EmitToken = createAbstraction<IEmitTransformer>("Test/EmitTransformer");
-        const EmitImpl = EmitToken.createImplementation({
-            implementation: EmitTransformer,
-            dependencies: []
-        });
-        container.register(EmitImpl).inSingletonScope();
+        // Inline emitting transformer — a plain function that pushes a command per record.
+        const emit = (ctx: FakeContext): void => {
+            ctx.commands.add({ key: "TEST_CMD" });
+        };
 
         const runner = container.resolve(PipelineRunner);
         const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
@@ -201,7 +187,7 @@ describe("PipelineRunner.run()", () => {
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
-        builder.filter(createFilter<FakeRecord>(() => true)).use(EmitToken);
+        builder.filter(createFilter<FakeRecord>(() => true)).use(emit);
         runner.register(builder.build() as unknown as AnyPipeline);
         await runner.run();
 
@@ -224,20 +210,9 @@ describe("PipelineRunner.run()", () => {
             { id: "r3", type: "foo" }
         ];
 
-        interface IEmitTransformer {
-            transform(ctx: FakeContext): void;
-        }
-        class EmitTransformer implements IEmitTransformer {
-            public transform(ctx: FakeContext): void {
-                ctx.commands.add({ key: "TEST_CMD" });
-            }
-        }
-        const EmitToken = createAbstraction<IEmitTransformer>("Test/EmitTransformerShared");
-        const EmitImpl = EmitToken.createImplementation({
-            implementation: EmitTransformer,
-            dependencies: []
-        });
-        container.register(EmitImpl).inSingletonScope();
+        const emit = (ctx: FakeContext): void => {
+            ctx.commands.add({ key: "TEST_CMD" });
+        };
 
         const runner = container.resolve(PipelineRunner);
 
@@ -246,14 +221,14 @@ describe("PipelineRunner.run()", () => {
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
-        builderA.filter(createFilter<FakeRecord>(r => r.type === "foo")).use(EmitToken);
+        builderA.filter(createFilter<FakeRecord>(r => r.type === "foo")).use(emit);
 
         const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
             name: "shared-bar",
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
-        builderB.filter(createFilter<FakeRecord>(r => r.type === "bar")).use(EmitToken);
+        builderB.filter(createFilter<FakeRecord>(r => r.type === "bar")).use(emit);
 
         runner
             .register(builderA.build() as unknown as AnyPipeline)

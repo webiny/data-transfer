@@ -8,7 +8,7 @@ import {
     Hook,
     createFilter
 } from "~/domain/pipeline/index.ts";
-import { FakeTransformer } from "./fixtures/fakes.ts";
+import { tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
 
 describe("PipelineBuilder — construction and build()", () => {
@@ -140,7 +140,7 @@ describe("PipelineBuilder.filter() — extended rules", () => {
 });
 
 describe("PipelineBuilder.use()", () => {
-    it("chains the same transformer token twice and exposes both via transformerTokens", () => {
+    it("chains the same transformer function twice and exposes both via transformerFns", () => {
         const matchAll = createFilter<FakeRecord>(() => true);
 
         const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
@@ -149,13 +149,13 @@ describe("PipelineBuilder.use()", () => {
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         })
             .filter(matchAll)
-            .use(FakeTransformer)
-            .use(FakeTransformer)
+            .use(tagTransformer)
+            .use(tagTransformer)
             .build();
 
-        expect(pipeline.transformerTokens).toHaveLength(2);
-        expect(pipeline.transformerTokens[0]).toBe(FakeTransformer);
-        expect(pipeline.transformerTokens[1]).toBe(FakeTransformer);
+        expect(pipeline.transformerFns).toHaveLength(2);
+        expect(pipeline.transformerFns[0]).toBe(tagTransformer);
+        expect(pipeline.transformerFns[1]).toBe(tagTransformer);
     });
 
     it("returns the builder for chaining", () => {
@@ -164,7 +164,7 @@ describe("PipelineBuilder.use()", () => {
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         });
-        expect(builder.use(FakeTransformer)).toBe(builder);
+        expect(builder.use(tagTransformer)).toBe(builder);
     });
 });
 

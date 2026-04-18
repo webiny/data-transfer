@@ -1,5 +1,4 @@
 import { Container } from "@webiny/di";
-import { createAbstraction } from "~/base/index.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { Scanner, Processor, Hook } from "~/domain/pipeline/index.ts";
 import type { FakeRecord, FakeShard, FakeContext } from "./types.ts";
@@ -76,39 +75,16 @@ export const FakeHookBImpl = Hook.createImplementation({
     dependencies: []
 });
 
-// A distinct Transformer abstraction for tests — isolated from src/domain/transform/Transformer.ts
-// so we can register fakes without reaching into production abstractions.
-interface IFakeTransformer {
-    transform(ctx: FakeContext): void | Promise<void>;
-}
+// Plain function transformers — no DI, no abstractions. The pipeline
+// builder takes functions directly via `.use(fn)`.
 
-export const FakeTransformer = createAbstraction<IFakeTransformer>("Test/FakeTransformer");
-export namespace FakeTransformer {
-    export type Interface = IFakeTransformer;
-}
+export const tagTransformer = (ctx: FakeContext): void => {
+    ctx.emit(`TAG:${ctx.record.id}`);
+};
 
-export class TagTransformer implements IFakeTransformer {
-    public tag: string = "TAG";
-    public transform(ctx: FakeContext): void {
-        ctx.emit(`${this.tag}:${ctx.record.id}`);
-    }
-}
-
-export const TagTransformerImpl = FakeTransformer.createImplementation({
-    implementation: TagTransformer,
-    dependencies: []
-});
-
-export class UppercaseTransformer implements IFakeTransformer {
-    public transform(ctx: FakeContext): void {
-        ctx.record.type = ctx.record.type.toUpperCase();
-    }
-}
-
-export const UppercaseTransformerImpl = FakeTransformer.createImplementation({
-    implementation: UppercaseTransformer,
-    dependencies: []
-});
+export const uppercaseTransformer = (ctx: FakeContext): void => {
+    ctx.record.type = ctx.record.type.toUpperCase();
+};
 
 export function registerFakes(container: Container): void {
     container.register(FakeScannerImpl).inSingletonScope();

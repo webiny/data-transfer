@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { Abstraction } from "@webiny/di";
 import { Pipeline, Scanner, Processor, createFilter } from "~/domain/pipeline/index.ts";
 import type { PipelineConfig } from "~/domain/pipeline/Pipeline.ts";
-import { FakeTransformer } from "./fixtures/fakes.ts";
+import { tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
 
 function baseConfig(
@@ -23,7 +23,7 @@ function baseConfig(
 describe("Pipeline — construction + getters", () => {
     it("exposes name, scanner/processor tokens, and empty hook lists", () => {
         const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
-            baseConfig({ name: "exposes-tokens", transformers: [FakeTransformer] })
+            baseConfig({ name: "exposes-tokens", transformers: [tagTransformer] })
         );
 
         expect(pipeline.name).toBe("exposes-tokens");
@@ -33,14 +33,14 @@ describe("Pipeline — construction + getters", () => {
         expect(pipeline.afterHookTokens).toEqual([]);
     });
 
-    it("exposes transformerTokens in registration order", () => {
+    it("exposes transformerFns in registration order", () => {
         const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
-            baseConfig({ transformers: [FakeTransformer, FakeTransformer] })
+            baseConfig({ transformers: [tagTransformer, tagTransformer] })
         );
 
-        expect(pipeline.transformerTokens).toHaveLength(2);
-        expect(pipeline.transformerTokens[0]).toBe(FakeTransformer);
-        expect(pipeline.transformerTokens[1]).toBe(FakeTransformer);
+        expect(pipeline.transformerFns).toHaveLength(2);
+        expect(pipeline.transformerFns[0]).toBe(tagTransformer);
+        expect(pipeline.transformerFns[1]).toBe(tagTransformer);
     });
 
     it("reports hasFilter=false when filters array is empty", () => {

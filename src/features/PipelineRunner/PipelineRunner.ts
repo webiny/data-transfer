@@ -4,7 +4,6 @@ import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.ts";
 import type { Hook } from "~/domain/pipeline/abstractions/Hook.ts";
 import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
@@ -142,9 +141,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 matched = true;
                 const processor = pipelineToProcessor.get(pipeline)!;
                 const ctx = processor.createContext(record);
-                for (const token of pipeline.transformerTokens) {
-                    const transformer = this.container.resolve(token);
-                    await transformer.transform(ctx);
+                for (const transformer of pipeline.transformerFns) {
+                    await transformer(ctx);
                 }
                 let buffer = processorBuffers.get(processor);
                 if (!buffer) {

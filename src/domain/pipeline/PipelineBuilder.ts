@@ -23,7 +23,7 @@ export class PipelineBuilder<
 
     private filters: Filter<TRecord>[] = [];
     private filterCalled = false;
-    private transformers: Abstraction<Transformer.Interface<TContext>>[] = [];
+    private transformers: Transformer.Interface<TContext>[] = [];
     private beforeHooks: Abstraction<Hook.Interface>[] = [];
     private afterHooks: Abstraction<Hook.Interface>[] = [];
 
@@ -55,8 +55,8 @@ export class PipelineBuilder<
         return this;
     }
 
-    public use(token: Abstraction<Transformer.Interface<TContext>>): this {
-        this.transformers.push(token);
+    public use(transformer: Transformer.Interface<TContext>): this {
+        this.transformers.push(transformer);
         return this;
     }
 

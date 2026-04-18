@@ -10,7 +10,7 @@ export interface PipelineConfig<TRecord, TContext extends Processor.Context, TSh
     readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
     readonly processor: Abstraction<Processor.Interface<TRecord, TContext>>;
     readonly filters: readonly Filter<TRecord>[];
-    readonly transformers: readonly Abstraction<Transformer.Interface<TContext>>[];
+    readonly transformers: readonly Transformer.Interface<TContext>[];
     readonly beforeHooks: readonly Abstraction<Hook.Interface>[];
     readonly afterHooks: readonly Abstraction<Hook.Interface>[];
 }
@@ -44,7 +44,7 @@ export class Pipeline<
         return this.config.afterHooks;
     }
 
-    public get transformerTokens(): readonly Abstraction<Transformer.Interface<TContext>>[] {
+    public get transformerFns(): readonly Transformer.Interface<TContext>[] {
         return this.config.transformers;
     }
 

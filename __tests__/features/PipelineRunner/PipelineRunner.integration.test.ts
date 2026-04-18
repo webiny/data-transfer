@@ -7,7 +7,6 @@ import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
-import { createAbstraction } from "~/base/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
@@ -15,24 +14,9 @@ import { DdbScanner } from "~/features/DdbScanner/index.ts";
 
 type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
 
-interface IPassthroughTransformer {
-    transform(ctx: DdbTransformContext.Interface<BaseRecord>): void;
-}
-
-class PassthroughTransformer implements IPassthroughTransformer {
-    public transform(ctx: DdbTransformContext.Interface<BaseRecord>): void {
-        ctx.commands.add(PutRecord.create({ table: "target-table", record: { ...ctx.record } }));
-    }
-}
-
-const PassthroughTransformerToken = createAbstraction<IPassthroughTransformer>(
-    "Test/PassthroughTransformer"
-);
-
-const PassthroughTransformerImpl = PassthroughTransformerToken.createImplementation({
-    implementation: PassthroughTransformer,
-    dependencies: []
-});
+const passthroughTransformer = (ctx: DdbTransformContext.Interface<BaseRecord>): void => {
+    ctx.commands.add(PutRecord.create({ table: "target-table", record: { ...ctx.record } }));
+};
 
 function makeRecord(pk: string, sk: string, type: string): BaseRecord {
     return {
@@ -55,7 +39,6 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const container = createDdbContainer({
             sourceRecords: { "source-table": sourceRecords }
         });
-        container.register(PassthroughTransformerImpl).inSingletonScope();
 
         const runner = container.resolve(PipelineRunner);
 
@@ -72,7 +55,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         teamsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
-            .use(PassthroughTransformerToken);
+            .use(passthroughTransformer);
         runner.register(teamsBuilder.build() as unknown as AnyPipeline);
 
         const groupsBuilder = runner.pipeline<
@@ -88,7 +71,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         groupsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.group"))
-            .use(PassthroughTransformerToken);
+            .use(passthroughTransformer);
         runner.register(groupsBuilder.build() as unknown as AnyPipeline);
 
         await runner.run();
