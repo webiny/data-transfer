@@ -28,7 +28,6 @@ export default defineConfig({
             "__tests__/integration/os-migration.test.ts",
             "__tests__/mailer-settings.test.ts",
             "__tests__/os-table-migration.test.ts",
-            "__tests__/preset-pipelines.test.ts",
             "__tests__/preset-system.test.ts",
             "__tests__/record-filtering.test.ts",
             "__tests__/security-groups-to-roles.test.ts",

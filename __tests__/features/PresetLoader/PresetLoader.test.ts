@@ -29,9 +29,7 @@ describe("PresetLoader Feature", () => {
     });
 
     describe("load", () => {
-        // Skipped until Plan B rewrites `src/presets/v5-to-v6-ddb.ts` to stop importing
-        // the deleted legacy `CmsEntryPipeline`/`CmsModelPipeline`/`FmFilePipeline` classes.
-        it.skip("should load v5-to-v6 built-in preset", async () => {
+        it("should load v5-to-v6 built-in preset", async () => {
             const container = createDdbContainer();
             const preset = await container.resolve(PresetLoader).load("v5-to-v6");
             expect(preset.name).toBe("v5-to-v6");
