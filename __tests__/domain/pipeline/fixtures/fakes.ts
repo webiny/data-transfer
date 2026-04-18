@@ -1,5 +1,6 @@
 import { Container } from "@webiny/di";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { Scanner, Processor, Hook } from "~/domain/pipeline/index.ts";
 import type { FakeRecord, FakeShard, FakeContext } from "./types.ts";
 
@@ -34,15 +35,19 @@ export class FakeProcessor implements Processor.Interface<FakeRecord, FakeContex
     }
 
     public createContext(record: FakeRecord): FakeContext {
+        const commands = new Commands();
         const ctx: FakeContext = {
             record,
             emitted: [],
-            commands: new Commands(),
+            commands,
             emit(value: string): void {
                 ctx.emitted.push(value);
             },
-            putRecord(_record: Record<string, unknown>): void {
-                // no-op: fake context; runner's auto-put is a no-op here
+            putRecord(rec: Record<string, unknown>): void {
+                // Mirror real DdbTransformContextFactory semantics: emit a PutRecord
+                // into the context's commands buffer. Keeps the fake honest so the
+                // runner's auto-put is observable in unit tests.
+                commands.add(PutRecord.create({ table: "target-table", record: rec }));
             }
         };
         return ctx;

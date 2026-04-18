@@ -14,7 +14,7 @@ import {
 } from "./abstractions/PipelineRunner.ts";
 
 interface AutoPutContext {
-    record: unknown;
+    record: Record<string, unknown>;
     putRecord(record: Record<string, unknown>): void;
 }
 
@@ -149,12 +149,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 for (const transformer of pipeline.transformerFns) {
                     await transformer(ctx);
                 }
-                // Auto-put: emit a PutRecord for the final ctx.record. Matches the legacy
-                // TransformPipeline contract where the pipeline ended with an implicit
-                // ctx.putRecord(ctx.record). Transformers that want to emit ADDITIONAL
-                // commands (e.g., createMetadata's secondary PutRecord) still can.
+                // Auto-put: match legacy TransformPipeline which ended with an implicit
+                // ctx.putRecord(ctx.record). Without this, mutation-only transformers write nothing.
                 const autoPutCtx = ctx as unknown as AutoPutContext;
-                autoPutCtx.putRecord(autoPutCtx.record as Record<string, unknown>);
+                autoPutCtx.putRecord(autoPutCtx.record);
                 let buffer = processorBuffers.get(processor);
                 if (!buffer) {
                     buffer = new Commands();

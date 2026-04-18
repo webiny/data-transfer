@@ -152,19 +152,22 @@ describe("PipelineRunner.register()", () => {
 });
 
 describe("PipelineRunner.run()", () => {
-    it("does not call processor.execute when transformers emit no commands", async () => {
+    it("auto-emits a PutRecord per matched record when transformers emit no commands", async () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         const processor = container.resolve(Processor) as FakeProcessor;
         scanner.records = [{ id: "r1", type: "foo" }];
 
-        // TagTransformer pushes to ctx.emitted but adds nothing to ctx.commands.
-        // Buffer stays empty → no execute() call.
+        // TagTransformer pushes to ctx.emitted but adds nothing of its own to
+        // ctx.commands. The runner's auto-put (mirroring the legacy TransformPipeline
+        // contract) still emits a PutRecord for ctx.record, so the processor buffer
+        // is flushed with exactly one command.
         const runner = container.resolve(PipelineRunner);
         runner.register(buildPipeline(container, "single", { useTransformer: true }));
         await runner.run();
 
-        expect(processor.executed).toHaveLength(0);
+        expect(processor.executed).toHaveLength(1);
+        expect(processor.executed[0]?.size()).toBe(1);
     });
 
     it("flushes per-processor buffers via execute() when commands are emitted", async () => {
@@ -192,9 +195,10 @@ describe("PipelineRunner.run()", () => {
         await runner.run();
 
         // One execute() call per processor at shard end (we have one shard, one processor).
-        // Buffer contains 2 commands (one per record).
+        // Buffer contains 4 commands: 2 from the emit transformer (one per record) plus
+        // 2 from the runner's auto-put (one PutRecord per record).
         expect(processor.executed).toHaveLength(1);
-        expect(processor.executed[0]?.size()).toBe(2);
+        expect(processor.executed[0]?.size()).toBe(4);
     });
 
     it("aggregates commands across pipelines sharing a processor token into one execute() call", async () => {
@@ -235,10 +239,11 @@ describe("PipelineRunner.run()", () => {
             .register(builderB.build() as unknown as AnyPipeline);
         await runner.run();
 
-        // Single processor instance → one execute() call per shard, with all 3 commands
-        // (3 records, each claimed by exactly one pipeline, all targeting the shared processor).
+        // Single processor instance → one execute() call per shard. Buffer holds
+        // 6 commands total: 3 from the emit transformer (one per record across both
+        // pipelines) plus 3 from the runner's auto-put (one PutRecord per record).
         expect(processor.executed).toHaveLength(1);
-        expect(processor.executed[0]?.size()).toBe(3);
+        expect(processor.executed[0]?.size()).toBe(6);
     });
 
     it("evaluates pipelines in registration order and runs only the first match (first-match-wins)", async () => {
