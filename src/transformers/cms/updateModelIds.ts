@@ -1,4 +1,4 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 const MODEL_ID_MAP: Record<string, string> = {
@@ -14,9 +14,9 @@ const MODEL_ID_MAP: Record<string, string> = {
  * Updates modelIds in keys and data.modelId attribute.
  * NOTE: This transformer expects wrapInData to run FIRST, so modelId is in data.modelId.
  */
-export const updateModelIds: Transformer = {
-    name: "updateModelIds",
-    transform(ctx: BaseTransformContext.Interface) {
+export const updateModelIds = createTransformer<BaseTransformContext.Interface>(
+    "updateModelIds",
+    ctx => {
         const { record } = ctx;
 
         // Update modelId in keys (PK, SK, GSI keys)
@@ -36,7 +36,7 @@ export const updateModelIds: Transformer = {
             }
         }
     }
-};
+);
 
 function updateModelIdInString(value: string): string {
     let result = value;

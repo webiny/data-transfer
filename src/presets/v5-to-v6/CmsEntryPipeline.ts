@@ -7,9 +7,9 @@ import { addGsiTenant } from "../../transformers/global/addGsiTenant.ts";
 import { removeLocale } from "../../transformers/global/removeLocale.ts";
 import { removeAttributes } from "../../transformers/global/removeAttributes.ts";
 import { fixCmePk } from "../../transformers/cms/fixCmePk.ts";
-import { fixBrokenStorageKeys } from "../../transformers/cms/fix-broken-storage-keys.ts";
-import { transformRichText } from "../../transformers/cms/transform-rich-text.ts";
-import { updateModelIds } from "../../transformers/cms/update-model-ids.ts";
+import { fixBrokenStorageKeys } from "../../transformers/cms/fixBrokenStorageKeys.ts";
+import { transformRichText } from "../../transformers/cms/transformRichText.ts";
+import { updateModelIds } from "../../transformers/cms/updateModelIds.ts";
 import { removeFolderRevision } from "../../transformers/cms/removeFolderRevision.ts";
 
 /**

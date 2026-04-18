@@ -1,12 +1,8 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { GzipCompression } from "../../utils/gzip-compression.ts";
 import { LexicalRenderer } from "../../utils/LexicalRenderer.ts";
 import { visitFields } from "../../utils/field-visitor.ts";
-
-// ============================================================================
-// Transform Rich-Text Transformer
-// ============================================================================
 
 // Singleton instances for performance
 const gzipCompression = new GzipCompression();
@@ -23,9 +19,9 @@ const lexicalRenderer = new LexicalRenderer();
  * 4. Converts to { state: JSON.stringify(value), html: renderer.render(value) }
  * 5. Re-compresses and replaces the field value
  */
-export const transformRichText: Transformer = {
-    name: "transformRichText",
-    async transform(ctx: BaseTransformContext.Interface) {
+export const transformRichText = createTransformer<BaseTransformContext.Interface>(
+    "transformRichText",
+    async ctx => {
         if (!ctx.modelProvider) {
             return; // Model provider required
         }
@@ -62,7 +58,7 @@ export const transformRichText: Transformer = {
             }
         );
     }
-};
+);
 
 /**
  * Transforms a single rich-text field value

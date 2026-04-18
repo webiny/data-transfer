@@ -1,11 +1,7 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { getCorrectStorageId } from "../../models/field-utils.ts";
 import { visitFields } from "../../utils/field-visitor.ts";
-
-// ============================================================================
-// Fix Broken Storage Keys Transformer
-// ============================================================================
 
 /**
  * Fixes broken storage keys in CMS entry values.
@@ -18,9 +14,9 @@ import { visitFields } from "../../utils/field-visitor.ts";
  * The transformer uses the model definition as source of truth and recursively
  * fixes all field keys throughout the entry values structure.
  */
-export const fixBrokenStorageKeys: Transformer = {
-    name: "fixBrokenStorageKeys",
-    async transform(ctx: BaseTransformContext.Interface) {
+export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Interface>(
+    "fixBrokenStorageKeys",
+    async ctx => {
         if (!ctx.modelProvider) {
             throw new Error("ModelProvider is required for fixBrokenStorageKeys");
         }
@@ -50,7 +46,7 @@ export const fixBrokenStorageKeys: Transformer = {
         // Fix all keys recursively using field visitor
         await fixAllKeys(values as Record<string, unknown>, model.fields);
     }
-};
+);
 
 /**
  * Recursively fixes storage keys in entry values based on model field definitions
