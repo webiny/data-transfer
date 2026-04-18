@@ -24,6 +24,8 @@ import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
 import { OsCommandExecutorFeature } from "~/features/OsCommandExecutor/index.ts";
 import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/index.ts";
+import { OsScannerFeature } from "~/features/OsScanner/index.ts";
+import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -102,6 +104,8 @@ export function bootstrap(options: BootstrapOptions): Container {
     } else {
         OsCommandExecutorFeature.register(container);
         OsRecordDecompressorFeature.register(container);
+        OsScannerFeature.register(container);
+        OsProcessorFeature.register(container);
     }
 
     return container;
