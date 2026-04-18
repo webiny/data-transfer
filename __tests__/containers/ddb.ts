@@ -20,6 +20,7 @@ import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts"
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts";
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
+import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { DdbCommandExecutorFeature } from "../../src/features/DdbCommandExecutor/index.ts";
@@ -70,6 +71,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
 
     const container = new Container();
     container.registerInstance(ContainerToken, container);
+    container.registerInstance(TransferContext, { runId: "test-run-id" });
 
     // Core
     MigrationConfigFeature.register(container, { config });

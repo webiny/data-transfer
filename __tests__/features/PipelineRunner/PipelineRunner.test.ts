@@ -4,6 +4,7 @@ import type { Abstraction } from "@webiny/di";
 import { ContainerToken, createAbstraction } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
 import {
     Pipeline,
@@ -56,11 +57,15 @@ class TestLogger implements Logger.Interface {
     }
 }
 
-function makeContainer(): { container: Container; logger: TestLogger } {
+function makeContainer(options: { runId?: string } = {}): {
+    container: Container;
+    logger: TestLogger;
+} {
     const container = new Container();
     const logger = new TestLogger();
     container.registerInstance(ContainerToken, container);
     container.registerInstance(Logger, logger);
+    container.registerInstance(TransferContext, { runId: options.runId ?? "test-run-id" });
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(TagTransformerImpl).inSingletonScope();
@@ -145,24 +150,6 @@ describe("PipelineRunner.register()", () => {
         expect(() => runner.register(buildPipeline(container, "dup"))).toThrow(
             /already registered/i
         );
-    });
-
-    it("emits a debug log per before- and after-hook on registered pipelines", () => {
-        const { container, logger } = makeContainer();
-        const runner = container.resolve(PipelineRunner);
-
-        runner.register(
-            buildPipeline(container, "with-hooks", {
-                beforeHook: Hook,
-                afterHook: Hook
-            })
-        );
-
-        const debugEntries = logger.entries.filter(e => e.level === "debug");
-        expect(debugEntries.length).toBeGreaterThanOrEqual(2);
-        const lifecycleArgs = debugEntries.flatMap(e => e.args as string[]);
-        expect(lifecycleArgs).toContain("before");
-        expect(lifecycleArgs).toContain("after");
     });
 });
 
@@ -355,5 +342,207 @@ describe("PipelineRunner.run()", () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
         await expect(runner.run()).resolves.toBeUndefined();
+    });
+});
+
+describe("PipelineRunner — hook lifecycle", () => {
+    interface ITimelineHook {
+        run(params: { runId: string; mergeGroupId: string }): Promise<void>;
+    }
+
+    function makeTimelineHook(timeline: string[], label: string): ITimelineHook {
+        return {
+            async run(_params): Promise<void> {
+                timeline.push(label);
+            }
+        };
+    }
+
+    function registerTimelineHook(
+        container: Container,
+        timeline: string[],
+        label: string
+    ): Abstraction<Hook.Interface> {
+        const Token = createAbstraction<Hook.Interface>(`Test/Timeline/${label}`);
+        container.registerInstance(Token, makeTimelineHook(timeline, label));
+        return Token;
+    }
+
+    it("invokes before-hooks before any record is scanned, in registration order", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const timeline: string[] = [];
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        // Wrap scanner.scan to push a timeline marker when scanning begins.
+        const originalScan = scanner.scan.bind(scanner);
+        scanner.scan = async function* (shard: FakeShard): AsyncIterable<FakeRecord> {
+            timeline.push("scan-start");
+            yield* originalScan(shard);
+        };
+
+        const runner = container.resolve(PipelineRunner);
+        const HookFirst = registerTimelineHook(container, timeline, "before-1");
+        const HookSecond = registerTimelineHook(container, timeline, "before-2");
+
+        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "ordered",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builder
+            .filter(createFilter<FakeRecord>(() => true))
+            .beforeExecuteCommands(HookFirst)
+            .beforeExecuteCommands(HookSecond);
+        runner.register(builder.build() as unknown as AnyPipeline);
+
+        await runner.run();
+        scanner.scan = originalScan;
+
+        expect(timeline).toEqual(["before-1", "before-2", "scan-start"]);
+    });
+
+    it("invokes after-hooks after all shards complete, in REVERSE registration order", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const timeline: string[] = [];
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        const originalScan = scanner.scan.bind(scanner);
+        scanner.scan = async function* (shard: FakeShard): AsyncIterable<FakeRecord> {
+            for await (const record of originalScan(shard)) {
+                timeline.push("scan-yield");
+                yield record;
+            }
+            timeline.push("scan-end");
+        };
+
+        const runner = container.resolve(PipelineRunner);
+        const HookFirst = registerTimelineHook(container, timeline, "after-1");
+        const HookSecond = registerTimelineHook(container, timeline, "after-2");
+
+        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "after-ordered",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builder
+            .filter(createFilter<FakeRecord>(() => true))
+            .afterExecuteCommands(HookFirst)
+            .afterExecuteCommands(HookSecond);
+        runner.register(builder.build() as unknown as AnyPipeline);
+
+        await runner.run();
+        scanner.scan = originalScan;
+
+        expect(timeline).toEqual(["scan-yield", "scan-end", "after-2", "after-1"]);
+    });
+
+    it("dedupes hooks by token reference: same token across pipelines fires once per group", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const timeline: string[] = [];
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        const runner = container.resolve(PipelineRunner);
+        const SharedHook = registerTimelineHook(container, timeline, "shared-before");
+        const SharedAfter = registerTimelineHook(container, timeline, "shared-after");
+
+        const builderA = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "dedup-a",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builderA
+            .filter(createFilter<FakeRecord>(r => r.id === "match-a"))
+            .beforeExecuteCommands(SharedHook)
+            .afterExecuteCommands(SharedAfter);
+
+        const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "dedup-b",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builderB
+            .filter(createFilter<FakeRecord>(() => true))
+            .beforeExecuteCommands(SharedHook)
+            .afterExecuteCommands(SharedAfter);
+
+        runner
+            .register(builderA.build() as unknown as AnyPipeline)
+            .register(builderB.build() as unknown as AnyPipeline);
+
+        await runner.run();
+
+        // SharedHook is registered twice (across both pipelines) but should fire once.
+        const beforeCount = timeline.filter(s => s === "shared-before").length;
+        const afterCount = timeline.filter(s => s === "shared-after").length;
+        expect(beforeCount).toBe(1);
+        expect(afterCount).toBe(1);
+    });
+
+    it("skips after-hooks when a shard throws", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const timeline: string[] = [];
+        scanner.records = [];
+        scanner.scan = async function* () {
+            throw new Error("scanner-boom");
+        };
+
+        const runner = container.resolve(PipelineRunner);
+        const Before = registerTimelineHook(container, timeline, "before");
+        const After = registerTimelineHook(container, timeline, "after");
+
+        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "throws",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builder
+            .filter(createFilter<FakeRecord>(() => true))
+            .beforeExecuteCommands(Before)
+            .afterExecuteCommands(After);
+        runner.register(builder.build() as unknown as AnyPipeline);
+
+        await expect(runner.run()).rejects.toThrow("scanner-boom");
+
+        // before-hook fired (before scanner ran), after-hook did NOT fire.
+        expect(timeline).toEqual(["before"]);
+    });
+
+    it("passes runId from TransferContext and mergeGroupId to each hook", async () => {
+        const { container } = makeContainer({ runId: "custom-run-42" });
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        const captured: Array<{ runId: string; mergeGroupId: string }> = [];
+        const HookToken = createAbstraction<Hook.Interface>("Test/CapturingHook");
+        container.registerInstance(HookToken, {
+            async run(params: { runId: string; mergeGroupId: string }): Promise<void> {
+                captured.push(params);
+            }
+        });
+
+        const runner = container.resolve(PipelineRunner);
+        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+            name: "capture-params",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        });
+        builder
+            .filter(createFilter<FakeRecord>(() => true))
+            .beforeExecuteCommands(HookToken)
+            .afterExecuteCommands(HookToken);
+        runner.register(builder.build() as unknown as AnyPipeline);
+
+        await runner.run();
+
+        expect(captured).toHaveLength(2);
+        expect(captured[0]?.runId).toBe("custom-run-42");
+        expect(captured[1]?.runId).toBe("custom-run-42");
+        // Scanner abstraction name is "Core/Scanner" → "Core-Scanner" after sanitisation.
+        expect(captured[0]?.mergeGroupId).toBe("Core-Scanner");
+        expect(captured[1]?.mergeGroupId).toBe("Core-Scanner");
     });
 });

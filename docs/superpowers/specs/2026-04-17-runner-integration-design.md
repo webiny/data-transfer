@@ -1,6 +1,6 @@
 # Runner Integration & DDB Implementations — Design
 
-**Status:** Approved spec / pending implementation plan
+**Status:** Implemented; hook lifecycle landed as a follow-up (2026-04-18) — see "Hook lifecycle (added 2026-04-18)" section below.
 **Date:** 2026-04-17
 **Implements:** locked decisions in `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" + 2026-04-17 revision note (scanner-only merge key, **first-match-wins** semantics, mandatory filters).
 **Builds on:** `docs/superpowers/plans/2026-04-17-pipeline-builder.md` (delivered: `Filter`, `Scanner`/`Processor`/`Hook` abstractions, `Pipeline`, `PipelineBuilder`).
@@ -31,7 +31,7 @@ Make the `src/domain/pipeline/` primitives runnable end-to-end. Replace `Pipelin
 
 ### Out of scope (deferred to future plans)
 
-- **Hook lifecycle** — before/after invocation with token-level dedup at merge-group lifecycle points. Hooks are stored on `Pipeline` (already done by Tasks 6/12) but never invoked by this runner.
+- **Hook lifecycle** — ~~before/after invocation with token-level dedup at merge-group lifecycle points. Hooks are stored on `Pipeline` (already done by Tasks 6/12) but never invoked by this runner.~~ **Landed 2026-04-18 as a follow-up; see "Hook lifecycle (added 2026-04-18)" section below.**
 - **Worker spawning + shard parallelism + `.transfer/<runId>/.../<shard>.json` state files** — `processor.getShardState()` exists for future use; this plan does not call it.
 - **Real OS / S3 scanners + processors** — `OsScanner`, `OsProcessor`, `S3Scanner`, `S3Processor`. They will follow the same shape as `DdbScanner` / `DdbProcessor` but require their own service wiring.
 - **Preset migration** — `v5-to-v6-ddb` and other production presets keep using the now-deleted legacy API and break in this plan. They will be ported (or deleted) in a follow-up plan.
@@ -373,3 +373,44 @@ Each step is one commit per the project convention.
 2. **Worker integration** — extract the per-shard inner loop into a worker-callable method (`runner.runShard(mergeGroupId, shard)`); orchestrator spawns workers via `WorkerSpawner`; workers serialize `processor.getShardState()` to `.transfer/<runId>/<mergeGroupId>/<processorId>/<shard>.json`; orchestrator reads those files for after-hooks.
 3. **OS / S3 implementations** — `OsScanner` + `OsProcessor` + `S3Scanner` + `S3Processor` following the same shape as `DdbScanner` + `DdbProcessor`. Throws on construction if their config slice is unset (`OsClientConfig` / `S3ClientConfig`).
 4. **Preset migration + legacy cleanup** — port `v5-to-v6-ddb` and other production presets to the new `runner.pipeline(...).filter(...).use(...).build()` API. Port or delete legacy tests still referencing `processRecord`. Delete `src/domain/transform/Pipeline.ts` and `PipelineBuilder.ts` (the old data-transfer-side pipeline classes).
+
+---
+
+## Hook lifecycle (added 2026-04-18)
+
+Implemented as a focused follow-up to the original runner-integration plan.
+
+**Dependencies added to `PipelineRunner`:** `TransferContext` (already exists at `src/features/TransferLifecycle/abstractions/TransferContext.ts`, holds `runId`).
+
+**New `runMergeGroup` flow:**
+
+1. Resolve scanner.
+2. Build `hookParams = { runId: this.transferContext.runId, mergeGroupId }`.
+3. Dedup before-hook tokens by reference identity across all pipelines in the group, preserving registration order.
+4. Resolve each token, `await hook.run(hookParams)` sequentially.
+5. Pre-resolve processors per pipeline (unchanged).
+6. Run shards sequentially (unchanged).
+7. After all shards complete successfully: dedup after-hook tokens, resolve, and call sequentially in **reverse** registration order (LIFO).
+
+**Failure semantics:**
+
+- Before-hook throws → run() throws; subsequent merge groups are NOT executed (no try/catch in the runner — same as scanner/transformer/processor errors). After-hooks are NOT called.
+- Shard throws (scanner / transformer / processor) → run() throws; after-hooks are SKIPPED. Idempotency on rerun is the user's responsibility.
+- After-hook throws → run() throws; subsequent after-hooks in the group are SKIPPED. Subsequent merge groups are NOT executed.
+
+**Dedup details:**
+
+- Dedup by token reference identity (`Set<Abstraction<Hook.Interface>>`).
+- A hook token registered on multiple pipelines in the same merge group fires ONCE per group lifecycle.
+- A hook token shared between two different merge groups fires ONCE per group (twice total — groups are independent lifecycles).
+
+**Test coverage:** 5 new tests in `__tests__/features/PipelineRunner/PipelineRunner.test.ts` under `describe("PipelineRunner — hook lifecycle", ...)`:
+- before-hooks fire before any record is scanned, in registration order
+- after-hooks fire after all shards complete, in REVERSE registration order
+- dedup by token reference: same token across pipelines fires once per group
+- skips after-hooks when a shard throws
+- passes runId from TransferContext + mergeGroupId to each hook
+
+**Test container helpers updated:** `__tests__/containers/ddb.ts` and `__tests__/containers/os.ts` both now `registerInstance(TransferContext, { runId: "test-run-id" })`. The runner's PipelineRunner.test.ts container helper takes an optional `runId` override for the TransferContext-passes-runId test.
+
+**State persistence:** Still NOT implemented. `processor.getShardState()` is unread by this runner — workers will be the consumer in the worker-integration plan. Hooks today receive only `runId` + `mergeGroupId`; if a hook needs processor state in a future revision, the `Hook.RunParams` type can be widened.

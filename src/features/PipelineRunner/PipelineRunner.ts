@@ -5,8 +5,10 @@ import { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.ts";
+import type { Hook } from "~/domain/pipeline/abstractions/Hook.ts";
 import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
     type PipelineRunnerFactoryInput
@@ -22,7 +24,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
     public constructor(
         private readonly container: Container,
-        private readonly logger: Logger.Interface
+        private readonly logger: Logger.Interface,
+        private readonly transferContext: TransferContext.Interface
     ) {}
 
     public pipeline<TRecord, TContext extends Processor.Context, TShard>(
@@ -49,26 +52,6 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             this.mergeGroups.set(groupKey, [pipeline]);
         }
 
-        const mergeGroupId = this.deriveMergeGroupId(groupKey);
-        for (const hookToken of pipeline.beforeHookTokens) {
-            this.logger.debug(
-                "hook registered but not invoked in this runner version",
-                hookToken.toString(),
-                "before",
-                pipeline.name,
-                mergeGroupId
-            );
-        }
-        for (const hookToken of pipeline.afterHookTokens) {
-            this.logger.debug(
-                "hook registered but not invoked in this runner version",
-                hookToken.toString(),
-                "after",
-                pipeline.name,
-                mergeGroupId
-            );
-        }
-
         return this;
     }
 
@@ -84,6 +67,16 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     ): Promise<void> {
         const scanner = this.container.resolve(scannerToken);
         const mergeGroupId = this.deriveMergeGroupId(scannerToken);
+        const hookParams: Hook.RunParams = {
+            runId: this.transferContext.runId,
+            mergeGroupId
+        };
+
+        const beforeHookTokens = this.dedupHookTokens(pipelines, "before");
+        for (const hookToken of beforeHookTokens) {
+            const hook = this.container.resolve(hookToken);
+            await hook.run(hookParams);
+        }
 
         const pipelineToProcessor: Map<
             Pipeline<unknown, Processor.Context, unknown>,
@@ -97,6 +90,32 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         for (const shard of shards) {
             await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineToProcessor);
         }
+
+        const afterHookTokens = this.dedupHookTokens(pipelines, "after");
+        for (let i = afterHookTokens.length - 1; i >= 0; i--) {
+            const hookToken = afterHookTokens[i]!;
+            const hook = this.container.resolve(hookToken);
+            await hook.run(hookParams);
+        }
+    }
+
+    private dedupHookTokens(
+        pipelines: Pipeline<unknown, Processor.Context, unknown>[],
+        lifecycle: "before" | "after"
+    ): Abstraction<Hook.Interface>[] {
+        const seen: Set<Abstraction<Hook.Interface>> = new Set();
+        const result: Abstraction<Hook.Interface>[] = [];
+        for (const pipeline of pipelines) {
+            const tokens =
+                lifecycle === "before" ? pipeline.beforeHookTokens : pipeline.afterHookTokens;
+            for (const token of tokens) {
+                if (!seen.has(token)) {
+                    seen.add(token);
+                    result.push(token);
+                }
+            }
+        }
+        return result;
     }
 
     private async runShard(
@@ -161,5 +180,5 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
 export const PipelineRunner = PipelineRunnerAbstraction.createImplementation({
     implementation: PipelineRunnerImpl,
-    dependencies: [ContainerToken, Logger]
+    dependencies: [ContainerToken, Logger, TransferContext]
 });
