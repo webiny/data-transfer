@@ -3,10 +3,7 @@ export type { Command } from "./commands/Command.ts";
 export { PutRecord } from "./commands/PutRecord.ts";
 export { S3Copy } from "./commands/S3Copy.ts";
 export { Commands } from "./commands/Commands.ts";
-export type { Transformer } from "./Transformer.ts";
 export type { MigrationPreset } from "./Preset.ts";
-export { TransformPipeline, type RecordFilter, type PipelineResult } from "./Pipeline.ts";
-export { PipelineBuilder } from "./PipelineBuilder.ts";
 export {
     byType,
     byTypePrefix,
