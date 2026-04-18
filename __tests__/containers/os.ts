@@ -23,6 +23,7 @@ import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.t
 import { OsCommandExecutorFeature } from "../../src/features/OsCommandExecutor/index.ts";
 import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "../../src/features/OsScanner/index.ts";
+import { OsProcessorFeature } from "../../src/features/OsProcessor/index.ts";
 import { MockDynamoDbClient } from "../servic../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockOpenSearchClient } from "../servic../../services/OpenSearchClient/MockOpenSearchClient.ts";
 
@@ -100,6 +101,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     OsCommandExecutorFeature.register(container);
     OsRecordDecompressorFeature.register(container);
     OsScannerFeature.register(container);
+    OsProcessorFeature.register(container);
 
     return container;
 }
