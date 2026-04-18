@@ -53,3 +53,8 @@ export const OsScanner = Scanner.createImplementation({
     implementation: OsScannerImpl,
     dependencies: [SourceDynamoDbClient, OsRecordDecompressor, MigrationConfig]
 });
+
+export namespace OsScanner {
+    export type Record = OsRecord;
+    export type Shard = OsShard;
+}

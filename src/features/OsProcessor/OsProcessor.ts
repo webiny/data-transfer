@@ -6,8 +6,10 @@ import {
 } from "~/features/TransformContext/abstractions/OsTransformContext.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { OsRecord } from "~/features/OsScanner/abstractions/OsScanner.ts";
+import { OsScanner } from "~/features/OsScanner/index.ts";
 import type { OsShardState } from "./abstractions/OsProcessor.ts";
+
+type OsRecord = OsScanner.Record;
 
 class OsProcessorImpl implements Processor.Interface<
     OsRecord,
@@ -53,3 +55,7 @@ export const OsProcessor = Processor.createImplementation({
     implementation: OsProcessorImpl,
     dependencies: [OsCommandExecutor, OsTransformContextFactory]
 });
+
+export namespace OsProcessor {
+    export type ShardState = OsShardState;
+}

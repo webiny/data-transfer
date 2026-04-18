@@ -4,9 +4,9 @@ import { Processor } from "~/domain/pipeline/index.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { OsCommandExecutor } from "~/features/OsCommandExecutor/index.ts";
-import type { OsRecord } from "~/features/OsScanner/abstractions/OsScanner.ts";
+import { OsScanner } from "~/features/OsScanner/index.ts";
 
-function makeOsRecord(pk: string, indexName: string): OsRecord {
+function makeOsRecord(pk: string, indexName: string): OsScanner.Record {
     return {
         PK: pk,
         SK: "L",
@@ -40,7 +40,7 @@ describe("OsProcessor", () => {
         const ctxB = processor.createContext(recB);
 
         expect(ctxA).not.toBe(ctxB);
-        expect((ctxA as unknown as { record: OsRecord }).record.PK).toBe("a");
+        expect((ctxA as unknown as { record: OsScanner.Record }).record.PK).toBe("a");
         expect((ctxA as unknown as { commands: Commands }).commands).toBeInstanceOf(Commands);
     });
 

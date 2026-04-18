@@ -11,7 +11,7 @@ import { createAbstraction } from "~/base/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import type { DdbShard } from "~/features/DdbScanner/index.ts";
+import { DdbScanner } from "~/features/DdbScanner/index.ts";
 
 type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
 
@@ -62,10 +62,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const teamsBuilder = runner.pipeline<
             BaseRecord,
             DdbTransformContext.Interface<BaseRecord>,
-            DdbShard
+            DdbScanner.Shard
         >({
             name: "teams",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbShard>>,
+            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
             processor: Processor as Abstraction<
                 Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
             >
@@ -78,10 +78,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const groupsBuilder = runner.pipeline<
             BaseRecord,
             DdbTransformContext.Interface<BaseRecord>,
-            DdbShard
+            DdbScanner.Shard
         >({
             name: "groups",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbShard>>,
+            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
             processor: Processor as Abstraction<
                 Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
             >
@@ -108,10 +108,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const builderA = runner.pipeline<
             BaseRecord,
             DdbTransformContext.Interface<BaseRecord>,
-            DdbShard
+            DdbScanner.Shard
         >({
             name: "dup",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbShard>>,
+            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
             processor: Processor as Abstraction<
                 Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
             >
@@ -122,10 +122,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const builderB = runner.pipeline<
             BaseRecord,
             DdbTransformContext.Interface<BaseRecord>,
-            DdbShard
+            DdbScanner.Shard
         >({
             name: "dup",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbShard>>,
+            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
             processor: Processor as Abstraction<
                 Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
             >

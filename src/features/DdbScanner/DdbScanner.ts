@@ -34,3 +34,7 @@ export const DdbScanner = Scanner.createImplementation({
     implementation: DdbScannerImpl,
     dependencies: [SourceDynamoDbClient, MigrationConfig]
 });
+
+export namespace DdbScanner {
+    export type Shard = DdbShard;
+}

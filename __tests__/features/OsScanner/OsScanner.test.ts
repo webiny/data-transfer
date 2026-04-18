@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { createOsContainer } from "../../containers/index.ts";
 import { Scanner } from "~/domain/pipeline/index.ts";
-import type { OsRecord, OsShard } from "~/features/OsScanner/abstractions/OsScanner.ts";
+import { OsScanner } from "~/features/OsScanner/index.ts";
 import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
@@ -48,14 +48,20 @@ describe("OsScanner", () => {
 
     it("returns a single shard when pipeline.segments is unset", async () => {
         const container = createOsContainer();
-        const scanner = container.resolve(Scanner) as Scanner.Interface<OsRecord, OsShard>;
+        const scanner = container.resolve(Scanner) as Scanner.Interface<
+            OsScanner.Record,
+            OsScanner.Shard
+        >;
         const shards = await scanner.listShards();
         expect(shards).toEqual([{ segment: 0, total: 1 }]);
     });
 
     it("returns N shards when pipeline.segments is set", async () => {
         const container = createOsContainer({ pipelineOverride: { segments: 3 } });
-        const scanner = container.resolve(Scanner) as Scanner.Interface<OsRecord, OsShard>;
+        const scanner = container.resolve(Scanner) as Scanner.Interface<
+            OsScanner.Record,
+            OsScanner.Shard
+        >;
         const shards = await scanner.listShards();
         expect(shards).toEqual([
             { segment: 0, total: 3 },
@@ -72,9 +78,12 @@ describe("OsScanner", () => {
         });
         // Re-create the container with the row pre-populated under the OS table name
         const seeded = createOsContainer({ sourceRecords: { "source-os": [row] } });
-        const scanner = seeded.resolve(Scanner) as Scanner.Interface<OsRecord, OsShard>;
+        const scanner = seeded.resolve(Scanner) as Scanner.Interface<
+            OsScanner.Record,
+            OsScanner.Shard
+        >;
 
-        const collected: OsRecord[] = [];
+        const collected: OsScanner.Record[] = [];
         for await (const record of scanner.scan({ segment: 0, total: 1 })) {
             collected.push(record);
         }
@@ -108,8 +117,11 @@ describe("OsScanner", () => {
         const decompressor = container.resolve(OsRecordDecompressor);
         const spy = vi.spyOn(decompressor, "decompress").mockResolvedValue(null);
 
-        const scanner = container.resolve(Scanner) as Scanner.Interface<OsRecord, OsShard>;
-        const collected: OsRecord[] = [];
+        const scanner = container.resolve(Scanner) as Scanner.Interface<
+            OsScanner.Record,
+            OsScanner.Shard
+        >;
+        const collected: OsScanner.Record[] = [];
         for await (const record of scanner.scan({ segment: 0, total: 1 })) {
             collected.push(record);
         }
@@ -177,7 +189,10 @@ describe("OsScanner", () => {
         OsRecordDecompressorFeature.register(container);
         ScannerFeature.register(container);
 
-        const scanner = container.resolve(Scanner) as Scanner.Interface<OsRecord, OsShard>;
+        const scanner = container.resolve(Scanner) as Scanner.Interface<
+            OsScanner.Record,
+            OsScanner.Shard
+        >;
         await expect(async () => {
             for await (const _ of scanner.scan({ segment: 0, total: 1 })) {
                 // Should never iterate

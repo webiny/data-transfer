@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { Scanner } from "~/domain/pipeline/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import type { DdbShard } from "~/features/DdbScanner/abstractions/DdbScanner.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 function makeRecord(pk: string, sk: string, type: string): BaseRecord {
@@ -27,7 +26,10 @@ describe("DdbScanner", () => {
 
     it("returns a single shard when pipeline.segments is unset", async () => {
         const container = createDdbContainer();
-        const scanner = container.resolve(Scanner) as Scanner.Interface<BaseRecord, DdbShard>;
+        const scanner = container.resolve(Scanner) as Scanner.Interface<
+            BaseRecord,
+            DdbScanner.Shard
+        >;
         const shards = await scanner.listShards();
         expect(shards).toEqual([{ segment: 0, total: 1 }]);
     });
@@ -36,7 +38,10 @@ describe("DdbScanner", () => {
         const container = createDdbContainer({
             pipelineOverride: { segments: 4 }
         });
-        const scanner = container.resolve(Scanner) as Scanner.Interface<BaseRecord, DdbShard>;
+        const scanner = container.resolve(Scanner) as Scanner.Interface<
+            BaseRecord,
+            DdbScanner.Shard
+        >;
         const shards = await scanner.listShards();
         expect(shards).toEqual([
             { segment: 0, total: 4 },
@@ -51,7 +56,10 @@ describe("DdbScanner", () => {
         const container = createDdbContainer({
             sourceRecords: { "source-table": records }
         });
-        const scanner = container.resolve(Scanner) as Scanner.Interface<BaseRecord, DdbShard>;
+        const scanner = container.resolve(Scanner) as Scanner.Interface<
+            BaseRecord,
+            DdbScanner.Shard
+        >;
 
         const collected: BaseRecord[] = [];
         for await (const record of scanner.scan({ segment: 0, total: 1 })) {

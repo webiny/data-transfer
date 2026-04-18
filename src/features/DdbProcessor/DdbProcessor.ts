@@ -34,3 +34,7 @@ export const DdbProcessor = Processor.createImplementation({
     implementation: DdbProcessorImpl,
     dependencies: [DdbCommandExecutor, DdbTransformContextFactory]
 });
+
+export namespace DdbProcessor {
+    export type ShardState = DdbShardState;
+}
