@@ -1,5 +1,6 @@
 import { TransformPipeline, type RecordFilter } from "./Pipeline.ts";
 import type { Transformer } from "./Transformer.ts";
+import type { Transformer as NewTransformer } from "~/domain/pipeline/abstractions/Transformer.ts";
 
 /**
  * Thin builder wrapper around TransformPipeline.
@@ -18,9 +19,9 @@ export class PipelineBuilder<TInput extends Record<string, unknown> = Record<str
         return this;
     }
 
-    /** Add a transformer to the pipeline */
-    public use<T extends Transformer<any>>(transformer: T): this {
-        this.pipeline.use(transformer);
+    /** Add a transformer to the pipeline (accepts both legacy object form and new function form) */
+    public use<T extends Transformer<any> | NewTransformer.Interface<any>>(transformer: T): this {
+        this.pipeline.use(transformer as unknown as Transformer<any>);
         return this;
     }
 

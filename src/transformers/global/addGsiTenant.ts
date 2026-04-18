@@ -1,13 +1,13 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
  * Adds GSI_TENANT attribute by extracting tenant ID from PK or data.tenant.
  * NOTE: This transformer expects wrapInData to run FIRST, so tenant is in data.tenant.
  */
-export const addGsiTenant: Transformer = {
-    name: "addGsiTenant",
-    transform(ctx: BaseTransformContext.Interface) {
+export const addGsiTenant = createTransformer<BaseTransformContext.Interface>(
+    "addGsiTenant",
+    ctx => {
         const { record } = ctx;
 
         // Skip if GSI_TENANT already exists
@@ -33,4 +33,4 @@ export const addGsiTenant: Transformer = {
             }
         }
     }
-};
+);

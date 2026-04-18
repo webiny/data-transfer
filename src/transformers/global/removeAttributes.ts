@@ -1,4 +1,4 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
@@ -7,9 +7,9 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
  * - tenant: Now stored in PK/SK keys via GSI_TENANT
  * - webinyVersion: No longer needed in v6
  */
-export const removeAttributes: Transformer = {
-    name: "removeAttributes",
-    transform(ctx: BaseTransformContext.Interface) {
+export const removeAttributes = createTransformer<BaseTransformContext.Interface>(
+    "removeAttributes",
+    ctx => {
         const { record } = ctx;
 
         // Remove from data envelope
@@ -22,4 +22,4 @@ export const removeAttributes: Transformer = {
             }
         }
     }
-};
+);
