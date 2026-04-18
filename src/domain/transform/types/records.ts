@@ -14,8 +14,3 @@ export interface DdbRecord extends BaseRecord {
     GSI2_PK: string;
     GSI2_SK: string;
 }
-
-export interface OsRecord extends BaseRecord {
-    data: { value: string; compression: string };
-    index: string;
-}

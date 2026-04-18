@@ -1,1 +1,1 @@
-export type { BaseRecord, DdbRecord, OsRecord } from "./records.ts";
+export type { BaseRecord, DdbRecord } from "./records.ts";
