@@ -22,15 +22,21 @@ import { TransformContextFeature } from "../../src/features/TransformContext/ind
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { OsCommandExecutorFeature } from "../../src/features/OsCommandExecutor/index.ts";
 import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
+import { OsScannerFeature } from "../../src/features/OsScanner/index.ts";
 import { MockDynamoDbClient } from "../servic../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockOpenSearchClient } from "../servic../../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 
+export interface OsContainerPipelineOverride {
+    segments?: number;
+}
+
 export interface OsContainerOptions {
     sourceRecords?: Record<string, SourceDynamoDbClient.Record[]>;
     modelsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
+    pipelineOverride?: OsContainerPipelineOverride;
 }
 
 export function createOsContainer(options: OsContainerOptions = {}): Container {
@@ -57,7 +63,10 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
         },
         pipeline: {
             preset: "v5-to-v6-os",
-            modelsDir: options.modelsDir
+            modelsDir: options.modelsDir,
+            ...(options.pipelineOverride?.segments !== undefined
+                ? { segments: options.pipelineOverride.segments }
+                : {})
         }
     };
 
@@ -90,6 +99,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     PipelineRunnerFeature.register(container);
     OsCommandExecutorFeature.register(container);
     OsRecordDecompressorFeature.register(container);
+    OsScannerFeature.register(container);
 
     return container;
 }
