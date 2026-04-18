@@ -50,19 +50,17 @@ describe("OsProcessor", () => {
         const executor = container.resolve(OsCommandExecutor);
         const spy = vi.spyOn(executor, "execute").mockResolvedValue(undefined);
 
+        // createContext captures pre-transform metadata (locale/index/_ct/_md);
+        // execute pairs each PutRecord with that captured metadata in FIFO order.
+        // Simulate the PipelineRunner contract: createContext -> transforms -> put.
+        const recA = makeOsRecord("a", "idx-foo");
+        const recB = makeOsRecord("b", "idx-bar");
+        processor.createContext(recA);
+        processor.createContext(recB);
+
         const commands = new Commands();
-        commands.add(
-            PutRecord.create({
-                table: "target-os",
-                record: makeOsRecord("a", "idx-foo")
-            })
-        );
-        commands.add(
-            PutRecord.create({
-                table: "target-os",
-                record: makeOsRecord("b", "idx-bar")
-            })
-        );
+        commands.add(PutRecord.create({ table: "target-os", record: recA }));
+        commands.add(PutRecord.create({ table: "target-os", record: recB }));
 
         await processor.execute(commands);
 
@@ -109,13 +107,11 @@ describe("OsProcessor", () => {
                 touchedIndexes.set("idx-foo", "1s");
             });
 
+        const rec = makeOsRecord("a", "idx-foo");
+        processor.createContext(rec);
+
         const commands = new Commands();
-        commands.add(
-            PutRecord.create({
-                table: "target-os",
-                record: makeOsRecord("a", "idx-foo")
-            })
-        );
+        commands.add(PutRecord.create({ table: "target-os", record: rec }));
         await processor.execute(commands);
 
         expect(processor.getShardState()).toEqual({ touchedIndexes: { "idx-foo": "1s" } });
