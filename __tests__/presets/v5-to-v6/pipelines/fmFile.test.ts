@@ -3,7 +3,7 @@ import { createDdbContainer } from "../../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
-import { fmFilePipeline } from "~/presets/v5-to-v6/pipelines/fm-file.ts";
+import { fmFilePipeline } from "~/presets/v5-to-v6/pipelines/fmFile.ts";
 
 describe("fmFilePipeline", () => {
     it("has the expected name", () => {

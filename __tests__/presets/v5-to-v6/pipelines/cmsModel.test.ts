@@ -3,18 +3,18 @@ import { createDdbContainer } from "../../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
-import { cmsEntryPipeline } from "~/presets/v5-to-v6/pipelines/cms-entry.ts";
+import { cmsModelPipeline } from "~/presets/v5-to-v6/pipelines/cmsModel.ts";
 
-describe("cmsEntryPipeline", () => {
+describe("cmsModelPipeline", () => {
     it("has the expected name", () => {
-        expect(cmsEntryPipeline.name).toBe("cms-entries");
+        expect(cmsModelPipeline.name).toBe("cms-models");
     });
 
     it("registers with the runner (proven by duplicate-registration throw)", () => {
         const container = createDdbContainer();
         const runner = container.resolve(PipelineRunner);
-        cmsEntryPipeline.register(runner, DdbScanner, DdbProcessor);
-        expect(() => cmsEntryPipeline.register(runner, DdbScanner, DdbProcessor)).toThrow(
+        cmsModelPipeline.register(runner, DdbScanner, DdbProcessor);
+        expect(() => cmsModelPipeline.register(runner, DdbScanner, DdbProcessor)).toThrow(
             /already registered/i
         );
     });

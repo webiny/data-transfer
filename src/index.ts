@@ -51,9 +51,9 @@ export { createDdbPipeline } from "./domain/pipeline/createDdbPipeline.ts";
 export { createOsPipeline } from "./domain/pipeline/createOsPipeline.ts";
 
 // v5-to-v6 built-in pipeline definitions
-export { cmsEntryPipeline } from "./presets/v5-to-v6/pipelines/cms-entry.ts";
-export { cmsModelPipeline } from "./presets/v5-to-v6/pipelines/cms-model.ts";
-export { fmFilePipeline } from "./presets/v5-to-v6/pipelines/fm-file.ts";
+export { cmsEntryPipeline } from "./presets/v5-to-v6/pipelines/cmsEntry.ts";
+export { cmsModelPipeline } from "./presets/v5-to-v6/pipelines/cmsModel.ts";
+export { fmFilePipeline } from "./presets/v5-to-v6/pipelines/fmFile.ts";
 
 // Context types for user-written transformers
 export type { BaseTransformContext } from "./features/TransformContext/abstractions/BaseTransformContext.ts";
