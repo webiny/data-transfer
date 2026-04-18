@@ -1,17 +1,17 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
- * Migrates Mailer settings from old format to KeyValue format.
- * NOTE: This transformer expects wrapInData to run FIRST, so values is in record.data.values.
+ * Migrates File Manager settings from old format to KeyValue format.
+ * NOTE: This transformer expects wrapInData to run FIRST, so the original data is in record.data.
  */
-export const migrateMailerSettings: Transformer = {
-    name: "migrateMailerSettings",
-    transform(ctx: BaseTransformContext.Interface) {
+export const migrateFileManagerSettings = createTransformer<BaseTransformContext.Interface>(
+    "migrateFileManagerSettings",
+    ctx => {
         const { record, original } = ctx;
 
-        // Only process mailer settings records (identified by SK: "L" and modelId: "mailerSettings")
-        if (original.SK !== "L" || original.modelId !== "mailerSettings") {
+        // Only process if this is a File Manager settings record
+        if (original.TYPE !== "fm.settings") {
             return;
         }
 
@@ -21,17 +21,19 @@ export const migrateMailerSettings: Transformer = {
             return; // No data envelope
         }
 
-        const values = dataEnvelope.values as Record<string, unknown>;
         const tenant = dataEnvelope.tenant || "root";
+
+        // Extract settings (everything except tenant)
+        const { tenant: _tenant, ...settingsValue } = dataEnvelope;
 
         // Replace with new KeyValue format
         ctx.replace({
-            PK: `KV#${tenant}:Mailer/Settings/Transport`,
+            PK: `KV#${tenant}:FileManager/General`,
             SK: "A",
             data: {
-                key: "Mailer/Settings/Transport",
+                key: "FileManager/General",
                 scope: tenant,
-                value: values
+                value: settingsValue
             },
             TYPE: "KeyValueStore",
             GSI_TENANT: tenant as string,
@@ -40,4 +42,4 @@ export const migrateMailerSettings: Transformer = {
             _md: new Date().toISOString()
         });
     }
-};
+);

@@ -15,13 +15,13 @@ import { removeLocale } from "../transformers/global/removeLocale.ts";
 import { removeAttributes } from "../transformers/global/removeAttributes.ts";
 
 // Import File Manager transformers
-import { migrateFileManagerSettings } from "../transformers/file-manager/migrate-settings.ts";
+import { migrateFileManagerSettings } from "../transformers/file-manager/migrateFileManagerSettings.ts";
 
 // Import Folder transformers
-import { updateFlpIds } from "../transformers/folders/update-flp-ids.ts";
+import { updateFlpIds } from "../transformers/folders/updateFlpIds.ts";
 
 // Import Mailer transformers
-import { migrateMailerSettings } from "../transformers/mailer/migrate-settings.ts";
+import { migrateMailerSettings } from "../transformers/mailer/migrateMailerSettings.ts";
 
 // Import Security transformers
 import { groupsToRoles } from "../transformers/security/groups-to-roles.ts";

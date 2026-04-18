@@ -1,6 +1,6 @@
 import { isFmFile } from "~/domain/transform/filters.ts";
-import { createFileMetadata } from "../../transformers/file-manager/create-metadata.ts";
-import { extractImageMetadata } from "../../transformers/file-manager/extract-image-metadata.ts";
+import { createMetadata } from "../../transformers/file-manager/createMetadata.ts";
+import { extractImageMetadata } from "../../transformers/file-manager/extractImageMetadata.ts";
 import { CmsEntryPipeline } from "./CmsEntryPipeline.js";
 
 /**
@@ -14,7 +14,7 @@ export class FmFilePipeline extends CmsEntryPipeline {
         this.filter(isFmFile);
 
         // File Manager-specific transformers
-        this.use(createFileMetadata);
+        this.use(createMetadata);
         this.use(extractImageMetadata);
     }
 }
