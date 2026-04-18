@@ -1,4 +1,4 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
@@ -8,9 +8,9 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
  * 2. Removes location from data.values["object@location"] if it exists there
  * 3. Removes revision number #0001 from folderId
  */
-export const removeFolderRevision: Transformer = {
-    name: "removeFolderRevision",
-    transform(ctx: BaseTransformContext.Interface) {
+export const removeFolderRevision = createTransformer<BaseTransformContext.Interface>(
+    "removeFolderRevision",
+    ctx => {
         const { record } = ctx;
 
         // Extract data envelope
@@ -45,4 +45,4 @@ export const removeFolderRevision: Transformer = {
             }
         }
     }
-};
+);

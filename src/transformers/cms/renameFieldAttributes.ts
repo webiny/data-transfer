@@ -1,4 +1,4 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { ModelField, Template } from "../../models/types.ts";
 
@@ -7,9 +7,9 @@ import { ModelField, Template } from "../../models/types.ts";
  * - helpText → description
  * - placeholderText → placeholder
  */
-export const renameFieldAttributes: Transformer = {
-    name: "renameFieldAttributes",
-    transform(ctx: BaseTransformContext.Interface) {
+export const renameFieldAttributes = createTransformer<BaseTransformContext.Interface>(
+    "renameFieldAttributes",
+    ctx => {
         const { record } = ctx;
 
         const data = record.data as Record<string, unknown> | undefined;
@@ -24,7 +24,7 @@ export const renameFieldAttributes: Transformer = {
 
         renameFieldAttributesRecursive(fields);
     }
-};
+);
 
 function renameFieldAttributesRecursive(fields: ModelField[]): void {
     for (const field of fields) {

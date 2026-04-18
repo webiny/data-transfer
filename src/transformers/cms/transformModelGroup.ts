@@ -1,4 +1,4 @@
-import type { Transformer } from "~/domain/transform/Transformer.ts";
+import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 /**
@@ -6,9 +6,9 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
  * NOTE: This transformer expects wrapInData to run FIRST, so group is in data.group.
  * - Replaces group object with group slug (resolves group ID to slug)
  */
-export const transformModelGroup: Transformer = {
-    name: "transformModelGroup",
-    async transform(ctx: BaseTransformContext.Interface) {
+export const transformModelGroup = createTransformer<BaseTransformContext.Interface>(
+    "transformModelGroup",
+    async ctx => {
         const { record } = ctx;
 
         // Extract data envelope
@@ -48,4 +48,4 @@ export const transformModelGroup: Transformer = {
                 : "ungrouped";
         }
     }
-};
+);

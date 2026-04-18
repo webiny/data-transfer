@@ -10,11 +10,11 @@ import { removeLocale } from "../transformers/global/removeLocale.ts";
 import { removeAttributes } from "../transformers/global/removeAttributes.ts";
 
 // Import CMS transformers
-import { fixCmePk } from "../transformers/cms/fix-cme-pk.ts";
+import { fixCmePk } from "../transformers/cms/fixCmePk.ts";
 import { fixBrokenStorageKeys } from "../transformers/cms/fix-broken-storage-keys.ts";
 import { transformRichText } from "../transformers/cms/transform-rich-text.ts";
 import { updateModelIds } from "../transformers/cms/update-model-ids.ts";
-import { removeFolderRevision } from "../transformers/cms/remove-folder-revision.ts";
+import { removeFolderRevision } from "../transformers/cms/removeFolderRevision.ts";
 
 // ============================================================================
 // Webiny v5 to v6 OS Migration Preset
