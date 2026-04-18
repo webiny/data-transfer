@@ -36,26 +36,11 @@ describe("Preset System", () => {
             expect(typeof v5ToV6Preset.configure).toBe("function");
         });
 
-        it("should configure runner with pipelines", () => {
-            const runner = createDdbContainer().resolve(PipelineRunner);
+        it("should configure runner with pipelines and run without throwing", async () => {
+            const container = createDdbContainer();
+            const runner = container.resolve(PipelineRunner);
             v5ToV6Preset.configure(runner);
-            expect(runner).toBeDefined();
-        });
-    });
-
-    describe("Preset Configuration", () => {
-        it("should allow custom presets to register pipelines", () => {
-            const runner = createDdbContainer().resolve(PipelineRunner);
-
-            const customPreset = {
-                name: "test-preset",
-                description: "Test preset",
-                configure(r: PipelineRunner.Interface) {
-                    expect(r).toBeDefined();
-                }
-            };
-
-            customPreset.configure(runner);
+            await expect(runner.run()).resolves.toBeUndefined();
         });
     });
 });
