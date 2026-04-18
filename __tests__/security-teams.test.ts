@@ -1,28 +1,38 @@
 import { describe, it, expect } from "vitest";
 import { v5ToV6Preset } from "~/presets/v5-to-v6-ddb.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { DdbCommandExecutor } from "~/features/DdbCommandExecutor/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { createDdbContainer } from "./containers/index.ts";
 import { MockDynamoDbClient } from "./services/DynamoDbClient/MockDynamoDbClient.ts";
 import { v5SecurityTeam } from "./fixtures/v5-records.ts";
 
+interface MigratedSecurityTeam extends BaseRecord {
+    GSI1_PK?: string;
+    GSI_TENANT?: string;
+    webinyVersion?: string;
+    data: {
+        name?: string;
+        groups?: string[];
+        webinyVersion?: string;
+    };
+}
+
 describe("Security Teams", () => {
     it("should transform security.team records", async () => {
-        const container = createDdbContainer();
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": [v5SecurityTeam as BaseRecord] }
+        });
         const runner = container.resolve(PipelineRunner);
-        const executor = container.resolve(DdbCommandExecutor);
         const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
-
         v5ToV6Preset.configure(runner);
 
-        const commands = await runner.processRecord(v5SecurityTeam as any);
-        await executor.execute(commands);
+        await runner.run();
 
         const migratedRecords = targetDb.batchPutRecords;
         expect(migratedRecords).toHaveLength(1);
 
-        const migratedRecord = migratedRecords[0] as any;
+        const migratedRecord = migratedRecords[0] as MigratedSecurityTeam;
 
         expect(migratedRecord.TYPE).toBe("security.team");
         expect(migratedRecord._et).toBe("SecurityTeam");
