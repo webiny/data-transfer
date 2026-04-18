@@ -9,13 +9,12 @@ import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/Dyn
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 
 type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
 
-const passthroughTransformer = (ctx: DdbTransformContext.Interface<BaseRecord>): void => {
-    ctx.commands.add(PutRecord.create({ table: "target-table", record: { ...ctx.record } }));
+const passthroughTransformer = (_ctx: DdbTransformContext.Interface<BaseRecord>): void => {
+    // no-op: the runner auto-emits a PutRecord for the final ctx.record
 };
 
 function makeRecord(pk: string, sk: string, type: string): BaseRecord {
@@ -117,6 +116,41 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
 
         expect(() => runner.register(builderB.build() as unknown as AnyPipeline)).toThrow(
             /already registered/i
+        );
+    });
+
+    it("auto-puts the transformed record after the transformer chain (no manual ctx.putRecord needed)", async () => {
+        const sourceRecords = [makeRecord("tenant-1", "team-1", "security.team")];
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": sourceRecords }
+        });
+        const runner = container.resolve(PipelineRunner);
+
+        const builder = runner.pipeline<
+            BaseRecord,
+            DdbTransformContext.Interface<BaseRecord>,
+            DdbScanner.Shard
+        >({
+            name: "mutation-only",
+            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
+            processor: Processor as Abstraction<
+                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
+            >
+        });
+        const tagTransformer = (ctx: DdbTransformContext.Interface<BaseRecord>): void => {
+            (ctx.record as BaseRecord & { tagged?: boolean }).tagged = true;
+        };
+        builder
+            .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
+            .use(tagTransformer);
+        runner.register(builder.build() as unknown as AnyPipeline);
+
+        await runner.run();
+
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        expect(targetDb.batchPutRecords).toHaveLength(1);
+        expect((targetDb.batchPutRecords[0] as BaseRecord & { tagged?: boolean }).tagged).toBe(
+            true
         );
     });
 });

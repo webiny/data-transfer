@@ -13,6 +13,11 @@ import {
     type PipelineRunnerFactoryInput
 } from "./abstractions/PipelineRunner.ts";
 
+interface AutoPutContext {
+    record: unknown;
+    putRecord(record: Record<string, unknown>): void;
+}
+
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     private mergeGroups: Map<
         Abstraction<Scanner.Interface<unknown, unknown>>,
@@ -144,6 +149,12 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 for (const transformer of pipeline.transformerFns) {
                     await transformer(ctx);
                 }
+                // Auto-put: emit a PutRecord for the final ctx.record. Matches the legacy
+                // TransformPipeline contract where the pipeline ended with an implicit
+                // ctx.putRecord(ctx.record). Transformers that want to emit ADDITIONAL
+                // commands (e.g., createMetadata's secondary PutRecord) still can.
+                const autoPutCtx = ctx as unknown as AutoPutContext;
+                autoPutCtx.putRecord(autoPutCtx.record as Record<string, unknown>);
                 let buffer = processorBuffers.get(processor);
                 if (!buffer) {
                     buffer = new Commands();

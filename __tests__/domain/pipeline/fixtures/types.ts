@@ -16,4 +16,5 @@ export interface FakeContext {
     emitted: string[];
     emit(value: string): void;
     commands: Commands;
+    putRecord(record: Record<string, unknown>): void;
 }

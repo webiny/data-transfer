@@ -40,6 +40,9 @@ export class FakeProcessor implements Processor.Interface<FakeRecord, FakeContex
             commands: new Commands(),
             emit(value: string): void {
                 ctx.emitted.push(value);
+            },
+            putRecord(_record: Record<string, unknown>): void {
+                // no-op: fake context; runner's auto-put is a no-op here
             }
         };
         return ctx;
