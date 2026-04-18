@@ -12,13 +12,7 @@ export default defineConfig({
         globals: true,
         environment: "node",
         include: ["**/*.test.ts"],
-        exclude: [
-            "**/node_modules/**",
-            // Legacy tests using the removed PipelineRunner.processRecord/processAll APIs
-            // and TransformPipeline. Will be ported (or deleted) as part of preset migration
-            // and worker-integration plans. Re-enable each test once its consumer is migrated.
-            "__tests__/integration/os-migration.test.ts"
-        ],
+        exclude: ["**/node_modules/**"],
         coverage: {
             provider: "v8",
             reporter: ["text", "json", "html"]
