@@ -22,6 +22,8 @@ import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
 import { DdbCommandExecutorFeature } from "~/features/DdbCommandExecutor/index.ts";
 import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
+import { PutDynamoDbRecordExecutorFeature } from "~/features/PutDynamoDbRecordExecutor/index.ts";
+import { S3CopyExecutorFeature } from "~/features/S3CopyExecutor/index.ts";
 import { OsCommandExecutorFeature } from "~/features/OsCommandExecutor/index.ts";
 import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
@@ -102,6 +104,8 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     if (config.storage === "ddb") {
         DdbCommandExecutorFeature.register(container);
+        PutDynamoDbRecordExecutorFeature.register(container);
+        S3CopyExecutorFeature.register(container);
         DdbScannerFeature.register(container);
         DdbProcessorFeature.register(container);
     } else {
