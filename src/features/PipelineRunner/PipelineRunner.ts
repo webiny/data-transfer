@@ -62,6 +62,21 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return this;
     }
 
+    public getProcessors(): Processor.Interface<unknown, Processor.Context>[] {
+        const seen = new Set<Processor.Interface<unknown, Processor.Context>>();
+        const processors: Processor.Interface<unknown, Processor.Context>[] = [];
+        for (const pipelines of this.mergeGroups.values()) {
+            for (const pipeline of pipelines) {
+                const processor = this.container.resolve(pipeline.processorToken);
+                if (!seen.has(processor)) {
+                    seen.add(processor);
+                    processors.push(processor);
+                }
+            }
+        }
+        return processors;
+    }
+
     public async run(): Promise<void> {
         for (const [scannerToken, pipelines] of this.mergeGroups) {
             await this.runMergeGroup(scannerToken, pipelines);
