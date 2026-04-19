@@ -28,8 +28,8 @@ import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { PutDynamoDbRecordExecutorFeature } from "../../src/features/PutDynamoDbRecordExecutor/index.ts";
 import { S3CopyExecutorFeature } from "../../src/features/S3CopyExecutor/index.ts";
-import { MockDynamoDbClient } from "../servic../../services/DynamoDbClient/MockDynamoDbClient.ts";
-import { MockS3Client } from "../servic../../services/S3Client/MockS3Client.ts";
+import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 
