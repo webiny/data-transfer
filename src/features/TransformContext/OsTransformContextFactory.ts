@@ -49,20 +49,6 @@ class OsTransformContextFactoryImpl implements OsTransformContextFactoryAbstract
             queryRecord: async (pk: string, sk?: string) => {
                 const results = await factory.sourceDb.query(sourcePrimaryTable, pk, sk);
                 return results.length > 0 ? (results[0] as Record<string, unknown>) : null;
-            },
-
-            executePipeline: async (pipeline: any, records: Record<string, unknown>[]) => {
-                const merged = new Commands();
-                for (const record of records) {
-                    const result = await pipeline.run(record, factory);
-                    if (result) {
-                        for (const cmd of result.commands.all()) {
-                            merged.add(cmd);
-                            commands.add(cmd);
-                        }
-                    }
-                }
-                return merged;
             }
         };
 

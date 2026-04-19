@@ -56,20 +56,6 @@ class DdbTransformContextFactoryImpl implements DdbTransformContextFactoryAbstra
                 return results.length > 0 ? (results[0] as Record<string, unknown>) : null;
             },
 
-            executePipeline: async (pipeline: any, records: Record<string, unknown>[]) => {
-                const merged = new Commands();
-                for (const record of records) {
-                    const result = await pipeline.run(record, factory);
-                    if (result) {
-                        for (const cmd of result.commands.all()) {
-                            merged.add(cmd);
-                            commands.add(cmd);
-                        }
-                    }
-                }
-                return merged;
-            },
-
             copyFile: (sourceKey: string, targetKey: string) => {
                 commands.add(
                     S3Copy.create({

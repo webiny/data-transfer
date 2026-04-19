@@ -17,7 +17,6 @@ interface IBaseTransformContext<TRecord = Record<string, unknown>> {
     replace<TNew>(newRecord: TNew): void;
     putRecord(record: Record<string, unknown>): void;
     queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
-    executePipeline(pipeline: any, records: Record<string, unknown>[]): Promise<Commands>;
 }
 
 // ============================================================================
