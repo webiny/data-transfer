@@ -1,6 +1,6 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { GzipCompression } from "../../utils/gzip-compression.ts";
+import { GzipCompressionImpl as GzipCompression } from "~/tools/GzipCompression/GzipCompression.ts";
 import { LexicalRenderer } from "../../utils/LexicalRenderer.ts";
 import { visitFields } from "../../utils/field-visitor.ts";
 
@@ -90,9 +90,10 @@ async function transformRichTextField(
         }
 
         // Convert to new format
+        const lexicalState = decompressed as Parameters<typeof lexicalRenderer.render>[0];
         const newFormat = {
-            state: JSON.stringify(decompressed),
-            html: lexicalRenderer.render(decompressed)
+            state: JSON.stringify(lexicalState),
+            html: lexicalRenderer.render(lexicalState)
         };
 
         // Compress the new format

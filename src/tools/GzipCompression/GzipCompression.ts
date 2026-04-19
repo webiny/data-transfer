@@ -5,7 +5,7 @@ const GZIP = "gzip";
 const TO_STORAGE_ENCODING = "base64";
 const FROM_STORAGE_ENCODING = "utf8";
 
-class GzipCompressionImpl implements GzipCompressionAbstraction.Interface {
+export class GzipCompressionImpl implements GzipCompressionAbstraction.Interface {
     public async compress<T>(data: T): Promise<GzipCompressionAbstraction.Compressed> {
         const json = JSON.stringify(data);
         const buffer = await gzip(Buffer.from(json));
