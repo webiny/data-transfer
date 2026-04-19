@@ -8,9 +8,7 @@ import type { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 // class produced by `Abstraction.createImplementation({...})` (e.g., DdbScanner,
 // OsProcessor). Implementation classes carry the abstraction in metadata; the
 // runtime helper below pulls it out.
-type AbstractionToken<T> =
-    | Abstraction<T>
-    | (new (...args: never[]) => T);
+type AbstractionToken<T> = Abstraction<T> | (new (...args: never[]) => T);
 
 export interface PipelineDefinition<TRecord, TContext extends Processor.Context, TShard> {
     readonly name: string;

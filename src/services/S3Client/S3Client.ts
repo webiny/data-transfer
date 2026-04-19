@@ -2,18 +2,24 @@ import { S3Client as AWSS3Client, CopyObjectCommand, GetObjectCommand } from "@a
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
 
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF = 100;
-const CONCURRENCY_LIMIT = 10;
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_INITIAL_BACKOFF = 100;
+const DEFAULT_CONCURRENCY = 10;
 
 export class S3ClientImpl implements SourceS3Client.Interface {
     private client: AWSS3Client;
+    private readonly maxRetries: number;
+    private readonly initialBackoff: number;
+    private readonly concurrency: number;
 
-    public constructor(config: S3ClientConfig.Connection) {
+    public constructor(config: S3ClientConfig.Connection, tuning?: S3ClientConfig.Tuning) {
         this.client = new AWSS3Client({
             region: config.region,
             credentials: config.credentials
         });
+        this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
+        this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
+        this.concurrency = tuning?.concurrency ?? DEFAULT_CONCURRENCY;
     }
 
     public async copy(options: SourceS3Client.Copy): Promise<void> {
@@ -43,8 +49,8 @@ export class S3ClientImpl implements SourceS3Client.Interface {
             return;
         }
 
-        for (let i = 0; i < operations.length; i += CONCURRENCY_LIMIT) {
-            const batch = operations.slice(i, i + CONCURRENCY_LIMIT);
+        for (let i = 0; i < operations.length; i += this.concurrency) {
+            const batch = operations.slice(i, i + this.concurrency);
             await Promise.all(batch.map(op => this.copy(op)));
         }
     }
@@ -52,7 +58,7 @@ export class S3ClientImpl implements SourceS3Client.Interface {
     private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         let lastError: Error | undefined;
 
-        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        for (let attempt = 0; attempt < this.maxRetries; attempt++) {
             try {
                 return await fn();
             } catch (error) {
@@ -64,11 +70,11 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                         error.name === "RequestTimeout" ||
                         error.name === "ServiceUnavailable");
 
-                if (!isRetryable || attempt === MAX_RETRIES - 1) {
+                if (!isRetryable || attempt === this.maxRetries - 1) {
                     throw error;
                 }
 
-                const backoff = INITIAL_BACKOFF * Math.pow(2, attempt);
+                const backoff = this.initialBackoff * Math.pow(2, attempt);
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }

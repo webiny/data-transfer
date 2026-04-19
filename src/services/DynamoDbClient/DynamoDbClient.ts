@@ -9,14 +9,19 @@ import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
-const BATCH_SIZE = 25;
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF = 100;
+const BATCH_SIZE = 25; // AWS-enforced BatchWriteItem limit — not user-tunable
+const DEFAULT_MAX_RETRIES = 3;
+const DEFAULT_INITIAL_BACKOFF = 100;
 
 export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
     private client: DynamoDBDocumentClient;
+    private readonly maxRetries: number;
+    private readonly initialBackoff: number;
 
-    public constructor(config: DynamoDbClientConfig.Connection) {
+    public constructor(
+        config: DynamoDbClientConfig.Connection,
+        tuning?: DynamoDbClientConfig.Tuning
+    ) {
         const awsClient = new AWSDynamoDBClient({
             region: config.region,
             ...(config.credentials && { credentials: config.credentials }),
@@ -27,6 +32,8 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
                 removeUndefinedValues: true
             }
         });
+        this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
+        this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
     }
 
     public async *scan<T extends SourceDynamoDbClient.Record = BaseRecord>(
@@ -141,7 +148,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
     private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         let lastError: Error | undefined;
 
-        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        for (let attempt = 0; attempt < this.maxRetries; attempt++) {
             try {
                 return await fn();
             } catch (error) {
@@ -153,11 +160,11 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
                         error.name === "ThrottlingException" ||
                         error.name === "RequestLimitExceeded");
 
-                if (!isRetryable || attempt === MAX_RETRIES - 1) {
+                if (!isRetryable || attempt === this.maxRetries - 1) {
                     throw error;
                 }
 
-                const backoff = INITIAL_BACKOFF * Math.pow(2, attempt);
+                const backoff = this.initialBackoff * Math.pow(2, attempt);
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }

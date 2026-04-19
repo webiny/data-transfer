@@ -6,7 +6,7 @@ import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompre
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { OsCommandExecutor as OsCommandExecutorAbstraction } from "./abstractions/OsCommandExecutor.ts";
 
-const RETRY_SCHEDULE = [5000, 10000, 20000, 30000, 30000];
+const DEFAULT_RETRY_SCHEDULE = [5000, 10000, 20000, 30000, 30000];
 const DEFAULT_REFRESH_INTERVAL = "1s";
 const DISABLED_REFRESH_INTERVAL = "-1";
 
@@ -158,18 +158,23 @@ class OsCommandExecutorImpl implements OsCommandExecutorAbstraction.Interface {
         touchedIndexes.set(indexName, DEFAULT_REFRESH_INTERVAL);
     }
 
+    private get retrySchedule(): number[] {
+        return this.config.tuning?.os?.retryScheduleMs ?? DEFAULT_RETRY_SCHEDULE;
+    }
+
     private async withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
         let lastError: Error | undefined;
+        const schedule = this.retrySchedule;
 
-        for (let attempt = 0; attempt <= RETRY_SCHEDULE.length; attempt++) {
+        for (let attempt = 0; attempt <= schedule.length; attempt++) {
             try {
                 return await fn();
             } catch (error) {
                 lastError = error as Error;
-                if (attempt < RETRY_SCHEDULE.length) {
-                    const wait = RETRY_SCHEDULE[attempt];
+                if (attempt < schedule.length) {
+                    const wait = schedule[attempt];
                     this.logger.warn(
-                        `${label} failed (attempt ${attempt + 1}/${RETRY_SCHEDULE.length + 1}). Retrying in ${wait / 1000}s...`
+                        `${label} failed (attempt ${attempt + 1}/${schedule.length + 1}). Retrying in ${wait / 1000}s...`
                     );
                     await new Promise(resolve => setTimeout(resolve, wait));
                 }

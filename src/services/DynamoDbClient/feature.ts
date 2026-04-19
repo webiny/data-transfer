@@ -8,10 +8,10 @@ export const DynamoDbClientFeature = createFeature({
     register(container) {
         const config = container.resolve(DynamoDbClientConfig);
 
-        const sourceClient = new DynamoDbClientImpl(config.source);
+        const sourceClient = new DynamoDbClientImpl(config.source, config.tuning);
         container.registerInstance(SourceDynamoDbClient, sourceClient);
 
-        const targetClient = new DynamoDbClientImpl(config.target);
+        const targetClient = new DynamoDbClientImpl(config.target, config.tuning);
         container.registerInstance(TargetDynamoDbClient, targetClient);
     }
 });

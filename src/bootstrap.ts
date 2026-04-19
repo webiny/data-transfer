@@ -60,7 +60,8 @@ export function bootstrap(options: BootstrapOptions): Container {
         target: {
             region: config.target.region,
             credentials: config.target.credentials
-        }
+        },
+        tuning: config.tuning?.ddb
     });
     DynamoDbClientFeature.register(container);
 
@@ -73,7 +74,8 @@ export function bootstrap(options: BootstrapOptions): Container {
             target: {
                 region: config.target.region,
                 credentials: config.target.credentials
-            }
+            },
+            tuning: config.tuning?.s3
         });
         S3ClientFeature.register(container);
     }

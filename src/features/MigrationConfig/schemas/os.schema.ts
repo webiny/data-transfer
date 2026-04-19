@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { awsCredentialsSchema, pipelineSettingsSchema } from "./shared.schema.ts";
+import { awsCredentialsSchema, pipelineSettingsSchema, tuningSchema } from "./shared.schema.ts";
 
 const osSourceAccountConfigSchema = z.object({
     region: z.string(),
@@ -21,7 +21,8 @@ const osTargetAccountConfigSchema = z.object({
 export const osTransferInputSchema = z.object({
     source: osSourceAccountConfigSchema,
     target: osTargetAccountConfigSchema,
-    pipeline: pipelineSettingsSchema
+    pipeline: pipelineSettingsSchema,
+    tuning: tuningSchema
 });
 
 export type OsTransferInput = z.infer<typeof osTransferInputSchema>;

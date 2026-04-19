@@ -17,9 +17,15 @@ export interface DynamoDbConnectionConfig {
     endpoint?: string;
 }
 
+export interface DynamoDbTuning {
+    maxRetries?: number;
+    initialBackoffMs?: number;
+}
+
 export interface IDynamoDbClientConfig {
     source: DynamoDbConnectionConfig;
     target: DynamoDbConnectionConfig;
+    tuning?: DynamoDbTuning;
 }
 
 // ============================================================================
@@ -34,4 +40,5 @@ export namespace DynamoDbClientConfig {
     export type Interface = IDynamoDbClientConfig;
     export type Connection = DynamoDbConnectionConfig;
     export type Credentials = AwsCredentials;
+    export type Tuning = DynamoDbTuning;
 }

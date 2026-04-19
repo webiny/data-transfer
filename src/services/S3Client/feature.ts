@@ -8,10 +8,10 @@ export const S3ClientFeature = createFeature({
     register(container) {
         const config = container.resolve(S3ClientConfig);
 
-        const sourceClient = new S3ClientImpl(config.source);
+        const sourceClient = new S3ClientImpl(config.source, config.tuning);
         container.registerInstance(SourceS3Client, sourceClient);
 
-        const targetClient = new S3ClientImpl(config.target);
+        const targetClient = new S3ClientImpl(config.target, config.tuning);
         container.registerInstance(TargetS3Client, targetClient);
     }
 });

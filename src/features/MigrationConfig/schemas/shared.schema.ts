@@ -11,3 +11,29 @@ export const pipelineSettingsSchema = z.object({
     segments: z.number().int().positive().optional(),
     modelsDir: z.string().optional()
 });
+
+// Per-client operational knobs. All optional — clients fall back to module
+// defaults. Use to throttle parallelism or adjust retry behavior against a
+// rate-limited AWS account.
+export const tuningSchema = z
+    .object({
+        ddb: z
+            .object({
+                maxRetries: z.number().int().nonnegative().optional(),
+                initialBackoffMs: z.number().int().nonnegative().optional()
+            })
+            .optional(),
+        s3: z
+            .object({
+                concurrency: z.number().int().positive().optional(),
+                maxRetries: z.number().int().nonnegative().optional(),
+                initialBackoffMs: z.number().int().nonnegative().optional()
+            })
+            .optional(),
+        os: z
+            .object({
+                retryScheduleMs: z.array(z.number().int().nonnegative()).optional()
+            })
+            .optional()
+    })
+    .optional();
