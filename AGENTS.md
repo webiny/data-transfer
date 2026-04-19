@@ -78,8 +78,12 @@ src/
 │   ├── OpenSearchClient/     # OS mode only
 │   └── S3Client/             # DDB mode only; has concurrency knob via tuning
 ├── features/                 # Domain logic combining tools + services
-│   ├── DdbScanner/ DdbProcessor/ DdbCommandExecutor/
-│   ├── OsScanner/ OsProcessor/ OsCommandExecutor/ OsRecordDecompressor/
+│   ├── DdbScanner/ DdbProcessor/
+│   ├── OsScanner/ OsProcessor/ OsRecordDecompressor/
+│   ├── PutDynamoDbRecordExecutor/   # PutRecord[] → TargetDynamoDbClient.batchPut
+│   ├── S3CopyExecutor/              # S3Copy[]   → TargetS3Client.batchCopy
+│   ├── PutOsDynamoDbRecordExecutor/ # gzip + ensureIndex + delegate to PutDdb
+│   ├── TouchedIndexes/              # per-worker singleton: index → original refresh_interval
 │   ├── PipelineRunner/       # Runs merge groups; auto-puts ctx.record per record
 │   ├── TransformContext/     # Ddb + Os context factories; exposes ctx.original (frozen)
 │   ├── MigrationConfig/      # createDdbTransfer / createOsTransfer (Zod-validated)
@@ -163,8 +167,8 @@ DDB context adds: `copyFile(srcKey, tgtKey)` and `getFile(key)` (S3 helpers).
 ### Scanner / Processor / Executor
 
 - **Scanner** = source iterator. Yields records of some shape per shard. `DynamoDbClient.scan<T>` is generic so scanners can narrow the raw row type.
-- **Processor** = context factory + command→action adapter. `createContext(record)` makes a ctx; `execute(commands)` drains the buffer into the executor.
-- **Executor** = the actual write-to-target. Trusts the record entirely — every field on `ctx.record` (PK, SK, GSI_TENANT, index, \_et/\_ct/\_md, etc.) lands on target verbatim. The executor's only transformation is gzip for OS.
+- **Processor** = context factory + command dispatcher. `createContext(record)` makes a ctx; `execute(commands)` picks commands from the `Commands` bag by key and dispatches each subset to the owning per-command executor. Unknown keys warn once per key per worker (dedupe via a `Set<string>` on the processor instance).
+- **Executor** = one per command type per target. `PutDynamoDbRecordExecutor` writes `PutRecord[]` to DDB. `S3CopyExecutor` runs `S3Copy[]` through `TargetS3Client.batchCopy`. `PutOsDynamoDbRecordExecutor` layers gzip + `ensureIndex` over a delegated `PutDynamoDbRecordExecutor`. Each trusts the record entirely — every field on `ctx.record` (PK, SK, GSI_TENANT, index, \_et/\_ct/\_md, etc.) lands on target verbatim; the only transformation is gzip for OS. Retry / classifier / `retryMode:"adaptive"` live on the underlying clients.
 - **"Record carries everything"** is a house invariant — do NOT add pre-transform snapshot queues, metadata side-channels, or "executor derives X" logic. If transformers destroyed something the executor needs, users write a transformer that preps it. See the 2026-04-19 `refactor(os)` commit for the canonical simplified shape.
 
 ### MigrationConfig tuning
@@ -229,6 +233,7 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - **Unified AWS retry classifier** — every outer retry loop goes through `isRetryableAwsError` (see `src/base/isRetryableAwsError.ts`). The SDK clients use `retryMode: "adaptive"` for internal self-tuning. Don't introduce per-client classifiers or hardcoded per-second rate caps — considered and rejected (limits vary per account).
 - **OS `ensureIndex` fails the transfer on retry-exhaustion** — the old swallow-and-continue path masked real schema / mapping bugs. If index prep exhausts retries, the whole run aborts so the user sees and fixes it.
 - **`@webiny/aws-sdk` wrapper** — AWS imports come from `@webiny/aws-sdk/client-{dynamodb,s3}` + helpers `getDocumentClient`, `createS3Client`. Don't import `@aws-sdk/client-*` directly. One exception: `QueryCommand` still comes from `@aws-sdk/lib-dynamodb` because the wrapper's re-export expects pre-marshalled AttributeValues — flagged for Webiny team to fix.
+- **One executor per command type** — each command-type executor is single-responsibility (`PutDynamoDbRecordExecutor`, `S3CopyExecutor`, `PutOsDynamoDbRecordExecutor`). Processors own dispatch + unknown-key warnings. Adding a new command = adding a new executor without touching existing ones. `PutOsDynamoDbRecordExecutor` composes `PutDynamoDbRecordExecutor` for the final DDB write; it does NOT duplicate put logic. Cross-cutting shard state (e.g. `TouchedIndexes`) lives in dedicated DI singletons, not on the processor.
 
 ---
 
