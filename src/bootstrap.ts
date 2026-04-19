@@ -85,7 +85,8 @@ export function bootstrap(options: BootstrapOptions): Container {
             endpoint: config.target.opensearch.endpoint,
             region: config.target.region,
             service: config.target.opensearch.service,
-            credentials: config.target.credentials
+            credentials: config.target.credentials,
+            maxRetries: config.tuning?.os?.maxRetries
         });
         OpenSearchClientFeature.register(container);
     }

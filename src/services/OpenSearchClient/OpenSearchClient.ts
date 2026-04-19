@@ -17,7 +17,8 @@ class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
                     sessionToken: config.credentials.sessionToken
                 })
             }),
-            node: config.endpoint
+            node: config.endpoint,
+            maxRetries: config.maxRetries ?? 3
         });
     }
 

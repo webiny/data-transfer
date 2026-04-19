@@ -32,6 +32,7 @@ export const tuningSchema = z
             .optional(),
         os: z
             .object({
+                maxRetries: z.number().int().nonnegative().optional(),
                 retryScheduleMs: z.array(z.number().int().nonnegative()).optional()
             })
             .optional()

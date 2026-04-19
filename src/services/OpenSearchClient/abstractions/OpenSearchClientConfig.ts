@@ -13,6 +13,7 @@ export interface IOpenSearchClientConfig {
         secretAccessKey: string;
         sessionToken?: string;
     };
+    maxRetries?: number;
 }
 
 // ============================================================================
