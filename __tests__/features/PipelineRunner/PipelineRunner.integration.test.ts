@@ -119,6 +119,49 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         );
     });
 
+    it("pure passthrough: zero filters + zero transformers copies every source record to target unchanged", async () => {
+        // Data-transfer use case: prod → dev seeding with no transformation.
+        // Pipeline with no .filter() and no .use() must still work — accept
+        // every scanned record, emit it verbatim via auto-put. Nothing about
+        // the infrastructure should require a transformer or filter to exist.
+        const sourceRecords = [
+            makeRecord("tenant-1", "a", "foo"),
+            makeRecord("tenant-1", "b", "bar"),
+            makeRecord("tenant-2", "c", "baz")
+        ];
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": sourceRecords }
+        });
+        const runner = container.resolve(PipelineRunner);
+
+        const builder = runner.pipeline<
+            BaseRecord,
+            DdbTransformContext.Interface<BaseRecord>,
+            DdbScanner.Shard
+        >({
+            name: "passthrough",
+            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
+            processor: Processor as Abstraction<
+                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
+            >
+        });
+        // Intentionally no .filter() and no .use()
+        runner.register(builder.build() as unknown as AnyPipeline);
+
+        await runner.run();
+
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        const written = targetDb.batchPutRecords as BaseRecord[];
+        expect(written).toHaveLength(sourceRecords.length);
+
+        const bySk = new Map(written.map(r => [r.SK, r]));
+        for (const source of sourceRecords) {
+            const target = bySk.get(source.SK);
+            expect(target).toBeDefined();
+            expect(target).toEqual(source);
+        }
+    });
+
     it("auto-puts the transformed record after the transformer chain (no manual ctx.putRecord needed)", async () => {
         const sourceRecords = [makeRecord("tenant-1", "team-1", "security.team")];
         const container = createDdbContainer({

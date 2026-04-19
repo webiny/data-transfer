@@ -58,14 +58,16 @@ describe("PipelineBuilder — construction and build()", () => {
         ).toThrow(/name/i);
     });
 
-    it("throws when build() is called without .filter()", () => {
-        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+    it("builds a pipeline that accepts every record when .filter() was never called (pure-passthrough)", () => {
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
             name: "no-filter",
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
-        });
+        }).build();
 
-        expect(() => builder.build()).toThrow(/filter/i);
+        expect(pipeline.hasFilter).toBe(false);
+        expect(pipeline.accepts({ id: "r1", type: "anything" })).toBe(true);
+        expect(pipeline.accepts({ id: "r2", type: "else" })).toBe(true);
     });
 });
 

@@ -71,12 +71,6 @@ export class PipelineBuilder<
     }
 
     public build(): Pipeline<TRecord, TContext, TShard> {
-        if (!this.filterCalled) {
-            throw new Error(
-                `PipelineBuilder "${this.name}": .filter() is required ` +
-                    "(use createFilter(() => true) for an explicit catch-all)."
-            );
-        }
         const pipelineConfig: PipelineConfig<TRecord, TContext, TShard> = {
             name: this.name,
             scanner: this.scanner,
