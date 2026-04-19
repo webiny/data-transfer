@@ -6,6 +6,7 @@ import {
 } from "@webiny/aws-sdk/client-s3";
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
+import { isRetryableAwsError } from "~/base/index.ts";
 
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_INITIAL_BACKOFF = 100;
@@ -20,7 +21,8 @@ export class S3ClientImpl implements SourceS3Client.Interface {
     public constructor(config: S3ClientConfig.Connection, tuning?: S3ClientConfig.Tuning) {
         this.client = createS3Client({
             region: config.region,
-            credentials: config.credentials
+            credentials: config.credentials,
+            retryMode: "adaptive"
         });
         this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
@@ -69,13 +71,7 @@ export class S3ClientImpl implements SourceS3Client.Interface {
             } catch (error) {
                 lastError = error as Error;
 
-                const isRetryable =
-                    error instanceof Error &&
-                    (error.name === "SlowDown" ||
-                        error.name === "RequestTimeout" ||
-                        error.name === "ServiceUnavailable");
-
-                if (!isRetryable || attempt === this.maxRetries - 1) {
+                if (!isRetryableAwsError(error) || attempt === this.maxRetries - 1) {
                     throw error;
                 }
 
