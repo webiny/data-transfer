@@ -1,4 +1,9 @@
-import { S3Client as AWSS3Client, CopyObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+    CopyObjectCommand,
+    GetObjectCommand,
+    createS3Client,
+    type S3Client
+} from "@webiny/aws-sdk/client-s3";
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
 
@@ -7,13 +12,13 @@ const DEFAULT_INITIAL_BACKOFF = 100;
 const DEFAULT_CONCURRENCY = 10;
 
 export class S3ClientImpl implements SourceS3Client.Interface {
-    private client: AWSS3Client;
+    private client: S3Client;
     private readonly maxRetries: number;
     private readonly initialBackoff: number;
     private readonly concurrency: number;
 
     public constructor(config: S3ClientConfig.Connection, tuning?: S3ClientConfig.Tuning) {
-        this.client = new AWSS3Client({
+        this.client = createS3Client({
             region: config.region,
             credentials: config.credentials
         });

@@ -1,10 +1,15 @@
-import { DynamoDBClient as AWSDynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
-    DynamoDBDocumentClient,
+    BatchWriteCommand,
     ScanCommand,
-    QueryCommand,
-    BatchWriteCommand
-} from "@aws-sdk/lib-dynamodb";
+    getDocumentClient,
+    type DynamoDBDocument
+} from "@webiny/aws-sdk/client-dynamodb";
+// QueryCommand: @webiny/aws-sdk/client-dynamodb re-exports the LOW-LEVEL
+// variant from @aws-sdk/client-dynamodb, which expects pre-marshalled
+// AttributeValue inputs. Our code passes plain JS values and relies on
+// DocumentClient auto-marshalling, which requires the lib-dynamodb variant.
+// Imported directly here until @webiny/aws-sdk's export is fixed.
+import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
@@ -14,7 +19,7 @@ const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_INITIAL_BACKOFF = 100;
 
 export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
-    private client: DynamoDBDocumentClient;
+    private client: DynamoDBDocument;
     private readonly maxRetries: number;
     private readonly initialBackoff: number;
 
@@ -22,15 +27,13 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         config: DynamoDbClientConfig.Connection,
         tuning?: DynamoDbClientConfig.Tuning
     ) {
-        const awsClient = new AWSDynamoDBClient({
+        // getDocumentClient bakes in marshall options (convertEmptyValues,
+        // removeUndefinedValues, convertClassInstanceToMap) and caches by
+        // config hash — no manual DynamoDBClient/DynamoDBDocument wiring.
+        this.client = getDocumentClient({
             region: config.region,
             ...(config.credentials && { credentials: config.credentials }),
             ...(config.endpoint && { endpoint: config.endpoint })
-        });
-        this.client = DynamoDBDocumentClient.from(awsClient, {
-            marshallOptions: {
-                removeUndefinedValues: true
-            }
         });
         this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
