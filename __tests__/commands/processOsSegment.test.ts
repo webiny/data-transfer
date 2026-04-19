@@ -56,7 +56,9 @@ describe("processOsSegment handler", () => {
             execute: vi.fn(),
             createContext: vi.fn(),
             getShardState: () => ({
-                touchedIndexes: Object.fromEntries(touchedIndexesMap)
+                touchedIndexes: [...touchedIndexesMap.entries()].map(
+                    ([indexName, originalRefresh]) => ({ indexName, originalRefresh })
+                )
             })
         };
         resolveMap.set(PipelineRunner, {
@@ -79,10 +81,10 @@ describe("processOsSegment handler", () => {
         const filePath = join(workDir, ".transfer", "r1", "2-indexes.json");
         const content = await readFile(filePath, "utf-8");
         const parsed = JSON.parse(content);
-        expect(parsed).toEqual({
-            "root-headless-cms-category": "1s",
-            "root-headless-cms-article": "5s"
-        });
+        expect(parsed).toEqual([
+            { indexName: "root-headless-cms-category", originalRefresh: "1s" },
+            { indexName: "root-headless-cms-article", originalRefresh: "5s" }
+        ]);
     });
 
     it("writes empty indexes file when no indexes touched", async () => {
@@ -90,7 +92,7 @@ describe("processOsSegment handler", () => {
 
         const filePath = join(workDir, ".transfer", "r2", "0-indexes.json");
         const content = await readFile(filePath, "utf-8");
-        expect(JSON.parse(content)).toEqual({});
+        expect(JSON.parse(content)).toEqual([]);
     });
 
     it("re-throws on runner failure", async () => {

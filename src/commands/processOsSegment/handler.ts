@@ -6,6 +6,7 @@ import { Logger } from "~/tools/Logger/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
+import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 
 export interface ProcessOsSegmentArgs {
     runId: string;
@@ -15,7 +16,7 @@ export interface ProcessOsSegmentArgs {
 }
 
 interface OsShardStateShape {
-    touchedIndexes: Record<string, string>;
+    touchedIndexes: TouchedIndexes.Item[];
 }
 
 export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
@@ -37,22 +38,27 @@ export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
     // Collect touchedIndexes from OS processor(s) and write the
     // <segment>-indexes.json file that EnableRefreshHook already reads.
     const processors = runner.getProcessors();
-    const merged: Record<string, string> = {};
+    const merged = new Map<string, string>();
     for (const processor of processors) {
         const state = (processor as { getShardState(): OsShardStateShape }).getShardState();
-        if (state && typeof state === "object" && "touchedIndexes" in state) {
-            for (const [indexName, refresh] of Object.entries(state.touchedIndexes)) {
-                if (!(indexName in merged)) {
-                    merged[indexName] = refresh;
+        if (state && typeof state === "object" && Array.isArray(state.touchedIndexes)) {
+            for (const item of state.touchedIndexes) {
+                if (!merged.has(item.indexName)) {
+                    merged.set(item.indexName, item.originalRefresh);
                 }
             }
         }
     }
 
+    const payload: TouchedIndexes.Item[] = Array.from(merged, ([indexName, originalRefresh]) => ({
+        indexName,
+        originalRefresh
+    }));
+
     const transferDir = join(process.cwd(), ".transfer", argv.runId);
     await mkdir(transferDir, { recursive: true });
     const stateFile = join(transferDir, `${argv.segment}-indexes.json`);
-    await writeFile(stateFile, JSON.stringify(merged), "utf-8");
+    await writeFile(stateFile, JSON.stringify(payload), "utf-8");
 
     logger.info("Shard complete.");
 }

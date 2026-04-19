@@ -4,6 +4,7 @@ import { AfterTransferHook } from "~/features/TransferLifecycle/abstractions/Tra
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { OpenSearchClient } from "../abstractions/OpenSearchClient.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 
 class EnableRefreshHookImpl implements AfterTransferHook.Interface {
     public constructor(
@@ -52,12 +53,12 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
             for (const file of indexFiles) {
                 try {
                     const content = await readFile(join(transferDir, file), "utf-8");
-                    const data = JSON.parse(content) as Record<string, string>;
-                    for (const [indexName, originalRefresh] of Object.entries(data)) {
+                    const data = JSON.parse(content) as TouchedIndexes.Item[];
+                    for (const item of data) {
                         // First writer wins — if multiple segments touched the same index,
                         // the original refresh_interval from the first one is correct
-                        if (!merged.has(indexName)) {
-                            merged.set(indexName, originalRefresh);
+                        if (!merged.has(item.indexName)) {
+                            merged.set(item.indexName, item.originalRefresh);
                         }
                     }
                 } catch (error) {
