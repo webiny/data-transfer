@@ -26,4 +26,3 @@ export const migrationConfigSchema = z.discriminatedUnion("storage", [
 export type MigrationConfiguration = z.infer<typeof migrationConfigSchema>;
 export type DdbMigrationConfiguration = z.infer<typeof ddbConfigSchema>;
 export type OsMigrationConfiguration = z.infer<typeof osConfigSchema>;
-export type StorageType = MigrationConfiguration["storage"];
