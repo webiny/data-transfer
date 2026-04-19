@@ -1,6 +1,6 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { ModelField, Template } from "../../models/types.ts";
+import { ModelField, Template } from "./modelTypes.ts";
 
 /**
  * Recursively renames field attributes in CMS model definitions:

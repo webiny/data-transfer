@@ -1,7 +1,7 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { getCorrectStorageId } from "../../models/field-utils.ts";
-import { visitFields } from "../../utils/field-visitor.ts";
+import { getCorrectStorageId } from "./fieldUtils.ts";
+import { visitFields } from "./fieldVisitor.ts";
 
 /**
  * Fixes broken storage keys in CMS entry values.

@@ -1,4 +1,4 @@
-import { ModelField } from "./types.ts";
+import { ModelField } from "./modelTypes.ts";
 
 // ============================================================================
 // Field Utility Functions

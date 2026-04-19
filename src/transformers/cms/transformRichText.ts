@@ -1,8 +1,8 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { GzipCompressionImpl as GzipCompression } from "~/tools/GzipCompression/GzipCompression.ts";
-import { LexicalRenderer } from "../../utils/LexicalRenderer.ts";
-import { visitFields } from "../../utils/field-visitor.ts";
+import { LexicalRenderer } from "./lexicalRenderer.ts";
+import { visitFields } from "./fieldVisitor.ts";
 
 // Singleton instances for performance
 const gzipCompression = new GzipCompression();
