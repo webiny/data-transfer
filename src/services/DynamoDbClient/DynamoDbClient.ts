@@ -12,6 +12,7 @@ import {
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
+import { isRetryableAwsError } from "~/base/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 const BATCH_SIZE = 25; // AWS-enforced BatchWriteItem limit — not user-tunable
@@ -33,7 +34,8 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         this.client = getDocumentClient({
             region: config.region,
             ...(config.credentials && { credentials: config.credentials }),
-            ...(config.endpoint && { endpoint: config.endpoint })
+            ...(config.endpoint && { endpoint: config.endpoint }),
+            retryMode: "adaptive"
         });
         this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
@@ -157,13 +159,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
             } catch (error) {
                 lastError = error as Error;
 
-                const isRetryable =
-                    error instanceof Error &&
-                    (error.name === "ProvisionedThroughputExceededException" ||
-                        error.name === "ThrottlingException" ||
-                        error.name === "RequestLimitExceeded");
-
-                if (!isRetryable || attempt === this.maxRetries - 1) {
+                if (!isRetryableAwsError(error) || attempt === this.maxRetries - 1) {
                     throw error;
                 }
 
