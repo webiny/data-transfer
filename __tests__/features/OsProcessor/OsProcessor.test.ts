@@ -8,7 +8,7 @@ import { OsScanner } from "~/features/OsScanner/index.ts";
 
 function makeOsRecord(idSuffix: string, indexName: string): OsScanner.Record {
     return {
-        PK: `T#root#L#en-US#CMS#CME#${idSuffix}`,
+        PK: `T#root#CMS#CME#${idSuffix}`,
         SK: "L",
         _et: "CmsEntriesElasticsearch",
         _ct: "2024-01-01T00:00:00.000Z",
@@ -41,24 +41,19 @@ describe("OsProcessor", () => {
 
         expect(ctxA).not.toBe(ctxB);
         expect((ctxA as unknown as { record: OsScanner.Record }).record.PK).toBe(
-            "T#root#L#en-US#CMS#CME#a"
+            "T#root#CMS#CME#a"
         );
         expect((ctxA as unknown as { commands: Commands }).commands).toBeInstanceOf(Commands);
     });
 
-    it("builds OsItems from PutRecord commands and delegates to OsCommandExecutor", async () => {
+    it("forwards PutRecord records to OsCommandExecutor in order", async () => {
         const container = createOsContainer();
         const processor = container.resolve(Processor);
         const executor = container.resolve(OsCommandExecutor);
         const spy = vi.spyOn(executor, "execute").mockResolvedValue(undefined);
 
-        // createContext captures pre-transform metadata (locale/index/_ct/_md);
-        // execute pairs each PutRecord with that captured metadata in FIFO order.
-        // Simulate the PipelineRunner contract: createContext -> transforms -> put.
         const recA = makeOsRecord("a", "idx-foo");
         const recB = makeOsRecord("b", "idx-bar");
-        processor.createContext(recA);
-        processor.createContext(recB);
 
         const commands = new Commands();
         commands.add(PutRecord.create({ table: "target-os", record: recA }));
@@ -67,14 +62,12 @@ describe("OsProcessor", () => {
         await processor.execute(commands);
 
         expect(spy).toHaveBeenCalledTimes(1);
-        const [items, touchedIndexes] = spy.mock.calls[0]!;
-        expect(items).toHaveLength(2);
-        expect(items[0]!.record.PK).toBe("T#root#L#en-US#CMS#CME#a");
-        expect(items[0]!.metadata.index).toBe("idx-foo");
-        expect(items[0]!.metadata._ct).toBe("2024-01-01T00:00:00.000Z");
-        expect(items[0]!.metadata._md).toBe("2024-01-01T00:00:00.000Z");
-        expect(items[0]!.locale).toBe("en-US");
-        expect(items[1]!.metadata.index).toBe("idx-bar");
+        const [records, touchedIndexes] = spy.mock.calls[0]!;
+        expect(records).toHaveLength(2);
+        expect(records[0]!.PK).toBe("T#root#CMS#CME#a");
+        expect(records[0]!.index).toBe("idx-foo");
+        expect(records[1]!.PK).toBe("T#root#CMS#CME#b");
+        expect(records[1]!.index).toBe("idx-bar");
         expect(touchedIndexes).toBeInstanceOf(Map);
         spy.mockRestore();
     });
@@ -105,12 +98,11 @@ describe("OsProcessor", () => {
         // Stub execute to add a fake entry to the map it's given.
         const spy = vi
             .spyOn(executor, "execute")
-            .mockImplementation(async (_items, touchedIndexes) => {
+            .mockImplementation(async (_records, touchedIndexes) => {
                 touchedIndexes.set("idx-foo", "1s");
             });
 
         const rec = makeOsRecord("a", "idx-foo");
-        processor.createContext(rec);
 
         const commands = new Commands();
         commands.add(PutRecord.create({ table: "target-os", record: rec }));

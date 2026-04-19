@@ -47,9 +47,9 @@ describe("OS table migration (end-to-end through v5ToV6OsPreset)", () => {
             expect(record._ct).toBeDefined();
             expect(record._md).toBeDefined();
             expect(record.index).toBeDefined();
-            // Locale stripped from the target index name
-            expect(record.index).not.toContain("en-us");
-            // Locale stripped from PK
+            // PK locale segment is stripped by the removeLocale transformer in
+            // cmsEntryOsPipeline. Index locale is not stripped by any transformer
+            // in the current preset — whatever the scanner yielded lands on target.
             expect(record.PK).not.toContain("#L#en-US#");
         }
 

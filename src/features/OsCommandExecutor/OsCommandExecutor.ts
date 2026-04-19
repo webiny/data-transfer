@@ -4,23 +4,19 @@ import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/Dyn
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { OsRecord } from "~/features/OsScanner/abstractions/OsScanner.ts";
 import { OsCommandExecutor as OsCommandExecutorAbstraction } from "./abstractions/OsCommandExecutor.ts";
 
 const DEFAULT_RETRY_SCHEDULE = [5000, 10000, 20000, 30000, 30000];
 const DEFAULT_REFRESH_INTERVAL = "1s";
 const DISABLED_REFRESH_INTERVAL = "-1";
 
-interface OsTargetRecord {
-    PK: string;
-    SK: string;
-    data: unknown;
+// Target-shape record: same envelope as the scanner-yielded OsRecord but with
+// `data` replaced by the gzipped form that actually lands in DDB.
+interface OsTargetRecord extends BaseRecord {
     index: string;
-    TYPE: string;
-    GSI_TENANT: unknown;
-    _et: string;
-    _ct: string;
-    _md: string;
-    [key: string]: unknown;
+    data: GzipCompression.Compressed;
 }
 
 class OsCommandExecutorImpl implements OsCommandExecutorAbstraction.Interface {
@@ -32,12 +28,9 @@ class OsCommandExecutorImpl implements OsCommandExecutorAbstraction.Interface {
         private readonly config: MigrationConfig.Interface
     ) {}
 
-    public async execute(
-        items: OsCommandExecutorAbstraction.Item[],
-        touchedIndexes: Map<string, string>
-    ): Promise<void> {
-        if (items.length === 0) {
-            this.logger.info("No items to execute");
+    public async execute(records: OsRecord[], touchedIndexes: Map<string, string>): Promise<void> {
+        if (records.length === 0) {
+            this.logger.info("No records to execute");
             return;
         }
 
@@ -46,42 +39,23 @@ class OsCommandExecutorImpl implements OsCommandExecutorAbstraction.Interface {
         }
 
         const targetTable = this.config.target.opensearch.tableName;
+        const targetRecords = await this.buildTargetRecords(records);
 
-        const osRecords = await this.buildOsRecords(items);
-
-        const uniqueIndexes = new Set(osRecords.map(r => r.index));
+        const uniqueIndexes = new Set(targetRecords.map(r => r.index));
         for (const indexName of uniqueIndexes) {
             await this.ensureIndex(indexName, touchedIndexes);
         }
 
-        await this.targetDb.batchPut(targetTable, osRecords);
+        await this.targetDb.batchPut(targetTable, targetRecords);
     }
 
-    private async buildOsRecords(
-        items: OsCommandExecutorAbstraction.Item[]
-    ): Promise<OsTargetRecord[]> {
+    private async buildTargetRecords(records: OsRecord[]): Promise<OsTargetRecord[]> {
         return Promise.all(
-            items.map(async item => {
-                const compressed = await this.gzip.compress(item.record.data);
-                const index = this.stripLocaleFromIndex(item.metadata.index, item.locale);
-                return {
-                    PK: item.record.PK,
-                    SK: item.record.SK,
-                    data: compressed,
-                    index,
-                    TYPE: item.record.TYPE,
-                    GSI_TENANT: item.record.GSI_TENANT,
-                    _et: "CmsEntriesElasticsearch",
-                    _ct: item.metadata._ct,
-                    _md: item.metadata._md
-                };
-            })
+            records.map(async record => ({
+                ...record,
+                data: await this.gzip.compress(record.data)
+            }))
         );
-    }
-
-    private stripLocaleFromIndex(index: string, locale: string): string {
-        const localeLower = locale.toLowerCase();
-        return index.replace(`-${localeLower}-`, "-");
     }
 
     private async ensureIndex(

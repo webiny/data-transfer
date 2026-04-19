@@ -11,11 +11,6 @@ interface OsCompressedRecord extends BaseRecord {
     data: OsCompressedRecordData;
 }
 
-interface OsDecompressedRecord extends Omit<OsCompressedRecord, "data"> {
-    index: string;
-    data: Record<string, unknown>;
-}
-
 interface IOsRecordDecompressor {
     /**
      * Decompress a CmsEntriesElasticsearch OS DynamoDB record.

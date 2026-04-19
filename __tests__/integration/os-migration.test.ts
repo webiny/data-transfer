@@ -56,7 +56,7 @@ describe("OS migration integration (end-to-end through v5ToV6OsPreset + generate
         }
     });
 
-    it("creates one OS index per distinct model id with the locale stripped", async () => {
+    it("creates one OS index per distinct model id", async () => {
         const sourceRecords = await generateOsRecords({
             entries: 2,
             modelIds: ["category", "article"]
@@ -75,8 +75,11 @@ describe("OS migration integration (end-to-end through v5ToV6OsPreset + generate
         const indexes = await osClient.listIndexes();
         const indexNames = indexes.map(i => i.index);
 
-        expect(indexNames).toContain("root-headless-cms-category");
-        expect(indexNames).toContain("root-headless-cms-article");
+        // Index names flow through from the source as-is; the infrastructure
+        // writes whatever the record carries. Locale stripping is a transformer
+        // concern (user-land), not enforced by the executor.
+        expect(indexNames).toContain("root-headless-cms-en-us-category");
+        expect(indexNames).toContain("root-headless-cms-en-us-article");
     });
 
     it("produces inner OS documents that keep modelId/entryId but drop the locale field", async () => {

@@ -1,34 +1,25 @@
 import { createAbstraction } from "~/base/index.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
-
-interface OsItemMetadata {
-    index: string;
-    _ct: string;
-    _md: string;
-}
-
-interface OsItem {
-    record: BaseRecord;
-    metadata: OsItemMetadata;
-    locale: string;
-}
+import type { OsRecord } from "~/features/OsScanner/abstractions/OsScanner.ts";
 
 interface IOsCommandExecutor {
     /**
-     * Gzip each item's record data, build the OS DynamoDB record shape,
-     * ensure target indexes exist (creates missing ones, disables refresh),
-     * and batch-write to the target OS table.
+     * Gzip each record's `data` field, ensure the target OS index exists for
+     * every distinct `record.index` (creating missing ones with refresh
+     * disabled), and batch-write the records to the target OS DDB table.
+     *
+     * Every field on the record is trusted — PK/SK, index, _et/_ct/_md,
+     * GSI_TENANT — whatever the transformer chain produced lands on the
+     * target as-is. The only transformation the executor performs is gzipping
+     * `record.data`.
      *
      * `touchedIndexes` (handler-owned) is mutated with indexName → original
      * refresh_interval so the after-transfer hook can restore them.
      */
-    execute(items: OsItem[], touchedIndexes: Map<string, string>): Promise<void>;
+    execute(records: OsRecord[], touchedIndexes: Map<string, string>): Promise<void>;
 }
 
 export const OsCommandExecutor = createAbstraction<IOsCommandExecutor>("Core/OsCommandExecutor");
 
 export namespace OsCommandExecutor {
     export type Interface = IOsCommandExecutor;
-    export type Item = OsItem;
-    export type Metadata = OsItemMetadata;
 }
