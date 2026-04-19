@@ -86,18 +86,16 @@ src/
 ├── transformers/             # 19 built-in transformers (user-land examples)
 │   ├── createTransformer.ts createDdbTransformer.ts createOsTransformer.ts
 │   ├── global/ cms/ file-manager/ folders/ mailer/ security/
+│   │   └── (cms/ also has fieldUtils.ts, fieldVisitor.ts, lexicalRenderer.ts,
+│   │       modelTypes.ts — helpers local to CMS transformers)
 │   └── index.ts              # Top-level barrel
 ├── presets/                  # Built-in presets (v5-to-v6-ddb, v5-to-v6-os)
 │   └── v5-to-v6/pipelines/   # 9 pipeline definition files (camelCase)
-├── models/                   # ModelField / Template / field-utils (used by CMS transformers)
 └── utils/
-    ├── LexicalRenderer.ts    # Used by transformRichText
-    ├── field-visitor.ts      # Used by several CMS transformers
-    ├── gzip-compression.ts   # Legacy gzip helper — tools/GzipCompression/ is the DI version
     └── load-env.ts           # loadEnv(import.meta.url) — exposed as public API
 ```
 
-Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/database/`, `src/config/`, `src/storage/`, `src/opensearch/`, `src/models/model-provider.ts`, `src/utils/{logger,tenants,record-guards}.ts`. Don't expect to find them.
+Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/database/`, `src/config/`, `src/storage/`, `src/opensearch/`, `src/models/`, `src/utils/{logger,tenants,record-guards,gzip-compression,field-visitor,LexicalRenderer}.ts`. The transformer-adjacent helpers that lived under `src/models/` and `src/utils/` now live in `src/transformers/cms/` (they're CMS-transformer-only). Don't expect to find them elsewhere.
 
 ---
 
