@@ -53,8 +53,14 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
             for (const file of indexFiles) {
                 try {
                     const content = await readFile(join(transferDir, file), "utf-8");
-                    const data = JSON.parse(content) as TouchedIndexes.Item[];
-                    for (const item of data) {
+                    const data = JSON.parse(content);
+                    if (!Array.isArray(data)) {
+                        this.logger.warn(
+                            `Ignoring ${file}: expected an array, got ${typeof data}. Stale file from an older run — clean up .transfer/<runId>/ manually.`
+                        );
+                        continue;
+                    }
+                    for (const item of data as TouchedIndexes.Item[]) {
                         // First writer wins — if multiple segments touched the same index,
                         // the original refresh_interval from the first one is correct
                         if (!merged.has(item.indexName)) {
