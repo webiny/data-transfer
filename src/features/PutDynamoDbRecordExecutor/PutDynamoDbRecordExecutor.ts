@@ -1,4 +1,7 @@
-import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import {
+    type DatabaseRecord,
+    TargetDynamoDbClient
+} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import type { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { PutDynamoDbRecordExecutor as PutDynamoDbRecordExecutorAbstraction } from "./abstractions/PutDynamoDbRecordExecutor.ts";
 
@@ -10,19 +13,19 @@ class PutDynamoDbRecordExecutorImpl implements PutDynamoDbRecordExecutorAbstract
             return;
         }
 
-        const byTable = new Map<string, Record<string, unknown>[]>();
+        const byTable = new Map<string, DatabaseRecord[]>();
         for (const put of puts) {
             let bucket = byTable.get(put.table);
             if (!bucket) {
                 bucket = [];
                 byTable.set(put.table, bucket);
             }
-            bucket.push(put.record);
+            bucket.push(put.record as DatabaseRecord);
         }
 
         await Promise.all(
             Array.from(byTable.entries()).map(([table, records]) =>
-                this.targetDb.batchPut(table, records as any)
+                this.targetDb.batchPut(table, records)
             )
         );
     }

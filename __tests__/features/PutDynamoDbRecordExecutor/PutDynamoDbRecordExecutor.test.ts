@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "@webiny/di";
-import { LoggerFeature } from "~/tools/Logger/index.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
@@ -13,7 +12,6 @@ describe("PutDynamoDbRecordExecutor", () => {
 
     beforeEach(() => {
         container = new Container();
-        LoggerFeature.register(container, { logLevel: "error", json: false });
         client = new MockDynamoDbClient();
         container.registerInstance(TargetDynamoDbClient, client);
         PutDynamoDbRecordExecutorFeature.register(container);
