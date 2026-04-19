@@ -80,6 +80,52 @@ describe("MigrationConfig Feature", () => {
             const configPath = writeConfig({ invalid: true });
             await expect(loadConfig(configPath)).rejects.toThrow();
         });
+
+        it("resolves a file-path preset relative to the config file's directory", async () => {
+            const configPath = writeConfig({
+                storage: "ddb",
+                source: {
+                    region: "eu-central-1",
+                    credentials: creds,
+                    dynamodb: { tableName: "src" },
+                    s3: { bucket: "src-bucket" }
+                },
+                target: {
+                    region: "eu-central-1",
+                    credentials: creds,
+                    dynamodb: { tableName: "tgt" },
+                    s3: { bucket: "tgt-bucket" }
+                },
+                pipeline: { preset: "./my-preset.ts" }
+            });
+
+            const config = await loadConfig(configPath);
+
+            expect(config.pipeline.preset).toBe(join(tmpDir, "my-preset.ts"));
+        });
+
+        it("leaves built-in preset names unchanged", async () => {
+            const configPath = writeConfig({
+                storage: "ddb",
+                source: {
+                    region: "eu-central-1",
+                    credentials: creds,
+                    dynamodb: { tableName: "src" },
+                    s3: { bucket: "src-bucket" }
+                },
+                target: {
+                    region: "eu-central-1",
+                    credentials: creds,
+                    dynamodb: { tableName: "tgt" },
+                    s3: { bucket: "tgt-bucket" }
+                },
+                pipeline: { preset: "v5-to-v6" }
+            });
+
+            const config = await loadConfig(configPath);
+
+            expect(config.pipeline.preset).toBe("v5-to-v6");
+        });
     });
 
     describe("DI registration", () => {

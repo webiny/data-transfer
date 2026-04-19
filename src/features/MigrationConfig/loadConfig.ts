@@ -31,10 +31,17 @@ export async function loadConfig(configPath: string): Promise<MigrationConfig.In
             );
         }
 
-        // Resolve modelsDir relative to the config file's directory
+        // Resolve path-shaped pipeline fields relative to the config file's
+        // directory. Built-in preset NAMES (e.g. "v5-to-v6") are left alone.
+        const configDir = dirname(absolutePath);
         if (config.pipeline?.modelsDir) {
-            const configDir = dirname(absolutePath);
             config.pipeline.modelsDir = resolve(configDir, config.pipeline.modelsDir);
+        }
+        if (
+            typeof config.pipeline?.preset === "string" &&
+            (config.pipeline.preset.endsWith(".ts") || config.pipeline.preset.endsWith(".js"))
+        ) {
+            config.pipeline.preset = resolve(configDir, config.pipeline.preset);
         }
 
         return config as MigrationConfig.Interface;
