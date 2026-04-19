@@ -49,6 +49,17 @@ export {
 export { createPipeline, type PipelineDefinition } from "./domain/pipeline/createPipeline.ts";
 export { createDdbPipeline } from "./domain/pipeline/createDdbPipeline.ts";
 export { createOsPipeline } from "./domain/pipeline/createOsPipeline.ts";
+export { createFilter, type Filter } from "./domain/pipeline/Filter.ts";
+
+// Scanner / processor implementation tokens — required when registering a
+// pipeline definition with the runner: pipeline.register(runner, DdbScanner, DdbProcessor).
+export { DdbScanner } from "./features/DdbScanner/index.ts";
+export { DdbProcessor } from "./features/DdbProcessor/index.ts";
+export { OsScanner } from "./features/OsScanner/index.ts";
+export { OsProcessor } from "./features/OsProcessor/index.ts";
+
+// MigrationPreset shape — users export an object of this type from their preset file.
+export type { MigrationPreset } from "./domain/transform/Preset.ts";
 
 // v5-to-v6 built-in pipeline definitions
 export { cmsEntryPipeline } from "./presets/v5-to-v6/pipelines/cmsEntry.ts";
