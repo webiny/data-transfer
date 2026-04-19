@@ -4,6 +4,7 @@ import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/Dyn
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { isRetryableAwsError } from "~/base/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { OsRecord } from "~/features/OsScanner/abstractions/OsScanner.ts";
 import { OsCommandExecutor as OsCommandExecutorAbstraction } from "./abstractions/OsCommandExecutor.ts";
@@ -76,6 +77,9 @@ class OsCommandExecutorImpl implements OsCommandExecutorAbstraction.Interface {
                 await this.createNewIndex(indexName, touchedIndexes);
             }, `ensureIndex("${indexName}")`);
         } catch (error) {
+            if (!isRetryableAwsError(error)) {
+                throw error;
+            }
             this.logger.error(
                 `Failed to ensure index "${indexName}" after retries. Continuing without index creation. Error: ${error}`
             );
@@ -145,6 +149,9 @@ class OsCommandExecutorImpl implements OsCommandExecutorAbstraction.Interface {
                 return await fn();
             } catch (error) {
                 lastError = error as Error;
+                if (!isRetryableAwsError(error)) {
+                    throw error;
+                }
                 if (attempt < schedule.length) {
                     const wait = schedule[attempt];
                     this.logger.warn(
