@@ -179,7 +179,7 @@ Optional `tuning` section on `MigrationConfig`:
 tuning?: {
     ddb?: { maxRetries?: number; initialBackoffMs?: number };
     s3?:  { concurrency?: number; maxRetries?: number; initialBackoffMs?: number };
-    os?:  { maxRetries?: number; retryScheduleMs?: number[] };
+    os?:  { maxRetries?: number; retryScheduleMs?: number[]; gzipConcurrency?: number };
 }
 ```
 

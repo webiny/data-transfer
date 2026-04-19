@@ -3,6 +3,8 @@ import { PutOsDynamoDbRecordExecutor } from "~/features/PutOsDynamoDbRecordExecu
 import { PutDynamoDbRecordExecutor } from "~/features/PutDynamoDbRecordExecutor/abstractions/PutDynamoDbRecordExecutor.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
+import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { createOsContainer } from "../../containers/index.ts";
 import { MockOpenSearchClient } from "../../services/OpenSearchClient/MockOpenSearchClient.ts";
@@ -11,6 +13,14 @@ interface RecordOverrides {
     PK?: string;
     index?: string;
     data?: Record<string, unknown>;
+}
+
+interface OsTuningShape {
+    gzipConcurrency?: number;
+}
+
+interface MutableConfigCast {
+    tuning?: { os?: OsTuningShape };
 }
 
 const TABLE = "target-os";
@@ -174,6 +184,41 @@ describe("PutOsDynamoDbRecordExecutor", () => {
             expect(createSpy).not.toHaveBeenCalled();
             expect(getSettingsSpy).not.toHaveBeenCalled();
             expect(touched.all()).toEqual([{ indexName: INDEX, originalRefresh: "2s" }]);
+        });
+
+        it("caps concurrent gzip.compress calls at tuning.os.gzipConcurrency", async () => {
+            const container = createOsContainer();
+            const config = container.resolve(MigrationConfig) as MigrationConfig.Interface &
+                MutableConfigCast;
+            config.tuning = { ...(config.tuning ?? {}), os: { gzipConcurrency: 2 } };
+
+            const executor = container.resolve(PutOsDynamoDbRecordExecutor);
+            const gzip = container.resolve(GzipCompression);
+            const delegate = container.resolve(PutDynamoDbRecordExecutor);
+
+            vi.spyOn(delegate, "execute").mockResolvedValue();
+
+            let inFlight = 0;
+            let peak = 0;
+            const original = gzip.compress.bind(gzip);
+            vi.spyOn(gzip, "compress").mockImplementation(async payload => {
+                inFlight++;
+                if (inFlight > peak) {
+                    peak = inFlight;
+                }
+                await new Promise(resolve => setTimeout(resolve, 0));
+                const result = await original(payload);
+                inFlight--;
+                return result;
+            });
+
+            const puts = Array.from({ length: 8 }, (_, i) =>
+                makePut({ PK: `T#root#CMS#CME#${i}` })
+            );
+            await executor.execute(puts);
+
+            expect(peak).toBeLessThanOrEqual(2);
+            expect(peak).toBeGreaterThan(0);
         });
 
         it("calls ensureIndex once per unique index across many records", async () => {

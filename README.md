@@ -130,7 +130,11 @@ export default createDdbTransfer({
   tuning: {
     ddb: { maxRetries: 3, initialBackoffMs: 100 },
     s3: { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
-    os: { maxRetries: 3, retryScheduleMs: [5000, 10000, 20000, 30000, 30000] }
+    os: {
+      maxRetries: 3,
+      retryScheduleMs: [5000, 10000, 20000, 30000, 30000],
+      gzipConcurrency: 16
+    }
   }
 });
 ```

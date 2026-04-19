@@ -12,6 +12,7 @@ import { PutOsDynamoDbRecordExecutor as PutOsDynamoDbRecordExecutorAbstraction }
 const DEFAULT_RETRY_SCHEDULE: number[] = [5000, 10000, 20000, 30000, 30000];
 const DEFAULT_REFRESH_INTERVAL = "1s";
 const DISABLED_REFRESH_INTERVAL = "-1";
+const DEFAULT_GZIP_CONCURRENCY = 16;
 
 class PutOsDynamoDbRecordExecutorImpl implements PutOsDynamoDbRecordExecutorAbstraction.Interface {
     public constructor(
@@ -39,18 +40,33 @@ class PutOsDynamoDbRecordExecutorImpl implements PutOsDynamoDbRecordExecutorAbst
     }
 
     private async buildGzippedPuts(puts: PutRecord[]): Promise<PutRecord[]> {
-        return Promise.all(
-            puts.map(async put => {
-                const compressed = await this.gzip.compress(put.record.data);
-                return PutRecord.create({
-                    table: put.table,
-                    record: {
-                        ...put.record,
-                        data: compressed
-                    }
-                });
-            })
-        );
+        const concurrency = this.gzipConcurrency;
+        const result: PutRecord[] = new Array(puts.length);
+
+        for (let i = 0; i < puts.length; i += concurrency) {
+            const slice = puts.slice(i, i + concurrency);
+            const gzipped = await Promise.all(
+                slice.map(async put => {
+                    const compressed = await this.gzip.compress(put.record.data);
+                    return PutRecord.create({
+                        table: put.table,
+                        record: {
+                            ...put.record,
+                            data: compressed
+                        }
+                    });
+                })
+            );
+            for (let j = 0; j < gzipped.length; j++) {
+                result[i + j] = gzipped[j];
+            }
+        }
+
+        return result;
+    }
+
+    private get gzipConcurrency(): number {
+        return this.config.tuning?.os?.gzipConcurrency ?? DEFAULT_GZIP_CONCURRENCY;
     }
 
     private async ensureIndex(indexName: string): Promise<void> {

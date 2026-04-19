@@ -33,7 +33,8 @@ export const tuningSchema = z
         os: z
             .object({
                 maxRetries: z.number().int().nonnegative().optional(),
-                retryScheduleMs: z.array(z.number().int().nonnegative()).optional()
+                retryScheduleMs: z.array(z.number().int().nonnegative()).optional(),
+                gzipConcurrency: z.number().int().positive().optional()
             })
             .optional()
     })
