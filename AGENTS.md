@@ -49,12 +49,14 @@ src/
 ├── cli.ts                    # Entry point — yargs router
 ├── bootstrap.ts              # Creates DI container, registers all features
 ├── index.ts                  # Public API (imported as @webiny/data-transfer)
-├── base/                     # createAbstraction, createFeature, Result, BaseError
+├── base/                     # createAbstraction, createFeature, Result, BaseError,
+│                             # formatError (CLI error formatter), isRetryableAwsError
+│                             # (unified AWS retry classifier)
 ├── commands/                 # Self-registering CLI commands
 │   ├── init/                 # Scaffolds a new transfer project from templates/
 │   ├── run/                  # Main orchestrator ($0)
-│   ├── processSegment/       # DDB worker — CURRENTLY STUBBED (throws)
-│   └── processOsSegment/     # OS worker — CURRENTLY STUBBED (throws)
+│   ├── processSegment/       # DDB worker — calls PipelineRunner.run({ segment, totalSegments })
+│   └── processOsSegment/     # OS worker — calls PipelineRunner.run({ segment, totalSegments })
 ├── domain/
 │   ├── pipeline/             # New (post-Plan-A) pipeline abstractions
 │   │   ├── abstractions/     # Scanner, Processor, Hook, Transformer
@@ -173,13 +175,20 @@ Optional `tuning` section on `MigrationConfig`:
 tuning?: {
     ddb?: { maxRetries?: number; initialBackoffMs?: number };
     s3?:  { concurrency?: number; maxRetries?: number; initialBackoffMs?: number };
-    os?:  { retryScheduleMs?: number[] };
+    os?:  { maxRetries?: number; retryScheduleMs?: number[] };
 }
 ```
 
 Fields flow to the respective client/executor; absent = module-level defaults. `BATCH_SIZE = 25` in DDB is AWS-enforced, NOT a user knob.
 
-**Still TODO**: cross-call token-bucket pacing — see `project_rate_limits_todo.md` memory.
+### AWS retry + error classification
+
+All AWS-facing code shares one classifier: `src/base/isRetryableAwsError.ts` (duck-typed, no SDK import). Retry path per client:
+
+- **DDB + S3**: AWS SDK clients are created with `retryMode: "adaptive"` (self-tuning token bucket inside the SDK). The outer `executeWithRetry` loop in `DynamoDbClientImpl` / `S3ClientImpl` uses the classifier to gate retries: non-retryable errors throw immediately; retryable errors retry up to `tuning.{ddb,s3}.maxRetries` with exponential backoff. Loop bounds: `attempt <= maxRetries` ⇒ 1 initial + N retries.
+- **OpenSearch**: `opensearch-js` `Client` receives `maxRetries` from `tuning.os.maxRetries` (default 3). `OsCommandExecutor.withRetry` is classifier-gated; `ensureIndex` now **fails the transfer** on retry-exhaustion (no silent continuation).
+
+No custom token-bucket pacing — the AWS SDK's adaptive mode handles remote-signal-based backoff. See `project_rate_limits_todo.md` memory for the design history.
 
 ---
 
@@ -217,16 +226,18 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - **First-match-wins + scanner-keyed merge groups** — registration order is semantic. More-specific pipelines before catch-alls. Different scanners = different merge groups.
 - **Impl-class-as-token accepted** — `PipelineDefinition.register(runner, DdbScanner, DdbProcessor)` works even though `DdbScanner` is an Implementation (not an Abstraction). Runtime extracts the abstraction via `Metadata`. Don't reintroduce an "abstraction-only" signature.
 - **PutRecord target is baked in** — `ctx.putRecord(record)` emits a PutRecord command with the target table resolved by the context factory. Transformers shouldn't need to know table names.
+- **Unified AWS retry classifier** — every outer retry loop goes through `isRetryableAwsError` (see `src/base/isRetryableAwsError.ts`). The SDK clients use `retryMode: "adaptive"` for internal self-tuning. Don't introduce per-client classifiers or hardcoded per-second rate caps — considered and rejected (limits vary per account).
+- **OS `ensureIndex` fails the transfer on retry-exhaustion** — the old swallow-and-continue path masked real schema / mapping bugs. If index prep exhausts retries, the whole run aborts so the user sees and fixes it.
+- **`@webiny/aws-sdk` wrapper** — AWS imports come from `@webiny/aws-sdk/client-{dynamodb,s3}` + helpers `getDocumentClient`, `createS3Client`. Don't import `@aws-sdk/client-*` directly. One exception: `QueryCommand` still comes from `@aws-sdk/lib-dynamodb` because the wrapper's re-export expects pre-marshalled AttributeValues — flagged for Webiny team to fix.
 
 ---
 
 ## 7. Known open work (in priority order)
 
-1. **Worker integration** (the big one). `src/commands/processSegment/handler.ts` and `processOsSegment/handler.ts` currently throw. `PipelineRunner` needs a `runShard(mergeGroupId, shard)` or equivalent per-shard entry point so a deployed worker can pick one shard off a queue. Until this lands, the tool runs only in tests. Needs a brainstorm before implementation.
-2. **Public API audit** — `src/index.ts` has grown a lot through the refactors. Read-through + tighten before shipping. Check what's accidentally public (built-in transformers probably shouldn't be permanent exports).
-3. **Init scaffolding health** — `init` command scaffolds from `templates/`. After the preset renames and `tuning` config addition, the template likely doesn't compile cleanly. Quick smoke run.
-4. **Token-bucket rate limiting** — `tuning.{ddb,s3,os}` covers retry + batch concurrency but NOT per-second pacing. See `project_rate_limits_todo.md` memory. Low priority until throttling hurts.
-5. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
+1. **Public API audit** — `src/index.ts` has grown a lot through the refactors. Read-through + tighten before shipping. Check what's accidentally public (built-in transformers probably shouldn't be permanent exports).
+2. **npm publish story** — the package isn't on npm yet. Needs version strategy, publish script, CI. `npx @webiny/data-transfer init` in the README won't work until this lands.
+3. **Init scaffolding smoke** — `init` scaffolds from `templates/`. `templates/transformers/stampMigratedAt.ts`, `templates/presets/example.ts`, `templates/projects/example/custom.transfer.config.ts` exist now. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
+4. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
 
 ---
 
@@ -237,7 +248,7 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - Type-check: `yarn ts-check`
 - Test: `yarn test` (or `yarn test:coverage`)
 - Scaffold a project: `npx @webiny/data-transfer init my-transfer-folder`
-- Run a transfer: `yarn transfer --config=./projects/example/ddb.transfer.config.ts` _(runs through `run` handler; workers will throw until item #1 above lands)_
+- Run a transfer: `yarn transfer --config=./projects/example/ddb.transfer.config.ts`
 
 ---
 
