@@ -1,8 +1,7 @@
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { OsRecordDecompressor as OsRecordDecompressorAbstraction } from "./abstractions/OsRecordDecompressor.ts";
-
-const DEFAULT_LOCALE = "en-US";
+import type { BaseRecord } from "~/domain/transform/index.js";
 
 class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interface {
     public constructor(
@@ -13,7 +12,10 @@ class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interf
     public async decompress(
         osRecord: Record<string, unknown>
     ): Promise<OsRecordDecompressorAbstraction.Decompressed | null> {
-        if (osRecord._et !== "CmsEntriesElasticsearch") {
+        /**
+         * Not possible to have an OS record without an index defined on it.
+         */
+        if (!osRecord.index) {
             return null;
         }
 
@@ -22,7 +24,7 @@ class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interf
             return null;
         }
 
-        const inner = await this.gzip.decompress<Record<string, unknown>>(data);
+        const inner = await this.gzip.decompress<BaseRecord>(data);
         if (!inner) {
             this.logger.warn(
                 `Failed to decompress OS record PK=${osRecord.PK} SK=${osRecord.SK}. Data may be corrupt.`
@@ -30,41 +32,7 @@ class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interf
             return null;
         }
 
-        const sk = osRecord.SK as string;
-        let type: string;
-        if (sk === "L") {
-            type = "cms.entry.l";
-        } else if (sk === "P") {
-            type = "cms.entry.p";
-        } else {
-            this.logger.warn(
-                `Unexpected SK value "${sk}" for OS record PK=${osRecord.PK}. Skipping.`
-            );
-            return null;
-        }
-
-        const pk = osRecord.PK as string;
-        const locale = this.extractLocaleFromPk(pk) ?? DEFAULT_LOCALE;
-
-        return {
-            record: {
-                ...inner,
-                PK: pk,
-                SK: sk,
-                TYPE: type
-            },
-            metadata: {
-                index: osRecord.index as string,
-                _ct: osRecord._ct as string,
-                _md: osRecord._md as string
-            },
-            locale
-        };
-    }
-
-    private extractLocaleFromPk(pk: string): string | null {
-        const match = pk.match(/#L#([^#]+)#/);
-        return match ? match[1] : null;
+        return inner;
     }
 }
 

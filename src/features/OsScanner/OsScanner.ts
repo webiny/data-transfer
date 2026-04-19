@@ -1,8 +1,15 @@
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import type { OsRecord, OsShard } from "./abstractions/OsScanner.ts";
+
+// OS companion-table rows carry the target index name at the root. Decoded
+// rows without it are not OS CMS entries and are skipped at scan time.
+interface OsRawRecord extends BaseRecord {
+    index?: string;
+}
 
 class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
     public constructor(
@@ -25,26 +32,23 @@ class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
             throw new Error("OsScanner: source is not in OS storage mode; check config.storage");
         }
         const tableName = this.config.source.opensearch.tableName;
-        for await (const raw of this.source.scan(tableName, {
+        for await (const raw of this.source.scan<OsRawRecord>(tableName, {
             segment: shard.segment,
             totalSegments: shard.total
         })) {
+            const { index } = raw;
+            if (!index) {
+                continue;
+            }
             const decompressed = await this.decompressor.decompress(raw);
             if (!decompressed) {
                 continue;
             }
-            const merged: OsRecord = {
-                ...decompressed.record,
-                PK: decompressed.record.PK as string,
-                SK: decompressed.record.SK as string,
-                _et: decompressed.record._et as string,
-                _ct: decompressed.metadata._ct,
-                _md: decompressed.metadata._md,
-                TYPE: decompressed.record.TYPE as string,
-                index: decompressed.metadata.index,
-                locale: decompressed.locale
+            yield {
+                ...raw,
+                index,
+                data: decompressed
             };
-            yield merged;
         }
     }
 }

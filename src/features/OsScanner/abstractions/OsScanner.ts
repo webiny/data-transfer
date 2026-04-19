@@ -2,7 +2,7 @@ import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 export interface OsRecord extends BaseRecord {
     index: string;
-    locale: string;
+    data: Record<string, unknown>; // decompressed data
 }
 
 export interface OsShard {
