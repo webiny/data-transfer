@@ -11,6 +11,13 @@ export interface PipelineRunnerFactoryInput<TRecord, TContext extends Processor.
     processor: Abstraction<Processor.Interface<TRecord, TContext>>;
 }
 
+export interface RunOptions {
+    /** Zero-based index of the shard this runner invocation should process. */
+    segment: number;
+    /** Total number of shards. Must match the scanner's reported shard count. */
+    totalSegments: number;
+}
+
 interface IPipelineRunner {
     pipeline<TRecord, TContext extends Processor.Context, TShard>(
         config: PipelineRunnerFactoryInput<TRecord, TContext, TShard>
@@ -20,7 +27,9 @@ interface IPipelineRunner {
         pipeline: Pipeline<TRecord, TContext, TShard>
     ): this;
 
-    run(): Promise<void>;
+    run(opts?: RunOptions): Promise<void>;
+
+    getProcessors(): Processor.Interface<unknown, Processor.Context>[];
 }
 
 export const PipelineRunner = createAbstraction<IPipelineRunner>("Core/PipelineRunner");
@@ -32,4 +41,5 @@ export namespace PipelineRunner {
         TContext extends Processor.Context,
         TShard
     > = PipelineRunnerFactoryInput<TRecord, TContext, TShard>;
+    export type Run = RunOptions;
 }
