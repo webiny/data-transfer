@@ -1,426 +1,256 @@
 # AI Agent Guidelines
 
-This document is read by AI agents (Claude Code, Copilot, Codex, etc.) when working on this codebase. It describes architecture patterns, conventions, and rules that must be followed.
+This document is read by AI agents when working on this codebase. It describes the current architecture, hard-won decisions, and conventions that must be followed.
 
-**This document is updated as the codebase evolves.**
+**This document is updated as the codebase evolves.** Treat anything that contradicts the current code as stale — the code is the source of truth.
 
-## Project Context
+---
 
-This tool transfers Webiny data between environments. Current use case is v5-to-v6 migration, but it will also support production-to-dev data transfer for testing/development. Name things generically ("transfer" not "migration") where possible.
+## 1. Project at a glance
 
-**Long-term vision:** `docs/design/generic-pipeline-framework.md` is the living design doc covering three layers of future work: (1) short-term handler unification for DDB+OS, (2) medium-term pipeline-centric refactor where each pipeline binds its own scanner/processor (see `src/presets/example.ts` for the target API), (3) long-term interactive CLI orchestration with per-pipeline progress, resume-on-failure, and a fully source-agnostic framework (MySQL, S3-direct, etc.). Read it before any big refactor to scanner/preprocessor/executor abstractions or before touching the `run` command's orchestration loop.
+**Package:** `@webiny/data-transfer`.
 
-> **Pipeline-centric model — current state (2026-04-17):** decisions are locked in `docs/design/generic-pipeline-framework.md` → "Resolved design decisions" section, including a same-day **revision note** that changes the merge-group key from `(scanner, processor)` to **scanner only**. Match semantics stay **first-match-wins** within a merge group — pipelines are evaluated in registration order and the first one whose filters all pass is the one that runs (subsequent pipelines skip that record). Pipeline registration order is meaningful: more specific filter first, catch-all last. Filters are mandatory, enforced at `PipelineBuilder.build()`. **Hook lifecycle is implemented**: per merge group, before-hooks fire (dedup'd by token reference, in registration order) BEFORE shards begin; after-hooks fire (dedup'd, in REVERSE registration order, LIFO) AFTER all shards complete successfully; after-hooks are SKIPPED if any shard throws. Hooks receive `{ runId, mergeGroupId }` — `runId` comes from `TransferContext`, so test containers must `registerInstance(TransferContext, { runId })`. The first concrete implementation step is `docs/superpowers/plans/2026-04-17-pipeline-builder.md` (TDD plan, 14 tasks, scope: builder primitives only — no runner integration, no preset migration). Read both docs before working on `src/domain/pipeline/`, `src/features/PipelineRunner/`, or any new scanner/processor abstraction.
+**What it does:** a generic data-transfer tool for Webiny environments. The flagship use case is v5→v6 migration, but the infrastructure is storage-agnostic and transformer-optional — **"copy prod data into dev with zero transformation"** is a first-class use case.
 
-**Package name:** `@webiny/data-transfer`
+**Runtime flow (when deployed):**
 
-**User installation:** `npm install @webiny/data-transfer` (published to npm)
+1. User writes a config file: `createDdbTransfer({ source, target, pipeline })` or `createOsTransfer(...)`.
+2. CLI `transfer` command bootstraps a DI container, loads the named preset, spawns worker processes per segment.
+3. Each worker runs one or more shards: scans source → pipeline chain (filter + transformer list + auto-put) → processor buffers commands → executor writes to target.
 
-**User config files** import builder functions from the package:
+**Read before big refactors:**
 
-```typescript
-import { createDdbTransfer } from "@webiny/data-transfer";
-export default createDdbTransfer({ source: {...}, target: {...}, pipeline: {...} });
-```
+- `docs/design/generic-pipeline-framework.md` — long-term design (pipeline-centric model, merge groups keyed by scanner, first-match-wins).
+- `docs/superpowers/specs/2026-04-18-*.md` — recent design docs (transformer-library, preset-migration).
 
-**Scaffolding:** `npx @webiny/data-transfer init my-transfer-folder`
+---
 
-**Running:** `yarn transfer --config=./projects/example/ddb.transfer.config.ts`
+## 2. Public API surface
 
-**Public API** (exported from `src/index.ts` via `package.json` `exports` field):
+Everything users import lives in `src/index.ts`:
 
-- `createDdbTransfer(input)` — validates with Zod, returns config with `storage: "ddb"`
-- `createOsTransfer(input)` — validates with Zod, returns config with `storage: "os"`
-- `loadEnv(import.meta.url)` — loads `.env` from the calling file's directory (cross-platform)
+- **Config builders:** `createDdbTransfer`, `createOsTransfer`, `loadEnv`
+- **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
+- **Pipeline factories:** `createPipeline`, `PipelineDefinition`, `createDdbPipeline`, `createOsPipeline`
+- **Filter factory:** `createFilter` _(re-exported from `domain/pipeline`)_
+- **Context types:** `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext`
+- **Transformer type:** `Transformer` (namespace with `.Interface`)
+- **Built-in transformers:** 19 named exports grouped by domain (global / cms / file-manager / folders / mailer / security) — considered **user-land examples**, will be rewritten when the rest of the infra is stable.
+- **Built-in pipeline definitions:** `cmsEntryPipeline`, `cmsModelPipeline`, `fmFilePipeline` (DDB), plus more internal ones under `src/presets/v5-to-v6/pipelines/` (not all publicly exported).
 
-**Config builder functions** (`createDdbTransfer`, `createOsTransfer`):
+When tightening the public surface: audit `src/index.ts` line-by-line before shipping.
 
-- Live in `src/features/MigrationConfig/`
-- Validate input with Zod at creation time
-- Add `storage: "ddb"` or `storage: "os"` internally
-- User never sets `storage` manually
-- Config field is `pipeline: { preset, segments?, modelsDir? }` (not `migration`)
+---
 
-## Verification Steps
-
-After completing any task, **always run these in order before committing**:
-
-1. `yarn format:fix` — format all source and test files (oxfmt)
-2. `yarn ts-check` — verify TypeScript compiles with no errors
-3. `yarn test:coverage` — run full test suite with coverage
-4. `git status` — check for ALL modified files (including prettier changes) and stage them all
-
-All steps must pass and all changes must be included in the commit.
-
-## Code Style
-
-- Always wrap `if`/`for`/`while` bodies in curly braces, even for single statements
-- Use `yarn` for package management, never `npm`
-- File extensions in imports: use `.ts` in source files
-- Always use `public`/`private`/`protected` on class methods and properties
-- Abstractions index files only export const tokens (no type exports) — use namespaces for types
-- Use `createImplementation` + `container.register` for stateless services (no constructor config)
-- Use `registerInstance` only when runtime config is needed to construct the instance
-- Implementation classes should NOT be exported — resolve from container in tests
-
-## Project Structure
+## 3. Project structure (current)
 
 ```
 src/
-├── cli.ts                    # Entry point — thin yargs router (14 lines)
+├── cli.ts                    # Entry point — yargs router
 ├── bootstrap.ts              # Creates DI container, registers all features
-├── base/                     # Foundation: createAbstraction, createFeature, Result, BaseError
-├── commands/                 # CLI commands (self-registering)
-│   ├── index.ts              # Exports all register functions
-│   ├── init/                 # Scaffold a new transfer project
-│   │   ├── handler.ts        # Copies templates, writes package.json
-│   │   └── register.ts       # Registers "init <folder>" on yargs
-│   ├── run/                  # Main orchestrator command ($0)
-│   │   ├── handler.ts        # Logic: bootstrap, hooks, spawn workers
-│   │   └── register.ts       # Registers on yargs
-│   ├── processSegment/       # DDB worker command
-│   │   ├── handler.ts
-│   │   └── register.ts
-│   └── processOsSegment/     # OS worker command
-│       ├── handler.ts
-│       └── register.ts
-├── domain/                   # Plain domain primitives (not DI)
-│   └── transform/
-│       ├── types/            # BaseRecord, DdbRecord, OsRecord
-│       ├── commands/         # Command interface, PutRecord, S3Copy, Commands collection
-│       ├── Transformer.ts    # Transformer<TCtx> interface (generic over context)
-│       ├── Pipeline.ts       # TransformPipeline class with run(record, contextFactory)
-│       ├── PipelineBuilder.ts
-│       ├── filters.ts        # byType, isCmsEntry, isCmsModel, etc.
-│       └── Preset.ts         # MigrationPreset interface (configure(runner))
-├── tools/                    # Infrastructure utilities — simple, composable building blocks
-│   ├── Cache/                # InMemoryCache (Map wrapper with get/set/has/delete/clear/size)
-│   ├── DirectoryTool/        # Sync directory operations (create, readDir, remove, copy)
-│   ├── FileTool/             # Sync file operations (readFile, writeFile, remove, copy)
-│   ├── GzipCompression/      # compress / decompress / canDecompress
-│   └── Logger/               # Pino-backed. Has child(prefix) for scoped log prefixes
-├── services/                 # External API wrappers — still simple, typed AWS/OS clients
-│   ├── DynamoDbClient/       # SourceDynamoDbClient + TargetDynamoDbClient
-│   ├── OpenSearchClient/     # indexExists, createIndex, getIndexSettings, putIndexSettings, listIndexes
-│   └── S3Client/             # SourceS3Client + TargetS3Client (ddb mode only)
+├── index.ts                  # Public API (imported as @webiny/data-transfer)
+├── base/                     # createAbstraction, createFeature, Result, BaseError
+├── commands/                 # Self-registering CLI commands
+│   ├── init/                 # Scaffolds a new transfer project from templates/
+│   ├── run/                  # Main orchestrator ($0)
+│   ├── processSegment/       # DDB worker — CURRENTLY STUBBED (throws)
+│   └── processOsSegment/     # OS worker — CURRENTLY STUBBED (throws)
+├── domain/
+│   ├── pipeline/             # New (post-Plan-A) pipeline abstractions
+│   │   ├── abstractions/     # Scanner, Processor, Hook, Transformer
+│   │   ├── Pipeline.ts       # Pipeline class (filters + transformerFns + hooks)
+│   │   ├── PipelineBuilder.ts# Fluent builder; .filter() and .use() BOTH optional
+│   │   ├── Filter.ts         # createFilter
+│   │   ├── createPipeline.ts # PipelineDefinition + createPipeline (accepts Abstraction | impl class)
+│   │   ├── createDdbPipeline.ts
+│   │   └── createOsPipeline.ts
+│   └── transform/            # Primitives still used by runner + features
+│       ├── types/            # BaseRecord (PK/SK/_et/_ct/_md/TYPE + index sig)
+│       ├── commands/         # Commands + PutRecord + S3Copy
+│       ├── filters.ts        # byType, isCmsEntry, isFmFile, ... (filter predicates)
+│       └── Preset.ts         # MigrationPreset interface (name, description, configure(runner))
+├── tools/                    # Generic utilities
+│   ├── Cache/ GzipCompression/ DirectoryTool/ FileTool/ Logger/
+├── services/                 # External API wrappers
+│   ├── DynamoDbClient/       # Source + Target; scan<T> is generic
+│   ├── OpenSearchClient/     # OS mode only
+│   └── S3Client/             # DDB mode only; has concurrency knob via tuning
 ├── features/                 # Domain logic combining tools + services
-│   ├── DdbCommandExecutor/   # Executes PUT/S3_COPY commands (ddb mode only)
-│   ├── MigrationConfig/      # User-facing API: createDdbTransfer, createOsTransfer, loadEnv
-│   ├── ModelProvider/        # Loads CMS models from DDB + JSON files
-│   ├── OsCommandExecutor/    # Gzips + ensures indexes + batch-writes to OS DDB (os mode only)
-│   ├── OsRecordDecompressor/ # Decompresses OS DDB records, derives TYPE/locale (os mode only)
-│   ├── PipelineRunner/       # Registers pipelines, processes records (first-match wins)
-│   ├── PresetLoader/         # Loads built-in or custom presets by name/path
-│   ├── TenantLocales/        # Preloads tenant → default locale map
-│   ├── TransferLifecycle/    # BeforeTransferHook + AfterTransferHook composites
-│   ├── TransformContext/     # DdbTransformContextFactory + OsTransformContextFactory
-│   └── WorkerSpawner/        # Spawns child processes for parallel segment processing
-├── transformers/             # Record transformers (wrapInData, removeLocale, etc.)
-├── presets/                  # Migration presets (v5-to-v6-ddb, v5-to-v6-os)
-├── utils/
-│   └── load-env.ts           # loadEnv(import.meta.url) — exported for user config files
-├── core/                     # Legacy pipeline/runner/executor — pending deletion
-├── database/                 # Legacy DDB client — replaced by services/DynamoDbClient
-├── config/                   # Legacy config loader — replaced by features/MigrationConfig
-├── models/                   # Legacy model loader — replaced by features/ModelProvider
-├── storage/                  # Legacy S3 client — replaced by services/S3Client
-└── opensearch/               # Legacy OS helpers — replaced by services/OpenSearchClient +
-                              #   features/OsCommandExecutor + features/OsRecordDecompressor
-templates/                    # Scaffolded by `init` command
-├── package.json.tpl          # Template with {{PROJECT_NAME}} placeholder
-├── README.md
-├── .gitignore
-├── .env.example
-├── projects/example/         # Example project configs
-│   ├── ddb.transfer.config.ts
-│   ├── os.transfer.config.ts
-│   └── .env.example
-├── transformers/.gitkeep
-├── presets/.gitkeep
-└── features/.gitkeep
+│   ├── DdbScanner/ DdbProcessor/ DdbCommandExecutor/
+│   ├── OsScanner/ OsProcessor/ OsCommandExecutor/ OsRecordDecompressor/
+│   ├── PipelineRunner/       # Runs merge groups; auto-puts ctx.record per record
+│   ├── TransformContext/     # Ddb + Os context factories; exposes ctx.original (frozen)
+│   ├── MigrationConfig/      # createDdbTransfer / createOsTransfer (Zod-validated)
+│   ├── ModelProvider/ TenantLocales/ PresetLoader/ WorkerSpawner/
+│   └── TransferLifecycle/    # BeforeTransferHook / AfterTransferHook composites
+├── transformers/             # 19 built-in transformers (user-land examples)
+│   ├── createTransformer.ts createDdbTransformer.ts createOsTransformer.ts
+│   ├── global/ cms/ file-manager/ folders/ mailer/ security/
+│   └── index.ts              # Top-level barrel
+├── presets/                  # Built-in presets (v5-to-v6-ddb, v5-to-v6-os)
+│   └── v5-to-v6/pipelines/   # 9 pipeline definition files (camelCase)
+├── models/                   # ModelField / Template / field-utils (used by CMS transformers)
+└── utils/
+    ├── LexicalRenderer.ts    # Used by transformRichText
+    ├── field-visitor.ts      # Used by several CMS transformers
+    ├── gzip-compression.ts   # Legacy gzip helper — tools/GzipCompression/ is the DI version
+    └── load-env.ts           # loadEnv(import.meta.url) — exposed as public API
 ```
 
-## Command Structure
+Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/database/`, `src/config/`, `src/storage/`, `src/opensearch/`, `src/models/model-provider.ts`, `src/utils/{logger,tenants,record-guards}.ts`. Don't expect to find them.
 
-Each CLI command is a self-registering folder:
+---
 
-```
-src/commands/commandName/
-├── handler.ts     # The actual logic
-└── register.ts    # Registers command on yargs
-```
+## 4. Architecture patterns
 
-**Adding a new command:**
+### DI via `@webiny/di`
 
-1. Create folder in `src/commands/`
-2. Add `handler.ts` with the logic
-3. Add `register.ts` with `registerXCommand(yargs: Argv): Argv`
-4. Export from `src/commands/index.ts`
-5. Register in `src/cli.ts`
+- `createAbstraction<T>(name)` → `Abstraction<T>` (has `.token: symbol`).
+- `Abstraction.createImplementation({ implementation, dependencies })` → an Implementation class (`I & { __abstraction: A }`). **The Implementation class is NOT an Abstraction at runtime** — it has no `.token`. `container.resolve(ImplClass)` would fail, but `container.register(ImplClass)` works (reads abstraction via `Metadata`).
+- For this reason, `PipelineDefinition.register(runner, scannerTokenOrImpl, processorTokenOrImpl)` accepts **either** an Abstraction or an Implementation class — `createPipeline` resolves the abstraction via `Metadata.getAbstraction()` at runtime. See `src/domain/pipeline/createPipeline.ts`.
+- Similarly, `PipelineRunner.register` is generic over `Pipeline<TRecord, TContext, TShard>` — narrow types flow through and get erased at the storage boundary.
 
-```typescript
-// register.ts
-import type { Argv } from "yargs";
-import { handler } from "./handler.ts";
+### Feature layout
 
-export function registerMyCommand(yargs: Argv): Argv {
-  return yargs.command(
-    "my-command",
-    "Description",
-    (yargs) => { return yargs.option(...); },
-    async (argv) => { await handler(argv); }
-  );
-}
-```
-
-## DI Architecture Patterns (`@webiny/di`)
-
-This project uses `@webiny/di` for dependency injection with SOLID principles.
-
-### Foundation: `src/base/`
-
-- `createAbstraction<T>(name)` — creates a typed DI token (`Abstraction<T>`)
-- `createFeature({ name, register })` — defines a feature module that registers implementations into a `Container`
-- `createImplementation` / `createDecorator` / `createComposite` — re-exported from `@webiny/di`
-- `Result<TValue, TError>` — functional ok/fail type for typed error handling
-- `ResultAsync<TValue, TError>` — async version of Result
-- `BaseError` — typed error base class with `code` and `data`
-
-### Feature Structure
-
-Each feature follows this directory layout:
+Every feature follows:
 
 ```
 src/features/FeatureName/
 ├── abstractions/
 │   ├── FeatureName.ts    # Interface + abstraction token + namespace
-│   └── index.ts          # Re-exports (only const tokens, no types)
-├── FeatureName.ts        # Implementation class + createImplementation
-├── feature.ts            # createFeature — registers into container
-└── index.ts              # Public API (re-exports abstraction tokens + feature)
+│   └── index.ts          # Only const tokens (no type exports)
+├── FeatureName.ts        # Class + createImplementation
+├── feature.ts            # createFeature registers into container
+└── index.ts              # Public API
 ```
 
-### Abstraction Pattern
+**Rules that are NOT negotiable:**
+
+- Types accessed only via namespace (`FeatureName.Interface`), never direct interface exports from abstractions.
+- `public`/`private`/`protected` on every class member.
+- Braces always — no single-line `if`/`for`/`while`.
+- No `reflect-metadata` imports (loaded by `@webiny/di` internally).
+- `~/*` path alias in `src/`; relative paths in `__tests__/` for test-only infra that lives outside `src/`.
+- Named `interface`/`type` for any structural shape — no inline `{ ... }` in generic positions.
+- File names use **camelCase** (not kebab-case).
+- oxfmt (`yarn format:fix`) — NOT prettier.
+- `yarn` — never `npm`.
+
+### Pipeline runtime model
+
+- **Merge group** = set of pipelines sharing the same scanner abstraction. Runner iterates one merge group at a time.
+- **First-match-wins** per record: within a merge group, the first pipeline whose filters all pass is the one that runs. Subsequent pipelines skip that record.
+- **Filter order matters**: register more-specific pipelines before catch-alls.
+- **Auto-put**: after the transformer chain runs, the runner calls `ctx.putRecord(ctx.record)` automatically. Pipelines with zero transformers still produce writes. See `src/features/PipelineRunner/PipelineRunner.ts:runShard`.
+- **Hooks**: per merge group. Before-hooks run (dedup'd by token, in registration order) before any shards. After-hooks run (dedup'd, in REVERSE order) after all shards succeed. After-hooks are SKIPPED on shard failure. Each hook gets `{ runId, mergeGroupId }`.
+
+### Context surface
+
+`BaseTransformContext.Interface<TRecord>` exposes:
+
+- `record: TRecord` — mutable, transformers change this.
+- `original: Readonly<TRecord>` — **frozen snapshot of the pre-transform record, always present**. Users may consume it for gate-checks, audits, etc. — do NOT remove even if no built-in code uses it.
+- `commands: Commands` — the command buffer.
+- `modelProvider`, `cache` — shared singletons.
+- `replace(newRecord)` — replaces `ctx.record`.
+- `putRecord(record)` — emits a PutRecord command (target table baked in by factory).
+- `queryRecord(pk, sk?)` — source-table lookup, Promise-returning.
+
+DDB context adds: `copyFile(srcKey, tgtKey)` and `getFile(key)` (S3 helpers).
+
+**Removed from context (do not reintroduce):** `executePipeline(pipeline, records)` — nested-pipeline helper, dropped 2026-04-19 for zero live consumers.
+
+### Scanner / Processor / Executor
+
+- **Scanner** = source iterator. Yields records of some shape per shard. `DynamoDbClient.scan<T>` is generic so scanners can narrow the raw row type.
+- **Processor** = context factory + command→action adapter. `createContext(record)` makes a ctx; `execute(commands)` drains the buffer into the executor.
+- **Executor** = the actual write-to-target. Trusts the record entirely — every field on `ctx.record` (PK, SK, GSI_TENANT, index, \_et/\_ct/\_md, etc.) lands on target verbatim. The executor's only transformation is gzip for OS.
+- **"Record carries everything"** is a house invariant — do NOT add pre-transform snapshot queues, metadata side-channels, or "executor derives X" logic. If transformers destroyed something the executor needs, users write a transformer that preps it. See the 2026-04-19 `refactor(os)` commit for the canonical simplified shape.
+
+### MigrationConfig tuning
+
+Optional `tuning` section on `MigrationConfig`:
 
 ```typescript
-import { createAbstraction } from "@/src/base/index.ts";
-
-interface IFeatureName {
-  doSomething(input: string): Promise<void>;
+tuning?: {
+    ddb?: { maxRetries?: number; initialBackoffMs?: number };
+    s3?:  { concurrency?: number; maxRetries?: number; initialBackoffMs?: number };
+    os?:  { retryScheduleMs?: number[] };
 }
-
-export const FeatureName = createAbstraction<IFeatureName>("Domain/FeatureName");
-
-export namespace FeatureName {
-  export type Interface = IFeatureName;
-}
 ```
 
-**Key rules:**
+Fields flow to the respective client/executor; absent = module-level defaults. `BATCH_SIZE = 25` in DDB is AWS-enforced, NOT a user knob.
 
-- All types accessible only via namespace (`FeatureName.Interface`, `FeatureName.Record`, etc.)
-- Never export interfaces directly from abstraction index files
-- Abstraction name uses domain prefix (`"Core/"`, `"Transfer/"`, `"Base/"`)
+**Still TODO**: cross-call token-bucket pacing — see `project_rate_limits_todo.md` memory.
 
-### Implementation Pattern
+---
 
-```typescript
-import { FeatureName as FeatureNameAbstraction } from "./abstractions/FeatureName.ts";
+## 5. Testing
 
-class FeatureNameImpl implements FeatureNameAbstraction.Interface {
-  public constructor(private readonly someDep: SomeDep.Interface) {}
+- Tests live in `__tests__/` mirroring `src/` structure.
+- **Shared containers**: `__tests__/containers/{ddb,os}.ts` expose `createDdbContainer({ sourceRecords?, modelsDir?, logLevel? })` / `createOsContainer(...)`. Use these — don't hand-roll DI containers in tests.
+- **Mock clients**: `__tests__/services/DynamoDbClient/MockDynamoDbClient.ts` + `OpenSearchClient/MockOpenSearchClient.ts` + `S3Client/MockS3Client.ts`.
+- **Transformer unit tests** use `__tests__/transformers/fakeContext.ts` → `makeFakeBaseContext<T>(record, overrides?)`. For DDB-specific fields, cast at the test site.
+- **Preset/pipeline tests** under `__tests__/presets/v5-to-v6/pipelines/` — each pipeline has a `.name` + `.register` + duplicate-throws test.
+- **End-to-end integration** in `__tests__/features/PipelineRunner/PipelineRunner.integration.test.ts` — includes a zero-transformer passthrough case.
+- `vitest.config.ts` excludes: **empty** (aside from `**/node_modules/**`). All excluded-legacy-tests from the old refactor were ported during Plan B.
 
-  public async doSomething(input: string): Promise<void> {
-    // implementation
-  }
-}
+Verification before any commit:
 
-// For stateless services (no constructor config):
-export const FeatureName = FeatureNameAbstraction.createImplementation({
-  implementation: FeatureNameImpl,
-  dependencies: [SomeDep]
-});
-
-// For services needing runtime config: use registerInstance in feature.ts
+```bash
+yarn format:fix    # oxfmt
+yarn ts-check      # expect 0 errors
+yarn test          # expect all green
+git status         # include ALL modified files
 ```
 
-### Composite Pattern (for hooks/events)
+`src/presets/example.ts` used to reformat unsolicitedly under oxfmt — it's been deleted, so that's no longer a concern.
 
-Used when multiple implementations of the same abstraction should all be executed:
+---
 
-```typescript
-export const BeforeTransferHookComposite = BeforeTransferHook.createComposite({
-  implementation: BeforeTransferHookCompositeImpl,
-  dependencies: [[BeforeTransferHook, { multiple: true }]]
-});
+## 6. Hard-won decisions (read before changing)
 
-// Feature registers composite
-container.registerComposite(BeforeTransferHookComposite);
+These are one-line summaries. Each links to a spec or PR if fuller context is needed.
 
-// Other features register their hook implementations
-container.register(SomeHook); // implements BeforeTransferHook
-```
+- **Zero transformers must work** — infra supports pure data-transfer (prod→dev seeding). `PipelineBuilder.build()` never throws for missing `.filter()`; runner auto-puts when transformer chain is empty.
+- **Record carries everything** — processors + executors trust `ctx.record` at execute time; no side-channel queues or pre-transform snapshot passing. The OS refactor on 2026-04-19 made this explicit.
+- **`ctx.original` always present** — frozen pre-transform snapshot, on every context, permanently. Don't remove even if no built-in code consumes it.
+- **Transformers + presets are user-land** — the `src/transformers/` and `src/presets/v5-to-v6/` files are examples. They will be revisited when the core infra is stable. Don't design the infra around them; if a refactor breaks them, update the examples or flag for rewrite.
+- **First-match-wins + scanner-keyed merge groups** — registration order is semantic. More-specific pipelines before catch-alls. Different scanners = different merge groups.
+- **Impl-class-as-token accepted** — `PipelineDefinition.register(runner, DdbScanner, DdbProcessor)` works even though `DdbScanner` is an Implementation (not an Abstraction). Runtime extracts the abstraction via `Metadata`. Don't reintroduce an "abstraction-only" signature.
+- **PutRecord target is baked in** — `ctx.putRecord(record)` emits a PutRecord command with the target table resolved by the context factory. Transformers shouldn't need to know table names.
 
-### Bootstrap
+---
 
-`src/bootstrap.ts` creates and configures the DI container:
+## 7. Known open work (in priority order)
 
-```typescript
-const config = await loadConfig(argv.config);
-const container = bootstrap({ config });
-const logger = container.resolve(Logger);
-```
+1. **Worker integration** (the big one). `src/commands/processSegment/handler.ts` and `processOsSegment/handler.ts` currently throw. `PipelineRunner` needs a `runShard(mergeGroupId, shard)` or equivalent per-shard entry point so a deployed worker can pick one shard off a queue. Until this lands, the tool runs only in tests. Needs a brainstorm before implementation.
+2. **Public API audit** — `src/index.ts` has grown a lot through the refactors. Read-through + tighten before shipping. Check what's accidentally public (built-in transformers probably shouldn't be permanent exports).
+3. **Init scaffolding health** — `init` command scaffolds from `templates/`. After the preset renames and `tuning` config addition, the template likely doesn't compile cleanly. Quick smoke run.
+4. **Token-bucket rate limiting** — `tuning.{ddb,s3,os}` covers retry + batch concurrency but NOT per-second pacing. See `project_rate_limits_todo.md` memory. Low priority until throttling hurts.
+5. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
 
-Features registered conditionally (e.g., OpenSearchClient only in "os" mode).
+---
 
-## Registered Features
+## 8. Commands / running the tool
 
-Grouped by category. Tools and services are simple building blocks; features combine them to implement domain behavior.
+- Install: `yarn install`
+- Format: `yarn format:fix`
+- Type-check: `yarn ts-check`
+- Test: `yarn test` (or `yarn test:coverage`)
+- Scaffold a project: `npx @webiny/data-transfer init my-transfer-folder`
+- Run a transfer: `yarn transfer --config=./projects/example/ddb.transfer.config.ts` _(runs through `run` handler; workers will throw until item #1 above lands)_
 
-### Tools (`src/tools/`)
+---
 
-| Feature         | Abstraction       | Scope     | Notes                                                                               |
-| --------------- | ----------------- | --------- | ----------------------------------------------------------------------------------- |
-| Logger          | `Logger`          | Singleton | PinoLogger with pretty/json transport. `.child(prefix)` for scoped prefixes         |
-| Cache           | `Cache`           | Singleton | InMemoryCache (Map wrapper). Shared across records within a run                     |
-| GzipCompression | `GzipCompression` | Singleton | compress / decompress / canDecompress                                               |
-| DirectoryTool   | `DirectoryTool`   | Singleton | Sync dir ops: create, readDir, remove, copy. Depends on Logger                      |
-| FileTool        | `FileTool`        | Singleton | Sync file ops: readFile, writeFile, remove, copy. Depends on Logger + DirectoryTool |
+## 9. Memory files
 
-### Services (`src/services/`)
+Persistent user/project memory for agents lives in `~/.claude/projects/.../memory/` and is indexed by `MEMORY.md`. Key entries:
 
-| Feature                | Abstraction(s)                                 | Scope                | Notes                                            |
-| ---------------------- | ---------------------------------------------- | -------------------- | ------------------------------------------------ |
-| DynamoDbClient         | `SourceDynamoDbClient`, `TargetDynamoDbClient` | Singleton (instance) | Separate clients per region/credentials          |
-| DynamoDbClientConfig   | `DynamoDbClientConfig`                         | Instance             | Source + target connection details               |
-| S3Client               | `SourceS3Client`, `TargetS3Client`             | Singleton (instance) | DDB mode only. Retry + batch concurrency         |
-| S3ClientConfig         | `S3ClientConfig`                               | Instance             | DDB mode only                                    |
-| OpenSearchClient       | `OpenSearchClient`                             | Singleton            | OS mode only. Also registers after-transfer hook |
-| OpenSearchClientConfig | `OpenSearchClientConfig`                       | Instance             | OS mode only                                     |
+- `user_role.md` — Bruno, senior Webiny engineer.
+- `feedback_*` files — house style rules (braces, access modifiers, namespace types, no inline structural types, camelCase file names, no reflect-metadata imports, terse responses, commit per section).
+- `feedback_no_transformers_required.md` — zero-transformer rule.
+- `feedback_keep_ctx_original.md` — ctx.original stays.
+- `project_*` files — project context and open TODOs.
 
-### Features (`src/features/`)
-
-| Feature              | Abstraction(s)                                            | Scope     | Notes                                                                               |
-| -------------------- | --------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------- |
-| MigrationConfig      | `MigrationConfig`                                         | Instance  | Loaded async, registered before bootstrap. Validates via Zod in builder functions   |
-| ModelProvider        | `ModelProvider`                                           | Singleton | Loads from DDB + JSON files. Deps: SourceDynamoDbClient, Logger, MigrationConfig    |
-| TenantLocales        | `TenantLocales`                                           | Singleton | Preloads tenant/locale map. Deps: SourceDynamoDbClient, Logger, MigrationConfig     |
-| PresetLoader         | `PresetLoader`                                            | Singleton | Loads built-in or custom presets. Deps: Logger                                      |
-| WorkerSpawner        | `WorkerSpawner`                                           | Singleton | Spawns child processes via execa. Deps: Logger                                      |
-| TransferLifecycle    | `BeforeTransferHook`, `AfterTransferHook`                 | Composite | Collects all registered hooks                                                       |
-| TransferContext      | `TransferContext`                                         | Instance  | Holds runId, registered by CLI before hooks                                         |
-| TransformContext     | `DdbTransformContextFactory`, `OsTransformContextFactory` | Singleton | Mode-conditional. Also registers active factory under `BaseTransformContextFactory` |
-| PipelineRunner       | `PipelineRunner`                                          | Singleton | Registers pipelines, processes records via `BaseTransformContextFactory`            |
-| DdbCommandExecutor   | `DdbCommandExecutor`                                      | Singleton | DDB mode only. Dispatches PUT_RECORD and S3_COPY commands in parallel               |
-| OsCommandExecutor    | `OsCommandExecutor`                                       | Singleton | OS mode only. Gzips, ensures indexes w/ retry, batch-writes to target OS DDB        |
-| OsRecordDecompressor | `OsRecordDecompressor`                                    | Singleton | OS mode only. Decompresses OS DDB records, derives TYPE/locale. Deps: Logger, Gzip  |
-
-## Architecture Decisions
-
-- **Two storage modes**: `"ddb"` (DynamoDB only) and `"os"` (OpenSearch DDB table)
-- **Separate configs**: users run DDB transfer first, then OS transfer with separate config files
-- **Workers are separate processes**: each worker loads config and bootstraps its own container
-- **OS flow**: decompress gzipped records → run through same pipeline as DDB → gzip in parallel → write to target OS DDB table
-- **Index management**: OS executor creates missing indexes with retry (5/10/20/30/30s schedule). Disables refresh just-in-time when first encountering an index. Stores original refresh_interval in `.transfer/<runId>/segment-N-indexes.json`. After-hook reads files and restores original values.
-- **Lifecycle hooks**: composite pattern — features register hooks, orchestrator calls composites without knowing implementations
-- **Credentials required**: AWS credentials are mandatory in all config schemas (not optional)
-- **No `put` method**: DynamoDbClient only has `scan`, `query`, `batchPut` — use `batchPut` even for single records
-- **Self-registering commands**: each command folder has handler.ts + register.ts, CLI just chains registrations
-- **Init command**: `init <folder>` scaffolds a new project by copying `templates/` directory, replaces `{{PROJECT_NAME}}` in `package.json.tpl`, removes the `.tpl` file. Fails if folder exists.
-- **loadEnv helper**: exported for user config files — loads `.env` relative to the config file's location using `import.meta.url`. Uses `dotenv` internally. Each project folder has its own `.env` for credential isolation.
-- **Template structure**: `templates/` contains real files (not inline strings) that get copied verbatim. `package.json.tpl` is the only templated file.
-- **Scaffolded project**: `"type": "module"`, `"private": true`, single `"transfer"` script pointing to the `webiny-data-transfer` binary. Users can have multiple project folders under `projects/` with isolated `.env` files.
-
-## Testing Patterns
-
-- Tests live in `__tests__/features/FeatureName/` mirroring the feature structure
-- **Shared container factories** in `__tests__/containers/`:
-  - `createDdbContainer({ sourceRecords?, modelsDir?, logLevel? })` — full DDB mode container with mocks
-  - `createOsContainer({ sourceRecords?, modelsDir?, logLevel? })` — full OS mode container with mocks
-  - Tests resolve the feature under test from these containers — never manually construct implementations
-- Mock implementations: `MockDynamoDbClient` (in `__tests__/features/DynamoDbClient/`), `MockOpenSearchClient` (in `__tests__/features/OpenSearchClient/`)
-- `registerInstance` only for mocks that replace real AWS clients, never for the feature being tested
-- Do NOT import `reflect-metadata` — `@webiny/di` loads it internally
-- Integration tests in `__tests__/integration/` use dynalite (local DDB) and local OpenSearch
-- OS record mocker in `__tests__/utils/os-record-mocker.ts` generates configurable test data
-
-## Files to Delete (after full DI migration)
-
-These files contain legacy code pending removal (see "Next Steps" for order):
-
-- `src/config/` — replaced by `MigrationConfig` feature (currently still re-exports)
-- `src/database/` — replaced by `DynamoDbClient` feature
-- `src/core/` — pipeline, runner, context, executor, transformer, types, preset-loader (replaced by `~/domain/transform/` + `PipelineRunner` + `DdbCommandExecutor`)
-- `src/utils/logger.ts` — replaced by `Logger` feature
-- `src/utils/gzip-compression.ts` — replaced by `GzipCompression` feature
-- `src/utils/tenants.ts` — replaced by `TenantLocales` feature
-- `src/utils/test-helpers.ts` — legacy test helper, should become unused after test migration
-- `src/models/` — replaced by `ModelProvider` feature
-- `src/storage/` — replaced by `S3Client` feature
-- `src/opensearch/client.ts` — replaced by `OpenSearchClient` feature
-- `src/opensearch/lifecycle.ts` — replaced by `TransferLifecycle` + OS hooks
-- `src/opensearch/executor.ts` — replaced by `OsCommandExecutor` feature
-- `src/opensearch/decompress-record.ts` — replaced by `OsRecordDecompressor` feature
-- `__tests__/mocks/database-client.ts`, `__tests__/mocks/storage-client.ts` — replaced by mocks under `__tests__/services/*/`
-
-## Next Steps (for future agents)
-
-### Priority 1: Legacy tests migration
-
-The following tests are excluded from vitest runs (see `vitest.config.ts`):
-`batch-processing`, `cms-entries`, `cms-model-field-attributes`, `file-manager-metadata`, `file-manager-settings`, `folder-records`, `full-table-migration`, `global-transformations`, `mailer-settings`, `nested-pipeline`, `os-table-migration`, `preset-pipelines`, `record-filtering`, `security-groups-to-roles`, `security-teams`, `integration/os-migration`.
-
-They depend on:
-
-- Legacy `MigrationRunner` (`src/core/runner.ts`) — incompatible with new `TransformPipeline.run(record, factory)` signature
-- Legacy `executeCommands` (`src/core/executor.ts`)
-- Legacy `MigrationConfig` type (`src/core/types.ts`)
-- Legacy `MockDatabaseClient` / `MockStorageClient` (`__tests__/mocks/`)
-- `createTestRunner` helper (`src/utils/test-helpers.ts`)
-
-Port pattern: replace `createTestRunner(config, database)` with `createDdbContainer({ sourceRecords: {...} })` from `__tests__/containers/`, resolve `PipelineRunner` + `DdbCommandExecutor`, and configure the preset.
-
-### Priority 2: Delete legacy files
-
-After legacy tests are ported (or excluded+removed), delete:
-
-- `src/core/` — all of it (pipeline, runner, context, executor, transformer, types, preset-loader)
-- `src/database/` — replaced by `services/DynamoDbClient`
-- `src/config/` — replaced by `features/MigrationConfig`
-- `src/utils/logger.ts`, `src/utils/gzip-compression.ts`, `src/utils/tenants.ts`, `src/utils/test-helpers.ts`
-- `src/models/` — replaced by `features/ModelProvider`
-- `src/storage/s3-client.ts`, `src/storage/interface.ts` — replaced by `services/S3Client`
-- `src/opensearch/client.ts`, `src/opensearch/lifecycle.ts`, `src/opensearch/executor.ts`, `src/opensearch/decompress-record.ts` — replaced by `services/OpenSearchClient` + `features/OsCommandExecutor` + `features/OsRecordDecompressor`
-- `__tests__/mocks/database-client.ts`, `__tests__/mocks/storage-client.ts`
-
-### Priority 3: Production-to-dev data transfer
-
-- Extend the tool to support production-to-dev data transfer (not just v5-to-v6 migration)
-- May need new presets, new config options, possibly new storage modes
-- The DI architecture makes this extensible — add features, register hooks, create new presets
-
-### Important conventions to follow
-
-- Read the full AGENTS.md before starting work
-- Always run verification steps before committing (format:fix, ts-check, test:coverage, git status)
-- Use yarn, never npm
-- Use namespaces for types, never export interfaces directly
-- Use `public`/`private`/`protected` on all class members
-- Always wrap if/for/while in curly braces
-- Config field is `pipeline` (not `migration`) — holds `preset`, `segments`, `modelsDir`
-- Public API exports live in `src/index.ts`: `createDdbTransfer`, `createOsTransfer`, `loadEnv`
-- Template files in `templates/` are real files that get copied — keep them valid and up to date when changing config schemas or the public API
-- The `.env` files must never be committed — `.gitignore` in templates blocks `**/.env`
-- Path alias: use `~/tools/X`, `~/services/X`, `~/features/X`, `~/domain/X` — configured in tsconfig and vitest.config.ts. Old code uses `@/src/` — update as you touch files
-- **Semantic category**: pick carefully. `tools/` for generic infrastructure (Logger, FileTool, Cache). `services/` for external API wrappers (DynamoDbClient, S3Client, OpenSearchClient). `features/` for domain logic combining tools+services. `domain/` for plain data/types with no DI.
-- Do NOT import `reflect-metadata` anywhere — `@webiny/di` handles it
-- Use `createImplementation` + `container.register().inSingletonScope()` — never manually `new` + `registerInstance` for DI-managed services
-- Implementation classes must be private (not exported) — tests resolve from shared container factories
-- Use `FileTool` / `DirectoryTool` for all file system operations in DI code — never import `node:fs` directly in features
-- `modelsDir` is resolved relative to the config file location by `loadConfig` — users write `"./models"` not absolute paths
-- Transform domain types (`BaseRecord`, `Command`, `Commands`, `Transformer`, `TransformPipeline`, filters, `MigrationPreset`) live in `~/domain/transform/` — plain data, not DI. Features consume them.
-- Context factories are mode-conditional. `BaseTransformContextFactory` resolves to the active factory (`registerFactory` in `TransformContext` feature) — dep on it for mode-agnostic code
-- Logger supports `child(prefix: string)` — use for scoped prefixes like `[segment #N]`. Child reuses parent pino instance
-- `DynamoDbClient.scan()` returns `AsyncIterable<BaseRecord>` (stronger type — all Webiny records have PK/SK/\_et/\_ct/\_md/TYPE). `query()`/`batchPut()` keep the lighter `DatabaseRecord` shape.
-- `Commands` collection has `.size()` / `.get(key)` / `.all()` / `.keys()` — no `.length` property
-- Bootstrap registers in order: Config → Tools → Services → Features. Keep this order when adding new pieces.
+When in doubt about a preference, check `MEMORY.md` first. When adding a new hard-won decision, save it to a memory file AND surface it in section 6 of this doc.
