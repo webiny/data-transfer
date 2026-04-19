@@ -10,7 +10,8 @@ import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
-    type PipelineRunnerFactoryInput
+    type PipelineRunnerFactoryInput,
+    type RunOptions
 } from "./abstractions/PipelineRunner.ts";
 
 interface AutoPutContext {
@@ -77,10 +78,57 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return processors;
     }
 
-    public async run(): Promise<void> {
-        for (const [scannerToken, pipelines] of this.mergeGroups) {
-            await this.runMergeGroup(scannerToken, pipelines);
+    public async run(opts?: RunOptions): Promise<void> {
+        if (!opts) {
+            for (const [scannerToken, pipelines] of this.mergeGroups) {
+                await this.runMergeGroup(scannerToken, pipelines);
+            }
+            return;
         }
+
+        if (this.mergeGroups.size > 1) {
+            throw new Error(
+                `PipelineRunner.run({...}): shard mode is only supported with a single ` +
+                    `merge group; got ${this.mergeGroups.size}.`
+            );
+        }
+
+        const entry = this.mergeGroups.entries().next();
+        if (entry.done) {
+            return;
+        }
+        const [scannerToken, pipelines] = entry.value;
+        await this.runSingleShard(scannerToken, pipelines, opts);
+    }
+
+    private async runSingleShard(
+        scannerToken: Abstraction<Scanner.Interface<unknown, unknown>>,
+        pipelines: Pipeline<unknown, Processor.Context, unknown>[],
+        opts: RunOptions
+    ): Promise<void> {
+        const scanner = this.container.resolve(scannerToken);
+        const shards = await scanner.listShards();
+
+        if (shards.length !== opts.totalSegments) {
+            throw new Error(
+                `PipelineRunner.run({segment, totalSegments}): scanner "${scannerToken.toString()}" ` +
+                    `reported ${shards.length} shards but caller declared ` +
+                    `totalSegments=${opts.totalSegments}.`
+            );
+        }
+
+        const mergeGroupId = this.deriveMergeGroupId(scannerToken);
+
+        const pipelineToProcessor: Map<
+            Pipeline<unknown, Processor.Context, unknown>,
+            Processor.Interface<unknown, Processor.Context>
+        > = new Map();
+        for (const pipeline of pipelines) {
+            pipelineToProcessor.set(pipeline, this.container.resolve(pipeline.processorToken));
+        }
+
+        const shard = shards[opts.segment];
+        await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineToProcessor);
     }
 
     private async runMergeGroup(
