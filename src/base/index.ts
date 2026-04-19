@@ -5,3 +5,4 @@ export { Result } from "./Result.js";
 export { ResultAsync } from "./ResultAsync.js";
 export { BaseError } from "./BaseError.js";
 export { ContainerToken } from "./Container.ts";
+export { formatError } from "./formatError.ts";
