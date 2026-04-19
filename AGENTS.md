@@ -27,18 +27,18 @@ This document is read by AI agents when working on this codebase. It describes t
 
 ## 2. Public API surface
 
-Everything users import lives in `src/index.ts`:
+Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers or built-in pipeline definitions are re-exported. Those are user-land examples that still live under `src/transformers/` and `src/presets/v5-to-v6/pipelines/` but are consumed exclusively by the built-in `v5-to-v6` and `v5-to-v6-os` presets via internal paths. The presets themselves are resolved by name through `PresetLoader`, not imported by users.
 
 - **Config builders:** `createDdbTransfer`, `createOsTransfer`, `loadEnv`
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
 - **Pipeline factories:** `createPipeline`, `PipelineDefinition`, `createDdbPipeline`, `createOsPipeline`
-- **Filter factory:** `createFilter` _(re-exported from `domain/pipeline`)_
+- **Filter factory:** `createFilter` + `Filter` type
+- **Scanner / processor tokens:** `DdbScanner`, `DdbProcessor`, `OsScanner`, `OsProcessor`
+- **MigrationPreset type**
 - **Context types:** `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext`
 - **Transformer type:** `Transformer` (namespace with `.Interface`)
-- **Built-in transformers:** 19 named exports grouped by domain (global / cms / file-manager / folders / mailer / security) — considered **user-land examples**, will be rewritten when the rest of the infra is stable.
-- **Built-in pipeline definitions:** `cmsEntryPipeline`, `cmsModelPipeline`, `fmFilePipeline` (DDB), plus more internal ones under `src/presets/v5-to-v6/pipelines/` (not all publicly exported).
 
-When tightening the public surface: audit `src/index.ts` line-by-line before shipping.
+**Rule:** when adding something to `src/index.ts`, it must be infra (something a user building their own transformers/pipelines/presets genuinely needs). Built-ins stay internal until the transformer rewrite; re-exporting them encourages users to depend on examples that will change.
 
 ---
 
@@ -234,10 +234,9 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 
 ## 7. Known open work (in priority order)
 
-1. **Public API audit** — `src/index.ts` has grown a lot through the refactors. Read-through + tighten before shipping. Check what's accidentally public (built-in transformers probably shouldn't be permanent exports).
-2. **npm publish story** — the package isn't on npm yet. Needs version strategy, publish script, CI. `npx @webiny/data-transfer init` in the README won't work until this lands.
-3. **Init scaffolding smoke** — `init` scaffolds from `templates/`. `templates/transformers/stampMigratedAt.ts`, `templates/presets/example.ts`, `templates/projects/example/custom.transfer.config.ts` exist now. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
-4. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
+1. **npm publish story** — the package isn't on npm yet. Needs version strategy, publish script, CI. `npx @webiny/data-transfer init` in the README won't work until this lands.
+2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. `templates/transformers/stampMigratedAt.ts`, `templates/presets/example.ts`, `templates/projects/example/custom.transfer.config.ts` exist now. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
+3. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
 
 ---
 

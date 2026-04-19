@@ -254,7 +254,7 @@ Every scanned record lands on target unchanged. No mutations applied.
 | `v5-to-v6`    | `createDdbTransfer` | CMS entries + models, security groups→roles, security teams, file manager settings + files, folder permissions, mailer settings |
 | `v5-to-v6-os` | `createOsTransfer`  | CMS entries from the OS companion DDB table                                                                                     |
 
-Built-in transformers and pipeline definitions are exported from the package and can be composed into your own presets — see the package exports for the full list.
+To use a built-in preset, reference it by name in `config.pipeline.preset` — the preset loader resolves it internally. The built-in transformers and pipeline definitions themselves are not re-exported from the package; they are treated as internal examples and will be revisited once the surrounding infrastructure settles. If you need one of them today, fork or inline it in your own preset.
 
 ## Pipeline runtime semantics
 
