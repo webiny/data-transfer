@@ -1,2 +1,2 @@
 export { TouchedIndexes } from "./abstractions/TouchedIndexes.ts";
-export { touchedIndexesFeature } from "./feature.ts";
+export { TouchedIndexesFeature } from "./feature.ts";

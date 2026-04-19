@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { Container } from "@webiny/di";
-import { touchedIndexesFeature } from "~/features/TouchedIndexes/feature.ts";
+import { TouchedIndexesFeature } from "~/features/TouchedIndexes/feature.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 
 function createContainer(): Container {
     const container = new Container();
-    touchedIndexesFeature.register(container);
+    TouchedIndexesFeature.register(container);
     return container;
 }
 

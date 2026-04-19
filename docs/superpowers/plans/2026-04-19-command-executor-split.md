@@ -90,12 +90,12 @@ Create `__tests__/features/TouchedIndexes/TouchedIndexes.test.ts`:
 ```typescript
 import { describe, expect, it } from "vitest";
 import { Container } from "@webiny/di";
-import { touchedIndexesFeature } from "~/features/TouchedIndexes/feature.ts";
+import { TouchedIndexesFeature } from "~/features/TouchedIndexes/feature.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 
 function createContainer(): Container {
     const container = new Container();
-    touchedIndexesFeature(container);
+    TouchedIndexesFeature(container);
     return container;
 }
 
@@ -214,7 +214,7 @@ Create `src/features/TouchedIndexes/feature.ts`:
 import { createFeature } from "~/base/index.ts";
 import { TouchedIndexes } from "./TouchedIndexes.ts";
 
-export const touchedIndexesFeature = createFeature(container => {
+export const TouchedIndexesFeature = createFeature(container => {
     container.register(TouchedIndexes);
 });
 ```
@@ -223,7 +223,7 @@ Create `src/features/TouchedIndexes/index.ts`:
 
 ```typescript
 export { TouchedIndexes } from "./abstractions/TouchedIndexes.ts";
-export { touchedIndexesFeature } from "./feature.ts";
+export { TouchedIndexesFeature } from "./feature.ts";
 ```
 
 - [ ] **Step 6: Run tests to verify pass**
@@ -266,7 +266,7 @@ import { loggerFeature } from "~/tools/Logger/index.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { putDynamoDbRecordExecutorFeature } from "~/features/PutDynamoDbRecordExecutor/feature.ts";
+import { PutDynamoDbRecordExecutorFeature } from "~/features/PutDynamoDbRecordExecutor/feature.ts";
 import { PutDynamoDbRecordExecutor } from "~/features/PutDynamoDbRecordExecutor/abstractions/PutDynamoDbRecordExecutor.ts";
 
 describe("PutDynamoDbRecordExecutor", () => {
@@ -278,7 +278,7 @@ describe("PutDynamoDbRecordExecutor", () => {
         loggerFeature(container);
         client = new MockDynamoDbClient();
         container.registerInstance(TargetDynamoDbClient, client);
-        putDynamoDbRecordExecutorFeature(container);
+        PutDynamoDbRecordExecutorFeature(container);
     });
 
     it("is a no-op when given an empty array", async () => {
@@ -402,7 +402,7 @@ Create `src/features/PutDynamoDbRecordExecutor/feature.ts`:
 import { createFeature } from "~/base/index.ts";
 import { PutDynamoDbRecordExecutor } from "./PutDynamoDbRecordExecutor.ts";
 
-export const putDynamoDbRecordExecutorFeature = createFeature(container => {
+export const PutDynamoDbRecordExecutorFeature = createFeature(container => {
     container.register(PutDynamoDbRecordExecutor);
 });
 ```
@@ -411,7 +411,7 @@ Create `src/features/PutDynamoDbRecordExecutor/index.ts`:
 
 ```typescript
 export { PutDynamoDbRecordExecutor } from "./abstractions/PutDynamoDbRecordExecutor.ts";
-export { putDynamoDbRecordExecutorFeature } from "./feature.ts";
+export { PutDynamoDbRecordExecutorFeature } from "./feature.ts";
 ```
 
 - [ ] **Step 6: Run tests to verify pass**
@@ -453,7 +453,7 @@ import { Container } from "@webiny/di";
 import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
 import { TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
-import { s3CopyExecutorFeature } from "~/features/S3CopyExecutor/feature.ts";
+import { S3CopyExecutorFeature } from "~/features/S3CopyExecutor/feature.ts";
 import { S3CopyExecutor } from "~/features/S3CopyExecutor/abstractions/S3CopyExecutor.ts";
 
 describe("S3CopyExecutor", () => {
@@ -464,7 +464,7 @@ describe("S3CopyExecutor", () => {
         container = new Container();
         client = new MockS3Client();
         container.registerInstance(TargetS3Client, client);
-        s3CopyExecutorFeature(container);
+        S3CopyExecutorFeature(container);
     });
 
     it("is a no-op when given an empty array", async () => {
@@ -567,7 +567,7 @@ Create `src/features/S3CopyExecutor/feature.ts`:
 import { createFeature } from "~/base/index.ts";
 import { S3CopyExecutor } from "./S3CopyExecutor.ts";
 
-export const s3CopyExecutorFeature = createFeature(container => {
+export const S3CopyExecutorFeature = createFeature(container => {
     container.register(S3CopyExecutor);
 });
 ```
@@ -576,7 +576,7 @@ Create `src/features/S3CopyExecutor/index.ts`:
 
 ```typescript
 export { S3CopyExecutor } from "./abstractions/S3CopyExecutor.ts";
-export { s3CopyExecutorFeature } from "./feature.ts";
+export { S3CopyExecutorFeature } from "./feature.ts";
 ```
 
 - [ ] **Step 6: Run tests to verify pass**
@@ -904,7 +904,7 @@ Create `src/features/PutOsDynamoDbRecordExecutor/feature.ts`:
 import { createFeature } from "~/base/index.ts";
 import { PutOsDynamoDbRecordExecutor } from "./PutOsDynamoDbRecordExecutor.ts";
 
-export const putOsDynamoDbRecordExecutorFeature = createFeature(container => {
+export const PutOsDynamoDbRecordExecutorFeature = createFeature(container => {
     container.register(PutOsDynamoDbRecordExecutor);
 });
 ```
@@ -913,14 +913,14 @@ Create `src/features/PutOsDynamoDbRecordExecutor/index.ts`:
 
 ```typescript
 export { PutOsDynamoDbRecordExecutor } from "./abstractions/PutOsDynamoDbRecordExecutor.ts";
-export { putOsDynamoDbRecordExecutorFeature } from "./feature.ts";
+export { PutOsDynamoDbRecordExecutorFeature } from "./feature.ts";
 ```
 
 - [ ] **Step 7: Wire the new executor into `createOsContainer` (test helper)**
 
 The OS test container must register `PutDynamoDbRecordExecutor`, `TouchedIndexes`, and `PutOsDynamoDbRecordExecutor`. Open `__tests__/containers/os.ts`, add the new feature registrations so tests in Task 4 can resolve everything.
 
-Add imports + feature calls for `putDynamoDbRecordExecutorFeature`, `touchedIndexesFeature`, `putOsDynamoDbRecordExecutorFeature`. Leave old `osCommandExecutorFeature` import in place for now — it's removed in Task 10.
+Add imports + feature calls for `PutDynamoDbRecordExecutorFeature`, `TouchedIndexesFeature`, `PutOsDynamoDbRecordExecutorFeature`. Leave old `osCommandExecutorFeature` import in place for now — it's removed in Task 10.
 
 - [ ] **Step 8: Run tests**
 
@@ -952,7 +952,7 @@ git commit -m "feat(executor): PutOsDynamoDbRecordExecutor — gzip + ensureInde
 The new assertions cover: direct dispatch to `PutDynamoDbRecordExecutor` and `S3CopyExecutor`; empty `Commands` short-circuits (no executor calls); warns once per unknown key per instance; does NOT warn for known keys; `getShardState()` still returns `{}`.
 
 Replace the body of `__tests__/features/DdbProcessor/DdbProcessor.test.ts` with a fixture that:
-- Builds a Container with `loggerFeature`, `putDynamoDbRecordExecutorFeature`, `s3CopyExecutorFeature`, plus mock DDB + S3 clients.
+- Builds a Container with `loggerFeature`, `PutDynamoDbRecordExecutorFeature`, `S3CopyExecutorFeature`, plus mock DDB + S3 clients.
 - Registers `DdbTransformContextFactory` stub (see `__tests__/features/DdbProcessor/` existing fixtures for the mock pattern).
 - Registers `DdbProcessor`.
 - Resolves the processor, spies on each executor's `execute`, asserts dispatch.
@@ -1187,8 +1187,8 @@ git commit -m "refactor(os-processor): delegate touchedIndexes to abstraction; s
 
 Replace the DDB and OS container blocks:
 
-- DDB container: remove `ddbCommandExecutorFeature` registration; add `putDynamoDbRecordExecutorFeature` and `s3CopyExecutorFeature`.
-- OS container: remove `osCommandExecutorFeature` registration; add `touchedIndexesFeature`, `putDynamoDbRecordExecutorFeature`, `putOsDynamoDbRecordExecutorFeature`.
+- DDB container: remove `ddbCommandExecutorFeature` registration; add `PutDynamoDbRecordExecutorFeature` and `S3CopyExecutorFeature`.
+- OS container: remove `osCommandExecutorFeature` registration; add `TouchedIndexesFeature`, `PutDynamoDbRecordExecutorFeature`, `PutOsDynamoDbRecordExecutorFeature`.
 
 Imports land in the existing alphabetized order. No changes to scanner / processor registrations (those already register the updated classes).
 
