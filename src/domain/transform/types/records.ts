@@ -7,10 +7,3 @@ export interface BaseRecord {
     TYPE: string;
     [key: string]: unknown;
 }
-
-export interface DdbRecord extends BaseRecord {
-    GSI1_PK: string;
-    GSI1_SK: string;
-    GSI2_PK: string;
-    GSI2_SK: string;
-}

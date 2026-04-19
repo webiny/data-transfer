@@ -1,5 +1,5 @@
 import { createAbstraction } from "~/base/index.ts";
-import type { BaseRecord } from "~/domain/transform/index.js";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 interface OsCompressedRecordData {
     compression: string;
