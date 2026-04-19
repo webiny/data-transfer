@@ -196,4 +196,34 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             true
         );
     });
+
+    it("run({segment:0, totalSegments:1}) on a single-shard scanner matches run()", async () => {
+        const records = [
+            makeRecord("tenant-1", "team-1", "security.team"),
+            makeRecord("tenant-1", "team-2", "security.team")
+        ];
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": records }
+        });
+        const runner = container.resolve(PipelineRunner);
+
+        const builder = runner.pipeline<
+            BaseRecord,
+            DdbTransformContext.Interface<BaseRecord>,
+            DdbScanner.Shard
+        >({
+            name: "single-shard-shardmode",
+            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
+            processor: Processor as Abstraction<
+                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
+            >
+        });
+        builder.filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"));
+        runner.register(builder.build() as unknown as AnyPipeline);
+
+        await runner.run({ segment: 0, totalSegments: 1 });
+
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        expect(targetDb.batchPutRecords).toHaveLength(2);
+    });
 });
