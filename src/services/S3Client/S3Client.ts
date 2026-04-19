@@ -65,13 +65,13 @@ export class S3ClientImpl implements SourceS3Client.Interface {
     private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         let lastError: Error | undefined;
 
-        for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+        for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
             try {
                 return await fn();
             } catch (error) {
                 lastError = error as Error;
 
-                if (!isRetryableAwsError(error) || attempt === this.maxRetries - 1) {
+                if (!isRetryableAwsError(error) || attempt === this.maxRetries) {
                     throw error;
                 }
 
