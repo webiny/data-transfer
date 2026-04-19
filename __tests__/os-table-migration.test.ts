@@ -42,7 +42,6 @@ describe("OS table migration (end-to-end through v5ToV6OsPreset)", () => {
         for (const record of written) {
             expect(record.PK).toBeDefined();
             expect(record.SK).toBeDefined();
-            expect(record.TYPE).toBeDefined();
             expect(record.GSI_TENANT).toBeDefined();
             expect(record._et).toBe("CmsEntriesElasticsearch");
             expect(record._ct).toBeDefined();

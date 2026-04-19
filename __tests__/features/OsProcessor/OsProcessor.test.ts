@@ -6,16 +6,16 @@ import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { OsCommandExecutor } from "~/features/OsCommandExecutor/index.ts";
 import { OsScanner } from "~/features/OsScanner/index.ts";
 
-function makeOsRecord(pk: string, indexName: string): OsScanner.Record {
+function makeOsRecord(idSuffix: string, indexName: string): OsScanner.Record {
     return {
-        PK: pk,
+        PK: `T#root#L#en-US#CMS#CME#${idSuffix}`,
         SK: "L",
         _et: "CmsEntriesElasticsearch",
         _ct: "2024-01-01T00:00:00.000Z",
         _md: "2024-01-01T00:00:00.000Z",
         TYPE: "cms.entry.l",
         index: indexName,
-        locale: "en-US"
+        data: {}
     };
 }
 
@@ -40,7 +40,9 @@ describe("OsProcessor", () => {
         const ctxB = processor.createContext(recB);
 
         expect(ctxA).not.toBe(ctxB);
-        expect((ctxA as unknown as { record: OsScanner.Record }).record.PK).toBe("a");
+        expect((ctxA as unknown as { record: OsScanner.Record }).record.PK).toBe(
+            "T#root#L#en-US#CMS#CME#a"
+        );
         expect((ctxA as unknown as { commands: Commands }).commands).toBeInstanceOf(Commands);
     });
 
@@ -67,7 +69,7 @@ describe("OsProcessor", () => {
         expect(spy).toHaveBeenCalledTimes(1);
         const [items, touchedIndexes] = spy.mock.calls[0]!;
         expect(items).toHaveLength(2);
-        expect(items[0]!.record.PK).toBe("a");
+        expect(items[0]!.record.PK).toBe("T#root#L#en-US#CMS#CME#a");
         expect(items[0]!.metadata.index).toBe("idx-foo");
         expect(items[0]!.metadata._ct).toBe("2024-01-01T00:00:00.000Z");
         expect(items[0]!.metadata._md).toBe("2024-01-01T00:00:00.000Z");

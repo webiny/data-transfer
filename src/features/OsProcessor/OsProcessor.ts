@@ -11,6 +11,14 @@ import type { OsShardState } from "./abstractions/OsProcessor.ts";
 
 type OsRecord = OsScanner.Record;
 
+const DEFAULT_LOCALE = "en-US";
+const LOCALE_PK_RE = /#L#([^#]+)#/;
+
+function extractLocaleFromPk(pk: string): string {
+    const match = pk.match(LOCALE_PK_RE);
+    return match ? match[1]! : DEFAULT_LOCALE;
+}
+
 interface PendingOsMetadata {
     locale: string;
     index: string;
@@ -62,12 +70,12 @@ class OsProcessorImpl implements Processor.Interface<
 
     public createContext(record: OsRecord): OsTransformContext.Interface<OsRecord> {
         // Capture pre-transform metadata BEFORE transformers can strip it.
-        // removeLocale deletes record.locale; OsCommandExecutor still needs it
-        // at execute() time to compute the target index name (stripLocaleFromIndex).
-        // Index/_ct/_md are captured alongside for symmetry — the PutRecord.record
-        // is no longer a reliable carrier for any of these pre-transform values.
+        // Locale is parsed from raw PK (pattern `#L#{xx-XX}#`) at scan time;
+        // removeLocale erases that segment later, so the PK is unusable here
+        // once the chain has run. Index/_ct/_md are captured alongside — the
+        // PutRecord.record is not guaranteed to carry pre-transform values.
         this.pendingMetadata.push({
-            locale: record.locale,
+            locale: extractLocaleFromPk(record.PK),
             index: record.index,
             _ct: record._ct,
             _md: record._md

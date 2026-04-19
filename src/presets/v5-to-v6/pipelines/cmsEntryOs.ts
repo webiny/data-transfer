@@ -1,5 +1,5 @@
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { createFilter, createOsPipeline } from "~/domain/pipeline/index.ts";
-import { isCmsEntry } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
     removeAttributes,
@@ -14,9 +14,16 @@ import {
     updateModelIds
 } from "~/transformers/cms/index.ts";
 
+// OS companion rows carry `_et === "CmsEntriesElasticsearch"` for CMS entries
+// and `"PbPagesEs"` (etc.) for other record types. The scanner now passes all
+// `.index`-bearing rows through; this filter scopes the pipeline to CMS entries.
+const isCmsEntryOsRecord = (record: BaseRecord): boolean => {
+    return record._et === "CmsEntriesElasticsearch";
+};
+
 export const cmsEntryOsPipeline = createOsPipeline("cms-entries-os", builder => {
     builder
-        .filter(createFilter(isCmsEntry))
+        .filter(createFilter<BaseRecord>(isCmsEntryOsRecord))
         .use(wrapInData)
         .use(addGsiTenant)
         .use(removeLocale)

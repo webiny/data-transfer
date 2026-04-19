@@ -94,9 +94,8 @@ describe("OsScanner", () => {
         expect(r.SK).toBe("L");
         expect(r.TYPE).toBe("cms.entry.l");
         expect(r.index).toBe("root-headless-cms-en-us-myblog");
-        expect(r.locale).toBe("en-US");
-        expect(r.modelId).toBe("blogPost");
-        expect(r.title).toBe("Hello");
+        expect(r.data.modelId).toBe("blogPost");
+        expect(r.data.title).toBe("Hello");
     });
 
     it("silently skips records that the decompressor rejects (returns null)", async () => {
@@ -109,7 +108,8 @@ describe("OsScanner", () => {
                         _et: "Anything",
                         _ct: "",
                         _md: "",
-                        TYPE: "ignored"
+                        TYPE: "ignored",
+                        index: "some-index"
                     } as unknown as SourceDynamoDbClient.Record
                 ]
             }
