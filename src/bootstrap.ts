@@ -19,12 +19,10 @@ import { WorkerSpawnerFeature } from "~/features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "~/features/TransferLifecycle/index.ts";
 import { TransformContextFeature } from "~/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
-import { DdbCommandExecutorFeature } from "~/features/DdbCommandExecutor/index.ts";
 import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
 import { PutDynamoDbRecordExecutorFeature } from "~/features/PutDynamoDbRecordExecutor/index.ts";
 import { S3CopyExecutorFeature } from "~/features/S3CopyExecutor/index.ts";
-import { OsCommandExecutorFeature } from "~/features/OsCommandExecutor/index.ts";
 import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
@@ -105,13 +103,11 @@ export function bootstrap(options: BootstrapOptions): Container {
     PipelineRunnerFeature.register(container);
 
     if (config.storage === "ddb") {
-        DdbCommandExecutorFeature.register(container);
         PutDynamoDbRecordExecutorFeature.register(container);
         S3CopyExecutorFeature.register(container);
         DdbScannerFeature.register(container);
         DdbProcessorFeature.register(container);
     } else {
-        OsCommandExecutorFeature.register(container);
         TouchedIndexesFeature.register(container);
         PutDynamoDbRecordExecutorFeature.register(container);
         PutOsDynamoDbRecordExecutorFeature.register(container);

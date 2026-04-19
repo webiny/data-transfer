@@ -20,7 +20,6 @@ import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/i
 import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
-import { OsCommandExecutorFeature } from "../../src/features/OsCommandExecutor/index.ts";
 import { PutDynamoDbRecordExecutorFeature } from "../../src/features/PutDynamoDbRecordExecutor/index.ts";
 import { PutOsDynamoDbRecordExecutorFeature } from "../../src/features/PutOsDynamoDbRecordExecutor/index.ts";
 import { TouchedIndexesFeature } from "../../src/features/TouchedIndexes/index.ts";
@@ -101,7 +100,6 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
     PipelineRunnerFeature.register(container);
-    OsCommandExecutorFeature.register(container);
     TouchedIndexesFeature.register(container);
     PutDynamoDbRecordExecutorFeature.register(container);
     PutOsDynamoDbRecordExecutorFeature.register(container);

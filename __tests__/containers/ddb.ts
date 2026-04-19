@@ -23,7 +23,6 @@ import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/i
 import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
-import { DdbCommandExecutorFeature } from "../../src/features/DdbCommandExecutor/index.ts";
 import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { PutDynamoDbRecordExecutorFeature } from "../../src/features/PutDynamoDbRecordExecutor/index.ts";
@@ -99,7 +98,6 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
     PipelineRunnerFeature.register(container);
-    DdbCommandExecutorFeature.register(container);
     PutDynamoDbRecordExecutorFeature.register(container);
     S3CopyExecutorFeature.register(container);
     DdbScannerFeature.register(container);
