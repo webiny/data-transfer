@@ -30,8 +30,17 @@ export interface QueryOptions {
 }
 
 export interface IDynamoDbClient {
-    /** Scans emit Webiny records — all have PK, SK, _et, _ct, _md, TYPE */
-    scan(tableName: string, options?: ScanOptions): AsyncIterable<BaseRecord>;
+    /**
+     * Scans yield DynamoDB items as T. T defaults to BaseRecord (Webiny shape:
+     * PK, SK, _et, _ct, _md, TYPE) but callers with tighter knowledge of the
+     * source schema (e.g., OS companion table adds `index` at the root) can
+     * pass a narrower generic to get typed access without casts. Runtime does
+     * not validate T — the bound (DatabaseRecord) only promises PK+SK.
+     */
+    scan<T extends DatabaseRecord = BaseRecord>(
+        tableName: string,
+        options?: ScanOptions
+    ): AsyncIterable<T>;
     query<T extends DatabaseRecord>(
         tableName: string,
         pk: string,

@@ -29,10 +29,10 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         });
     }
 
-    public async *scan(
+    public async *scan<T extends SourceDynamoDbClient.Record = BaseRecord>(
         tableName: string,
         options?: SourceDynamoDbClient.Scan
-    ): AsyncIterable<BaseRecord> {
+    ): AsyncIterable<T> {
         let lastEvaluatedKey: Record<string, unknown> | undefined;
 
         do {
@@ -49,7 +49,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
 
             if (response.Items) {
                 for (const item of response.Items) {
-                    yield item as BaseRecord;
+                    yield item as T;
                 }
             }
 

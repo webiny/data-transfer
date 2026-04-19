@@ -14,18 +14,21 @@ export class MockDynamoDbClient implements SourceDynamoDbClient.Interface {
         }
     }
 
-    async *scan(tableName: string, options?: SourceDynamoDbClient.Scan): AsyncIterable<BaseRecord> {
+    async *scan<T extends SourceDynamoDbClient.Record = BaseRecord>(
+        tableName: string,
+        options?: SourceDynamoDbClient.Scan
+    ): AsyncIterable<T> {
         const records = this.records.get(tableName) || [];
 
         if (options && options.segment !== undefined && options.totalSegments) {
             for (let i = 0; i < records.length; i++) {
                 if (i % options.totalSegments === options.segment) {
-                    yield records[i] as BaseRecord;
+                    yield records[i] as T;
                 }
             }
         } else {
             for (const record of records) {
-                yield record as BaseRecord;
+                yield record as T;
             }
         }
     }
