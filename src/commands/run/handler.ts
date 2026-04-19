@@ -36,7 +36,18 @@ export async function handler(configPath: string): Promise<void> {
             workers.push(spawnWorker(segment, segments, runId, configPath, workerCommand));
         }
 
-        await Promise.all(workers);
+        const results = await Promise.allSettled(workers);
+        const failures: number[] = [];
+        results.forEach((result, segment) => {
+            if (result.status === "rejected") {
+                failures.push(segment);
+                logger.error(`Segment ${segment} failed: ${result.reason}`);
+            }
+        });
+        logger.info(
+            `${segments - failures.length} of ${segments} shards succeeded` +
+                (failures.length > 0 ? ` (failed: ${failures.join(", ")})` : "")
+        );
 
         try {
             const afterHook = container.resolve(AfterTransferHook);
@@ -44,11 +55,17 @@ export async function handler(configPath: string): Promise<void> {
             await afterHook.execute();
         } catch (error) {
             logger.error(
-                `After-transfer hooks failed. Data transfer succeeded, but post-transfer actions may need manual intervention. Error: ${error}`
+                `After-transfer hooks failed. Data transfer state may need manual intervention. Error: ${error}`
             );
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        if (failures.length > 0) {
+            logger.error(
+                `Transfer completed with ${failures.length} failed shard(s) in ${duration}s`
+            );
+            process.exit(1);
+        }
         logger.info(`Transfer completed successfully in ${duration}s`);
     } catch (error) {
         logger.error(`Transfer failed: ${error}`);
