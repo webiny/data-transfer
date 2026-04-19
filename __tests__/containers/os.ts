@@ -27,8 +27,8 @@ import { TouchedIndexesFeature } from "../../src/features/TouchedIndexes/index.t
 import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "../../src/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "../../src/features/OsProcessor/index.ts";
-import { MockDynamoDbClient } from "../servic../../services/DynamoDbClient/MockDynamoDbClient.ts";
-import { MockOpenSearchClient } from "../servic../../services/OpenSearchClient/MockOpenSearchClient.ts";
+import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockOpenSearchClient } from "../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 

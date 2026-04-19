@@ -126,7 +126,13 @@ describe("PutOsDynamoDbRecordExecutor", () => {
 
             await executor.execute([makePut()]);
 
-            expect(createSpy).toHaveBeenCalled();
+            expect(createSpy).toHaveBeenCalledTimes(1);
+            expect(createSpy).toHaveBeenCalledWith(
+                INDEX,
+                expect.objectContaining({
+                    settings: { index: { refresh_interval: "-1" } }
+                })
+            );
             expect(getSettingsSpy).not.toHaveBeenCalled();
             expect(touched.all()).toEqual([{ indexName: INDEX, originalRefresh: "1s" }]);
         });
