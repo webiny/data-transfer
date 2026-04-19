@@ -4,25 +4,24 @@ import type { Processor } from "./abstractions/Processor.ts";
 import type { PipelineBuilder } from "./PipelineBuilder.ts";
 import type { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 
+// A register-time token is either the Abstraction itself or an Implementation
+// class produced by `Abstraction.createImplementation({...})` (e.g., DdbScanner,
+// OsProcessor). Implementation classes carry the abstraction in metadata; the
+// runtime helper below pulls it out.
+type AbstractionToken<T> =
+    | Abstraction<T>
+    | (new (...args: never[]) => T);
+
 export interface PipelineDefinition<TRecord, TContext extends Processor.Context, TShard> {
     readonly name: string;
     register(
         runner: PipelineRunner.Interface,
-        scanner: Abstraction<Scanner.Interface<TRecord, TShard>>,
-        processor: Abstraction<Processor.Interface<TRecord, TContext>>
+        scanner: AbstractionToken<Scanner.Interface<TRecord, TShard>>,
+        processor: AbstractionToken<Processor.Interface<TRecord, TContext>>
     ): void;
 }
 
-/**
- * Resolves an incoming scanner/processor token to its underlying Abstraction.
- *
- * `.register(...)` accepts either a concrete Abstraction (e.g., the generic
- * `Scanner` / `Processor` tokens) or an Implementation class produced by
- * `Abstraction.createImplementation({...})` (e.g., `DdbScanner`, `OsProcessor`).
- * Implementation classes carry the abstraction in their metadata but lack the
- * `.token` property that `container.resolve(...)` needs — so we extract it.
- */
-function resolveAbstraction<T>(token: Abstraction<T> | { prototype: unknown }): Abstraction<T> {
+function resolveAbstraction<T>(token: AbstractionToken<T>): Abstraction<T> {
     if (token instanceof Abstraction) {
         return token;
     }

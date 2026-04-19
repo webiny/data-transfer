@@ -16,7 +16,9 @@ interface IPipelineRunner {
         config: PipelineRunnerFactoryInput<TRecord, TContext, TShard>
     ): PipelineBuilder<TRecord, TContext, TShard>;
 
-    register(pipeline: Pipeline<unknown, Processor.Context, unknown>): this;
+    register<TRecord, TContext extends Processor.Context, TShard>(
+        pipeline: Pipeline<TRecord, TContext, TShard>
+    ): this;
 
     run(): Promise<void>;
 }

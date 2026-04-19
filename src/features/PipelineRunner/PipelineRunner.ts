@@ -42,18 +42,21 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         });
     }
 
-    public register(pipeline: Pipeline<unknown, Processor.Context, unknown>): this {
+    public register<TRecord, TContext extends Processor.Context, TShard>(
+        pipeline: Pipeline<TRecord, TContext, TShard>
+    ): this {
         if (this.pipelineNames.has(pipeline.name)) {
             throw new Error(`PipelineRunner: pipeline name "${pipeline.name}" already registered`);
         }
         this.pipelineNames.add(pipeline.name);
 
-        const groupKey = pipeline.scannerToken as Abstraction<Scanner.Interface<unknown, unknown>>;
+        const erased = pipeline as unknown as Pipeline<unknown, Processor.Context, unknown>;
+        const groupKey = erased.scannerToken as Abstraction<Scanner.Interface<unknown, unknown>>;
         const group = this.mergeGroups.get(groupKey);
         if (group) {
-            group.push(pipeline);
+            group.push(erased);
         } else {
-            this.mergeGroups.set(groupKey, [pipeline]);
+            this.mergeGroups.set(groupKey, [erased]);
         }
 
         return this;
