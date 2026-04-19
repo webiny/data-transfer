@@ -130,12 +130,14 @@ export default createDdbTransfer({
   tuning: {
     ddb: { maxRetries: 3, initialBackoffMs: 100 },
     s3: { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
-    os: { retryScheduleMs: [5000, 10000, 20000, 30000, 30000] }
+    os: { maxRetries: 3, retryScheduleMs: [5000, 10000, 20000, 30000, 30000] }
   }
 });
 ```
 
 All fields are optional; absent = built-in defaults. `BATCH_SIZE` for DynamoDB is NOT tunable (AWS enforces 25 items per `BatchWriteItem`).
+
+DynamoDB and S3 clients additionally run in AWS SDK `adaptive` retry mode, which self-tunes backoff based on response-side throttle signals — no per-second pacing knob is needed or exposed. The `tuning.{ddb,s3}.maxRetries` cap controls the outer envelope on top of that.
 
 ## Writing custom transformers
 
@@ -263,8 +265,8 @@ Built-in transformers and pipeline definitions are exported from the package and
 
 ## Troubleshooting
 
-- **AWS throttling** — bump `tuning.ddb.maxRetries` and `tuning.s3.maxRetries`; consider lowering `tuning.s3.concurrency` for S3-heavy transfers.
-- **OS indexes not creating** — check `tuning.os.retryScheduleMs`. Index creation failures after all retries are logged but don't abort the transfer.
+- **AWS throttling** — the SDK already self-tunes via `retryMode: "adaptive"`. If you still hit the outer retry cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; consider lowering `tuning.s3.concurrency` for S3-heavy transfers.
+- **OS indexes not creating** — the transfer now aborts if index prep exhausts retries (previously it silently continued and wrote to a missing/wrong-mapping index). Tune `tuning.os.maxRetries` and `tuning.os.retryScheduleMs`, or fix the underlying mapping error surfaced in the logs.
 - **Missing env vars** — config files typically use `loadEnv(import.meta.url)` to load a sibling `.env`. Each project folder should have its own `.env` isolated from others.
 - **Target records look wrong** — the runner auto-puts `ctx.record` at the end of each transformer chain. If you're manually calling `ctx.putRecord(ctx.record)`, that's a duplicate write. Remove it; only call `putRecord` for ADDITIONAL records.
 
