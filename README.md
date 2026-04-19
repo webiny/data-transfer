@@ -1,6 +1,14 @@
-# Webiny Data Transfer Tool
+# `@webiny/data-transfer`
 
-## Quick Start
+A generic data-transfer tool for Webiny environments. Copies DynamoDB + S3 (or OpenSearch) records between AWS accounts, optionally running a transformer chain on each record.
+
+**Use cases:**
+
+- **v5 → v6 migration** (the flagship preset ships with the package).
+- **Prod → dev seeding** — zero transformers, just copy.
+- **Custom transfers** — write your own transformers + pipelines + preset for bespoke data moves.
+
+## Quick start
 
 ```bash
 npx @webiny/data-transfer init my-transfer
@@ -11,11 +19,9 @@ cp projects/example/.env.example projects/example/.env
 yarn transfer --config=./projects/example/ddb.transfer.config.ts
 ```
 
-The `init` command scaffolds a project with config templates, `.env` files, and directories for custom transformers, presets, and features.
+The `init` command scaffolds a project with config templates, `.env` files, and empty `transformers/` + `presets/` folders.
 
-## Manual Setup
-
-Install the tool:
+## Manual install
 
 ```bash
 yarn add @webiny/data-transfer
@@ -55,20 +61,22 @@ export default createDdbTransfer({
 });
 ```
 
-Then run:
+Run it:
 
 ```bash
 yarn webiny-data-transfer --config=./my-config.ts
 ```
 
-### Storage Modes
+## Storage modes
 
-The `storage` field determines which data source to migrate. Run DDB migration first, then OS migration. They use separate config files.
+The config builder determines the mode:
 
-- **`ddb`** — DynamoDB primary table. Migrates all record types (CMS entries, models, security, file manager, settings) to the target DynamoDB table and S3 bucket.
-- **`os`** — OpenSearch DynamoDB table. Migrates CMS entries from the source OS DynamoDB table, decompresses gzipped records, applies the same transformations, then gzips and writes to the target OS DynamoDB table (which triggers a Lambda that syncs into OpenSearch/Elasticsearch).
+- `createDdbTransfer(...)` — DynamoDB primary table (+ S3 files). Handles all record types: CMS entries + models, security, file manager, folder permissions, mailer settings.
+- `createOsTransfer(...)` — OpenSearch companion DynamoDB table. Handles CMS entries (reads gzipped records, unzips, transforms, zips again, writes to target OS DDB table).
 
-### OpenSearch (`os`) Configuration
+Run DDB transfer first, then OS transfer with a separate config file. They don't share state.
+
+## OpenSearch config shape
 
 ```typescript
 import { loadEnv, createOsTransfer } from "@webiny/data-transfer";
@@ -82,8 +90,8 @@ export default createOsTransfer({
       accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
     },
-    dynamodb: { tableName: "webiny-v5-table" }, // for models + tenant queries
-    opensearch: { tableName: "webiny-v5-es-table" } // OS DDB table to scan
+    dynamodb: { tableName: "webiny-v5-table" }, // primary table (models, tenants)
+    opensearch: { tableName: "webiny-v5-es-table" } // OS companion DDB table
   },
   target: {
     region: "us-east-1",
@@ -94,7 +102,7 @@ export default createOsTransfer({
     opensearch: {
       endpoint: "https://search-xxx.us-east-1.es.amazonaws.com",
       tableName: "webiny-v6-es-table",
-      service: "opensearch"
+      service: "opensearch" // or "opensearch-serverless"
     }
   },
   pipeline: {
@@ -104,159 +112,162 @@ export default createOsTransfer({
 });
 ```
 
-The `source.dynamodb.tableName` is the primary DynamoDB table — needed to load CMS models and tenant/locale info. The `source.opensearch.tableName` is the OS DynamoDB table to scan.
+**Index management** (OS mode): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected — safe for shared clusters.
 
-The OpenSearch client uses the target account's `credentials` and `region` for AWS SigV4 signing. The `service` field must be `"opensearch"` (managed) or `"opensearch-serverless"`.
+## Tuning (optional)
 
-**Index management:** When running in `os` mode, the tool automatically:
-
-1. Disables `refresh_interval` on each index just before writing to it (just-in-time, not upfront)
-2. Creates missing indexes with the Webiny base mapping and `refresh_interval: "-1"`
-3. After transfer completes, restores each index to its **original** `refresh_interval` value
-
-Only indexes that were actually written to are affected — safe for shared OpenSearch clusters.
-
-### Migration Presets
-
-**Built-in Presets:**
-
-- `v5-to-v6` - Migrates all Webiny v5 DynamoDB data to v6 format
-- `v5-to-v6-os` - Migrates CMS entries from the OpenSearch DynamoDB table
-
-**Example Presets:** (see `examples/`)
-
-- `cms-only` - Only CMS models and entries
-- `cms-model-with-files` - Specific model with referenced files
-
-### Creating Custom Presets
-
-Custom presets use **PipelineBuilder** to configure filters and transformers. This approach separates "what to process" (filters) from "how to transform" (transformers):
+Operational knobs live under `config.tuning`:
 
 ```typescript
-import type { MigrationPreset, MigrationConfig } from "@/src/core/types";
-import { MigrationRunner } from "@/src/core/runner";
-import { DatabaseClient } from "@/src/database/interface";
-import { PipelineBuilder, isCmsModel, isCmsEntry } from "@/src/core/pipelines";
+export default createDdbTransfer({
+  source: {
+    /* ... */
+  },
+  target: {
+    /* ... */
+  },
+  pipeline: { preset: "v5-to-v6" },
+  tuning: {
+    ddb: { maxRetries: 3, initialBackoffMs: 100 },
+    s3: { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
+    os: { retryScheduleMs: [5000, 10000, 20000, 30000, 30000] }
+  }
+});
+```
 
-// Import transformers you need
-import { wrapInData } from "@/src/transformers/global/wrap-in-data";
-import { addGsiTenant } from "@/src/transformers/global/add-gsi-tenant";
-import { removeLocale } from "@/src/transformers/global/remove-locale";
-import { removeAttributes } from "@/src/transformers/global/remove-attributes";
+All fields are optional; absent = built-in defaults. `BATCH_SIZE` for DynamoDB is NOT tunable (AWS enforces 25 items per `BatchWriteItem`).
 
-export const publishedOnlyPreset: MigrationPreset = {
-  name: "published-only",
-  description: "Migrate only published CMS entries",
-  configure(runner: MigrationRunner, config: MigrationConfig, database: DatabaseClient) {
-    // Models pipeline
-    const models = new PipelineBuilder()
-      .filter(isCmsModel)
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(removeAttributes)
-      .build();
+## Writing custom transformers
 
-    // Published entries only
-    const entries = new PipelineBuilder()
-      .filter(isCmsEntry)
-      .filter(record => record.status === "published")
-      .use(wrapInData)
-      .use(addGsiTenant)
-      .use(removeLocale)
-      .use(removeAttributes)
-      .build();
+A transformer is a plain function `(ctx) => void | Promise<void>` that mutates `ctx.record`. Wrap it with a named factory for DI friendliness:
 
-    runner.register(models).register(entries);
+```typescript
+import { createDdbTransformer } from "@webiny/data-transfer";
+import type { DdbTransformContext } from "@webiny/data-transfer";
+
+export const stampMigratedAt = createDdbTransformer(
+  "stampMigratedAt",
+  (ctx: DdbTransformContext.Interface) => {
+    ctx.record.migratedAt = new Date().toISOString();
+  }
+);
+```
+
+Factory variants:
+
+- `createTransformer<TContext>(name, fn)` — generic over any context type.
+- `createDdbTransformer(name, fn)` — binds `DdbTransformContext.Interface`.
+- `createOsTransformer(name, fn)` — binds `OsTransformContext.Interface`.
+
+### Context API
+
+Both DDB and OS transform contexts expose:
+
+| Member                     | Description                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ctx.record`               | Mutable record. Transformers change this.                                                             |
+| `ctx.original`             | Frozen, deep-cloned pre-transform snapshot. Use for gate-checks or audit comparisons. Always present. |
+| `ctx.commands`             | The command buffer. Transformers rarely need this directly — use the helpers below.                   |
+| `ctx.modelProvider`        | Loaded CMS models.                                                                                    |
+| `ctx.cache`                | Shared `Map`-like cache, persists across records within a run.                                        |
+| `ctx.replace(newRecord)`   | Replace `ctx.record` wholesale.                                                                       |
+| `ctx.putRecord(record)`    | Emit an extra PutRecord to the target (beyond the auto-put at chain end).                             |
+| `ctx.queryRecord(pk, sk?)` | Query the source primary table. Returns `null` if not found.                                          |
+
+DDB context additionally provides:
+
+- `ctx.copyFile(sourceKey, targetKey)` — emit an S3 copy command.
+- `ctx.getFile(key)` — read a file from the source bucket.
+
+**Auto-put**: you do NOT need to call `ctx.putRecord(ctx.record)` at the end of a transformer chain — the runner auto-emits a PutRecord for the final `ctx.record` after the chain runs. Mutation-only transformers produce writes. Only call `putRecord` when emitting ADDITIONAL records.
+
+## Writing custom pipelines
+
+A **pipeline** composes a filter + transformer chain. It's bound to a scanner and processor at registration time:
+
+```typescript
+import { createDdbPipeline, createFilter } from "@webiny/data-transfer";
+import { stampMigratedAt } from "./transformers/stampMigratedAt.ts";
+
+export const taggedEntriesPipeline = createDdbPipeline("tagged-entries", builder => {
+  builder
+    .filter(createFilter(r => r.TYPE === "cms.entry" && r.tags?.includes("internal")))
+    .use(stampMigratedAt);
+});
+```
+
+Both `.filter()` and `.use()` are **optional**. A pipeline with neither accepts every record and emits it verbatim — pure data copy.
+
+Pipeline factories:
+
+- `createPipeline<TRecord, TContext, TShard>(name, configure)` — generic.
+- `createDdbPipeline(name, configure)` — binds DDB scanner/processor shapes.
+- `createOsPipeline(name, configure)` — binds OS scanner/processor shapes.
+
+## Writing a preset
+
+A preset is an object that registers pipelines with the runner:
+
+```typescript
+import type { MigrationPreset } from "@webiny/data-transfer";
+import { DdbScanner, DdbProcessor } from "@webiny/data-transfer"; // if exported, else use generic Scanner/Processor
+import { taggedEntriesPipeline } from "./pipelines/taggedEntries.ts";
+
+export default {
+  name: "custom",
+  description: "Transfer only internal-tagged CMS entries",
+  configure(runner) {
+    taggedEntriesPipeline.register(runner, DdbScanner, DdbProcessor);
+  }
+} satisfies MigrationPreset;
+```
+
+Point `config.pipeline.preset` at the file path (relative to the config) or at the built-in name.
+
+### Zero-transformer preset (pure data copy)
+
+```typescript
+import { createDdbPipeline } from "@webiny/data-transfer";
+import { DdbScanner, DdbProcessor } from "@webiny/data-transfer";
+
+const copyAll = createDdbPipeline("copy-all", () => {
+  /* no filter, no transformers */
+});
+
+export default {
+  name: "copy",
+  description: "Copy every record from source to target verbatim",
+  configure(runner) {
+    copyAll.register(runner, DdbScanner, DdbProcessor);
   }
 };
 ```
 
-**Available Filters:**
+Every scanned record lands on target unchanged. No mutations applied.
 
-- `isCmsModel`, `isCmsEntry` - CMS records
-- `isFmFile`, `isFmSettings` - File Manager
-- `isSecurityTeam`, `isCustomSecurityGroup` - Security
-- `isFlpRecord` - Folder permissions
-- `isMailerSettings` - Mailer
-- `byType(type)`, `byTypePrefix(prefix)` - Generic filters
+## Built-in presets
 
-**Key Transformers:**
+| Name          | Config builder      | Covers                                                                                                                          |
+| ------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `v5-to-v6`    | `createDdbTransfer` | CMS entries + models, security groups→roles, security teams, file manager settings + files, folder permissions, mailer settings |
+| `v5-to-v6-os` | `createOsTransfer`  | CMS entries from the OS companion DDB table                                                                                     |
 
-- `wrapInData` - MUST be first - wraps attributes in data envelope
-- `addGsiTenant`, `removeLocale`, `removeAttributes` - Global transformations
-- `fixCmePk`, `fixBrokenStorageKeys`, `transformRichText` - CMS-specific
-- `groupsToRoles`, `transformPermissions` - Security
-- `migrateFileManagerSettings`, `migrateMailerSettings` - Settings
+Built-in transformers and pipeline definitions are exported from the package and can be composed into your own presets — see the package exports for the full list.
 
-See `src/presets/v5-to-v6-ddb.ts` for a complete example.
+## Pipeline runtime semantics
 
-### Transform Context Methods
+- **Merge groups**: pipelines sharing the same scanner run together, in registration order.
+- **First-match-wins**: within a merge group, the first pipeline whose filter(s) pass is the one that runs for that record. Register more-specific filters before catch-alls.
+- **Hooks**: each pipeline may declare before-hooks + after-hooks. Before-hooks fire once per merge group before any shard runs; after-hooks fire once after all shards in the merge group succeed. After-hooks are skipped on shard failure.
+- **Parallelism**: the `pipeline.segments` config field controls the number of scanner segments (shards). Each shard runs in parallel via a child process.
 
-Transformers receive a `TransformContext` with these methods for emitting commands:
+## Troubleshooting
 
-- `ctx.putPrimaryRecord(record)` — write a record to the target DynamoDB table
-- `ctx.copyFile(sourceKey, targetKey)` — copy a file between S3 buckets
-- `ctx.queryRecord(pk, sk?)` — query a record from the source DynamoDB table
-- `ctx.getFile(key)` — read a file from the source S3 bucket
-- `ctx.replace(newRecord)` — replace the working record entirely
-- `ctx.modelProvider` — access CMS model definitions
-- `ctx.cache` — shared `Map` that persists across records within a migration run
+- **AWS throttling** — bump `tuning.ddb.maxRetries` and `tuning.s3.maxRetries`; consider lowering `tuning.s3.concurrency` for S3-heavy transfers.
+- **OS indexes not creating** — check `tuning.os.retryScheduleMs`. Index creation failures after all retries are logged but don't abort the transfer.
+- **Missing env vars** — config files typically use `loadEnv(import.meta.url)` to load a sibling `.env`. Each project folder should have its own `.env` isolated from others.
+- **Target records look wrong** — the runner auto-puts `ctx.record` at the end of each transformer chain. If you're manually calling `ctx.putRecord(ctx.record)`, that's a duplicate write. Remove it; only call `putRecord` for ADDITIONAL records.
 
-## Transformations
+## License
 
-### Global (All Records)
-
-- Wrap non-reserved attributes in `data` envelope
-- Add `GSI_TENANT` attribute
-- Remove locale codes from PK/SK/GSI keys
-- Remove `webinyVersion` and `tenant` attributes
-
-### Security Groups → Roles
-
-- Transform `security.group` → `security.role`
-- Transform `GROUP` → `ROLE` in keys
-- Transform `GROUPS` → `ROLES` in GSI keys
-- Remove `content.i18n` permission
-- Flatten `cms.contentModel` models from locale object to array
-- Transform `cms.contentModelGroup` groups from IDs to slugs
-- Skip full-access and anonymous roles
-
-### Security Teams
-
-- Wrap in data envelope
-- Add `GSI_TENANT` attribute
-
-### CMS Entries
-
-- Remove duplicate `#CME#CME#` → `#CME#`
-- Update modelIds:
-  - fmFile -> `wbyFmFile`
-  - acoFolder -> `wbyAcoFolder`
-  - acoFilter -> `wbyAcoFilter`
-  - webinyTask -> `wbyTask`
-  - webinyTaskLog -> `wbyTaskLog`
-  - wby_recordLocking -> `wbyRecordLock`
-- Remove `#0001` from entry `data.location.folderId`
-- Transform rich-text fields to Lexical format with gzip compression
-- Update GSI keys to remove locale
-- Fix incorrect storageIds in entries (use model definition as the source of truth)
-
-### File Manager Files
-
-- Update S3 paths: remove revision from path
-- Create file metadata KeyValue records
-- Copy files to new S3 location
-- Update file entry `text@key` values
-
-### File Manager Settings
-
-- Migrate to KeyValue format (`KV#root:FileManager/General`)
-
-### Folders
-
-- Remove `#0001` from `data.id` and `data.parentId`
-
-### Mailer Settings
-
-- Migrate to KeyValue format (`KV#root:Mailer/Settings/Transport`)
+See `LICENSE`.
