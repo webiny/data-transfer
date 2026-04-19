@@ -1,4 +1,4 @@
-import { DatabaseRecord } from "../../src/database/interface.ts";
+import type { DatabaseRecord } from "../../src/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 
 /**
  * Sample v5 records for testing
