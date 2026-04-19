@@ -5,12 +5,6 @@ import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import type { OsRecord, OsShard } from "./abstractions/OsScanner.ts";
 
-// OS companion-table rows carry the target index name at the root. Decoded
-// rows without it are not OS CMS entries and are skipped at scan time.
-interface OsRawRecord extends BaseRecord {
-    index?: string;
-}
-
 class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
     public constructor(
         private readonly source: SourceDynamoDbClient.Interface,
@@ -32,7 +26,7 @@ class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
             throw new Error("OsScanner: source is not in OS storage mode; check config.storage");
         }
         const tableName = this.config.source.opensearch.tableName;
-        for await (const raw of this.source.scan<OsRawRecord>(tableName, {
+        for await (const raw of this.source.scan<OsRecordDecompressor.Compressed>(tableName, {
             segment: shard.segment,
             totalSegments: shard.total
         })) {

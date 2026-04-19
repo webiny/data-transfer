@@ -1,7 +1,6 @@
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { OsRecordDecompressor as OsRecordDecompressorAbstraction } from "./abstractions/OsRecordDecompressor.ts";
-import type { BaseRecord } from "~/domain/transform/index.js";
 
 class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interface {
     public constructor(
@@ -10,7 +9,7 @@ class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interf
     ) {}
 
     public async decompress(
-        osRecord: Record<string, unknown>
+        osRecord: OsRecordDecompressorAbstraction.Compressed
     ): Promise<OsRecordDecompressorAbstraction.Decompressed | null> {
         /**
          * Not possible to have an OS record without an index defined on it.
@@ -24,7 +23,8 @@ class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interf
             return null;
         }
 
-        const inner = await this.gzip.decompress<BaseRecord>(data);
+        const inner =
+            await this.gzip.decompress<OsRecordDecompressorAbstraction.Decompressed>(data);
         if (!inner) {
             this.logger.warn(
                 `Failed to decompress OS record PK=${osRecord.PK} SK=${osRecord.SK}. Data may be corrupt.`

@@ -1,10 +1,19 @@
 import { createAbstraction } from "~/base/index.ts";
 import type { BaseRecord } from "~/domain/transform/index.js";
 
-interface OsRecordMetadata {
+interface OsCompressedRecordData {
+    compression: string;
+    value: string;
+}
+
+interface OsCompressedRecord extends BaseRecord {
     index: string;
-    _ct: string;
-    _md: string;
+    data: OsCompressedRecordData;
+}
+
+interface OsDecompressedRecord extends Omit<OsCompressedRecord, "data"> {
+    index: string;
+    data: Record<string, unknown>;
 }
 
 interface IOsRecordDecompressor {
@@ -15,7 +24,7 @@ interface IOsRecordDecompressor {
      * Returns null for non-CMS records, unexpected SK values, missing locale,
      * or failed decompression.
      */
-    decompress(osRecord: Record<string, unknown>): Promise<BaseRecord | null>;
+    decompress(osRecord: OsCompressedRecord): Promise<BaseRecord | null>;
 }
 
 export const OsRecordDecompressor = createAbstraction<IOsRecordDecompressor>(
@@ -24,6 +33,6 @@ export const OsRecordDecompressor = createAbstraction<IOsRecordDecompressor>(
 
 export namespace OsRecordDecompressor {
     export type Interface = IOsRecordDecompressor;
+    export type Compressed = OsCompressedRecord;
     export type Decompressed = BaseRecord;
-    export type Metadata = OsRecordMetadata;
 }
