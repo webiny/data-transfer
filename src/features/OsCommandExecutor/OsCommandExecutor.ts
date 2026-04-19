@@ -67,23 +67,14 @@ class OsCommandExecutorImpl implements OsCommandExecutorAbstraction.Interface {
             return;
         }
 
-        try {
-            await this.withRetry(async () => {
-                const exists = await this.osClient.indexExists(indexName);
-                if (exists) {
-                    await this.disableRefreshOnExisting(indexName, touchedIndexes);
-                    return;
-                }
-                await this.createNewIndex(indexName, touchedIndexes);
-            }, `ensureIndex("${indexName}")`);
-        } catch (error) {
-            if (!isRetryableAwsError(error)) {
-                throw error;
+        await this.withRetry(async () => {
+            const exists = await this.osClient.indexExists(indexName);
+            if (exists) {
+                await this.disableRefreshOnExisting(indexName, touchedIndexes);
+                return;
             }
-            this.logger.error(
-                `Failed to ensure index "${indexName}" after retries. Continuing without index creation. Error: ${error}`
-            );
-        }
+            await this.createNewIndex(indexName, touchedIndexes);
+        }, `ensureIndex("${indexName}")`);
     }
 
     private async disableRefreshOnExisting(
