@@ -58,7 +58,13 @@ interface IPipelineRunner {
         ScannerShard<TScanner>
     >;
 
-    register(...pipelines: Pipeline<unknown, Processor.Context, unknown>[]): this;
+    /**
+     * Register one or more pipelines. Heterogeneous record/context types are
+     * allowed (each pipeline runs with its own scanner+processor pair); the
+     * parameter type is intentionally widened so concrete narrow pipelines
+     * are accepted without casts.
+     */
+    register(...pipelines: Pipeline<any, any, any>[]): this;
 
     run(opts?: RunOptions): Promise<void>;
 

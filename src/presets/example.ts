@@ -1,5 +1,4 @@
 import type { MigrationPreset } from "~/domain/transform/Preset.ts";
-import type { Pipeline, Processor } from "~/domain/pipeline/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 import {
@@ -64,16 +63,7 @@ export const v5ToV6Preset: MigrationPreset = {
             .use(extractImageMetadata)
             .build();
 
-        // note that build should be executed by the runner
-        // users should not be bothered with build()...
-        // cast pattern mirrors the test-suite's AnyPipeline alias: Pipeline<TRecord, ...>
-        // is invariant in TRecord (Filter is contravariant), so the concrete DdbBaseRecord
-        // pipelines aren't assignable to register's Pipeline<unknown, ...> signature.
-        type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
-        runner.register(
-            fileSettingsPipeline as unknown as AnyPipeline,
-            filePipeline as unknown as AnyPipeline
-        );
+        runner.register(fileSettingsPipeline, filePipeline);
     }
 };
 

@@ -7,8 +7,6 @@ import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 
-type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
-
 function makeBuilder(runner: PipelineRunner.Interface, name: string) {
     return runner.pipeline({
         name,
@@ -30,8 +28,8 @@ describe("PipelineRunner.getProcessors", () => {
 
         const b1 = makeBuilder(runner, "p1").filter(createFilter<BaseRecord>(() => true));
         const b2 = makeBuilder(runner, "p2").filter(createFilter<BaseRecord>(() => true));
-        runner.register(b1.build() as unknown as AnyPipeline);
-        runner.register(b2.build() as unknown as AnyPipeline);
+        runner.register(b1.build());
+        runner.register(b2.build());
 
         const processors = runner.getProcessors();
         expect(processors).toHaveLength(1);

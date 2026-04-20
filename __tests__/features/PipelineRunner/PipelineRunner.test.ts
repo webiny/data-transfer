@@ -72,8 +72,6 @@ function makeContainer(options: { runId?: string } = {}): {
     return { container, logger };
 }
 
-type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
-
 function buildPipeline(
     container: Container,
     name: string,
@@ -83,7 +81,7 @@ function buildPipeline(
         beforeHook?: Abstraction<Hook.Interface>;
         afterHook?: Abstraction<Hook.Interface>;
     } = {}
-): AnyPipeline {
+): Pipeline<FakeRecord, FakeContext, FakeShard> {
     const runner = container.resolve(PipelineRunner);
     const builder = runner.pipeline({
         name,
@@ -100,7 +98,7 @@ function buildPipeline(
     if (extras.afterHook) {
         builder.afterExecuteCommands(extras.afterHook);
     }
-    return builder.build() as unknown as AnyPipeline;
+    return builder.build();
 }
 
 describe("PipelineRunner — DI registration", () => {
@@ -224,7 +222,7 @@ describe("PipelineRunner.run()", () => {
             processor: FakeProcessorImpl
         });
         builder.filter(createFilter<FakeRecord>(() => true)).use(emit);
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
         await runner.run();
 
         // One execute() call per processor at shard end (we have one shard, one processor).
@@ -267,9 +265,7 @@ describe("PipelineRunner.run()", () => {
         });
         builderB.filter(createFilter<FakeRecord>(r => r.type === "bar")).use(emit);
 
-        runner
-            .register(builderA.build() as unknown as AnyPipeline)
-            .register(builderB.build() as unknown as AnyPipeline);
+        runner.register(builderA.build()).register(builderB.build());
         await runner.run();
 
         // Single processor instance → one execute() call per shard. Buffer holds
@@ -308,9 +304,7 @@ describe("PipelineRunner.run()", () => {
                 return true;
             })
         );
-        runner
-            .register(builderA.build() as unknown as AnyPipeline)
-            .register(builderB.build() as unknown as AnyPipeline);
+        runner.register(builderA.build()).register(builderB.build());
 
         await runner.run();
 
@@ -407,7 +401,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .beforeExecuteCommands(HookFirst)
             .beforeExecuteCommands(HookSecond);
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await runner.run();
         scanner.scan = originalScan;
@@ -443,7 +437,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .afterExecuteCommands(HookFirst)
             .afterExecuteCommands(HookSecond);
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await runner.run();
         scanner.scan = originalScan;
@@ -481,9 +475,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .beforeExecuteCommands(SharedHook)
             .afterExecuteCommands(SharedAfter);
 
-        runner
-            .register(builderA.build() as unknown as AnyPipeline)
-            .register(builderB.build() as unknown as AnyPipeline);
+        runner.register(builderA.build()).register(builderB.build());
 
         await runner.run();
 
@@ -516,7 +508,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .beforeExecuteCommands(Before)
             .afterExecuteCommands(After);
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await expect(runner.run()).rejects.toThrow("scanner-boom");
 
@@ -547,7 +539,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .beforeExecuteCommands(HookToken)
             .afterExecuteCommands(HookToken);
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await runner.run();
 

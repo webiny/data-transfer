@@ -9,8 +9,6 @@ import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 
-type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
-
 function makeRecord(pk: string, sk: string, type: string): BaseRecord {
     return {
         PK: pk,
@@ -39,7 +37,7 @@ describe("PipelineRunner.run — shard mode", () => {
             processor: DdbProcessor
         });
         builder.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await runner.run({ segment: 0, totalSegments: 4 });
 
@@ -58,7 +56,7 @@ describe("PipelineRunner.run — shard mode", () => {
             processor: DdbProcessor
         });
         builder.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await expect(runner.run({ segment: 0, totalSegments: 4 })).rejects.toThrow(
             /scanner.*reported 2 shards.*totalSegments=4/i

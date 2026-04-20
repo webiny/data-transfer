@@ -10,8 +10,6 @@ import type { DdbTransformContext } from "~/features/TransformContext/abstractio
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 
-type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
-
 const passthroughTransformer = (_ctx: DdbTransformContext.Interface<BaseRecord>): void => {
     // no-op: the runner auto-emits a PutRecord for the final ctx.record
 };
@@ -48,7 +46,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         teamsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
             .use(passthroughTransformer);
-        runner.register(teamsBuilder.build() as unknown as AnyPipeline);
+        runner.register(teamsBuilder.build());
 
         const groupsBuilder = runner.pipeline({
             name: "groups",
@@ -58,7 +56,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         groupsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.group"))
             .use(passthroughTransformer);
-        runner.register(groupsBuilder.build() as unknown as AnyPipeline);
+        runner.register(groupsBuilder.build());
 
         await runner.run();
 
@@ -80,7 +78,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             processor: DdbProcessor
         });
         builderA.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builderA.build() as unknown as AnyPipeline);
+        runner.register(builderA.build());
 
         const builderB = runner.pipeline({
             name: "dup",
@@ -89,9 +87,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         builderB.filter(createFilter<BaseRecord>(() => true));
 
-        expect(() => runner.register(builderB.build() as unknown as AnyPipeline)).toThrow(
-            /already registered/i
-        );
+        expect(() => runner.register(builderB.build())).toThrow(/already registered/i);
     });
 
     it("pure passthrough: zero filters + zero transformers copies every source record to target unchanged", async () => {
@@ -115,7 +111,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             processor: DdbProcessor
         });
         // Intentionally no .filter() and no .use()
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await runner.run();
 
@@ -149,7 +145,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         builder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
             .use(tagTransformer);
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await runner.run();
 
@@ -176,7 +172,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             processor: DdbProcessor
         });
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"));
-        runner.register(builder.build() as unknown as AnyPipeline);
+        runner.register(builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 
