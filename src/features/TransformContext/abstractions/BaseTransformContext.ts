@@ -1,42 +1,48 @@
 import { createAbstraction } from "~/base/index.ts";
+import type { Command } from "~/domain/transform/commands/Command.ts";
+import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
 import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { Command } from "~/domain/transform/commands/Command.ts";
 
 // ============================================================================
 // Base Context Interface
 // ============================================================================
 
-interface IBaseTransformContext<TRecord = Record<string, unknown>> {
+interface IBaseTransformContext<TRecord = unknown> {
     record: TRecord;
     readonly original: Readonly<TRecord>;
-    readonly commands: Commands;
     readonly modelProvider: ModelProvider.Interface;
     readonly cache: Cache.Interface;
-    replace<TNew>(newRecord: TNew): void;
-    putRecord(record: Record<string, unknown>): void;
-    queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
+    replace(newRecord: TRecord): void;
     /**
-     * Push a command to the bag. Convenience over `commands.add(cmd)`. Slice
-     * helpers (in the upcoming per-command-processor refactor) use this;
-     * transformers reach for it when emitting custom command types no slice
-     * helper provides.
+     * Push a command to the bag. Slice helpers (DdbProcessor.putRecord,
+     * S3Processor.copyFile, OsProcessor.putRecord, etc.) use this
+     * internally. Transformers reach for slice helpers when available;
+     * reach for addCommand directly when emitting custom command types
+     * no slice helper provides.
      */
     addCommand(cmd: Command): void;
+    queryRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
 }
 
 // ============================================================================
 // Base Factory Interface
 // ============================================================================
 
-interface ICreateParams<T extends BaseRecord> {
-    record: T;
+interface ICreateParams<TRecord> {
+    record: TRecord;
+}
+
+interface IBaseContextCreateResult<TRecord> {
+    ctx: IBaseTransformContext<TRecord>;
+    commands: Commands;
 }
 
 interface IBaseTransformContextFactory {
-    create<T extends BaseRecord>(params: ICreateParams<T>): IBaseTransformContext<T>;
+    create<TRecord>(params: ICreateParams<TRecord>): IBaseContextCreateResult<TRecord>;
 }
 
 // ============================================================================
@@ -48,7 +54,7 @@ export const BaseTransformContext = createAbstraction<IBaseTransformContext>(
 );
 
 export namespace BaseTransformContext {
-    export type Interface<TRecord = Record<string, unknown>> = IBaseTransformContext<TRecord>;
+    export type Interface<TRecord = unknown> = IBaseTransformContext<TRecord>;
 }
 
 export const BaseTransformContextFactory = createAbstraction<IBaseTransformContextFactory>(
@@ -57,5 +63,6 @@ export const BaseTransformContextFactory = createAbstraction<IBaseTransformConte
 
 export namespace BaseTransformContextFactory {
     export type Interface = IBaseTransformContextFactory;
-    export type CreateParams<T extends BaseRecord> = ICreateParams<T>;
+    export type CreateParams<TRecord> = ICreateParams<TRecord>;
+    export type CreateResult<TRecord> = IBaseContextCreateResult<TRecord>;
 }
