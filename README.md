@@ -187,11 +187,11 @@ DDB context additionally provides:
 - `ctx.copyFile(sourceKey, targetKey)` — emit an S3 copy command.
 - `ctx.getFile(key)` — read a file from the source bucket.
 
-**Auto-put**: you do NOT need to call `ctx.putRecord(ctx.record)` at the end of a transformer chain — the runner auto-emits a PutRecord for the final `ctx.record` after the chain runs. Mutation-only transformers produce writes. Only call `putRecord` when emitting ADDITIONAL records.
+**Auto-put**: `DdbProcessor` and `OsProcessor` include an `onEnd` hook that emits a `PutRecord` for `ctx.record` at the end of each transformer chain. Pure-passthrough pipelines (no `.filter` + no `.use`) still produce writes. `S3Processor` has no `onEnd` — transformers call `ctx.copyFile(...)` explicitly.
 
 ## Writing a preset
 
-A preset is an object exported from a `.ts` file. It builds pipelines inside `configure(runner)` using `runner.pipeline({...})`:
+A preset is an object exported from a `.ts` file. It builds pipelines inside `configure({ runner, pipelineBuilderFactory, container })` using `pipelineBuilderFactory.create({...})`:
 
 ```typescript
 import type { MigrationPreset } from "@webiny/data-transfer";
@@ -201,9 +201,9 @@ import { stampMigratedAt } from "./transformers/stampMigratedAt.ts";
 const preset: MigrationPreset = {
   name: "tagged-entries",
   description: "Stamp every internal-tagged CMS entry with migratedAt.",
-  configure(runner) {
-    const taggedEntries = runner
-      .pipeline({ name: "TaggedEntries", scanner: DdbScanner, processor: DdbProcessor })
+  configure({ runner, pipelineBuilderFactory }) {
+    const taggedEntries = pipelineBuilderFactory
+      .create({ name: "TaggedEntries", scanner: DdbScanner, processors: [DdbProcessor] })
       .filter(createFilter(r => r.TYPE === "cms.entry" && r.tags?.includes("internal")))
       .use(stampMigratedAt)
       .build();
@@ -217,14 +217,24 @@ export default preset;
 
 Point `config.pipeline.preset` at the file path (relative to the config) — for example `"./presets/tagged-entries.ts"` or `"../shared/presets/foo.ts"`.
 
-### `runner.pipeline({...})` — typed builder
+### `PresetConfigureContext`
 
-`runner.pipeline({ name, scanner, processor })` returns a `PipelineBuilder` with `TRecord` and `TContext` inferred from the scanner + processor pair. Mismatched pairs (e.g. `DdbScanner` + `OsProcessor`) fail at compile time.
+`configure` receives:
+
+- `runner` — call `.register(...pipelines)` after building.
+- `pipelineBuilderFactory` — call `.create({...})` to build pipelines.
+- `container` — DI container for resolving custom services you registered in `setup.ts` (see below).
+
+Return `void` or `Promise<void>` — async configure is supported.
+
+### `pipelineBuilderFactory.create({...})` — typed builder
+
+`create({ name, scanner, processors })` returns a `PipelineBuilder` with `TRecord` inferred from the scanner and `TContext` inferred from the processors' slices. `processors` is a `NonEmptyArray`; TS rejects empty arrays and rejects processors whose slice keys collide (e.g. `DdbProcessor` + `OsProcessor` both contribute `putRecord`).
 
 Builder methods:
 
-- `.filter(filter)` — accepts one filter per call. Multiple `.filter()` calls AND-compose; order doesn't matter for execution.
-- `.use(transformer)` — accepts one transformer per call. Insertion order IS preserved at execution time.
+- `.filter(filter)` — one filter per call. Multiple `.filter()` calls AND-compose; order doesn't matter for execution.
+- `.use(transformer)` — one transformer per call. Insertion order IS preserved at execution time.
 - `.beforeExecuteCommands(hook)` / `.afterExecuteCommands(hook)` — optional per-merge-group hooks.
 - `.build()` — snapshots into an immutable `Pipeline`. Required before `runner.register()`.
 
@@ -239,9 +249,9 @@ import { DdbScanner, DdbProcessor } from "@webiny/data-transfer";
 const preset: MigrationPreset = {
   name: "copy",
   description: "Copy every record from source to target verbatim.",
-  configure(runner) {
-    const copyAll = runner
-      .pipeline({ name: "copy-all", scanner: DdbScanner, processor: DdbProcessor })
+  configure({ runner, pipelineBuilderFactory }) {
+    const copyAll = pipelineBuilderFactory
+      .create({ name: "copy-all", scanner: DdbScanner, processors: [DdbProcessor] })
       .build(); // no .filter, no .use → accepts every record, emits verbatim
 
     runner.register(copyAll);
@@ -251,7 +261,7 @@ const preset: MigrationPreset = {
 export default preset;
 ```
 
-The runner auto-emits a `PutRecord` for `ctx.record` at the end of each transformer chain (or right after the filter passes, when the chain is empty). Mutation-only transformers produce writes; pure-passthrough pipelines do too.
+`DdbProcessor.onEnd` emits a `PutRecord` for `ctx.record` at the end of each record. Pure-passthrough pipelines (no transformers, no filters) still produce writes.
 
 ## Built-in presets
 

@@ -35,7 +35,8 @@ export { OsProcessor } from "./features/OsProcessor/index.ts";
 export { Processor } from "./domain/pipeline/abstractions/Processor.ts";
 
 // MigrationPreset shape — users export an object of this type from their preset file.
-export type { MigrationPreset } from "./domain/transform/Preset.ts";
+// PresetConfigureContext is the arg bag passed into configure({runner, pipelineBuilderFactory, container}).
+export type { MigrationPreset, PresetConfigureContext } from "./domain/transform/Preset.ts";
 
 // Context types for user-written transformers.
 export type { BaseTransformContext } from "./features/TransformContext/abstractions/BaseTransformContext.ts";
