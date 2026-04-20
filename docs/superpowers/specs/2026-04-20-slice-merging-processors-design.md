@@ -208,6 +208,8 @@ interface DdbProcessorSlice {
 
 Slice: `{ putRecord(record: Record<string, unknown>): void }` — same shape as `DdbProcessor`'s slice (this is what makes them mutually exclusive). Pushes a `PutRecord` targeting the OS DDB table. `execute()` runs ensureIndex preamble + gzip + delegates to `DdbExecutor`.
 
+**Command-key coupling**: both `DdbProcessor` and `OsProcessor` drain `PutRecord.key`. Compile-time `DisjointKeys<>` catches the direct case (both listed in one pipeline) via the shared `putRecord` slice key. Runtime safety belt: each processor's `extendContext` throws if `config.storage` mode doesn't match its role. A future processor that needed to drain `PutRecord.key` alongside DdbProcessor would need either a new distinct command type or explicit dedup logic — flagged at the command file (`src/domain/transform/commands/PutRecord.ts`).
+
 ```typescript
 class OsProcessorImpl implements Processor.Interface<BaseTransformContext.Interface<BaseRecord>, OsProcessorSlice> {
     public constructor(

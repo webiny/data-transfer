@@ -328,6 +328,12 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return ordered;
     }
 
+    /**
+     * Emit a one-time warning per unclaimed command key observed across the
+     * runner's lifetime. `unclaimedWarned` grows monotonically but is bounded
+     * by the number of distinct command keys ever emitted (tiny in practice —
+     * PutRecord, S3Copy, and whatever future processors introduce).
+     */
     private warnUnclaimedKeys(buffer: Commands): void {
         const unclaimed = buffer.unclaimedKeys();
         if (unclaimed.length === 0) {
