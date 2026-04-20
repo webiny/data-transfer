@@ -67,16 +67,20 @@ Type inference: `ctx` is `BaseTransformContext<BaseRecord> & DdbProcessorSlice &
 
 | # | Decision | Rationale |
 |---|---|---|
-| 1 | `runner.pipeline({ name, scanner, processors: [...] })` — array of processors per pipeline. | Explicit composition; per-pipeline opt-in to executor sets. |
-| 2 | Each processor exposes `keys()`, optional `extendContext(base) → slice`, optional `onEnd(ctx)`, `execute(commands)`, `getShardState(): unknown`. | Slice is the helper contribution; keys declare what the processor consumes; onEnd is the per-record terminal hook (replaces magic auto-put); execute drains; shard state is per-processor. |
-| 3 | Slice-key collision = the implicit "processor type". No `Role` enum. | The slice IS the contract. Two processors both contributing `putRecord` are by definition incompatible. Mechanical detection. |
-| 4 | Base context provides `record`, `original`, `commands`, `addCommand(cmd)`, `replace`, `queryRecord<T>(...)`, `modelProvider`, `cache`. Processor slices contribute everything else. | Record-shape + raw command access in base; target-side concerns in processors. |
+| 1 | `runner.pipeline({ name, scanner, processors: NonEmptyArray<...> })` — array of processors per pipeline; empty array fails at the call site (TS). | Explicit composition; per-pipeline opt-in to executor sets. Pipelines with zero processors are bugs. |
+| 2 | Each processor exposes optional `extendContext(base) → slice`, optional `onEnd(ctx)`, `execute(commands)`, `getShardState(): unknown`. No `keys()` declaration. | Slice is the helper contribution; onEnd is the per-record terminal hook (replaces magic auto-put); execute drains; shard state is per-processor. Unhandled-command detection lives in `Commands.unclaimedKeys()` instead — see Decision 11. |
+| 3 | Slice-key collision = the implicit "processor type". No `Role` enum. | The slice IS the contract. Two processors both contributing `putRecord` are by definition incompatible. |
+| 4 | Base context exposes `record`, `original`, `addCommand(cmd)`, `replace`, `queryRecord<T>(...)`, `modelProvider`, `cache`. **Raw `commands` bag is hidden** — `addCommand` is the only public push path. Processor slices contribute everything else. | Cleaner public surface; transformers shouldn't need bag introspection. The bag still exists internally for processor `execute(commands)`. |
 | 5 | One shared `DdbExecutor` (the actual batchPut implementation). `DdbProcessor` and `OsProcessor` both compose it as a dependency. | Single source of truth for "write records to a DDB table". OS adds gzip + ensureIndex preamble inside its `execute()`. |
 | 6 | Slice helpers stay synchronous wrappers (push commands to the bag). Async work (batched gzip, ensureIndex, batchPut, batchCopy) lives in `execute()`. | Slice helpers callable from sync contexts (onEnd, sync transformers). Lets us keep batched gzip with concurrency cap. |
-| 7 | Processors run `execute()` in parallel via `Promise.all` at shard end (matches today's behavior). `onEnd` runs sequentially per processor in array order, per record. | No sequencing constraints across processors at shard end; per-record onEnd order is deterministic and visible in the pipeline definition. |
+| 7 | Both `onEnd` (per-record) and `execute()` (per-shard) run **sequentially in array order**. No `Promise.all` parallelism across processors. | "Don't hammer services" — one processor at a time. The few extra `await`s per record/shard are negligible vs scan time. Order is the user's lever. |
 | 8 | `.build()` takes no arg. Per-record terminal behavior comes entirely from each processor's `onEnd` hook. | No magic, no per-pipeline override config. If you want custom end logic, write a transformer at the end of `.use()` chain — it runs before all `onEnd` hooks. |
-| 9 | Compile-time slice-collision detection via TS conditional types (`DisjointKeys<TProcessors>`). Runtime throw as belt-and-suspenders for dynamic processor lists. | Best UX: bad pipeline configs fail at the call site, not at run time. |
-| 10 | `addCommand(cmd)` on the base context is the canonical primitive. Slice helpers are sugar over it. Transformers can use slice helpers OR `addCommand` for raw command pushes. | Generic command emission must work for command types no slice provides (custom user commands, future processor types). |
+| 9 | Slice-collision detection is **TypeScript-only** via `DisjointKeys<TProcessors>`. No runtime check. | If users cast their way past TS, the spread silently last-wins per JS spec — that's on them. Keeps runtime simple. |
+| 10 | `addCommand(cmd)` on the base context is the canonical primitive. Slice helpers internally use `addCommand`. | Generic command emission for command types no slice provides (custom user commands, future processor types). |
+| 11 | Unhandled-command detection lives in `Commands.unclaimedKeys()`: a key is "claimed" when any processor's `execute()` calls `commands.get(key)`. After all `execute()` runs, runner warns once per pipeline if any unclaimed key has commands. | No `keys()` declaration on Processor needed — the act of calling `commands.get(X)` IS the declaration. Future-proof. |
+| 12 | Errors in `onEnd` or `execute` bubble up unconditionally — fail the shard. After-hooks SKIPPED on shard failure (matches today). | Loud + safe. Per-record resilience added later if a real use case appears. |
+| 13 | `getShardState` payloads keyed by **DI abstraction token name** (e.g., `"Core/OsProcessor"`). | Stable across processes, automatic, no extra processor declaration. On-disk JSON is internal between worker and orchestrator within one run. |
+| 14 | User-authored DI features (custom processors, transformers, etc.) registered via a sibling `setup.ts` file, loaded BEFORE the preset's `configure(runner)` runs. CLI auto-discovers it next to the config file. Optional. | Single canonical place for custom DI wiring; explicit; no auto-registration magic. See "Setup file" section. |
 
 ## API surfaces
 
@@ -90,9 +94,6 @@ import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 interface IProcessor<TBaseContext extends BaseTransformContext.Interface<unknown>, TSlice = {}> {
-    /** Command keys this processor drains from the bag. Used for unknown-key detection at the runner level. */
-    keys(): readonly string[];
-
     /** Per-record helper contribution. Called once per record; returns a slice that's spread onto the base ctx. Optional — pure execute-only processors omit it. */
     extendContext?(base: TBaseContext): TSlice;
 
@@ -108,7 +109,12 @@ interface IProcessor<TBaseContext extends BaseTransformContext.Interface<unknown
      */
     onEnd?(ctx: TBaseContext & TSlice): void | Promise<void>;
 
-    /** Drain the processor's commands from the bag and write to target. */
+    /**
+     * Drain the processor's commands from the bag and write to target. The
+     * act of calling commands.get(key) marks that key as "claimed" — the
+     * runner uses Commands.unclaimedKeys() to warn-once on commands that
+     * no processor handled.
+     */
     execute(commands: Commands): Promise<void>;
 
     /** Per-shard state for the worker handler to serialize and pass to after-hooks. */
@@ -133,8 +139,15 @@ export namespace Processor {
 interface IBaseTransformContext<TRecord> {
     record: TRecord;
     readonly original: Readonly<TRecord>;
-    commands: Commands;
-    /** Convenience over commands.add(cmd). Transformers and onEnd hooks use this for raw command pushes (or use slice helpers for typed sugar). */
+    /**
+     * The canonical primitive for emitting commands. Slice helpers (e.g.,
+     * `ctx.putRecord`) internally call this. Transformers/onEnd use slice
+     * helpers when available; reach for addCommand only for custom command
+     * types no processor provides a slice helper for.
+     *
+     * The raw bag is intentionally NOT exposed on the public ctx surface —
+     * it lives internally for processor `execute()` to drain.
+     */
     addCommand(cmd: Command): void;
     modelProvider: ModelProvider.Interface;
     cache: Cache.Interface;
@@ -162,10 +175,6 @@ class DdbProcessorImpl implements Processor.Interface<BaseTransformContext.Inter
         private readonly executor: DdbExecutor.Interface,
         private readonly config: MigrationConfig.Interface
     ) {}
-
-    public keys(): readonly string[] {
-        return [PutRecord.key];
-    }
 
     public extendContext(base: BaseTransformContext.Interface<BaseRecord>): DdbProcessorSlice {
         const targetTable = this.config.target.dynamodb.tableName;
@@ -209,10 +218,6 @@ class OsProcessorImpl implements Processor.Interface<BaseTransformContext.Interf
         private readonly config: MigrationConfig.Interface,
         private readonly logger: Logger.Interface
     ) {}
-
-    public keys(): readonly string[] {
-        return [PutRecord.key];
-    }
 
     public extendContext(base: BaseTransformContext.Interface<BaseRecord>): OsProcessorSlice {
         const targetTable = this.config.target.opensearch.tableName;
@@ -266,10 +271,6 @@ class S3ProcessorImpl implements Processor.Interface<BaseTransformContext.Interf
         private readonly targetS3: TargetS3Client.Interface,
         private readonly config: MigrationConfig.Interface
     ) {}
-
-    public keys(): readonly string[] {
-        return [S3Copy.key];
-    }
 
     public extendContext(base: BaseTransformContext.Interface<BaseRecord>): S3ProcessorSlice {
         const sourceBucket = this.config.source.s3.bucket;
@@ -328,10 +329,12 @@ Same impl as today's `PutDynamoDbRecordExecutor` — only the name changes. Both
 ### `runner.pipeline()` signature
 
 ```typescript
+type NonEmptyArray<T> = readonly [T, ...T[]];
+
 runner.pipeline<
     TRecord,
     TShard,
-    TProcessors extends readonly ProcessorImpl<BaseTransformContext.Interface<TRecord>, any>[]
+    TProcessors extends NonEmptyArray<ProcessorImpl<BaseTransformContext.Interface<TRecord>, any>>
 >(input: {
     name: string;
     scanner: ScannerImpl<TRecord, TShard>;
@@ -343,7 +346,47 @@ runner.pipeline<
 >;
 ```
 
+Empty `processors: []` fails at the call site (`Type '[]' is not assignable to type 'NonEmptyArray<...>'`). `DisjointKeys` rejects mismatched-slice-keys (e.g., DdbProcessor + OsProcessor both contributing `putRecord`).
+
 `runner.register(...pipelines)` unchanged from current shape (variadic, throws on duplicate name).
+
+### Setup file (user-side custom DI)
+
+Users register their own processors / features / overrides in a `setup.ts` file colocated with their config:
+
+```typescript
+// projects/example/setup.ts
+import { initDataTransfer } from "@webiny/data-transfer";
+import { MyCustomProcessor } from "./processors/myCustom.ts";
+
+export default initDataTransfer(async ({ container }) => {
+    container.register(MyCustomProcessor);
+});
+```
+
+`initDataTransfer` is an exported typed identity helper:
+
+```typescript
+export interface InitDataTransferContext {
+    container: Container;
+}
+
+export function initDataTransfer(
+    fn: (ctx: InitDataTransferContext) => void | Promise<void>
+): typeof fn {
+    return fn;
+}
+```
+
+CLI flow:
+
+1. Load + Zod-validate config.
+2. Bootstrap container with package's built-in features.
+3. Look for `setup.ts` next to the config file (convention) or `config.setup` (explicit override). If present, dynamic-import its default export and `await setupFn({ container })`. Setup is **OPTIONAL** — most users won't need it.
+4. Load preset (from `config.pipeline.preset`) and run `preset.configure(runner)`. Preset can now reference user-registered processors in `runner.pipeline({ processors: [...] })`.
+5. Spawn workers / `runner.run()`.
+
+Order is mandatory: setup MUST run before preset.configure, since preset.configure depends on the registered processors.
 
 ## TypeScript hardening
 
@@ -430,13 +473,17 @@ for processor in pipeline.processors:
     await processor.onEnd?.(ctx)               // per-record terminal hook (e.g., DdbProcessor.onEnd → ctx.putRecord(ctx.record))
 ```
 
-At shard end:
+At shard end (sequential, array order):
 
 ```
-await Promise.all(pipeline.processors.map(p => p.execute(base.commands)))
+for processor in pipeline.processors:
+    await processor.execute(base.commands)
+const unclaimed = base.commands.unclaimedKeys();
+if (unclaimed.length > 0):
+    logger.warn(`Pipeline "${pipeline.name}" emitted commands of types [${unclaimed}] but no processor drained them.`);
 ```
 
-`Promise.all` keeps today's parallel behavior across processors. Inside each `execute`, processor-specific ordering applies (e.g., `OsProcessor` does ensureIndex sequentially before delegating to `DdbExecutor`).
+Sequential — one processor at a time, in array order. Avoids hammering services. Inside each `execute`, processor-specific ordering applies (e.g., `OsProcessor` does ensureIndex sequentially before delegating to `DdbExecutor`). Unhandled-command warning fires per-pipeline-per-shard.
 
 Worker handler `getShardState()` collection:
 
@@ -454,7 +501,8 @@ After-hook reads the keyed state. `OsProcessor`'s `{ touchedIndexes: TouchedInde
 
 **Modify:**
 
-- `src/domain/pipeline/abstractions/Processor.ts` — new shape: `extendContext` (optional) + `keys()` + `execute()` + `getShardState()`. Drop the `createContext`-based shape.
+- `src/domain/pipeline/abstractions/Processor.ts` — new shape: `extendContext` (optional) + `onEnd` (optional) + `execute()` + `getShardState()`. Drop the `createContext`-based shape.
+- `src/domain/transform/commands/Commands.ts` — add `claimedKeys: Set<string>`, mutate from `get()`; add public `unclaimedKeys(): string[]` method.
 - `src/features/PipelineRunner/abstractions/PipelineRunner.ts` — `pipeline()` signature accepts `processors: [...]` array, returns `PipelineBuilder<TRecord, EffectiveContext, TShard>`.
 - `src/features/PipelineRunner/PipelineRunner.ts` — runtime orchestration; per-record slice merge; per-pipeline `execute` fanout; aggregated `getShardState`.
 - `src/domain/pipeline/PipelineBuilder.ts` — `.use(transformer)` types against `EffectiveContext`; build snapshots the processors list onto `Pipeline`.
@@ -508,5 +556,5 @@ After-hook reads the keyed state. `OsProcessor`'s `{ touchedIndexes: TouchedInde
 - **`@webiny/di` slice extraction**: relies on the `__abstraction` marker pattern we already use for scanner/processor. Same risk as before — if `@webiny/di` ever changes its marker name, our type machinery breaks. Mitigated by localizing `ProcessorImpl<>` / `SliceOf<>` types in one file.
 - **Slice helper bivariance**: `extendContext(base): TSlice` — TS infers the slice type from the return type, so bivariance shouldn't bite the way it did with scanner/processor record matching. Type-test fixture covers it.
 - **`getShardState` keying scheme**: keying by `processorTokenName` (DI token string) is stable across processes, but ties shard state to the abstraction token. If a processor abstraction is ever renamed, the on-disk JSON layout changes. Acceptable — the on-disk format is internal between worker and orchestrator within one run.
-- **Unknown-command-key warning**: with explicit `keys()` declarations, the runner can warn (`pipeline "X" emitted command "Y" but no processor in the pipeline handles it`). This catches transformer bugs (e.g., emit `S3Copy` but pipeline has no `S3Processor`). Already part of the design; the warning channel is the standard logger.
+- **Unknown-command-key warning**: implicit via `Commands.unclaimedKeys()` — a key is "claimed" when any processor's `execute()` calls `commands.get(key)`. After all `execute()` calls, runner warns if any key has commands but was never claimed. Catches "transformer pushed `S3Copy` but pipeline omits `S3Processor`" without requiring processor authors to declare a `keys()` method.
 - **Pipelines with zero processors**: pure passthrough. Auto-put would fail because no processor contributes `putRecord`. Either error at `pipeline.build()` ("pipeline has no processors — what writes the records?") or allow it (pipeline is read-only? doesn't make sense in this tool). Recommend: throw at `build()` with a clear message.
