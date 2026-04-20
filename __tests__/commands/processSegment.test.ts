@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { existsSync } from "node:fs";
 
 const runSpy = vi.fn();
 const getProcessorsSpy = vi.fn(() => []);
@@ -21,6 +22,7 @@ vi.mock("~/bootstrap.ts", () => ({
 
 import { handler } from "~/commands/processSegment/handler.ts";
 import { Logger } from "~/tools/Logger/index.ts";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
@@ -45,6 +47,7 @@ describe("processSegment handler", () => {
         resolveMap.set(PipelineRunner, { run: runSpy, getProcessors: getProcessorsSpy });
         resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
+        resolveMap.set(FileTool, { exists: existsSync });
     });
 
     it("loads preset, configures runner, calls run({segment, totalSegments})", async () => {

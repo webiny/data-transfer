@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { Container } from "@webiny/di";
 import { loadUserSetup } from "../../src/utils/loadUserSetup.ts";
 import { createAbstraction } from "../../src/base/createAbstraction.ts";
+import { FileTool } from "../../src/tools/FileTool/abstractions/FileTool.ts";
 import type { Logger } from "../../src/tools/Logger/abstractions/Logger.ts";
+
+// Minimal FileTool stub — loadUserSetup only calls `.exists()`.
+const stubFileTool = { exists: existsSync } as unknown as FileTool.Interface;
 
 interface MarkerShape {
     name: string;
@@ -43,6 +48,7 @@ describe("CLI setup.ts loading", () => {
         await writeFile(configPath, "export default {};", "utf-8");
 
         const container = new Container();
+        container.registerInstance(FileTool, stubFileTool);
         const logger = createTestLogger();
         const infoSpy = vi.spyOn(logger, "info");
 
@@ -72,6 +78,7 @@ describe("CLI setup.ts loading", () => {
         );
 
         const container = new Container();
+        container.registerInstance(FileTool, stubFileTool);
         const logger = createTestLogger();
         const infoSpy = vi.spyOn(logger, "info");
 
@@ -95,6 +102,7 @@ describe("CLI setup.ts loading", () => {
         await writeFile(setupPath, "export default { not: 'a function' };", "utf-8");
 
         const container = new Container();
+        container.registerInstance(FileTool, stubFileTool);
         const logger = createTestLogger();
 
         await expect(loadUserSetup(configPath, container, logger)).rejects.toThrow(

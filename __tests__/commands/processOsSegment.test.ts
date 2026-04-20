@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdtemp, readFile } from "node:fs/promises";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -75,6 +75,7 @@ describe("processOsSegment handler", () => {
             create: (p: string) => mkdirSync(p, { recursive: true })
         });
         resolveMap.set(FileTool, {
+            exists: existsSync,
             writeFileOrThrow: (p: string, content: string) => writeFileSync(p, content)
         });
     });

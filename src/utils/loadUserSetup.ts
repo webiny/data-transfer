@@ -1,8 +1,8 @@
-import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Container } from "@webiny/di";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import type { InitDataTransferFn } from "~/utils/initDataTransfer.ts";
 
 const SETUP_FILENAMES: ReadonlyArray<string> = ["setup.ts", "setup.js"];
@@ -23,7 +23,7 @@ export async function loadUserSetup(
     const absoluteConfigPath = isAbsolute(configPath) ? configPath : resolve(configPath);
     const configDir = dirname(absoluteConfigPath);
 
-    const setupPath = resolveSetupPath(configDir);
+    const setupPath = resolveSetupPath(configDir, container.resolve(FileTool));
     if (!setupPath) {
         return;
     }
@@ -43,10 +43,10 @@ export async function loadUserSetup(
     await (setupFn as InitDataTransferFn)({ container });
 }
 
-function resolveSetupPath(configDir: string): string | null {
+function resolveSetupPath(configDir: string, fileTool: FileTool.Interface): string | null {
     for (const filename of SETUP_FILENAMES) {
         const candidate = join(configDir, filename);
-        if (existsSync(candidate)) {
+        if (fileTool.exists(candidate)) {
             return candidate;
         }
     }
