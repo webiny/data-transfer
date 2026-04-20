@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createMetadata } from "~/transformers/file-manager/createMetadata.ts";
 import { makeFakeBaseContext } from "../fakeContext.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
 
 interface PutRecordCall {
     record: Record<string, unknown>;

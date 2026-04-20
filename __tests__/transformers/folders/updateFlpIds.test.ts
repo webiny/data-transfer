@@ -21,7 +21,7 @@ describe("updateFlpIds", () => {
 
         updateFlpIds(ctx);
 
-        const data = (ctx.record as { data: FlpData }).data;
+        const data = (ctx.record as unknown as { data: FlpData }).data;
         expect(data.id).toBe("abc123");
         expect(data.parentId).toBe("def456");
     });
@@ -39,7 +39,7 @@ describe("updateFlpIds", () => {
 
         updateFlpIds(ctx);
 
-        const data = (ctx.record as { data: FlpData }).data;
+        const data = (ctx.record as unknown as { data: FlpData }).data;
         expect(data.id).toBe("abc123");
         expect(data.parentId).toBe("def456");
     });

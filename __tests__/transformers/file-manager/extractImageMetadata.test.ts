@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { extractImageMetadata } from "~/transformers/file-manager/extractImageMetadata.ts";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
 
 interface GetFileCall {
     key: string;
@@ -72,7 +72,8 @@ describe("extractImageMetadata", () => {
 
         await extractImageMetadata(ctx);
 
-        const values = (ctx.record as { data: { values: Record<string, unknown> } }).data.values;
+        const values = (ctx.record as unknown as { data: { values: Record<string, unknown> } }).data
+            .values;
         expect(values["object@meta"]).toBeUndefined();
         expect(values["object@metadata"]).toEqual({});
         expect(getFileCalls).toHaveLength(0);
@@ -105,7 +106,8 @@ describe("extractImageMetadata", () => {
 
         await extractImageMetadata(ctx);
 
-        const values = (ctx.record as { data: { values: Record<string, unknown> } }).data.values;
+        const values = (ctx.record as unknown as { data: { values: Record<string, unknown> } }).data
+            .values;
         expect(values["object@metadata"]).toEqual({});
         expect(getFileCalls).toHaveLength(0);
     });

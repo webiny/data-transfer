@@ -3,8 +3,10 @@ import { createTransformer } from "~/transformers/createTransformer.ts";
 import { createDdbTransformer } from "~/transformers/createDdbTransformer.ts";
 import { createOsTransformer } from "~/transformers/createOsTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
-import type { OsTransformContext } from "~/features/TransformContext/abstractions/OsTransformContext.ts";
+import type {
+    DdbTransformContext,
+    OsTransformContext
+} from "~/features/TransformContext/abstractions/contextAliases.ts";
 import type { OsScanner } from "~/features/OsScanner/index.ts";
 
 describe("createTransformer", () => {
