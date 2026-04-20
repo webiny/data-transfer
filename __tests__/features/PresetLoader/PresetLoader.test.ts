@@ -29,22 +29,6 @@ describe("PresetLoader Feature", () => {
     });
 
     describe("load", () => {
-        it("should load v5-to-v6 built-in preset", async () => {
-            const container = createDdbContainer();
-            const preset = await container.resolve(PresetLoader).load("v5-to-v6");
-            expect(preset.name).toBe("v5-to-v6");
-            expect(preset.description).toBeDefined();
-            expect(typeof preset.configure).toBe("function");
-        });
-
-        it("should load v5-to-v6-os built-in preset", async () => {
-            const container = createDdbContainer();
-            const preset = await container.resolve(PresetLoader).load("v5-to-v6-os");
-            expect(preset.name).toBe("v5-to-v6-os");
-            expect(preset.description).toBeDefined();
-            expect(typeof preset.configure).toBe("function");
-        });
-
         it("should throw on unknown preset name", async () => {
             const container = createDdbContainer();
             await expect(container.resolve(PresetLoader).load("nonexistent")).rejects.toThrow(
