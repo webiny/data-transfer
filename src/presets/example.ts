@@ -1,5 +1,5 @@
 import type { MigrationPreset } from "~/domain/transform/Preset.ts";
-import type { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import type { Pipeline, Processor } from "~/domain/pipeline/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 import {
@@ -15,9 +15,9 @@ import {
     transformRichText,
     updateModelIds,
     wrapInData
-} from "~/transformers/index.js";
-import { createFilter } from "@/src/index.js";
-import { byType, isCmsEntry, isFmFile } from "~/domain/transform/filters.js";
+} from "~/transformers/index.ts";
+import { createFilter } from "~/domain/pipeline/Filter.ts";
+import { byType, byTypePrefix, isCmsEntry, isFmFile } from "~/domain/transform/filters.ts";
 
 export const v5ToV6Preset: MigrationPreset = {
     name: "example",
@@ -36,8 +36,10 @@ export const v5ToV6Preset: MigrationPreset = {
             .filter(createFilter(byType("fm.settings")))
             .use(wrapInData)
             .use(migrateFileManagerSettings)
-            .filter(createFilter(oneMoreFilterWhichIsApplied))
-            .use(removeAttributes);
+            // illustrate that .filter() can be interleaved after .use() calls
+            .filter(createFilter(byTypePrefix("fm.")))
+            .use(removeAttributes)
+            .build();
 
         const filePipeline = runner
             .pipeline({
@@ -59,12 +61,19 @@ export const v5ToV6Preset: MigrationPreset = {
             .use(removeFolderRevision)
             .use(removeAttributes)
             .use(createMetadata)
-            .use(extractImageMetadata);
+            .use(extractImageMetadata)
+            .build();
 
         // note that build should be executed by the runner
         // users should not be bothered with build()...
-        runner.register(fileSettingsPipeline);
-        runner.register(filePipeline);
+        // cast pattern mirrors the test-suite's AnyPipeline alias: Pipeline<TRecord, ...>
+        // is invariant in TRecord (Filter is contravariant), so the concrete DdbBaseRecord
+        // pipelines aren't assignable to register's Pipeline<unknown, ...> signature.
+        type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
+        runner.register(
+            fileSettingsPipeline as unknown as AnyPipeline,
+            filePipeline as unknown as AnyPipeline
+        );
     }
 };
 
