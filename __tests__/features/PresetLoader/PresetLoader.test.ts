@@ -19,9 +19,11 @@ describe("PresetLoader Feature", () => {
     });
 
     describe("getBuiltInPresets", () => {
-        it("returns an empty array — no built-in presets are bundled", () => {
+        it("discovers built-ins from src/presets/builtin/ — currently empty", () => {
             const container = createDdbContainer();
             const loader = container.resolve(PresetLoader);
+            // The builtin/ directory exists but ships no presets today; adding
+            // one is a file drop, no code change.
             expect(loader.getBuiltInPresets()).toEqual([]);
         });
     });

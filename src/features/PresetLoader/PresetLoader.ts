@@ -1,14 +1,27 @@
-import { pathToFileURL } from "node:url";
-import { resolve, isAbsolute } from "node:path";
-import { existsSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { MigrationPreset } from "~/domain/transform/Preset.ts";
 import { PresetLoader as PresetLoaderAbstraction } from "./abstractions/PresetLoader.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 
-const BUILT_IN_PRESETS: ReadonlyMap<string, string> = new Map();
+// Built-in presets are auto-discovered from the sibling `src/presets/builtin/`
+// directory at runtime. PresetLoader resolves its own location via
+// import.meta.url, so this works whether the package is running from source
+// in-repo or installed as `node_modules/@webiny/data-transfer/...`. Convention:
+// the filename (without extension) IS the preset name. Drop a `.ts` file in
+// the directory and it ships — no other code change.
+const BUILTIN_PRESETS_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../presets/builtin");
+
+const PRESET_FILE_PATTERN = /^([\w-]+)\.(ts|js)$/;
 
 class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
-    public constructor(private readonly logger: Logger.Interface) {}
+    public constructor(
+        private readonly logger: Logger.Interface,
+        private readonly dirTool: DirectoryTool.Interface,
+        private readonly fileTool: FileTool.Interface
+    ) {}
 
     public async load(presetNameOrPath: string): Promise<MigrationPreset> {
         const presetPath = this.resolvePresetPath(presetNameOrPath);
@@ -46,12 +59,20 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
     }
 
     public getBuiltInPresets(): string[] {
-        return Array.from(BUILT_IN_PRESETS.keys());
+        if (!this.dirTool.exists(BUILTIN_PRESETS_DIR)) {
+            return [];
+        }
+        const entries = this.dirTool.readDir(BUILTIN_PRESETS_DIR) ?? [];
+        return entries
+            .map(name => PRESET_FILE_PATTERN.exec(name)?.[1])
+            .filter((name): name is string => name !== undefined)
+            .sort();
     }
 
     private resolvePresetPath(presetNameOrPath: string): string {
-        if (BUILT_IN_PRESETS.has(presetNameOrPath)) {
-            return BUILT_IN_PRESETS.get(presetNameOrPath)!;
+        const builtInPath = this.findBuiltInPath(presetNameOrPath);
+        if (builtInPath) {
+            return builtInPath;
         }
 
         if (presetNameOrPath.endsWith(".ts") || presetNameOrPath.endsWith(".js")) {
@@ -59,7 +80,7 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
                 ? presetNameOrPath
                 : resolve(process.cwd(), presetNameOrPath);
 
-            if (!existsSync(presetPath)) {
+            if (!this.fileTool.exists(presetPath)) {
                 throw new Error(
                     `Preset file not found: ${presetPath}\n` +
                         `Make sure the file exists and the path is correct.`
@@ -69,15 +90,28 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
             return presetPath;
         }
 
+        const available = this.getBuiltInPresets().join(", ");
+        const availableHint =
+            available.length > 0 ? `Available built-in presets: ${available}\n` : "";
         throw new Error(
             `Unknown preset: "${presetNameOrPath}"\n` +
-                `No built-in presets are bundled — provide a path to a preset file ` +
-                `(e.g., ./my-preset.ts).`
+                availableHint +
+                `Or provide a path to a custom preset file (e.g., ./my-preset.ts).`
         );
+    }
+
+    private findBuiltInPath(presetName: string): string | null {
+        for (const ext of [".ts", ".js"]) {
+            const candidate = join(BUILTIN_PRESETS_DIR, `${presetName}${ext}`);
+            if (this.fileTool.exists(candidate)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 }
 
 export const PresetLoader = PresetLoaderAbstraction.createImplementation({
     implementation: PresetLoaderImpl,
-    dependencies: [Logger]
+    dependencies: [Logger, DirectoryTool, FileTool]
 });
