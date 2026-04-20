@@ -7,6 +7,7 @@ import type { Command } from "./Command.ts";
 export class Commands {
     private buckets: Map<string, Command[]> = new Map();
     private seen: Map<string, Set<string>> = new Map();
+    private claimedKeys: Set<string> = new Set();
 
     /** Add a command. Skipped if a duplicate dedupKey already exists for the same key. */
     public add(command: Command): void {
@@ -32,6 +33,7 @@ export class Commands {
 
     /** Get commands for a specific key (empty array if none) */
     public get<TCommand extends Command = Command>(key: string): TCommand[] {
+        this.claimedKeys.add(key);
         return (this.buckets.get(key) ?? []) as TCommand[];
     }
 
@@ -56,5 +58,20 @@ export class Commands {
     /** Available command keys */
     public keys(): string[] {
         return Array.from(this.buckets.keys());
+    }
+
+    /**
+     * Keys whose buckets are non-empty AND no processor claimed them via `.get()`.
+     * Used by the runner to warn-once on commands a pipeline emitted but no
+     * processor drained.
+     */
+    public unclaimedKeys(): string[] {
+        const result: string[] = [];
+        for (const [key, bucket] of this.buckets) {
+            if (bucket.length > 0 && !this.claimedKeys.has(key)) {
+                result.push(key);
+            }
+        }
+        return result;
     }
 }

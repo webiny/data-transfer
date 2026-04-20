@@ -119,4 +119,51 @@ describe("Commands", () => {
             expect(commands.keys().sort()).toEqual([PutRecord.key, S3Copy.key].sort());
         });
     });
+
+    describe("unclaimedKeys", () => {
+        it("returns empty when all keys with commands have been .get()'d", () => {
+            const cmds = new Commands();
+            cmds.add(PutRecord.create({ table: "t", record: { PK: "1", SK: "1" } }));
+            cmds.add(
+                S3Copy.create({
+                    sourceBucket: "s",
+                    sourceKey: "k",
+                    targetBucket: "tb",
+                    targetKey: "tk"
+                })
+            );
+            cmds.get<PutRecord>(PutRecord.key);
+            cmds.get<S3Copy>(S3Copy.key);
+            expect(cmds.unclaimedKeys()).toEqual([]);
+        });
+
+        it("returns keys with commands that nothing claimed via .get()", () => {
+            const cmds = new Commands();
+            cmds.add(PutRecord.create({ table: "t", record: { PK: "1", SK: "1" } }));
+            cmds.add(
+                S3Copy.create({
+                    sourceBucket: "s",
+                    sourceKey: "k",
+                    targetBucket: "tb",
+                    targetKey: "tk"
+                })
+            );
+            cmds.get<PutRecord>(PutRecord.key); // only PutRecord drained
+            expect(cmds.unclaimedKeys()).toEqual([S3Copy.key]);
+        });
+
+        it("does NOT report keys with empty buckets even if not claimed", () => {
+            const cmds = new Commands();
+            // No commands added — nothing pending.
+            expect(cmds.unclaimedKeys()).toEqual([]);
+        });
+
+        it("treats a .get() of a key with zero commands as a claim — no false warning", () => {
+            const cmds = new Commands();
+            cmds.add(PutRecord.create({ table: "t", record: { PK: "1", SK: "1" } }));
+            cmds.get<S3Copy>(S3Copy.key); // claimed but no S3 commands ever added
+            cmds.get<PutRecord>(PutRecord.key);
+            expect(cmds.unclaimedKeys()).toEqual([]);
+        });
+    });
 });
