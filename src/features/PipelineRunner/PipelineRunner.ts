@@ -26,7 +26,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         Pipeline<unknown, Processor.Context, unknown>[]
     > = new Map();
 
-    private pipelineNames: Set<string> = new Set();
+    private readonly registeredNames: Set<string> = new Set();
 
     public constructor(
         private readonly container: Container,
@@ -52,21 +52,25 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         });
     }
 
-    public register<TRecord, TContext extends Processor.Context, TShard>(
-        pipeline: Pipeline<TRecord, TContext, TShard>
-    ): this {
-        if (this.pipelineNames.has(pipeline.name)) {
-            throw new Error(`PipelineRunner: pipeline name "${pipeline.name}" already registered`);
-        }
-        this.pipelineNames.add(pipeline.name);
+    public register(...pipelines: Pipeline<unknown, Processor.Context, unknown>[]): this {
+        for (const pipeline of pipelines) {
+            if (this.registeredNames.has(pipeline.name)) {
+                throw new Error(
+                    `PipelineRunner: pipeline name "${pipeline.name}" is already registered. ` +
+                        `Names must be unique within a runner.`
+                );
+            }
+            this.registeredNames.add(pipeline.name);
 
-        const erased = pipeline as unknown as Pipeline<unknown, Processor.Context, unknown>;
-        const groupKey = erased.scannerToken as Abstraction<Scanner.Interface<unknown, unknown>>;
-        const group = this.mergeGroups.get(groupKey);
-        if (group) {
-            group.push(erased);
-        } else {
-            this.mergeGroups.set(groupKey, [erased]);
+            const groupKey = pipeline.scannerToken as Abstraction<
+                Scanner.Interface<unknown, unknown>
+            >;
+            const group = this.mergeGroups.get(groupKey);
+            if (group) {
+                group.push(pipeline);
+            } else {
+                this.mergeGroups.set(groupKey, [pipeline]);
+            }
         }
 
         return this;

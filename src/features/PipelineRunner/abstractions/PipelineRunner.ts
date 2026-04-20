@@ -58,9 +58,7 @@ interface IPipelineRunner {
         ScannerShard<TScanner>
     >;
 
-    register<TRecord, TContext extends Processor.Context, TShard>(
-        pipeline: Pipeline<TRecord, TContext, TShard>
-    ): this;
+    register(...pipelines: Pipeline<unknown, Processor.Context, unknown>[]): this;
 
     run(opts?: RunOptions): Promise<void>;
 

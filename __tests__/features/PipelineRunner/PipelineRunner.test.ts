@@ -150,6 +150,40 @@ describe("PipelineRunner.register()", () => {
     });
 });
 
+describe("runner.register variadic + duplicate-name guard", () => {
+    it("registers multiple pipelines in one variadic call", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        const p1 = buildPipeline(container, "a");
+        const p2 = buildPipeline(container, "b");
+        expect(() => runner.register(p1, p2)).not.toThrow();
+    });
+
+    it("returns this for chaining", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        const p1 = buildPipeline(container, "c");
+        expect(runner.register(p1)).toBe(runner);
+    });
+
+    it("throws on duplicate pipeline name", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        const p1 = buildPipeline(container, "dup");
+        const p2 = buildPipeline(container, "dup");
+        runner.register(p1);
+        expect(() => runner.register(p2)).toThrow(/already registered/);
+    });
+
+    it("rejects duplicate within a single variadic call", () => {
+        const { container } = makeContainer();
+        const runner = container.resolve(PipelineRunner);
+        const p1 = buildPipeline(container, "z");
+        const p2 = buildPipeline(container, "z");
+        expect(() => runner.register(p1, p2)).toThrow(/already registered/);
+    });
+});
+
 describe("PipelineRunner.run()", () => {
     it("auto-emits a PutRecord per matched record when transformers emit no commands", async () => {
         const { container } = makeContainer();
