@@ -1,5 +1,5 @@
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { PutDynamoDbRecordExecutor } from "~/features/PutDynamoDbRecordExecutor/abstractions/PutDynamoDbRecordExecutor.ts";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import { S3CopyExecutor } from "~/features/S3CopyExecutor/abstractions/S3CopyExecutor.ts";
 import {
     DdbTransformContext,
@@ -22,7 +22,7 @@ class DdbProcessorImpl implements Processor.Interface<
 
     public constructor(
         private readonly logger: Logger.Interface,
-        private readonly putExecutor: PutDynamoDbRecordExecutor.Interface,
+        private readonly putExecutor: DdbExecutor.Interface,
         private readonly s3CopyExecutor: S3CopyExecutor.Interface,
         private readonly contextFactory: DdbTransformContextFactory.Interface
     ) {}
@@ -56,7 +56,7 @@ class DdbProcessorImpl implements Processor.Interface<
 
 export const DdbProcessor = Processor.createImplementation({
     implementation: DdbProcessorImpl,
-    dependencies: [Logger, PutDynamoDbRecordExecutor, S3CopyExecutor, DdbTransformContextFactory]
+    dependencies: [Logger, DdbExecutor, S3CopyExecutor, DdbTransformContextFactory]
 });
 
 export namespace DdbProcessor {

@@ -8,7 +8,7 @@ interface IPutOsDynamoDbRecordExecutor {
      * disabled), record the original `refresh_interval` of every touched
      * index into the `TouchedIndexes` singleton so the after-transfer hook
      * can restore them, and delegate the DDB batch write to
-     * `PutDynamoDbRecordExecutor`.
+     * `DdbExecutor`.
      */
     execute(puts: PutRecord[]): Promise<void>;
 }

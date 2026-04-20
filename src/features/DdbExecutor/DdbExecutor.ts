@@ -3,9 +3,9 @@ import {
     TargetDynamoDbClient
 } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import type { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { PutDynamoDbRecordExecutor as PutDynamoDbRecordExecutorAbstraction } from "./abstractions/PutDynamoDbRecordExecutor.ts";
+import { DdbExecutor as DdbExecutorAbstraction } from "./abstractions/DdbExecutor.ts";
 
-class PutDynamoDbRecordExecutorImpl implements PutDynamoDbRecordExecutorAbstraction.Interface {
+class DdbExecutorImpl implements DdbExecutorAbstraction.Interface {
     public constructor(private readonly targetDb: TargetDynamoDbClient.Interface) {}
 
     public async execute(puts: PutRecord[]): Promise<void> {
@@ -31,7 +31,7 @@ class PutDynamoDbRecordExecutorImpl implements PutDynamoDbRecordExecutorAbstract
     }
 }
 
-export const PutDynamoDbRecordExecutor = PutDynamoDbRecordExecutorAbstraction.createImplementation({
-    implementation: PutDynamoDbRecordExecutorImpl,
+export const DdbExecutor = DdbExecutorAbstraction.createImplementation({
+    implementation: DdbExecutorImpl,
     dependencies: [TargetDynamoDbClient]
 });

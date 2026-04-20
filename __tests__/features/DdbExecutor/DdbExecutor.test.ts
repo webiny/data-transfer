@@ -3,10 +3,10 @@ import { Container } from "@webiny/di";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { PutDynamoDbRecordExecutorFeature } from "~/features/PutDynamoDbRecordExecutor/feature.ts";
-import { PutDynamoDbRecordExecutor } from "~/features/PutDynamoDbRecordExecutor/abstractions/PutDynamoDbRecordExecutor.ts";
+import { DdbExecutorFeature } from "~/features/DdbExecutor/feature.ts";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 
-describe("PutDynamoDbRecordExecutor", () => {
+describe("DdbExecutor", () => {
     let container: Container;
     let client: MockDynamoDbClient;
 
@@ -14,18 +14,18 @@ describe("PutDynamoDbRecordExecutor", () => {
         container = new Container();
         client = new MockDynamoDbClient();
         container.registerInstance(TargetDynamoDbClient, client);
-        PutDynamoDbRecordExecutorFeature.register(container);
+        DdbExecutorFeature.register(container);
     });
 
     it("is a no-op when given an empty array", async () => {
-        const executor = container.resolve(PutDynamoDbRecordExecutor);
+        const executor = container.resolve(DdbExecutor);
         const spy = vi.spyOn(client, "batchPut");
         await executor.execute([]);
         expect(spy).not.toHaveBeenCalled();
     });
 
     it("groups puts by table and calls batchPut once per table", async () => {
-        const executor = container.resolve(PutDynamoDbRecordExecutor);
+        const executor = container.resolve(DdbExecutor);
         const spy = vi.spyOn(client, "batchPut").mockResolvedValue();
 
         await executor.execute([
@@ -45,7 +45,7 @@ describe("PutDynamoDbRecordExecutor", () => {
     });
 
     it("passes record data verbatim to batchPut", async () => {
-        const executor = container.resolve(PutDynamoDbRecordExecutor);
+        const executor = container.resolve(DdbExecutor);
         const spy = vi.spyOn(client, "batchPut").mockResolvedValue();
         const record = { PK: "pk", SK: "sk", custom: 42 };
 

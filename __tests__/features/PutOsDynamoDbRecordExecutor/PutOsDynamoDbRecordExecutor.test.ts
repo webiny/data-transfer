@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { PutOsDynamoDbRecordExecutor } from "~/features/PutOsDynamoDbRecordExecutor/abstractions/PutOsDynamoDbRecordExecutor.ts";
-import { PutDynamoDbRecordExecutor } from "~/features/PutDynamoDbRecordExecutor/abstractions/PutDynamoDbRecordExecutor.ts";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
@@ -65,7 +65,7 @@ describe("PutOsDynamoDbRecordExecutor", () => {
             const container = createOsContainer();
             const executor = container.resolve(PutOsDynamoDbRecordExecutor);
             const osClient = container.resolve(OpenSearchClient) as MockOpenSearchClient;
-            const delegate = container.resolve(PutDynamoDbRecordExecutor);
+            const delegate = container.resolve(DdbExecutor);
 
             const osExistsSpy = vi.spyOn(osClient, "indexExists");
             const osCreateSpy = vi.spyOn(osClient, "createIndex");
@@ -78,10 +78,10 @@ describe("PutOsDynamoDbRecordExecutor", () => {
             expect(delegateSpy).not.toHaveBeenCalled();
         });
 
-        it("gzips record.data and delegates the put to PutDynamoDbRecordExecutor", async () => {
+        it("gzips record.data and delegates the put to DdbExecutor", async () => {
             const container = createOsContainer();
             const executor = container.resolve(PutOsDynamoDbRecordExecutor);
-            const delegate = container.resolve(PutDynamoDbRecordExecutor);
+            const delegate = container.resolve(DdbExecutor);
 
             const delegateSpy = vi.spyOn(delegate, "execute").mockResolvedValue();
 
@@ -194,7 +194,7 @@ describe("PutOsDynamoDbRecordExecutor", () => {
 
             const executor = container.resolve(PutOsDynamoDbRecordExecutor);
             const gzip = container.resolve(GzipCompression);
-            const delegate = container.resolve(PutDynamoDbRecordExecutor);
+            const delegate = container.resolve(DdbExecutor);
 
             vi.spyOn(delegate, "execute").mockResolvedValue();
 

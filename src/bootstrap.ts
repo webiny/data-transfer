@@ -21,7 +21,7 @@ import { TransformContextFeature } from "~/features/TransformContext/index.ts";
 import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
 import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
-import { PutDynamoDbRecordExecutorFeature } from "~/features/PutDynamoDbRecordExecutor/index.ts";
+import { DdbExecutorFeature } from "~/features/DdbExecutor/index.ts";
 import { S3CopyExecutorFeature } from "~/features/S3CopyExecutor/index.ts";
 import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
@@ -103,13 +103,13 @@ export function bootstrap(options: BootstrapOptions): Container {
     PipelineRunnerFeature.register(container);
 
     if (config.storage === "ddb") {
-        PutDynamoDbRecordExecutorFeature.register(container);
+        DdbExecutorFeature.register(container);
         S3CopyExecutorFeature.register(container);
         DdbScannerFeature.register(container);
         DdbProcessorFeature.register(container);
     } else {
         TouchedIndexesFeature.register(container);
-        PutDynamoDbRecordExecutorFeature.register(container);
+        DdbExecutorFeature.register(container);
         PutOsDynamoDbRecordExecutorFeature.register(container);
         OsRecordDecompressorFeature.register(container);
         OsScannerFeature.register(container);

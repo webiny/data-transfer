@@ -3,7 +3,7 @@ import { isRetryableAwsError } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
-import { PutDynamoDbRecordExecutor } from "~/features/PutDynamoDbRecordExecutor/abstractions/PutDynamoDbRecordExecutor.ts";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
@@ -19,7 +19,7 @@ class PutOsDynamoDbRecordExecutorImpl implements PutOsDynamoDbRecordExecutorAbst
         private readonly logger: Logger.Interface,
         private readonly osClient: OpenSearchClient.Interface,
         private readonly gzip: GzipCompression.Interface,
-        private readonly putDdb: PutDynamoDbRecordExecutor.Interface,
+        private readonly putDdb: DdbExecutor.Interface,
         private readonly touchedIndexes: TouchedIndexes.Interface,
         private readonly config: MigrationConfig.Interface
     ) {}
@@ -177,7 +177,7 @@ export const PutOsDynamoDbRecordExecutor =
             Logger,
             OpenSearchClient,
             GzipCompression,
-            PutDynamoDbRecordExecutor,
+            DdbExecutor,
             TouchedIndexes,
             MigrationConfig
         ]
