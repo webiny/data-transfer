@@ -7,6 +7,8 @@ import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import type { Hook } from "~/domain/pipeline/abstractions/Hook.ts";
 import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
@@ -15,44 +17,52 @@ import {
 
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
-interface AutoPutContext {
-    record: Record<string, unknown>;
-    putRecord(record: Record<string, unknown>): void;
-}
+type ProcessorToken = Abstraction<
+    Processor.Interface<BaseTransformContext.Interface<unknown>, any>
+>;
+
+type ProcessorInstance = Processor.Interface<BaseTransformContext.Interface<unknown>, any>;
+
+type AnyPipeline = Pipeline<any, any, any>;
+
+type PipelineMethod = PipelineRunnerAbstraction.Interface["pipeline"];
 
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
-    private mergeGroups: Map<
-        Abstraction<Scanner.Interface<unknown, unknown>>,
-        Pipeline<unknown, Processor.Context, unknown>[]
-    > = new Map();
+    private mergeGroups: Map<Abstraction<Scanner.Interface<unknown, unknown>>, AnyPipeline[]> =
+        new Map();
 
     private readonly registeredNames: Set<string> = new Set();
+
+    private readonly unclaimedWarned: Set<string> = new Set();
 
     public constructor(
         private readonly container: Container,
         private readonly logger: Logger.Interface,
-        private readonly transferContext: TransferContext.Interface
+        private readonly transferContext: TransferContext.Interface,
+        private readonly baseContextFactory: BaseTransformContextFactory.Interface
     ) {}
 
-    public pipeline<TRecord, TContext extends Processor.Context, TShard>(input: {
+    public pipeline: PipelineMethod = ((input: {
         name: string;
         scanner: AnyImpl;
-        processor: AnyImpl;
-    }): PipelineBuilder<TRecord, TContext, TShard> {
+        processors: readonly AnyImpl[];
+    }) => {
         const scannerAbstraction = new Metadata(input.scanner).getAbstraction() as Abstraction<
-            Scanner.Interface<TRecord, TShard>
+            Scanner.Interface<unknown, unknown>
         >;
-        const processorAbstraction = new Metadata(input.processor).getAbstraction() as Abstraction<
-            Processor.Interface<TRecord, TContext>
-        >;
-        return new PipelineBuilder<TRecord, TContext, TShard>({
+        const processorAbstractions = input.processors.map(
+            p => new Metadata(p).getAbstraction() as ProcessorToken
+        );
+        // The public interface narrows this via IPipelineRunner.pipeline; the
+        // implementation is intentionally widened.
+        return new PipelineBuilder({
             name: input.name,
             scanner: scannerAbstraction,
-            processor: processorAbstraction
+            processors: processorAbstractions
         });
-    }
+    }) as unknown as PipelineMethod;
 
-    public register(...pipelines: Pipeline<unknown, Processor.Context, unknown>[]): this {
+    public register(...pipelines: AnyPipeline[]): this {
         for (const pipeline of pipelines) {
             if (this.registeredNames.has(pipeline.name)) {
                 throw new Error(
@@ -76,15 +86,17 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return this;
     }
 
-    public getProcessors(): Processor.Interface<unknown, Processor.Context>[] {
-        const seen = new Set<Processor.Interface<unknown, Processor.Context>>();
-        const processors: Processor.Interface<unknown, Processor.Context>[] = [];
+    public getProcessors(): ProcessorInstance[] {
+        const seen: Set<ProcessorInstance> = new Set();
+        const processors: ProcessorInstance[] = [];
         for (const pipelines of this.mergeGroups.values()) {
             for (const pipeline of pipelines) {
-                const processor = this.container.resolve(pipeline.processorToken);
-                if (!seen.has(processor)) {
-                    seen.add(processor);
-                    processors.push(processor);
+                for (const token of pipeline.processorTokens) {
+                    const processor = this.container.resolve(token) as ProcessorInstance;
+                    if (!seen.has(processor)) {
+                        seen.add(processor);
+                        processors.push(processor);
+                    }
                 }
             }
         }
@@ -116,7 +128,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
     private async runSingleShard(
         scannerToken: Abstraction<Scanner.Interface<unknown, unknown>>,
-        pipelines: Pipeline<unknown, Processor.Context, unknown>[],
+        pipelines: AnyPipeline[],
         opts: RunOptions
     ): Promise<void> {
         const scanner = this.container.resolve(scannerToken);
@@ -131,22 +143,14 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         }
 
         const mergeGroupId = this.deriveMergeGroupId(scannerToken);
-
-        const pipelineToProcessor: Map<
-            Pipeline<unknown, Processor.Context, unknown>,
-            Processor.Interface<unknown, Processor.Context>
-        > = new Map();
-        for (const pipeline of pipelines) {
-            pipelineToProcessor.set(pipeline, this.container.resolve(pipeline.processorToken));
-        }
-
+        const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
         const shard = shards[opts.segment];
-        await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineToProcessor);
+        await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineProcessors);
     }
 
     private async runMergeGroup(
         scannerToken: Abstraction<Scanner.Interface<unknown, unknown>>,
-        pipelines: Pipeline<unknown, Processor.Context, unknown>[]
+        pipelines: AnyPipeline[]
     ): Promise<void> {
         const scanner = this.container.resolve(scannerToken);
         const mergeGroupId = this.deriveMergeGroupId(scannerToken);
@@ -161,17 +165,11 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             await hook.run(hookParams);
         }
 
-        const pipelineToProcessor: Map<
-            Pipeline<unknown, Processor.Context, unknown>,
-            Processor.Interface<unknown, Processor.Context>
-        > = new Map();
-        for (const pipeline of pipelines) {
-            pipelineToProcessor.set(pipeline, this.container.resolve(pipeline.processorToken));
-        }
+        const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
 
         const shards = await scanner.listShards();
         for (const shard of shards) {
-            await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineToProcessor);
+            await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineProcessors);
         }
 
         const afterHookTokens = this.dedupHookTokens(pipelines, "after");
@@ -182,8 +180,22 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         }
     }
 
+    private resolvePipelineProcessors(
+        pipelines: AnyPipeline[]
+    ): Map<AnyPipeline, ProcessorInstance[]> {
+        const result: Map<AnyPipeline, ProcessorInstance[]> = new Map();
+        for (const pipeline of pipelines) {
+            const instances: ProcessorInstance[] = [];
+            for (const token of pipeline.processorTokens) {
+                instances.push(this.container.resolve(token) as ProcessorInstance);
+            }
+            result.set(pipeline, instances);
+        }
+        return result;
+    }
+
     private dedupHookTokens(
-        pipelines: Pipeline<unknown, Processor.Context, unknown>[],
+        pipelines: AnyPipeline[],
         lifecycle: "before" | "after"
     ): Abstraction<Hook.Interface>[] {
         const seen: Set<Abstraction<Hook.Interface>> = new Set();
@@ -203,18 +215,14 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
     private async runShard(
         mergeGroupId: string,
-        pipelines: Pipeline<unknown, Processor.Context, unknown>[],
+        pipelines: AnyPipeline[],
         scanner: Scanner.Interface<unknown, unknown>,
         shard: unknown,
-        pipelineToProcessor: Map<
-            Pipeline<unknown, Processor.Context, unknown>,
-            Processor.Interface<unknown, Processor.Context>
-        >
+        pipelineProcessors: Map<AnyPipeline, ProcessorInstance[]>
     ): Promise<void> {
-        const processorBuffers: Map<
-            Processor.Interface<unknown, Processor.Context>,
-            Commands
-        > = new Map();
+        // Per-processor command buffer, accumulated across every record in the
+        // shard and drained once at shard end via processor.execute(buffer).
+        const processorBuffers: Map<ProcessorInstance, Commands> = new Map();
 
         for await (const record of scanner.scan(shard)) {
             let matched = false;
@@ -223,25 +231,11 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                     continue;
                 }
                 matched = true;
-                const processor = pipelineToProcessor.get(pipeline)!;
-                const ctx = processor.createContext(record);
-                for (const transformer of pipeline.transformerFns) {
-                    await transformer(ctx);
-                }
-                // Auto-put: match legacy TransformPipeline which ended with an implicit
-                // ctx.putRecord(ctx.record). Without this, mutation-only transformers write nothing.
-                const autoPutCtx = ctx as unknown as AutoPutContext;
-                autoPutCtx.putRecord(autoPutCtx.record);
-                let buffer = processorBuffers.get(processor);
-                if (!buffer) {
-                    buffer = new Commands();
-                    processorBuffers.set(processor, buffer);
-                }
-                for (const cmd of ctx.commands.all()) {
-                    buffer.add(cmd);
-                }
-                // First-match-wins: subsequent pipelines in this group are skipped
-                // for this record. Pipeline registration order determines priority.
+                const processors = pipelineProcessors.get(pipeline)!;
+                await this.runRecord(pipeline, processors, record, processorBuffers);
+                // First-match-wins: subsequent pipelines in this group are
+                // skipped for this record. Pipeline registration order
+                // determines priority.
                 break;
             }
             if (!matched) {
@@ -252,10 +246,115 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
         }
 
-        for (const [processor, buffer] of processorBuffers) {
-            if (buffer.size() > 0) {
-                await processor.execute(buffer);
+        // Shard end: each processor drains its buffer in array order. We
+        // iterate each unique processor (across pipelines in this group) in
+        // first-seen registration order so execution is deterministic.
+        const processorOrder = this.collectProcessorOrder(pipelines, pipelineProcessors);
+        for (const processor of processorOrder) {
+            const buffer = processorBuffers.get(processor);
+            if (!buffer) {
+                continue;
             }
+            await processor.execute(buffer);
+            this.warnUnclaimedKeys(buffer);
+        }
+    }
+
+    private async runRecord(
+        pipeline: AnyPipeline,
+        processors: ProcessorInstance[],
+        record: unknown,
+        processorBuffers: Map<ProcessorInstance, Commands>
+    ): Promise<void> {
+        // Build the base ctx + its commands bag via the shared factory. The
+        // commands bag returned here is wired into ctx.addCommand and every
+        // slice helper that pushes commands.
+        const { ctx, commands } = this.baseContextFactory.create<unknown>({ record });
+
+        // Spread each processor's slice over ctx in array order. Later
+        // processors may override earlier keys — type-level DisjointKeys
+        // makes that a compile error, but at runtime we just spread.
+        let merged: Record<string, unknown> = ctx as unknown as Record<string, unknown>;
+        for (const processor of processors) {
+            if (processor.extendContext) {
+                const slice = processor.extendContext(
+                    merged as unknown as BaseTransformContext.Interface<unknown>
+                );
+                merged = { ...merged, ...(slice as Record<string, unknown>) };
+            }
+        }
+
+        const effective = merged as unknown as BaseTransformContext.Interface<unknown> & object;
+
+        for (const transformer of pipeline.transformerFns) {
+            await transformer(effective as never);
+        }
+
+        // Per-record terminal hooks: run each processor's onEnd in array
+        // order. onEnd uses slice helpers to push terminal commands into
+        // the same commands bag.
+        for (const processor of processors) {
+            if (processor.onEnd) {
+                await processor.onEnd(effective);
+            }
+        }
+
+        // Fold this record's commands into the per-processor shard buffer.
+        // All processors share the single commands bag at this point — we
+        // flatten and assign every command to every processor's buffer so
+        // each processor can claim the keys it owns via .get().
+        //
+        // NOTE: .get() marks keys as "claimed" on the buffer it was called
+        // on, so feeding each buffer a separate Commands instance keeps
+        // unclaimed-tracking per-processor (a key unclaimed by Processor A
+        // may still be owned by Processor B).
+        for (const processor of processors) {
+            let buffer = processorBuffers.get(processor);
+            if (!buffer) {
+                buffer = new Commands();
+                processorBuffers.set(processor, buffer);
+            }
+            for (const cmd of commands.all()) {
+                buffer.add(cmd);
+            }
+        }
+    }
+
+    private collectProcessorOrder(
+        pipelines: AnyPipeline[],
+        pipelineProcessors: Map<AnyPipeline, ProcessorInstance[]>
+    ): ProcessorInstance[] {
+        const seen: Set<ProcessorInstance> = new Set();
+        const ordered: ProcessorInstance[] = [];
+        for (const pipeline of pipelines) {
+            const processors = pipelineProcessors.get(pipeline);
+            if (!processors) {
+                continue;
+            }
+            for (const processor of processors) {
+                if (!seen.has(processor)) {
+                    seen.add(processor);
+                    ordered.push(processor);
+                }
+            }
+        }
+        return ordered;
+    }
+
+    private warnUnclaimedKeys(buffer: Commands): void {
+        const unclaimed = buffer.unclaimedKeys();
+        if (unclaimed.length === 0) {
+            return;
+        }
+        for (const key of unclaimed) {
+            if (this.unclaimedWarned.has(key)) {
+                continue;
+            }
+            this.unclaimedWarned.add(key);
+            this.logger.warn(
+                `PipelineRunner: command key "${key}" was emitted but no processor claimed it. ` +
+                    `(warn-once per runner)`
+            );
         }
     }
 
@@ -266,5 +365,5 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
 export const PipelineRunner = PipelineRunnerAbstraction.createImplementation({
     implementation: PipelineRunnerImpl,
-    dependencies: [ContainerToken, Logger, TransferContext]
+    dependencies: [ContainerToken, Logger, TransferContext, BaseTransformContextFactory]
 });

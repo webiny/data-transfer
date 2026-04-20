@@ -4,22 +4,32 @@ import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
 import type { Transformer } from "./abstractions/Transformer.ts";
 import type { Filter } from "./Filter.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { Pipeline, type PipelineConfig } from "./Pipeline.ts";
 
-export interface PipelineBuilderConfig<TRecord, TContext extends Processor.Context, TShard> {
+export interface PipelineBuilderConfig<
+    TRecord,
+    TContext extends BaseTransformContext.Interface<TRecord>,
+    TShard
+> {
     name: string;
     scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
-    processor: Abstraction<Processor.Interface<TRecord, TContext>>;
+    processors: readonly Abstraction<
+        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
+    >[];
 }
 
 export class PipelineBuilder<
     TRecord = unknown,
-    TContext extends Processor.Context = Processor.Context,
+    TContext extends BaseTransformContext.Interface<TRecord> =
+        BaseTransformContext.Interface<TRecord>,
     TShard = unknown
 > {
     private readonly name: string;
     private readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
-    private readonly processor: Abstraction<Processor.Interface<TRecord, TContext>>;
+    private readonly processors: readonly Abstraction<
+        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
+    >[];
 
     private filters: Filter<TRecord>[] = [];
     private transformers: Transformer.Interface<TContext>[] = [];
@@ -32,19 +42,25 @@ export class PipelineBuilder<
         }
         this.name = config.name;
         this.scanner = config.scanner;
-        this.processor = config.processor;
+        this.processors = config.processors;
     }
 
     /**
      * Add a filter. Order across .filter() calls does NOT matter — all
      * filters are collected and AND-composed at build time. Multiple
-     * calls are allowed; interleaving with .use() is fine.
+     * calls are allowed; interleaving with .use() is fine. Filters
+     * operate on the record only (not ctx).
      */
     public filter(filter: Filter<TRecord>): this {
         this.filters.push(filter);
         return this;
     }
 
+    /**
+     * Register a transformer. Transformers see the effective context —
+     * BaseTransformContext merged with every processor slice from the
+     * pipeline's processor list.
+     */
     public use(transformer: Transformer.Interface<TContext>): this {
         this.transformers.push(transformer);
         return this;
@@ -64,7 +80,7 @@ export class PipelineBuilder<
         const pipelineConfig: PipelineConfig<TRecord, TContext, TShard> = {
             name: this.name,
             scanner: this.scanner,
-            processor: this.processor,
+            processors: this.processors,
             filters: [...this.filters],
             transformers: [...this.transformers],
             beforeHooks: [...this.beforeHooks],

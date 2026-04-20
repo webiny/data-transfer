@@ -4,11 +4,18 @@ import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
 import type { Transformer } from "./abstractions/Transformer.ts";
 import type { Filter } from "./Filter.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
-export interface PipelineConfig<TRecord, TContext extends Processor.Context, TShard> {
+export interface PipelineConfig<
+    TRecord,
+    TContext extends BaseTransformContext.Interface<TRecord>,
+    TShard
+> {
     readonly name: string;
     readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
-    readonly processor: Abstraction<Processor.Interface<TRecord, TContext>>;
+    readonly processors: readonly Abstraction<
+        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
+    >[];
     readonly filters: readonly Filter<TRecord>[];
     readonly transformers: readonly Transformer.Interface<TContext>[];
     readonly beforeHooks: readonly Abstraction<Hook.Interface>[];
@@ -17,7 +24,8 @@ export interface PipelineConfig<TRecord, TContext extends Processor.Context, TSh
 
 export class Pipeline<
     TRecord = unknown,
-    TContext extends Processor.Context = Processor.Context,
+    TContext extends BaseTransformContext.Interface<TRecord> =
+        BaseTransformContext.Interface<TRecord>,
     TShard = unknown
 > {
     public constructor(private readonly config: PipelineConfig<TRecord, TContext, TShard>) {
@@ -32,8 +40,10 @@ export class Pipeline<
         return this.config.scanner;
     }
 
-    public get processorToken(): Abstraction<Processor.Interface<TRecord, TContext>> {
-        return this.config.processor;
+    public get processorTokens(): readonly Abstraction<
+        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
+    >[] {
+        return this.config.processors;
     }
 
     public get beforeHookTokens(): readonly Abstraction<Hook.Interface>[] {
