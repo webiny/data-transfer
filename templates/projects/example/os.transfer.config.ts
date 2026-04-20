@@ -29,7 +29,7 @@ export default createOsTransfer({
         }
     },
     pipeline: {
-        preset: "v5-to-v6-os",
+        preset: "../../presets/example.ts",
         segments: 4
         // modelsDir: "./models"
     }

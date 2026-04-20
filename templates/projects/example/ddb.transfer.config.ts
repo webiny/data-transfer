@@ -26,7 +26,7 @@ export default createDdbTransfer({
         s3: { bucket: process.env.TARGET_S3_BUCKET! }
     },
     pipeline: {
-        preset: "v5-to-v6",
+        preset: "../../presets/example.ts",
         segments: 4
         // modelsDir: "./models"
     }

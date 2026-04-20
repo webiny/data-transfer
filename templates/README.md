@@ -78,7 +78,7 @@ See `projects/example/os.transfer.config.ts` for the full template.
 
 ### Pipeline Options
 
-- `preset` - Either a built-in preset name (`"v5-to-v6"`, `"v5-to-v6-os"`) or a file path to your own preset. File paths are resolved relative to the config file's directory, e.g. `"./presets/my-preset.ts"` or `"../../presets/example.ts"`.
+- `preset` - File path to your preset, resolved relative to the config file's directory (e.g. `"./presets/my-preset.ts"` or `"../../presets/example.ts"`). No built-in presets ship with the package — author your own.
 - `segments` - Number of parallel workers for scanning (default: 1)
 - `modelsDir` - Path to a directory with custom CMS model JSON files (optional). Resolved relative to the config file's directory.
 
@@ -100,17 +100,19 @@ A preset is an object:
 
 ```typescript
 import type { MigrationPreset } from "@webiny/data-transfer";
-import { createDdbPipeline, DdbScanner, DdbProcessor } from "@webiny/data-transfer";
-
-const myPipeline = createDdbPipeline("my-pipeline", builder => {
-  builder.use(myTransformer); // optional; and filter() is optional too
-});
+import { DdbScanner, DdbProcessor } from "@webiny/data-transfer";
 
 const preset: MigrationPreset = {
   name: "my",
   description: "...",
   configure(runner) {
-    myPipeline.register(runner, DdbScanner, DdbProcessor);
+    const myPipeline = runner
+      .pipeline({ name: "my-pipeline", scanner: DdbScanner, processor: DdbProcessor })
+      .use(myTransformer) // optional
+      // .filter(createFilter(...)) // optional; chain as many as you want
+      .build();
+
+    runner.register(myPipeline);
   }
 };
 
