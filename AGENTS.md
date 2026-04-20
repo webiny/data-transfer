@@ -32,12 +32,18 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 - **Config builders:** `createDdbTransfer`, `createOsTransfer`, `loadEnv`
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
 - **Filter factory:** `createFilter` + `Filter` type
-- **Scanner / processor tokens:** `DdbScanner`, `DdbProcessor`, `OsScanner`, `OsProcessor`
+- **Scanner tokens:** `DdbScanner`, `OsScanner`
+- **Processor tokens:** `DdbProcessor`, `OsProcessor`, `S3Processor` (slice-merging; see below)
+- **Processor abstraction:** `Processor` — users implementing custom processors use this.
 - **MigrationPreset type**
-- **Context types:** `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext`
+- **Context types:** `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext` (type aliases = base ∩ processor slices; see below)
 - **Transformer type:** `Transformer` (namespace with `.Interface`)
+- **Utility types:** `NonEmptyArray<T>` (for typed processor arrays)
+- **Setup helper:** `initDataTransfer` + `InitDataTransferContext` (user-side custom DI wiring — see "setup.ts" below)
 
-**Pipeline construction:** users call `runner.pipeline({ name, scanner, processor })` inside their preset's `configure(runner)` callback. Returns a typed `PipelineBuilder` (record + context types inferred from the scanner/processor pair). Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order, then `.build()` for an immutable `Pipeline`. Pass to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20.
+**Pipeline construction:** users call `runner.pipeline({ name, scanner, processors: [...] })` inside their preset's `configure(runner)` callback. `processors` is a `NonEmptyArray<ProcessorImpl>` — TS rejects empty arrays AND rejects processors whose slice keys collide (`DisjointKeys<...>`). Returns a typed `PipelineBuilder` whose `ctx` is `BaseTransformContext & (union of processor slices)`. Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order; `.build()` takes no arguments (terminal behavior comes from each processor's `onEnd?` hook). Pass to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20.
+
+**User-side custom DI — `setup.ts`:** CLI looks for `setup.ts` next to the user's config file. If present, dynamic-imports its default export and awaits `fn({ container })` BEFORE `preset.configure(runner)` runs. Use the `initDataTransfer` typed helper to export it. Optional — pure-config users skip the file entirely.
 
 **Rule:** when adding something to `src/index.ts`, it must be infra (something a user building their own transformers/pipelines/presets genuinely needs). Built-ins stay internal until the transformer rewrite; re-exporting them encourages users to depend on examples that will change.
 
@@ -60,13 +66,17 @@ src/
 │   └── processOsSegment/     # OS worker — calls PipelineRunner.run({ segment, totalSegments })
 ├── domain/
 │   ├── pipeline/             # Pipeline abstractions
-│   │   ├── abstractions/     # Scanner, Processor, Hook, Transformer
-│   │   ├── Pipeline.ts       # Immutable Pipeline (returned by builder.build())
-│   │   ├── PipelineBuilder.ts# Fluent builder — typed via runner.pipeline(); .filter() + .use() chain freely
+│   │   ├── abstractions/
+│   │   │   ├── Processor.ts  # extendContext? + onEnd? + execute + getShardState; slice type parameter.
+│   │   │   ├── Scanner.ts    # Scanner.Interface<TRecord, TShard>
+│   │   │   ├── Hook.ts       # per-merge-group hook
+│   │   │   └── Transformer.ts
+│   │   ├── Pipeline.ts       # Immutable Pipeline — holds scanner + processors[] + filters + transformers + hooks.
+│   │   ├── PipelineBuilder.ts# Fluent builder — ctx typed via EffectiveContext = BaseCtx ∧ MergeSlices<TProcessors>.
 │   │   └── Filter.ts         # createFilter
 │   └── transform/            # Primitives still used by runner + features
 │       ├── types/            # BaseRecord (PK/SK/_et/_ct/_md/TYPE + index sig)
-│       ├── commands/         # Commands + PutRecord + S3Copy
+│       ├── commands/         # Commands (bag w/ claim tracking + unclaimedKeys) + PutRecord + S3Copy
 │       ├── filters.ts        # byType, isCmsEntry, isFmFile, ... (filter predicates)
 │       └── Preset.ts         # MigrationPreset interface (name, description, configure(runner))
 ├── tools/                    # Generic utilities
@@ -76,14 +86,17 @@ src/
 │   ├── OpenSearchClient/     # OS mode only
 │   └── S3Client/             # DDB mode only; has concurrency knob via tuning
 ├── features/                 # Domain logic combining tools + services
-│   ├── DdbScanner/ DdbProcessor/
-│   ├── OsScanner/ OsProcessor/ OsRecordDecompressor/
-│   ├── PutDynamoDbRecordExecutor/   # PutRecord[] → TargetDynamoDbClient.batchPut
-│   ├── S3CopyExecutor/              # S3Copy[]   → TargetS3Client.batchCopy
-│   ├── PutOsDynamoDbRecordExecutor/ # gzip + ensureIndex + delegate to PutDdb
+│   ├── DdbScanner/                  # AsyncIterable<BaseRecord> from DDB primary
+│   ├── OsScanner/ OsRecordDecompressor/   # OS companion table + decompression
+│   ├── DdbProcessor/                # slice: { putRecord }; onEnd auto-puts; execute via DdbExecutor
+│   ├── OsProcessor/                 # slice: { putRecord }; onEnd auto-puts; execute = gzip +
+│   │                                # ensureIndex + delegate to DdbExecutor
+│   ├── S3Processor/                 # slice: { copyFile, getFile }; NO onEnd (no default); execute drains S3Copy
+│   ├── DdbExecutor/                 # Shared primitive: PutRecord[] → TargetDynamoDbClient.batchPut.
+│   │                                # DdbProcessor + OsProcessor both compose this.
 │   ├── TouchedIndexes/              # per-worker singleton: index → original refresh_interval
-│   ├── PipelineRunner/       # Runs merge groups; auto-puts ctx.record per record
-│   ├── TransformContext/     # Ddb + Os context factories; exposes ctx.original (frozen)
+│   ├── PipelineRunner/       # Runs merge groups; per-record slice merge + onEnd; shard-end execute
+│   ├── TransformContext/     # Single BaseTransformContextFactory; factory returns { ctx, commands }
 │   ├── MigrationConfig/      # createDdbTransfer / createOsTransfer (Zod-validated)
 │   ├── ModelProvider/ TenantLocales/ PresetLoader/ WorkerSpawner/
 │   └── TransferLifecycle/    # BeforeTransferHook / AfterTransferHook composites
@@ -148,28 +161,39 @@ src/features/FeatureName/
 - **Auto-put**: after the transformer chain runs, the runner calls `ctx.putRecord(ctx.record)` automatically. Pipelines with zero transformers still produce writes. See `src/features/PipelineRunner/PipelineRunner.ts:runShard`.
 - **Hooks**: per merge group. Before-hooks run (dedup'd by token, in registration order) before any shards. After-hooks run (dedup'd, in REVERSE order) after all shards succeed. After-hooks are SKIPPED on shard failure. Each hook gets `{ runId, mergeGroupId }`.
 
-### Context surface
+### Context surface (slice-merged)
 
-`BaseTransformContext.Interface<TRecord>` exposes:
+`BaseTransformContext.Interface<TRecord>` (slim — target-agnostic) exposes:
 
 - `record: TRecord` — mutable, transformers change this.
 - `original: Readonly<TRecord>` — **frozen snapshot of the pre-transform record, always present**. Users may consume it for gate-checks, audits, etc. — do NOT remove even if no built-in code uses it.
-- `commands: Commands` — the command buffer.
+- `addCommand(cmd: Command)` — push a command to the (internal) bag. Canonical primitive; slice helpers are sugar over it.
 - `modelProvider`, `cache` — shared singletons.
 - `replace(newRecord)` — replaces `ctx.record`.
-- `putRecord(record)` — emits a PutRecord command (target table baked in by factory).
-- `queryRecord(pk, sk?)` — source-table lookup, Promise-returning.
+- `queryRecord<T>(pk, sk?)` — source-table lookup, generic return type, Promise-returning.
 
-DDB context adds: `copyFile(srcKey, tgtKey)` and `getFile(key)` (S3 helpers).
+**Raw `commands` bag is NOT on the public ctx** — `addCommand` is the only public push path. The bag still exists internally for `Processor.execute(commands)` at shard end. `Commands.unclaimedKeys()` tracks keys whose commands nobody drained, used by the runner to warn-once.
 
-**Removed from context (do not reintroduce):** `executePipeline(pipeline, records)` — nested-pipeline helper, dropped 2026-04-19 for zero live consumers.
+**Each processor contributes a SLICE of helpers** via its `extendContext(base)` method. The runner spreads all processor slices over the base ctx per-record. Effective ctx = `BaseTransformContext ∧ MergeSlices<TProcessors>`. Slice key collision → TS rejects at the `runner.pipeline({...})` call site via `DisjointKeys<...>`.
+
+Slice inventory:
+
+- **`DdbProcessor` slice**: `putRecord(record)` → emits PutRecord targeting DDB primary.
+- **`OsProcessor` slice**: `putRecord(record)` → emits PutRecord targeting OS DDB table (same key as DdbProcessor → mutually exclusive in one pipeline).
+- **`S3Processor` slice**: `copyFile(src, tgt)`, `getFile(key)` → PushQueue S3Copy / sync read from source bucket.
+
+Type aliases `DdbTransformContext` (= Base ∧ DdbProcessorSlice ∧ S3ProcessorSlice) and `OsTransformContext` (= Base ∧ OsProcessorSlice) are exported for transformer authors who want typed ctx parameters.
+
+**Removed from context (do not reintroduce):** `executePipeline(pipeline, records)` — nested-pipeline helper, dropped 2026-04-19.
 
 ### Scanner / Processor / Executor
 
-- **Scanner** = source iterator. Yields records of some shape per shard. `DynamoDbClient.scan<T>` is generic so scanners can narrow the raw row type.
-- **Processor** = context factory + command dispatcher. `createContext(record)` makes a ctx; `execute(commands)` picks commands from the `Commands` bag by key and dispatches each subset to the owning per-command executor. Unknown keys warn once per key per worker (dedupe via a `Set<string>` on the processor instance).
-- **Executor** = one per command type per target. `PutDynamoDbRecordExecutor` writes `PutRecord[]` to DDB. `S3CopyExecutor` runs `S3Copy[]` through `TargetS3Client.batchCopy`. `PutOsDynamoDbRecordExecutor` layers gzip + `ensureIndex` over a delegated `PutDynamoDbRecordExecutor`. Each trusts the record entirely — every field on `ctx.record` (PK, SK, GSI_TENANT, index, \_et/\_ct/\_md, etc.) lands on target verbatim; the only transformation is gzip for OS. Retry / classifier / `retryMode:"adaptive"` live on the underlying clients.
-- **"Record carries everything"** is a house invariant — do NOT add pre-transform snapshot queues, metadata side-channels, or "executor derives X" logic. If transformers destroyed something the executor needs, users write a transformer that preps it. See the 2026-04-19 `refactor(os)` commit for the canonical simplified shape.
+- **Scanner** = source iterator. Yields records per shard. `DynamoDbClient.scan<T>` is generic so scanners can narrow the raw row type.
+- **Processor** = per-command-type unit implementing `Processor.Interface<TBase, TSlice>`. Has optional `extendContext(base) → slice` (context helpers), optional `onEnd(ctx) → void | Promise<void>` (per-record terminal hook, replaces legacy auto-put magic), `execute(commands) → Promise<void>` (drains its command keys), `getShardState() → unknown` (per-shard state for the worker→orchestrator boundary).
+- Per-record orchestration: runner builds base ctx → spreads each processor's slice → applies filters → runs transformers → runs each processor's `onEnd?` SEQUENTIALLY IN ARRAY ORDER.
+- Per-shard orchestration: each processor's `execute()` runs SEQUENTIALLY IN ARRAY ORDER. After all processors drain, runner checks `Commands.unclaimedKeys()` and warns once per unmatched key ("transformer pushed X but no processor drained X").
+- **`DdbExecutor`** is a SHARED primitive (not a Processor) — `batchPut` against a target DDB table. Both `DdbProcessor.execute` and `OsProcessor.execute` compose it. OS adds gzip + ensureIndex preamble before delegating.
+- **"Record carries everything"** is a house invariant — do NOT add pre-transform snapshot queues, metadata side-channels, or "executor derives X" logic. If transformers destroyed something a processor needs, users write a transformer that preps it.
 
 ### MigrationConfig tuning
 
@@ -190,7 +214,7 @@ Fields flow to the respective client/executor; absent = module-level defaults. `
 All AWS-facing code shares one classifier: `src/base/isRetryableAwsError.ts` (duck-typed, no SDK import). Retry path per client:
 
 - **DDB + S3**: AWS SDK clients are created with `retryMode: "adaptive"` (self-tuning token bucket inside the SDK). The outer `executeWithRetry` loop in `DynamoDbClientImpl` / `S3ClientImpl` uses the classifier to gate retries: non-retryable errors throw immediately; retryable errors retry up to `tuning.{ddb,s3}.maxRetries` with exponential backoff. Loop bounds: `attempt <= maxRetries` ⇒ 1 initial + N retries.
-- **OpenSearch**: `opensearch-js` `Client` receives `maxRetries` from `tuning.os.maxRetries` (default 3). `OsCommandExecutor.withRetry` is classifier-gated; `ensureIndex` now **fails the transfer** on retry-exhaustion (no silent continuation).
+- **OpenSearch**: `opensearch-js` `Client` receives `maxRetries` from `tuning.os.maxRetries` (default 3). `OsProcessor.withRetry` is classifier-gated; `ensureIndex` **fails the transfer** on retry-exhaustion (no silent continuation).
 
 No custom token-bucket pacing — the AWS SDK's adaptive mode handles remote-signal-based backoff. See `project_rate_limits_todo.md` memory for the design history.
 
@@ -221,18 +245,19 @@ git status         # include ALL modified files
 
 These are one-line summaries. Each links to a spec or PR if fuller context is needed.
 
-- **Zero transformers must work** — infra supports pure data-transfer (prod→dev seeding). `PipelineBuilder.build()` never throws for missing `.filter()`; runner auto-puts when transformer chain is empty.
+- **Zero transformers must work** — infra supports pure data-transfer (prod→dev seeding). `PipelineBuilder.build()` never throws for missing `.filter()`; if the pipeline includes a processor with `onEnd` (e.g. `DdbProcessor`), the terminal put fires via that hook for every matching record.
 - **Record carries everything** — processors + executors trust `ctx.record` at execute time; no side-channel queues or pre-transform snapshot passing. The OS refactor on 2026-04-19 made this explicit.
 - **`ctx.original` always present** — frozen pre-transform snapshot, on every context, permanently. Don't remove even if no built-in code consumes it.
 - **Transformers + presets are user-land** — the `src/transformers/` files and `src/presets/example.ts` are examples. They will be revisited when the core infra is stable. Don't design the infra around them; if a refactor breaks them, update the examples or flag for rewrite. The package no longer ships any built-in preset; users always provide a path to their own preset file.
 - **First-match-wins + scanner-keyed merge groups** — registration order is semantic. More-specific pipelines before catch-alls. Different scanners = different merge groups.
-- **Impl-class-as-token accepted** — `runner.pipeline({ scanner: DdbScanner, processor: DdbProcessor })` works even though `DdbScanner` is an Implementation (not an Abstraction). Runtime extracts the abstraction via `Metadata`; the type system infers `TRecord` / `TContext` / `TShard` from the Impl class instance types. Don't reintroduce an "abstraction-only" signature.
-- **PutRecord target is baked in** — `ctx.putRecord(record)` emits a PutRecord command with the target table resolved by the context factory. Transformers shouldn't need to know table names.
+- **Impl-class-as-token accepted** — `runner.pipeline({ scanner: DdbScanner, processors: [DdbProcessor, S3Processor] })` works even though each token is an Implementation (not an Abstraction). Runtime extracts abstraction via `Metadata`; the type system infers `TRecord` from scanner + slice union from processors. Don't reintroduce an "abstraction-only" signature.
+- **PutRecord target is baked in by the processor** — `ctx.putRecord(record)` (slice helper contributed by `DdbProcessor` or `OsProcessor`) emits a PutRecord command with the target table resolved by that processor's config. Transformers shouldn't need to know table names.
 - **Unified AWS retry classifier** — every outer retry loop goes through `isRetryableAwsError` (see `src/base/isRetryableAwsError.ts`). The SDK clients use `retryMode: "adaptive"` for internal self-tuning. Don't introduce per-client classifiers or hardcoded per-second rate caps — considered and rejected (limits vary per account).
 - **OS `ensureIndex` fails the transfer on retry-exhaustion** — the old swallow-and-continue path masked real schema / mapping bugs. If index prep exhausts retries, the whole run aborts so the user sees and fixes it.
 - **`@webiny/aws-sdk` wrapper** — AWS imports come from `@webiny/aws-sdk/client-{dynamodb,s3}` + helpers `getDocumentClient`, `createS3Client`. Don't import `@aws-sdk/client-*` directly. One exception: `QueryCommand` still comes from `@aws-sdk/lib-dynamodb` because the wrapper's re-export expects pre-marshalled AttributeValues — flagged for Webiny team to fix.
-- **One executor per command type** — each command-type executor is single-responsibility (`PutDynamoDbRecordExecutor`, `S3CopyExecutor`, `PutOsDynamoDbRecordExecutor`). Processors own dispatch + unknown-key warnings. Adding a new command = adding a new executor without touching existing ones. `PutOsDynamoDbRecordExecutor` composes `PutDynamoDbRecordExecutor` for the final DDB write; it does NOT duplicate put logic. Cross-cutting shard state (e.g. `TouchedIndexes`) lives in dedicated DI singletons, not on the processor.
-- **Pipeline construction lives on the runner** — `runner.pipeline({ name, scanner, processor })` is the only entry point. The deleted factory triad (`createPipeline` / `createDdbPipeline` / `createOsPipeline`) drove users through three near-identical functions and split type inference across config + register time. The runner-centric API infers `TRecord` / `TContext` / `TShard` from the Impl class pair at construction. `.build()` is explicit and type-enforced (returns immutable `Pipeline`); `runner.register(...)` is variadic, chainable, and throws on duplicate names. Multiple `.filter()` calls AND-compose regardless of position; `.use()` insertion order is preserved for transformer execution. Don't reintroduce a standalone factory.
+- **Slice-merging processors** (2026-04-20) — pipelines take `processors: NonEmptyArray<ProcessorImpl>`. Each processor contributes a **slice** of context helpers (via `extendContext(base)`), owns a **terminal hook** (`onEnd?`), and **drains its own commands** (`execute(commands)`). Slice-key collision = mutually exclusive in a pipeline (DdbProcessor + OsProcessor both contribute `putRecord` → TS rejects); `DisjointKeys<>` catches at compile time. Slice + execute run sequentially in array order (don't hammer services). `Commands.unclaimedKeys()` reports commands no processor drained. **No more god-processors**; `DdbProcessor` writes DDB records, `S3Processor` copies S3 objects, `OsProcessor` writes OS records (gzip + ensureIndex + delegate to shared `DdbExecutor`). Adding a new command type = new processor file + add to relevant pipelines. Shared primitive `DdbExecutor` (the raw batchPut) is composed, not a Processor.
+- **Pipeline construction lives on the runner** — `runner.pipeline({ name, scanner, processors })` is the only entry point. The deleted factory triad (`createPipeline` / `createDdbPipeline` / `createOsPipeline`) drove users through three near-identical functions and split type inference. The runner-centric API infers `TRecord` from scanner + `EffectiveContext = BaseCtx ∧ MergeSlices<TProcessors>` from processors. `.build()` takes no args (terminal behavior comes from each processor's `onEnd`). `runner.register(...)` is variadic, chainable, and throws on duplicate names. Multiple `.filter()` calls AND-compose regardless of position; `.use()` insertion order is preserved for transformer execution.
+- **User-side custom DI via `setup.ts`** — CLI looks for `setup.ts` sibling of the config file; loads `await fn({ container })` BEFORE `preset.configure(runner)`. Use the `initDataTransfer` typed helper. Optional — pure-config users skip it. Canonical location for registering user-authored processors, transformers, or overriding defaults. Don't reintroduce auto-registration-via-inspection magic.
 - **Built-in presets are auto-discovered** — `PresetLoader` scans `src/presets/` (relative to its own `import.meta.url`, so dev / installed layouts both work). Convention: **filename === preset name**. `example.ts` is excluded by exact filename match. Adding a built-in is a file drop, not a code change. Don't reintroduce a hardcoded `BUILT_IN_PRESETS` map or a "register your preset here" registry.
 
 ---
