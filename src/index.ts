@@ -32,8 +32,20 @@ export type { MigrationPreset } from "./domain/transform/Preset.ts";
 
 // Context types for user-written transformers
 export type { BaseTransformContext } from "./features/TransformContext/abstractions/BaseTransformContext.ts";
-export type { DdbTransformContext } from "./features/TransformContext/abstractions/DdbTransformContext.ts";
-export type { OsTransformContext } from "./features/TransformContext/abstractions/OsTransformContext.ts";
+export type {
+    DdbTransformContext,
+    OsTransformContext
+} from "./features/TransformContext/abstractions/contextAliases.ts";
 
 // Transformer type shape for custom transformers
 export type { Transformer } from "./domain/pipeline/abstractions/Transformer.ts";
+
+// Processor abstraction token (users reach for this when declaring processor-only
+// helper types or custom processor impls).
+export { Processor } from "./domain/pipeline/abstractions/Processor.ts";
+
+// Runner helper type used when typing pipeline factory input (NonEmptyArray<...>).
+export type { NonEmptyArray } from "./features/PipelineRunner/abstractions/PipelineRunner.ts";
+
+// S3Processor token — users opt-in by listing it in pipeline.processors.
+export { S3Processor } from "./features/S3Processor/index.ts";

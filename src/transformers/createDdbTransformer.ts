@@ -1,4 +1,4 @@
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
 import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.ts";
 import { createTransformer } from "./createTransformer.ts";
 

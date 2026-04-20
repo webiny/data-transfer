@@ -1,12 +1,13 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 /**
  * Transforms Security Groups to Roles
  * - Changes GROUP -> ROLE in keys and TYPE
  * - Changes GROUPS -> ROLES in GSI keys
  */
-export const groupsToRoles = createTransformer<BaseTransformContext.Interface>(
+export const groupsToRoles = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "groupsToRoles",
     ctx => {
         const { record } = ctx;

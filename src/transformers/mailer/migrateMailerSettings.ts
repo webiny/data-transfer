@@ -1,11 +1,12 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 /**
  * Migrates Mailer settings from old format to KeyValue format.
  * NOTE: This transformer expects wrapInData to run FIRST, so values is in record.data.values.
  */
-export const migrateMailerSettings = createTransformer<BaseTransformContext.Interface>(
+export const migrateMailerSettings = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "migrateMailerSettings",
     ctx => {
         const { record, original } = ctx;

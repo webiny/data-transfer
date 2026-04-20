@@ -1,5 +1,6 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 /**
  * Transforms security role permissions to v6 format:
@@ -8,7 +9,7 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
  * - Flattens cms.contentModel models from locale object to array
  * - Transforms cms.contentModelGroup groups from IDs to slugs
  */
-export const transformPermissions = createTransformer<BaseTransformContext.Interface>(
+export const transformPermissions = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "transformPermissions",
     async ctx => {
         const { record } = ctx;

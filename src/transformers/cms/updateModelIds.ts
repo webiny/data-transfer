@@ -1,5 +1,6 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 const MODEL_ID_MAP: Record<string, string> = {
     fmFile: "wbyFmFile",
@@ -14,7 +15,7 @@ const MODEL_ID_MAP: Record<string, string> = {
  * Updates modelIds in keys and data.modelId attribute.
  * NOTE: This transformer expects wrapInData to run FIRST, so modelId is in data.modelId.
  */
-export const updateModelIds = createTransformer<BaseTransformContext.Interface>(
+export const updateModelIds = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "updateModelIds",
     ctx => {
         const { record } = ctx;

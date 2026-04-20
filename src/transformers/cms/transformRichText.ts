@@ -1,5 +1,6 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { GzipCompressionImpl as GzipCompression } from "~/tools/GzipCompression/GzipCompression.ts";
 import { LexicalRenderer } from "./lexicalRenderer.ts";
 import { visitFields } from "./fieldVisitor.ts";
@@ -19,7 +20,7 @@ const lexicalRenderer = new LexicalRenderer();
  * 4. Converts to { state: JSON.stringify(value), html: renderer.render(value) }
  * 5. Re-compresses and replaces the field value
  */
-export const transformRichText = createTransformer<BaseTransformContext.Interface>(
+export const transformRichText = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "transformRichText",
     async ctx => {
         if (!ctx.modelProvider) {

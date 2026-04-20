@@ -1,11 +1,12 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 /**
  * Removes #0001 revision from data.id and data.parentId in FLP records.
  * Note: FLP records already have data attribute, so wrapInData doesn't wrap them again
  */
-export const updateFlpIds = createTransformer<BaseTransformContext.Interface>(
+export const updateFlpIds = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "updateFlpIds",
     ctx => {
         const { record } = ctx;

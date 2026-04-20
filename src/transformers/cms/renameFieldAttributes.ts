@@ -1,5 +1,6 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { ModelField, Template } from "./modelTypes.ts";
 
 /**
@@ -7,7 +8,7 @@ import { ModelField, Template } from "./modelTypes.ts";
  * - helpText → description
  * - placeholderText → placeholder
  */
-export const renameFieldAttributes = createTransformer<BaseTransformContext.Interface>(
+export const renameFieldAttributes = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "renameFieldAttributes",
     ctx => {
         const { record } = ctx;

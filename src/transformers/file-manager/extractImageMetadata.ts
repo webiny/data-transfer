@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import ExifReader from "exifreader";
 import { createDdbTransformer } from "~/transformers/createDdbTransformer.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
 
 const CACHE_PREFIX = "imageMetadata:";
 

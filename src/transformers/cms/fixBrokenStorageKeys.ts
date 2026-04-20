@@ -1,5 +1,6 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { getCorrectStorageId } from "./fieldUtils.ts";
 import { visitFields } from "./fieldVisitor.ts";
 
@@ -14,7 +15,7 @@ import { visitFields } from "./fieldVisitor.ts";
  * The transformer uses the model definition as source of truth and recursively
  * fixes all field keys throughout the entry values structure.
  */
-export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Interface>(
+export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "fixBrokenStorageKeys",
     async ctx => {
         if (!ctx.modelProvider) {

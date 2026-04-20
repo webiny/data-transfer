@@ -1,11 +1,12 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 /**
  * Removes locale codes (e.g., L#en-US#) from PK, SK, and GSI keys,
  * and removes the locale field from the record.
  */
-export const removeLocale = createTransformer<BaseTransformContext.Interface>(
+export const removeLocale = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "removeLocale",
     ctx => {
         const { record } = ctx;
