@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -25,6 +26,8 @@ vi.mock("~/bootstrap.ts", () => ({
 
 import { handler } from "~/commands/processOsSegment/handler.ts";
 import { Logger } from "~/tools/Logger/index.ts";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
@@ -68,6 +71,12 @@ describe("processOsSegment handler", () => {
         });
         resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
+        resolveMap.set(DirectoryTool, {
+            create: (p: string) => mkdirSync(p, { recursive: true })
+        });
+        resolveMap.set(FileTool, {
+            writeFileOrThrow: (p: string, content: string) => writeFileSync(p, content)
+        });
     });
 
     afterEach(() => {

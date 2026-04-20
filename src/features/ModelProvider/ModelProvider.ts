@@ -1,7 +1,8 @@
-import { readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { ModelProvider as ModelProviderAbstraction } from "./abstractions/ModelProvider.ts";
 
@@ -13,6 +14,8 @@ class ModelProviderImpl implements ModelProviderAbstraction.Interface {
     public constructor(
         private readonly database: SourceDynamoDbClient.Interface,
         private readonly logger: Logger.Interface,
+        private readonly dirTool: DirectoryTool.Interface,
+        private readonly fileTool: FileTool.Interface,
         config: MigrationConfig.Interface
     ) {
         this.tableName = config.source.dynamodb.tableName;
@@ -44,14 +47,18 @@ class ModelProviderImpl implements ModelProviderAbstraction.Interface {
 
         // Load models from JSON files (if directory provided)
         if (this.modelsDir) {
-            try {
-                const files = await readdir(this.modelsDir);
+            const files = this.dirTool.readDir(this.modelsDir);
+            if (files) {
                 const jsonFiles = files.filter(f => f.endsWith(".json"));
 
                 for (const file of jsonFiles) {
                     try {
                         const path = join(this.modelsDir, file);
-                        const content = await readFile(path, "utf-8");
+                        const content = this.fileTool.readFile(path);
+                        if (content === null) {
+                            this.logger.warn(`Failed to read model file ${file}`);
+                            continue;
+                        }
                         const model = JSON.parse(content) as ModelProviderAbstraction.ModelType;
 
                         if (model.modelId) {
@@ -65,8 +72,6 @@ class ModelProviderImpl implements ModelProviderAbstraction.Interface {
                         this.logger.warn(`Failed to load model from ${file}: ${error}`);
                     }
                 }
-            } catch (error) {
-                this.logger.warn(`Failed to read models directory ${this.modelsDir}: ${error}`);
             }
         }
 
@@ -86,5 +91,5 @@ class ModelProviderImpl implements ModelProviderAbstraction.Interface {
 
 export const ModelProvider = ModelProviderAbstraction.createImplementation({
     implementation: ModelProviderImpl,
-    dependencies: [SourceDynamoDbClient, Logger, MigrationConfig]
+    dependencies: [SourceDynamoDbClient, Logger, DirectoryTool, FileTool, MigrationConfig]
 });

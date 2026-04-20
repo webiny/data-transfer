@@ -1,8 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { bootstrap } from "~/bootstrap.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
@@ -64,9 +65,9 @@ export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
     }));
 
     const transferDir = join(process.cwd(), ".transfer", argv.runId);
-    await mkdir(transferDir, { recursive: true });
+    container.resolve(DirectoryTool).create(transferDir);
     const stateFile = join(transferDir, `${argv.segment}-indexes.json`);
-    await writeFile(stateFile, JSON.stringify(payload), "utf-8");
+    container.resolve(FileTool).writeFileOrThrow(stateFile, JSON.stringify(payload));
 
     logger.info("Shard complete.");
 }
