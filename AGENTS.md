@@ -35,15 +35,16 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 - **Scanner tokens:** `DdbScanner`, `OsScanner`
 - **Processor tokens:** `DdbProcessor`, `OsProcessor`, `S3Processor` (slice-merging; see below)
 - **Processor abstraction:** `Processor` — users implementing custom processors use this.
-- **MigrationPreset type**
+- **Pipeline construction:** `PipelineBuilderFactory` — injected into `preset.configure({...})` as `pipelineBuilderFactory`.
+- **MigrationPreset type** + `PresetConfigureContext` (the `{runner, pipelineBuilderFactory, container}` arg bag).
 - **Context types:** `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext` (type aliases = base ∩ processor slices; see below)
 - **Transformer type:** `Transformer` (namespace with `.Interface`)
 - **Utility types:** `NonEmptyArray<T>` (for typed processor arrays)
 - **Setup helper:** `initDataTransfer` + `InitDataTransferContext` (user-side custom DI wiring — see "setup.ts" below)
 
-**Pipeline construction:** users call `runner.pipeline({ name, scanner, processors: [...] })` inside their preset's `configure(runner)` callback. `processors` is a `NonEmptyArray<ProcessorImpl>` — TS rejects empty arrays AND rejects processors whose slice keys collide (`DisjointKeys<...>`). Returns a typed `PipelineBuilder` whose `ctx` is `BaseTransformContext & (union of processor slices)`. Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order; `.build()` takes no arguments (terminal behavior comes from each processor's `onEnd?` hook). Pass to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20.
+**Pipeline construction:** inside a preset's `configure({ runner, pipelineBuilderFactory, container })` callback, users call `pipelineBuilderFactory.create({ name, scanner, processors: [...] })`. `processors` is a `NonEmptyArray<ProcessorImpl>` — TS rejects empty arrays AND rejects processors whose slice keys collide (`DisjointKeys<...>`). Returns a typed `PipelineBuilder` whose `ctx` is `BaseTransformContext & (union of processor slices)`. Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order; `.build()` takes no arguments (terminal behavior comes from each processor's `onEnd?` hook). Pass the built pipeline to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20; `runner.pipeline()` was moved to `PipelineBuilderFactory.create()` shortly after.
 
-**User-side custom DI — `setup.ts`:** CLI looks for `setup.ts` next to the user's config file. If present, dynamic-imports its default export and awaits `fn({ container })` BEFORE `preset.configure(runner)` runs. Use the `initDataTransfer` typed helper to export it. Optional — pure-config users skip the file entirely.
+**User-side custom DI — `setup.ts`:** CLI looks for `setup.ts` next to the user's config file. If present, dynamic-imports its default export and awaits `fn({ container })` BEFORE `preset.configure({...})` runs. Use the `initDataTransfer` typed helper to export it. Optional — pure-config users skip the file entirely.
 
 **Rule:** when adding something to `src/index.ts`, it must be infra (something a user building their own transformers/pipelines/presets genuinely needs). Built-ins stay internal until the transformer rewrite; re-exporting them encourages users to depend on examples that will change.
 
@@ -78,7 +79,7 @@ src/
 │       ├── types/            # BaseRecord (PK/SK/_et/_ct/_md/TYPE + index sig)
 │       ├── commands/         # Commands (bag w/ claim tracking + unclaimedKeys) + PutRecord + S3Copy
 │       ├── filters.ts        # byType, isCmsEntry, isFmFile, ... (filter predicates)
-│       └── Preset.ts         # MigrationPreset interface (name, description, configure(runner))
+│       └── Preset.ts         # MigrationPreset: { name, description, configure({runner, pipelineBuilderFactory, container}) }
 ├── tools/                    # Generic utilities
 │   ├── Cache/ GzipCompression/ DirectoryTool/ FileTool/ Logger/
 ├── services/                 # External API wrappers
@@ -95,7 +96,8 @@ src/
 │   ├── DdbExecutor/                 # Shared primitive: PutRecord[] → TargetDynamoDbClient.batchPut.
 │   │                                # DdbProcessor + OsProcessor both compose this.
 │   ├── TouchedIndexes/              # per-worker singleton: index → original refresh_interval
-│   ├── PipelineRunner/       # Runs merge groups; per-record slice merge + onEnd; shard-end execute
+│   ├── PipelineRunner/              # register(...) + run() + getProcessors(); per-record slice merge + onEnd; shard-end execute
+│   ├── PipelineBuilderFactory/      # Stateless DI singleton; .create({name, scanner, processors}) → PipelineBuilder
 │   ├── TransformContext/     # Single BaseTransformContextFactory; factory returns { ctx, commands }
 │   ├── MigrationConfig/      # createDdbTransfer / createOsTransfer (Zod-validated)
 │   ├── ModelProvider/ TenantLocales/ PresetLoader/ WorkerSpawner/
@@ -124,7 +126,7 @@ Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/da
 
 - `createAbstraction<T>(name)` → `Abstraction<T>` (has `.token: symbol`).
 - `Abstraction.createImplementation({ implementation, dependencies })` → an Implementation class (`I & { __abstraction: A }`). **The Implementation class is NOT an Abstraction at runtime** — it has no `.token`. `container.resolve(ImplClass)` would fail, but `container.register(ImplClass)` works (reads abstraction via `Metadata`).
-- For this reason, `runner.pipeline({ name, scanner, processor })` accepts Implementation classes (not just abstractions). It uses `new Metadata(impl).getAbstraction()` at runtime to recover the abstraction token, while the type system infers `TRecord` / `TContext` / `TShard` from the Impl class instance types.
+- For this reason, `PipelineBuilderFactory.create({ name, scanner, processors })` accepts Implementation classes (not just abstractions). It uses `new Metadata(impl).getAbstraction()` at runtime to recover the abstraction token, while the type system infers `TRecord` / `TContext` / `TShard` from the Impl class instance types.
 - `runner.register(...pipelines: Pipeline<any, any, any>[])` widens the parameter type intentionally — TRecord is invariant in `Pipeline` (because `Filter<TRecord>` is contravariant), so a strict signature would force every caller to cast. The runner doesn't introspect type params at this boundary.
 
 ### Feature layout
@@ -174,7 +176,7 @@ src/features/FeatureName/
 
 **Raw `commands` bag is NOT on the public ctx** — `addCommand` is the only public push path. The bag still exists internally for `Processor.execute(commands)` at shard end. `Commands.unclaimedKeys()` tracks keys whose commands nobody drained, used by the runner to warn-once.
 
-**Each processor contributes a SLICE of helpers** via its `extendContext(base)` method. The runner spreads all processor slices over the base ctx per-record. Effective ctx = `BaseTransformContext ∧ MergeSlices<TProcessors>`. Slice key collision → TS rejects at the `runner.pipeline({...})` call site via `DisjointKeys<...>`.
+**Each processor contributes a SLICE of helpers** via its `extendContext(base)` method. The runner spreads all processor slices over the base ctx per-record. Effective ctx = `BaseTransformContext ∧ MergeSlices<TProcessors>`. Slice key collision → TS rejects at the `pipelineBuilderFactory.create({...})` call site via `DisjointKeys<...>`.
 
 Slice inventory:
 
@@ -250,15 +252,16 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - **`ctx.original` always present** — frozen pre-transform snapshot, on every context, permanently. Don't remove even if no built-in code consumes it.
 - **Transformers + presets are user-land** — the `src/transformers/` files and `src/presets/example.ts` are examples. They will be revisited when the core infra is stable. Don't design the infra around them; if a refactor breaks them, update the examples or flag for rewrite. The package no longer ships any built-in preset; users always provide a path to their own preset file.
 - **First-match-wins + scanner-keyed merge groups** — registration order is semantic. More-specific pipelines before catch-alls. Different scanners = different merge groups.
-- **Impl-class-as-token accepted** — `runner.pipeline({ scanner: DdbScanner, processors: [DdbProcessor, S3Processor] })` works even though each token is an Implementation (not an Abstraction). Runtime extracts abstraction via `Metadata`; the type system infers `TRecord` from scanner + slice union from processors. Don't reintroduce an "abstraction-only" signature.
+- **Impl-class-as-token accepted** — `pipelineBuilderFactory.create({ scanner: DdbScanner, processors: [DdbProcessor, S3Processor] })` works even though each token is an Implementation (not an Abstraction). Runtime extracts abstraction via `Metadata`; the type system infers `TRecord` from scanner + slice union from processors. Don't reintroduce an "abstraction-only" signature.
 - **PutRecord target is baked in by the processor** — `ctx.putRecord(record)` (slice helper contributed by `DdbProcessor` or `OsProcessor`) emits a PutRecord command with the target table resolved by that processor's config. Transformers shouldn't need to know table names.
 - **Unified AWS retry classifier** — every outer retry loop goes through `isRetryableAwsError` (see `src/base/isRetryableAwsError.ts`). The SDK clients use `retryMode: "adaptive"` for internal self-tuning. Don't introduce per-client classifiers or hardcoded per-second rate caps — considered and rejected (limits vary per account).
 - **OS `ensureIndex` fails the transfer on retry-exhaustion** — the old swallow-and-continue path masked real schema / mapping bugs. If index prep exhausts retries, the whole run aborts so the user sees and fixes it.
 - **`@webiny/aws-sdk` wrapper** — AWS imports come from `@webiny/aws-sdk/client-{dynamodb,s3}` + helpers `getDocumentClient`, `createS3Client`. Don't import `@aws-sdk/client-*` directly. One exception: `QueryCommand` still comes from `@aws-sdk/lib-dynamodb` because the wrapper's re-export expects pre-marshalled AttributeValues — flagged for Webiny team to fix.
 - **Slice-merging processors** (2026-04-20) — pipelines take `processors: NonEmptyArray<ProcessorImpl>`. Each processor contributes a **slice** of context helpers (via `extendContext(base)`), owns a **terminal hook** (`onEnd?`), and **drains its own commands** (`execute(commands)`). Slice-key collision = mutually exclusive in a pipeline (DdbProcessor + OsProcessor both contribute `putRecord` → TS rejects); `DisjointKeys<>` catches at compile time. Slice + execute run sequentially in array order (don't hammer services). `Commands.unclaimedKeys()` reports commands no processor drained. **No more god-processors**; `DdbProcessor` writes DDB records, `S3Processor` copies S3 objects, `OsProcessor` writes OS records (gzip + ensureIndex + delegate to shared `DdbExecutor`). Adding a new command type = new processor file + add to relevant pipelines. Shared primitive `DdbExecutor` (the raw batchPut) is composed, not a Processor.
   - **Command-key coupling**: `DdbProcessor` and `OsProcessor` both drain `PutRecord.key`. If both ever land in one pipeline they'd double-write (same record to DDB and OS). Prevented at compile time via `DisjointKeys<>` (both contribute the `putRecord` slice key); at runtime via a `storage`-mode guard inside each processor's `extendContext` (throws if the wrong mode). The coupling is documented on `src/domain/transform/commands/PutRecord.ts` so future command-sharing scenarios remain visible.
-- **Pipeline construction lives on the runner** — `runner.pipeline({ name, scanner, processors })` is the only entry point. The deleted factory triad (`createPipeline` / `createDdbPipeline` / `createOsPipeline`) drove users through three near-identical functions and split type inference. The runner-centric API infers `TRecord` from scanner + `EffectiveContext = BaseCtx ∧ MergeSlices<TProcessors>` from processors. `.build()` takes no args (terminal behavior comes from each processor's `onEnd`). `runner.register(...)` is variadic, chainable, and throws on duplicate names. Multiple `.filter()` calls AND-compose regardless of position; `.use()` insertion order is preserved for transformer execution.
-- **User-side custom DI via `setup.ts`** — CLI looks for `setup.ts` sibling of the config file; loads `await fn({ container })` BEFORE `preset.configure(runner)`. Use the `initDataTransfer` typed helper. Optional — pure-config users skip it. Canonical location for registering user-authored processors, transformers, or overriding defaults. Don't reintroduce auto-registration-via-inspection magic.
+- **Pipeline construction lives in a dedicated factory** — `PipelineBuilderFactory.create({ name, scanner, processors })` is the only entry point. Originally lived on the runner (`runner.pipeline(...)`), extracted 2026-04-20 because construction isn't runner state. Runner's public surface shrank to `register(...) + run(opts?) + getProcessors()`. `.create()` infers `TRecord` from scanner + `EffectiveContext = BaseCtx ∧ MergeSlices<TProcessors>` from processors. `.build()` takes no args. The factory is a stateless DI singleton injected into `preset.configure({...})`. Don't reintroduce a `pipeline()` method on the runner.
+- **`preset.configure` takes an object arg bag** — signature is `configure({ runner, pipelineBuilderFactory, container }): void | Promise<void>`. Async returns allowed. `container` exposed so users can resolve custom services they registered in `setup.ts`. Object shape is forward-compat — add fields without breaking existing presets.
+- **User-side custom DI via `setup.ts`** — CLI looks for `setup.ts` sibling of the config file; loads `await fn({ container })` BEFORE `preset.configure({...})`. Use the `initDataTransfer` typed helper. Optional — pure-config users skip it. Canonical location for registering user-authored processors, transformers, or overriding defaults. Don't reintroduce auto-registration-via-inspection magic.
 - **Built-in presets are auto-discovered** — `PresetLoader` scans `src/presets/` (relative to its own `import.meta.url`, so dev / installed layouts both work). Convention: **filename === preset name**. `example.ts` is excluded by exact filename match. Adding a built-in is a file drop, not a code change. Don't reintroduce a hardcoded `BUILT_IN_PRESETS` map or a "register your preset here" registry.
 
 ---
