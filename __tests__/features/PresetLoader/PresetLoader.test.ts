@@ -19,12 +19,13 @@ describe("PresetLoader Feature", () => {
     });
 
     describe("getBuiltInPresets", () => {
-        it("discovers built-ins from src/presets/builtin/ — currently empty", () => {
+        it("discovers built-ins from src/presets/ (excluding example.ts)", () => {
             const container = createDdbContainer();
             const loader = container.resolve(PresetLoader);
-            // The builtin/ directory exists but ships no presets today; adding
-            // one is a file drop, no code change.
-            expect(loader.getBuiltInPresets()).toEqual([]);
+            // Filename (without extension) IS the preset name — drop a .ts file
+            // in src/presets/ and it ships. example.ts is excluded as the
+            // canonical reference, not a real preset.
+            expect(loader.getBuiltInPresets()).toEqual(["v5-to-v6-ddb"]);
         });
     });
 
