@@ -100,16 +100,21 @@ A preset is an object:
 
 ```typescript
 import type { MigrationPreset } from "@webiny/data-transfer";
-import { DdbScanner, DdbProcessor } from "@webiny/data-transfer";
+import { DdbScanner, DdbProcessor, S3Processor } from "@webiny/data-transfer";
 
 const preset: MigrationPreset = {
   name: "my",
   description: "...",
   configure(runner) {
     const myPipeline = runner
-      .pipeline({ name: "my-pipeline", scanner: DdbScanner, processor: DdbProcessor })
-      .use(myTransformer) // optional
-      // .filter(createFilter(...)) // optional; chain as many as you want
+      .pipeline({
+        name: "my-pipeline",
+        scanner: DdbScanner,
+        processors: [DdbProcessor] // add S3Processor too if any
+        // transformer uses ctx.copyFile / ctx.getFile
+      })
+      .use(myTransformer) // optional; chain as many as you want
+      // .filter(createFilter(...))       // optional; chain as many as you want
       .build();
 
     runner.register(myPipeline);
@@ -119,7 +124,32 @@ const preset: MigrationPreset = {
 export default preset;
 ```
 
+The `processors: [...]` array is the set of processors whose slices are merged
+onto the transformer context. `DdbProcessor` contributes `ctx.putRecord(...)`;
+`S3Processor` contributes `ctx.copyFile(...)` + `ctx.getFile(...)`; `OsProcessor`
+contributes `ctx.putRecord(...)` for the OpenSearch lane. Include every
+processor whose helpers your transformers reach for on `ctx`.
+
 **Zero transformers is valid** — a pipeline with no `.filter()` and no `.use()` accepts every record and emits it verbatim (pure data copy). Useful for prod-to-dev seeding.
+
+## Custom DI Wiring: `setup.ts`
+
+If you want to register your own processors / features / bindings into the DI
+container, drop a `setup.ts` file next to your transfer config:
+
+```typescript
+// projects/my-project/setup.ts
+import { initDataTransfer } from "@webiny/data-transfer";
+import { MyCustomProcessor } from "../../features/MyCustomProcessor.ts";
+
+export default initDataTransfer(async ({ container }) => {
+  container.register(MyCustomProcessor);
+});
+```
+
+The CLI picks it up automatically and runs it **before** loading your preset,
+so the preset can `container.resolve(...)` anything you registered. The file
+is optional — delete it if you don't need custom DI wiring.
 
 ## Security
 

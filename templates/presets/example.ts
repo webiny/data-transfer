@@ -21,7 +21,7 @@ const preset: MigrationPreset = {
     description: "Copy every record from source to target, stamping migratedAt on the way.",
     configure(runner) {
         const stampAll = runner
-            .pipeline({ name: "stamp-all", scanner: DdbScanner, processor: DdbProcessor })
+            .pipeline({ name: "stamp-all", scanner: DdbScanner, processors: [DdbProcessor] })
             .use(stampMigratedAt)
             .build();
 

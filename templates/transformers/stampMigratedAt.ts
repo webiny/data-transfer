@@ -1,5 +1,5 @@
-import { createDdbTransformer } from "@webiny/data-transfer";
-import type { DdbTransformContext } from "@webiny/data-transfer";
+import { createTransformer } from "@webiny/data-transfer";
+import type { BaseTransformContext } from "@webiny/data-transfer";
 
 /**
  * Example custom transformer.
@@ -9,12 +9,14 @@ import type { DdbTransformContext } from "@webiny/data-transfer";
  * chain runs, so most transformers just need to mutate — no need to call
  * `ctx.putRecord(ctx.record)` yourself.
  *
- * Use `createDdbTransformer(name, fn)` (or `createOsTransformer`) to wrap the
- * function with a named, DI-friendly factory.
+ * Use `createTransformer(name, fn)` for processor-agnostic transformers
+ * (ctx is just `BaseTransformContext` — no slice helpers). For transformers
+ * that need DDB/S3 helpers on ctx, reach for `createDdbTransformer`; for
+ * OpenSearch, `createOsTransformer`.
  */
-export const stampMigratedAt = createDdbTransformer(
+export const stampMigratedAt = createTransformer<BaseTransformContext.Interface>(
     "stampMigratedAt",
-    (ctx: DdbTransformContext.Interface) => {
+    ctx => {
         (ctx.record as Record<string, unknown>).migratedAt = new Date().toISOString();
     }
 );
