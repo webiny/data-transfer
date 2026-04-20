@@ -5,6 +5,10 @@ import { ContainerToken, createAbstraction } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
+import {
+    PipelineBuilderFactory,
+    PipelineBuilderFactoryFeature
+} from "~/features/PipelineBuilderFactory/index.ts";
 import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
@@ -99,6 +103,7 @@ function makeContainer(options: { runId?: string } = {}): {
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();
     container.register(FakeHookBImpl).inSingletonScope();
+    PipelineBuilderFactoryFeature.register(container);
     PipelineRunnerFeature.register(container);
     return { container, logger };
 }
@@ -113,8 +118,8 @@ function buildPipeline(
         afterHook?: Abstraction<Hook.Interface>;
     } = {}
 ): Pipeline<FakeRecord, FakeContext, FakeShard> {
-    const runner = container.resolve(PipelineRunner);
-    const builder = runner.pipeline({
+    const factory = container.resolve(PipelineBuilderFactory);
+    const builder = factory.create({
         name,
         scanner: FakeScannerImpl,
         processors: [FakeProcessorImpl]
@@ -137,7 +142,6 @@ describe("PipelineRunner — DI registration", () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
         expect(runner).toBeDefined();
-        expect(typeof runner.pipeline).toBe("function");
         expect(typeof runner.register).toBe("function");
         expect(typeof runner.run).toBe("function");
     });
@@ -148,11 +152,11 @@ describe("PipelineRunner — DI registration", () => {
     });
 });
 
-describe("PipelineRunner.pipeline()", () => {
+describe("PipelineBuilderFactory.create()", () => {
     it("returns a typed PipelineBuilder", () => {
         const { container } = makeContainer();
-        const runner = container.resolve(PipelineRunner);
-        const builder = runner.pipeline({
+        const factory = container.resolve(PipelineBuilderFactory);
+        const builder = factory.create({
             name: "test",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -250,7 +254,7 @@ describe("PipelineRunner.run()", () => {
         };
 
         const runner = container.resolve(PipelineRunner);
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "with-cmd",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -281,14 +285,14 @@ describe("PipelineRunner.run()", () => {
 
         const runner = container.resolve(PipelineRunner);
 
-        const builderA = runner.pipeline({
+        const builderA = container.resolve(PipelineBuilderFactory).create({
             name: "shared-foo",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
         });
         builderA.filter(createFilter<FakeRecord>(r => r.type === "foo")).use(emit);
 
-        const builderB = runner.pipeline({
+        const builderB = container.resolve(PipelineBuilderFactory).create({
             name: "shared-bar",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -311,7 +315,7 @@ describe("PipelineRunner.run()", () => {
 
         const runner = container.resolve(PipelineRunner);
         const acceptCalls: string[] = [];
-        const builderA = runner.pipeline({
+        const builderA = container.resolve(PipelineBuilderFactory).create({
             name: "a",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -322,7 +326,7 @@ describe("PipelineRunner.run()", () => {
                 return true;
             })
         );
-        const builderB = runner.pipeline({
+        const builderB = container.resolve(PipelineBuilderFactory).create({
             name: "b",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -417,7 +421,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const HookFirst = registerTimelineHook(container, timeline, "before-1");
         const HookSecond = registerTimelineHook(container, timeline, "before-2");
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "ordered",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -453,7 +457,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const HookFirst = registerTimelineHook(container, timeline, "after-1");
         const HookSecond = registerTimelineHook(container, timeline, "after-2");
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "after-ordered",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -480,7 +484,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const SharedHook = registerTimelineHook(container, timeline, "shared-before");
         const SharedAfter = registerTimelineHook(container, timeline, "shared-after");
 
-        const builderA = runner.pipeline({
+        const builderA = container.resolve(PipelineBuilderFactory).create({
             name: "dedup-a",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -490,7 +494,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .beforeExecuteCommands(SharedHook)
             .afterExecuteCommands(SharedAfter);
 
-        const builderB = runner.pipeline({
+        const builderB = container.resolve(PipelineBuilderFactory).create({
             name: "dedup-b",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -523,7 +527,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const Before = registerTimelineHook(container, timeline, "before");
         const After = registerTimelineHook(container, timeline, "after");
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "throws",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]
@@ -553,7 +557,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         });
 
         const runner = container.resolve(PipelineRunner);
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "capture-params",
             scanner: FakeScannerImpl,
             processors: [FakeProcessorImpl]

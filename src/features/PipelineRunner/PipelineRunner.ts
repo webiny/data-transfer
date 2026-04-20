@@ -1,4 +1,4 @@
-import { Metadata, type Abstraction, type Constructor, type Container } from "@webiny/di";
+import { type Abstraction, type Container } from "@webiny/di";
 import { ContainerToken } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
@@ -6,7 +6,6 @@ import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import type { Hook } from "~/domain/pipeline/abstractions/Hook.ts";
 import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
-import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
@@ -15,17 +14,9 @@ import {
     type RunOptions
 } from "./abstractions/PipelineRunner.ts";
 
-type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
-
-type ProcessorToken = Abstraction<
-    Processor.Interface<BaseTransformContext.Interface<unknown>, any>
->;
-
 type ProcessorInstance = Processor.Interface<BaseTransformContext.Interface<unknown>, any>;
 
 type AnyPipeline = Pipeline<any, any, any>;
-
-type PipelineMethod = PipelineRunnerAbstraction.Interface["pipeline"];
 
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     private mergeGroups: Map<Abstraction<Scanner.Interface<unknown, unknown>>, AnyPipeline[]> =
@@ -41,26 +32,6 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         private readonly transferContext: TransferContext.Interface,
         private readonly baseContextFactory: BaseTransformContextFactory.Interface
     ) {}
-
-    public pipeline: PipelineMethod = ((input: {
-        name: string;
-        scanner: AnyImpl;
-        processors: readonly AnyImpl[];
-    }) => {
-        const scannerAbstraction = new Metadata(input.scanner).getAbstraction() as Abstraction<
-            Scanner.Interface<unknown, unknown>
-        >;
-        const processorAbstractions = input.processors.map(
-            p => new Metadata(p).getAbstraction() as ProcessorToken
-        );
-        // The public interface narrows this via IPipelineRunner.pipeline; the
-        // implementation is intentionally widened.
-        return new PipelineBuilder({
-            name: input.name,
-            scanner: scannerAbstraction,
-            processors: processorAbstractions
-        });
-    }) as unknown as PipelineMethod;
 
     public register(...pipelines: AnyPipeline[]): this {
         for (const pipeline of pipelines) {

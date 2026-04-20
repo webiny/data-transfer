@@ -1,18 +1,19 @@
 import { describe, expectTypeOf, it } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
-import { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 import { OsScanner } from "~/features/OsScanner/index.ts";
 import { OsProcessor } from "~/features/OsProcessor/index.ts";
 // The S3Processor index re-exports the abstraction token; the Impl class we
-// need for runner.pipeline({ processors: [...] }) lives in the impl file.
+// need for factory.create({ processors: [...] }) lives in the impl file.
 import { S3Processor } from "~/features/S3Processor/S3Processor.ts";
 
 /**
- * Type-level fixture for runner.pipeline({ processors: [...] }). The tests
- * here don't assert runtime behavior — they exercise the TS inference path
- * that flows processor slices into the builder's transformer context.
+ * Type-level fixture for PipelineBuilderFactory.create({ processors: [...] }).
+ * The tests here don't assert runtime behavior — they exercise the TS
+ * inference path that flows processor slices into the builder's transformer
+ * context.
  *
  * The `@ts-expect-error` assertions verify the compile-time guard rails
  * documented in the slice-merging spec:
@@ -23,10 +24,10 @@ import { S3Processor } from "~/features/S3Processor/S3Processor.ts";
  *   4. Slice-key collisions (DdbProcessor + OsProcessor share `putRecord`)
  *      → DisjointKeys<...> produces `never`, rejecting the assignment.
  */
-describe("runner.pipeline() slice inference", () => {
+describe("PipelineBuilderFactory.create() slice inference", () => {
     it("single-processor pipeline exposes the processor's slice on ctx", () => {
-        const runner = createDdbContainer().resolve(PipelineRunner);
-        const builder = runner.pipeline({
+        const factory = createDdbContainer().resolve(PipelineBuilderFactory);
+        const builder = factory.create({
             name: "ddb-only",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -39,8 +40,8 @@ describe("runner.pipeline() slice inference", () => {
     });
 
     it("multi-processor pipeline exposes the union of all slices on ctx", () => {
-        const runner = createDdbContainer().resolve(PipelineRunner);
-        const builder = runner.pipeline({
+        const factory = createDdbContainer().resolve(PipelineBuilderFactory);
+        const builder = factory.create({
             name: "ddb+s3",
             scanner: DdbScanner,
             processors: [DdbProcessor, S3Processor]
@@ -54,8 +55,8 @@ describe("runner.pipeline() slice inference", () => {
     });
 
     it("missing processor → transformer using its helper fails to compile", () => {
-        const runner = createDdbContainer().resolve(PipelineRunner);
-        const builder = runner.pipeline({
+        const factory = createDdbContainer().resolve(PipelineBuilderFactory);
+        const builder = factory.create({
             name: "ddb-no-s3",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -67,8 +68,8 @@ describe("runner.pipeline() slice inference", () => {
     });
 
     it("two processors with overlapping slice keys → fails to compile", () => {
-        const runner = createDdbContainer().resolve(PipelineRunner);
-        runner.pipeline({
+        const factory = createDdbContainer().resolve(PipelineBuilderFactory);
+        factory.create({
             name: "ddb+os",
             scanner: DdbScanner,
             // @ts-expect-error — DdbProcessor + OsProcessor both contribute `putRecord`;
@@ -78,8 +79,8 @@ describe("runner.pipeline() slice inference", () => {
     });
 
     it("empty processors array → fails to compile (NonEmptyArray rejects)", () => {
-        const runner = createDdbContainer().resolve(PipelineRunner);
-        runner.pipeline({
+        const factory = createDdbContainer().resolve(PipelineBuilderFactory);
+        factory.create({
             name: "none",
             scanner: DdbScanner,
             // @ts-expect-error — processors must be NonEmptyArray<Processor>
@@ -95,8 +96,8 @@ describe("runner.pipeline() slice inference", () => {
         // placeholder: when processor impls tighten TBase to Base<BaseRecord>
         // / Base<OsRecord>, the commented assertion should start failing (and
         // the @ts-expect-error re-enabled).
-        const runner = createDdbContainer().resolve(PipelineRunner);
-        const _builder = runner.pipeline({
+        const factory = createDdbContainer().resolve(PipelineBuilderFactory);
+        const _builder = factory.create({
             name: "os-scanner-ddb-processor",
             scanner: OsScanner,
             processors: [DdbProcessor]

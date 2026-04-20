@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { createFilter } from "~/domain/pipeline/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
@@ -30,7 +31,7 @@ describe("PipelineRunner.run — shard mode", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "shard-test",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -49,7 +50,7 @@ describe("PipelineRunner.run — shard mode", () => {
     it("throws when scanner's listShards length mismatches totalSegments", async () => {
         const container = createDdbContainer({ pipelineOverride: { segments: 2 } });
         const runner = container.resolve(PipelineRunner);
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "mismatch",
             scanner: DdbScanner,
             processors: [DdbProcessor]

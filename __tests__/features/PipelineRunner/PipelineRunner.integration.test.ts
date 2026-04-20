@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { createFilter } from "~/domain/pipeline/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
@@ -47,7 +48,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
 
         const runner = container.resolve(PipelineRunner);
 
-        const teamsBuilder = runner.pipeline({
+        const teamsBuilder = container.resolve(PipelineBuilderFactory).create({
             name: "teams",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -57,7 +58,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             .use(passthroughTransformer);
         runner.register(teamsBuilder.build());
 
-        const groupsBuilder = runner.pipeline({
+        const groupsBuilder = container.resolve(PipelineBuilderFactory).create({
             name: "groups",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -81,7 +82,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const container = createDdbContainer();
         const runner = container.resolve(PipelineRunner);
 
-        const builderA = runner.pipeline({
+        const builderA = container.resolve(PipelineBuilderFactory).create({
             name: "dup",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -89,7 +90,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         builderA.filter(createFilter<BaseRecord>(() => true));
         runner.register(builderA.build());
 
-        const builderB = runner.pipeline({
+        const builderB = container.resolve(PipelineBuilderFactory).create({
             name: "dup",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -113,7 +114,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "passthrough",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -142,7 +143,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "mutation-only",
             scanner: DdbScanner,
             processors: [DdbProcessor]
@@ -177,7 +178,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "files",
             scanner: DdbScanner,
             processors: [DdbProcessor, S3Processor]
@@ -209,7 +210,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline({
+        const builder = container.resolve(PipelineBuilderFactory).create({
             name: "single-shard-shardmode",
             scanner: DdbScanner,
             processors: [DdbProcessor]

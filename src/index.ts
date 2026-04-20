@@ -21,7 +21,7 @@ export { createOsTransformer } from "./transformers/createOsTransformer.ts";
 export { createFilter, type Filter } from "./domain/pipeline/Filter.ts";
 
 // Scanner / processor implementation tokens — passed into
-// `runner.pipeline({ scanner, processors: [...] })` when building a pipeline.
+// `pipelineBuilderFactory.create({ scanner, processors: [...] })` when building a pipeline.
 // Include every processor whose slice helpers your transformers reach for
 // on ctx (DdbProcessor → putRecord; S3Processor → copyFile/getFile; etc.).
 export { DdbScanner } from "./features/DdbScanner/index.ts";
@@ -47,5 +47,6 @@ export type {
 // Transformer type shape for custom transformers.
 export type { Transformer } from "./domain/pipeline/abstractions/Transformer.ts";
 
-// Runner helper type used when typing pipeline factory input (NonEmptyArray<...>).
-export type { NonEmptyArray } from "./features/PipelineRunner/abstractions/PipelineRunner.ts";
+// Pipeline-builder-factory helper type used when typing factory input
+// (NonEmptyArray<...>).
+export type { NonEmptyArray } from "./features/PipelineBuilderFactory/index.ts";
