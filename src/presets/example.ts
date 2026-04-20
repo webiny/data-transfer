@@ -20,8 +20,9 @@ import {
 } from "~/transformers/index.ts";
 
 /**
- * Canonical reference preset — demonstrates `runner.pipeline({...})` composition
- * under the slice-merging processor model.
+ * Canonical reference preset — demonstrates
+ * `pipelineBuilderFactory.create({...})` composition under the slice-merging
+ * processor model.
  *
  * Two pipelines are registered:
  *
@@ -42,10 +43,10 @@ import {
 export const example: MigrationPreset = {
     name: "example",
     description:
-        "Canonical reference preset — demonstrates runner.pipeline({...processors}) composition.",
-    configure(runner) {
-        const fileSettingsPipeline = runner
-            .pipeline({
+        "Canonical reference preset — demonstrates pipelineBuilderFactory.create({...processors}) composition.",
+    configure({ runner, pipelineBuilderFactory }) {
+        const fileSettingsPipeline = pipelineBuilderFactory
+            .create({
                 name: "FileSettings",
                 scanner: DdbScanner,
                 processors: [DdbProcessor]
@@ -58,8 +59,8 @@ export const example: MigrationPreset = {
             .use(removeAttributes)
             .build();
 
-        const filePipeline = runner
-            .pipeline({
+        const filePipeline = pipelineBuilderFactory
+            .create({
                 name: "Files",
                 scanner: DdbScanner,
                 processors: [DdbProcessor, S3Processor]

@@ -105,9 +105,9 @@ import { DdbScanner, DdbProcessor, S3Processor } from "@webiny/data-transfer";
 const preset: MigrationPreset = {
   name: "my",
   description: "...",
-  configure(runner) {
-    const myPipeline = runner
-      .pipeline({
+  configure({ runner, pipelineBuilderFactory }) {
+    const myPipeline = pipelineBuilderFactory
+      .create({
         name: "my-pipeline",
         scanner: DdbScanner,
         processors: [DdbProcessor] // add S3Processor too if any
@@ -123,6 +123,9 @@ const preset: MigrationPreset = {
 
 export default preset;
 ```
+
+The `configure` callback also receives `container` — the DI container — if you
+need to `container.resolve(...)` a custom service you registered in `setup.ts`.
 
 The `processors: [...]` array is the set of processors whose slices are merged
 onto the transformer context. `DdbProcessor` contributes `ctx.putRecord(...)`;

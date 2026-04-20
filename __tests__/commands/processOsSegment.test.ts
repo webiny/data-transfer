@@ -8,7 +8,7 @@ const touchedIndexesMap = new Map<string, string>();
 const loadSpy = vi.fn(async () => ({
     name: "test-os-preset",
     description: "test",
-    configure(_runner: unknown): void {}
+    configure(_ctx: unknown): void {}
 }));
 const resolveMap = new Map<unknown, unknown>();
 const registerInstanceSpy = vi.fn();
@@ -26,6 +26,7 @@ vi.mock("~/bootstrap.ts", () => ({
 import { handler } from "~/commands/processOsSegment/handler.ts";
 import { Logger } from "~/tools/Logger/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 
 describe("processOsSegment handler", () => {
@@ -42,7 +43,7 @@ describe("processOsSegment handler", () => {
         loadSpy.mockReset().mockResolvedValue({
             name: "test-os-preset",
             description: "test",
-            configure(_runner: unknown): void {}
+            configure(_ctx: unknown): void {}
         });
         resolveMap.clear();
         resolveMap.set(Logger, {
@@ -65,6 +66,7 @@ describe("processOsSegment handler", () => {
             run: runSpy,
             getProcessors: () => [fakeOsProcessor]
         });
+        resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
     });
 

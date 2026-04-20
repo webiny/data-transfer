@@ -5,7 +5,7 @@ const getProcessorsSpy = vi.fn(() => []);
 const loadSpy = vi.fn(async () => ({
     name: "test-preset",
     description: "test",
-    configure(_runner: unknown): void {}
+    configure(_ctx: unknown): void {}
 }));
 const resolveMap = new Map<unknown, unknown>();
 
@@ -22,6 +22,7 @@ vi.mock("~/bootstrap.ts", () => ({
 import { handler } from "~/commands/processSegment/handler.ts";
 import { Logger } from "~/tools/Logger/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 
 describe("processSegment handler", () => {
@@ -31,7 +32,7 @@ describe("processSegment handler", () => {
         loadSpy.mockReset().mockResolvedValue({
             name: "test-preset",
             description: "test",
-            configure(_runner: unknown): void {}
+            configure(_ctx: unknown): void {}
         });
         resolveMap.clear();
         resolveMap.set(Logger, {
@@ -42,6 +43,7 @@ describe("processSegment handler", () => {
             child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })
         });
         resolveMap.set(PipelineRunner, { run: runSpy, getProcessors: getProcessorsSpy });
+        resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
     });
 

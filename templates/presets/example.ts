@@ -5,8 +5,9 @@ import { stampMigratedAt } from "../transformers/stampMigratedAt.ts";
 /**
  * Example custom preset.
  *
- * A preset is an object with `{ name, description, configure(runner) }`.
- * `configure` builds pipelines via `runner.pipeline({...})` and registers
+ * A preset is an object with `{ name, description, configure(ctx) }`.
+ * `configure` receives `{ runner, pipelineBuilderFactory, container }` and
+ * builds pipelines via `pipelineBuilderFactory.create({...})`, then registers
  * them with `runner.register(...)`.
  *
  * This preset registers ONE pipeline that accepts every scanned record and
@@ -15,13 +16,16 @@ import { stampMigratedAt } from "../transformers/stampMigratedAt.ts";
  *
  * Swap in your own pipelines / transformers to build a real transfer.
  * For pure data copy (zero transformers), just omit the `.use(...)` call.
+ *
+ * `container` is available if you need to `container.resolve(...)` any
+ * custom service registered via a sibling `setup.ts`.
  */
 const preset: MigrationPreset = {
     name: "example",
     description: "Copy every record from source to target, stamping migratedAt on the way.",
-    configure(runner) {
-        const stampAll = runner
-            .pipeline({ name: "stamp-all", scanner: DdbScanner, processors: [DdbProcessor] })
+    configure({ runner, pipelineBuilderFactory }) {
+        const stampAll = pipelineBuilderFactory
+            .create({ name: "stamp-all", scanner: DdbScanner, processors: [DdbProcessor] })
             .use(stampMigratedAt)
             .build();
 

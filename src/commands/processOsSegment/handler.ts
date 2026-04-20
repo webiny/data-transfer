@@ -4,6 +4,7 @@ import { bootstrap } from "~/bootstrap.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
@@ -32,7 +33,11 @@ export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
     await loadUserSetup(argv.config, container, logger);
 
     const preset = await presetLoader.load(config.pipeline.preset);
-    preset.configure(runner);
+    await preset.configure({
+        runner,
+        pipelineBuilderFactory: container.resolve(PipelineBuilderFactory),
+        container
+    });
 
     logger.info(`Processing shard ${argv.segment + 1}/${argv.total}...`);
 
