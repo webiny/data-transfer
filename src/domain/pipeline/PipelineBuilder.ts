@@ -22,7 +22,6 @@ export class PipelineBuilder<
     private readonly processor: Abstraction<Processor.Interface<TRecord, TContext>>;
 
     private filters: Filter<TRecord>[] = [];
-    private filterCalled = false;
     private transformers: Transformer.Interface<TContext>[] = [];
     private beforeHooks: Abstraction<Hook.Interface>[] = [];
     private afterHooks: Abstraction<Hook.Interface>[] = [];
@@ -36,22 +35,13 @@ export class PipelineBuilder<
         this.processor = config.processor;
     }
 
-    public filter(input: Filter<TRecord> | Filter<TRecord>[]): this {
-        if (this.filterCalled) {
-            throw new Error(
-                `PipelineBuilder "${this.name}": .filter() already called. ` +
-                    "Pass an array to apply multiple filters in one call."
-            );
-        }
-        const asArray = Array.isArray(input) ? input : [input];
-        if (asArray.length === 0) {
-            throw new Error(
-                `PipelineBuilder "${this.name}": .filter([]) is empty — ` +
-                    "pass at least one filter or omit the call entirely."
-            );
-        }
-        this.filters = asArray;
-        this.filterCalled = true;
+    /**
+     * Add a filter. Order across .filter() calls does NOT matter — all
+     * filters are collected and AND-composed at build time. Multiple
+     * calls are allowed; interleaving with .use() is fine.
+     */
+    public filter(filter: Filter<TRecord>): this {
+        this.filters.push(filter);
         return this;
     }
 

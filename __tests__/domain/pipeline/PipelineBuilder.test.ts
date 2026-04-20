@@ -6,7 +6,8 @@ import {
     Scanner,
     Processor,
     Hook,
-    createFilter
+    createFilter,
+    type Transformer
 } from "~/domain/pipeline/index.ts";
 import { tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
@@ -88,16 +89,17 @@ describe("PipelineBuilder.filter() — extended rules", () => {
         expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
     });
 
-    it("accepts an array of Filters and AND-combines them in order", () => {
+    it("AND-combines multiple filters via chained .filter() calls in declaration order", () => {
         const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
         const notDeleted = createFilter<FakeRecord>(r => r.payload?.deleted !== true);
 
         const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
-            name: "array-filter",
+            name: "chained-filters",
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
         })
-            .filter([isFoo, notDeleted])
+            .filter(isFoo)
+            .filter(notDeleted)
             .build();
 
         expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
@@ -105,39 +107,53 @@ describe("PipelineBuilder.filter() — extended rules", () => {
         expect(pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(false);
     });
 
-    it("throws when .filter() is called a second time on the same builder", () => {
-        const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
-        const isBar = createFilter<FakeRecord>(r => r.type === "bar");
-
-        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
-            name: "double-filter",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
-        }).filter(isFoo);
-
-        expect(() => builder.filter(isBar)).toThrow(/\.filter\(\).*already called/i);
-    });
-
-    it("throws when .filter() receives an empty array", () => {
-        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
-            name: "empty-array",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+    it("accumulates filters across multiple .filter() calls (declaration order)", () => {
+        const seen: string[] = [];
+        const filterA = createFilter<FakeRecord>(() => {
+            seen.push("a");
+            return true;
+        });
+        const filterB = createFilter<FakeRecord>(() => {
+            seen.push("b");
+            return true;
         });
 
-        expect(() => builder.filter([])).toThrow(/empty/i);
-    });
-
-    it("when .filter() is double-called with an empty array, throws the double-call error first (not empty-array)", () => {
-        const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
-        const builder = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
-            name: "guard-order",
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "accumulate",
             scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
             processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
-        }).filter(isFoo);
+        })
+            .filter(filterA)
+            .filter(filterB)
+            .build();
 
-        expect(() => builder.filter([])).toThrow(/\.filter\(\).*already called/i);
-        expect(() => builder.filter([])).not.toThrow(/empty/i);
+        expect(pipeline.hasFilter).toBe(true);
+        expect(pipeline.accepts({ id: "r1", type: "x" })).toBe(true);
+        expect(seen).toEqual(["a", "b"]);
+    });
+
+    it("preserves transformer insertion order regardless of where .filter() calls appear", () => {
+        const t1 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const t2 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const t3 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const filterA = createFilter<FakeRecord>(() => true);
+        const filterB = createFilter<FakeRecord>(() => true);
+
+        const pipeline = new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
+            name: "interleaved",
+            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        })
+            .use(t1)
+            .filter(filterA)
+            .use(t2)
+            .filter(filterB)
+            .use(t3)
+            .build();
+
+        expect(pipeline.transformerFns).toEqual([t1, t2, t3]);
+        expect(pipeline.hasFilter).toBe(true);
+        expect(pipeline.accepts({ id: "r", type: "x" })).toBe(true);
     });
 });
 
