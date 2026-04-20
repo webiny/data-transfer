@@ -1,6 +1,9 @@
 import type { MigrationPreset } from "~/domain/transform/Preset.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
+import { S3Processor } from "~/features/S3Processor/index.ts";
+import { createFilter } from "~/domain/pipeline/Filter.ts";
+import { byType, byTypePrefix, isCmsEntry, isFmFile } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
     createMetadata,
@@ -15,23 +18,38 @@ import {
     updateModelIds,
     wrapInData
 } from "~/transformers/index.ts";
-import { createFilter } from "~/domain/pipeline/Filter.ts";
-import { byType, byTypePrefix, isCmsEntry, isFmFile } from "~/domain/transform/filters.ts";
 
-export const v5ToV6Preset: MigrationPreset = {
+/**
+ * Canonical reference preset — demonstrates `runner.pipeline({...})` composition
+ * under the slice-merging processor model.
+ *
+ * Two pipelines are registered:
+ *
+ * 1. `FileSettings` — a single-processor pipeline (`[DdbProcessor]`) that
+ *    transforms `fm.settings` records into the new KeyValueStore shape and
+ *    cleans up every remaining `fm.*` record.
+ *
+ * 2. `Files` — a multi-processor pipeline (`[DdbProcessor, S3Processor]`) that
+ *    migrates File Manager file entries. It uses the S3 slice (`ctx.copyFile`,
+ *    `ctx.getFile`) via the `createMetadata` + `extractImageMetadata`
+ *    transformers, hence the S3Processor in `processors: [...]`.
+ *
+ * Note: transformers created with `createDdbTransformer` expect the full
+ * DDB + S3 slice (`DdbTransformContext`). Keep `S3Processor` in the pipeline
+ * whenever you .use() those transformers; pipelines with only the DDB slice
+ * are free to .use() plain `createTransformer<BaseTransformContext>` ones.
+ */
+export const example: MigrationPreset = {
     name: "example",
     description:
-        "An example preset that demonstrates how to set up pipelines and filters for a migration.",
+        "Canonical reference preset — demonstrates runner.pipeline({...processors}) composition.",
     configure(runner) {
         const fileSettingsPipeline = runner
             .pipeline({
                 name: "FileSettings",
-                processors: [DdbProcessor, S3Processor, CognitoUserProcessor],
-                scanner: DdbScanner
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
             })
-            // all types must be inferred from the processor and the scanner
-            // so all filters and use methods must know that they will receive a DdbRecord (or whatever)
-            // and that they will receive a DdbRecordContext (or whatever the context is) as the context
             .filter(createFilter(byType("fm.settings")))
             .use(wrapInData)
             .use(migrateFileManagerSettings)
@@ -43,10 +61,8 @@ export const v5ToV6Preset: MigrationPreset = {
         const filePipeline = runner
             .pipeline({
                 name: "Files",
-                // im still bothered by the fact that DdbProcessor is handling file transfers
-                // any ideas?
-                processor: DdbProcessor,
-                scanner: DdbScanner
+                scanner: DdbScanner,
+                processors: [DdbProcessor, S3Processor]
             })
             .filter(createFilter(isCmsEntry))
             .filter(createFilter(isFmFile))
@@ -67,4 +83,4 @@ export const v5ToV6Preset: MigrationPreset = {
     }
 };
 
-export default v5ToV6Preset;
+export default example;
