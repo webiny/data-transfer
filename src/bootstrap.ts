@@ -27,7 +27,6 @@ import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/ind
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
 import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.ts";
-import { PutOsDynamoDbRecordExecutorFeature } from "~/features/PutOsDynamoDbRecordExecutor/index.ts";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -110,7 +109,6 @@ export function bootstrap(options: BootstrapOptions): Container {
     } else {
         TouchedIndexesFeature.register(container);
         DdbExecutorFeature.register(container);
-        PutOsDynamoDbRecordExecutorFeature.register(container);
         OsRecordDecompressorFeature.register(container);
         OsScannerFeature.register(container);
         OsProcessorFeature.register(container);
