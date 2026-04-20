@@ -4,9 +4,11 @@ A generic data-transfer tool for Webiny environments. Copies DynamoDB + S3 (or O
 
 **Use cases:**
 
-- **v5 → v6 migration** (the flagship preset ships with the package).
+- **v5 → v6 migration** — write a preset that registers the relevant pipelines.
 - **Prod → dev seeding** — zero transformers, just copy.
 - **Custom transfers** — write your own transformers + pipelines + preset for bespoke data moves.
+
+The package ships no built-in presets — you author your own. See `templates/presets/example.ts` (scaffolded by `init`) and `src/presets/example.ts` (canonical reference).
 
 ## Quick start
 
@@ -54,7 +56,7 @@ export default createDdbTransfer({
     s3: { bucket: "webiny-v6-files" }
   },
   pipeline: {
-    preset: "v5-to-v6",
+    preset: "./presets/my-preset.ts", // path relative to this config file
     segments: 4,
     modelsDir: "./path/to/models"
   }
@@ -106,7 +108,7 @@ export default createOsTransfer({
     }
   },
   pipeline: {
-    preset: "v5-to-v6-os",
+    preset: "./presets/my-os-preset.ts",
     segments: 4
   }
 });
@@ -126,7 +128,7 @@ export default createDdbTransfer({
   target: {
     /* ... */
   },
-  pipeline: { preset: "v5-to-v6" },
+  pipeline: { preset: "./presets/my-preset.ts" },
   tuning: {
     ddb: { maxRetries: 3, initialBackoffMs: 100 },
     s3: { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
@@ -187,78 +189,73 @@ DDB context additionally provides:
 
 **Auto-put**: you do NOT need to call `ctx.putRecord(ctx.record)` at the end of a transformer chain — the runner auto-emits a PutRecord for the final `ctx.record` after the chain runs. Mutation-only transformers produce writes. Only call `putRecord` when emitting ADDITIONAL records.
 
-## Writing custom pipelines
-
-A **pipeline** composes a filter + transformer chain. It's bound to a scanner and processor at registration time:
-
-```typescript
-import { createDdbPipeline, createFilter } from "@webiny/data-transfer";
-import { stampMigratedAt } from "./transformers/stampMigratedAt.ts";
-
-export const taggedEntriesPipeline = createDdbPipeline("tagged-entries", builder => {
-  builder
-    .filter(createFilter(r => r.TYPE === "cms.entry" && r.tags?.includes("internal")))
-    .use(stampMigratedAt);
-});
-```
-
-Both `.filter()` and `.use()` are **optional**. A pipeline with neither accepts every record and emits it verbatim — pure data copy.
-
-Pipeline factories:
-
-- `createPipeline<TRecord, TContext, TShard>(name, configure)` — generic.
-- `createDdbPipeline(name, configure)` — binds DDB scanner/processor shapes.
-- `createOsPipeline(name, configure)` — binds OS scanner/processor shapes.
-
 ## Writing a preset
 
-A preset is an object that registers pipelines with the runner:
+A preset is an object exported from a `.ts` file. It builds pipelines inside `configure(runner)` using `runner.pipeline({...})`:
 
 ```typescript
 import type { MigrationPreset } from "@webiny/data-transfer";
-import { DdbScanner, DdbProcessor } from "@webiny/data-transfer"; // if exported, else use generic Scanner/Processor
-import { taggedEntriesPipeline } from "./pipelines/taggedEntries.ts";
+import { DdbScanner, DdbProcessor, createFilter } from "@webiny/data-transfer";
+import { stampMigratedAt } from "./transformers/stampMigratedAt.ts";
 
-export default {
-  name: "custom",
-  description: "Transfer only internal-tagged CMS entries",
+const preset: MigrationPreset = {
+  name: "tagged-entries",
+  description: "Stamp every internal-tagged CMS entry with migratedAt.",
   configure(runner) {
-    taggedEntriesPipeline.register(runner, DdbScanner, DdbProcessor);
+    const taggedEntries = runner
+      .pipeline({ name: "TaggedEntries", scanner: DdbScanner, processor: DdbProcessor })
+      .filter(createFilter(r => r.TYPE === "cms.entry" && r.tags?.includes("internal")))
+      .use(stampMigratedAt)
+      .build();
+
+    runner.register(taggedEntries);
   }
-} satisfies MigrationPreset;
+};
+
+export default preset;
 ```
 
-Point `config.pipeline.preset` at the file path (relative to the config) or at the built-in name.
+Point `config.pipeline.preset` at the file path (relative to the config) — for example `"./presets/tagged-entries.ts"` or `"../shared/presets/foo.ts"`.
+
+### `runner.pipeline({...})` — typed builder
+
+`runner.pipeline({ name, scanner, processor })` returns a `PipelineBuilder` with `TRecord` and `TContext` inferred from the scanner + processor pair. Mismatched pairs (e.g. `DdbScanner` + `OsProcessor`) fail at compile time.
+
+Builder methods:
+
+- `.filter(filter)` — accepts one filter per call. Multiple `.filter()` calls AND-compose; order doesn't matter for execution.
+- `.use(transformer)` — accepts one transformer per call. Insertion order IS preserved at execution time.
+- `.beforeExecuteCommands(hook)` / `.afterExecuteCommands(hook)` — optional per-merge-group hooks.
+- `.build()` — snapshots into an immutable `Pipeline`. Required before `runner.register()`.
+
+`runner.register(p1, p2, ...)` is variadic, chainable, and throws on duplicate pipeline name.
 
 ### Zero-transformer preset (pure data copy)
 
 ```typescript
-import { createDdbPipeline } from "@webiny/data-transfer";
+import type { MigrationPreset } from "@webiny/data-transfer";
 import { DdbScanner, DdbProcessor } from "@webiny/data-transfer";
 
-const copyAll = createDdbPipeline("copy-all", () => {
-  /* no filter, no transformers */
-});
-
-export default {
+const preset: MigrationPreset = {
   name: "copy",
-  description: "Copy every record from source to target verbatim",
+  description: "Copy every record from source to target verbatim.",
   configure(runner) {
-    copyAll.register(runner, DdbScanner, DdbProcessor);
+    const copyAll = runner
+      .pipeline({ name: "copy-all", scanner: DdbScanner, processor: DdbProcessor })
+      .build(); // no .filter, no .use → accepts every record, emits verbatim
+
+    runner.register(copyAll);
   }
 };
+
+export default preset;
 ```
 
-Every scanned record lands on target unchanged. No mutations applied.
+The runner auto-emits a `PutRecord` for `ctx.record` at the end of each transformer chain (or right after the filter passes, when the chain is empty). Mutation-only transformers produce writes; pure-passthrough pipelines do too.
 
 ## Built-in presets
 
-| Name          | Config builder      | Covers                                                                                                                          |
-| ------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `v5-to-v6`    | `createDdbTransfer` | CMS entries + models, security groups→roles, security teams, file manager settings + files, folder permissions, mailer settings |
-| `v5-to-v6-os` | `createOsTransfer`  | CMS entries from the OS companion DDB table                                                                                     |
-
-To use a built-in preset, reference it by name in `config.pipeline.preset` — the preset loader resolves it internally. The built-in transformers and pipeline definitions themselves are not re-exported from the package; they are treated as internal examples and will be revisited once the surrounding infrastructure settles. If you need one of them today, fork or inline it in your own preset.
+The package ships none today. The `PresetLoader` does scan `node_modules/@webiny/data-transfer/src/presets/builtin/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. Until then, every preset is path-resolved from your config file.
 
 ## Pipeline runtime semantics
 
