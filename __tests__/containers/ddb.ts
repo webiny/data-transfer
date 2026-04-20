@@ -22,6 +22,7 @@ import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts"
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
 import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
+import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
@@ -97,6 +98,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
+    PipelineBuilderFactoryFeature.register(container);
     PipelineRunnerFeature.register(container);
     DdbExecutorFeature.register(container);
     S3ProcessorFeature.register(container);

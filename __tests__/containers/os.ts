@@ -19,6 +19,7 @@ import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts"
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
 import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
+import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
 import { TouchedIndexesFeature } from "../../src/features/TouchedIndexes/index.ts";
@@ -98,6 +99,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
+    PipelineBuilderFactoryFeature.register(container);
     PipelineRunnerFeature.register(container);
     TouchedIndexesFeature.register(container);
     DdbExecutorFeature.register(container);

@@ -18,6 +18,7 @@ import { PresetLoaderFeature } from "~/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "~/features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "~/features/TransferLifecycle/index.ts";
 import { TransformContextFeature } from "~/features/TransformContext/index.ts";
+import { PipelineBuilderFactoryFeature } from "~/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
 import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
@@ -99,6 +100,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
     TransformContextFeature.register(container);
+    PipelineBuilderFactoryFeature.register(container);
     PipelineRunnerFeature.register(container);
 
     if (config.storage === "ddb") {
