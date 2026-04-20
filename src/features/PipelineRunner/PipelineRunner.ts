@@ -220,9 +220,14 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         shard: unknown,
         pipelineProcessors: Map<AnyPipeline, ProcessorInstance[]>
     ): Promise<void> {
-        // Per-processor command buffer, accumulated across every record in the
-        // shard and drained once at shard end via processor.execute(buffer).
-        const processorBuffers: Map<ProcessorInstance, Commands> = new Map();
+        // Single shared command buffer for the whole shard. Per-record
+        // transformers + processor.onEnd hooks push into it via slice
+        // helpers / addCommand. At shard end, each processor.execute drains
+        // its own keys via commands.get(key) — which also marks them claimed.
+        // After all processors drain, commands.unclaimedKeys() reports any
+        // keys that nobody handled (transformer pushed X but pipeline lacks
+        // the processor that drains X).
+        const shardCommands = new Commands();
 
         for await (const record of scanner.scan(shard)) {
             let matched = false;
@@ -232,7 +237,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 }
                 matched = true;
                 const processors = pipelineProcessors.get(pipeline)!;
-                await this.runRecord(pipeline, processors, record, processorBuffers);
+                await this.runRecord(pipeline, processors, record, shardCommands);
                 // First-match-wins: subsequent pipelines in this group are
                 // skipped for this record. Pipeline registration order
                 // determines priority.
@@ -246,29 +251,23 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
         }
 
-        // Shard end: each processor drains its buffer in array order. We
-        // iterate each unique processor (across pipelines in this group) in
-        // first-seen registration order so execution is deterministic.
+        // Shard end: each unique processor (across pipelines in this group)
+        // drains the shared buffer in first-seen registration order.
         const processorOrder = this.collectProcessorOrder(pipelines, pipelineProcessors);
         for (const processor of processorOrder) {
-            const buffer = processorBuffers.get(processor);
-            if (!buffer) {
-                continue;
-            }
-            await processor.execute(buffer);
-            this.warnUnclaimedKeys(buffer);
+            await processor.execute(shardCommands);
         }
+        this.warnUnclaimedKeys(shardCommands);
     }
 
     private async runRecord(
         pipeline: AnyPipeline,
         processors: ProcessorInstance[],
         record: unknown,
-        processorBuffers: Map<ProcessorInstance, Commands>
+        shardCommands: Commands
     ): Promise<void> {
-        // Build the base ctx + its commands bag via the shared factory. The
-        // commands bag returned here is wired into ctx.addCommand and every
-        // slice helper that pushes commands.
+        // Build the base ctx + its per-record commands bag via the shared
+        // factory. Slice helpers close over this bag via ctx.addCommand.
         const { ctx, commands } = this.baseContextFactory.create<unknown>({ record });
 
         // Spread each processor's slice over ctx in array order. Later
@@ -292,31 +291,19 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
         // Per-record terminal hooks: run each processor's onEnd in array
         // order. onEnd uses slice helpers to push terminal commands into
-        // the same commands bag.
+        // the same per-record bag.
         for (const processor of processors) {
             if (processor.onEnd) {
                 await processor.onEnd(effective);
             }
         }
 
-        // Fold this record's commands into the per-processor shard buffer.
-        // All processors share the single commands bag at this point — we
-        // flatten and assign every command to every processor's buffer so
-        // each processor can claim the keys it owns via .get().
-        //
-        // NOTE: .get() marks keys as "claimed" on the buffer it was called
-        // on, so feeding each buffer a separate Commands instance keeps
-        // unclaimed-tracking per-processor (a key unclaimed by Processor A
-        // may still be owned by Processor B).
-        for (const processor of processors) {
-            let buffer = processorBuffers.get(processor);
-            if (!buffer) {
-                buffer = new Commands();
-                processorBuffers.set(processor, buffer);
-            }
-            for (const cmd of commands.all()) {
-                buffer.add(cmd);
-            }
+        // Fold this record's commands into the single shared shard buffer.
+        // Each processor.execute will .get(key) from this shared buffer at
+        // shard end, which marks that key as claimed. Any key nobody claims
+        // surfaces via shardCommands.unclaimedKeys().
+        for (const cmd of commands.all()) {
+            shardCommands.add(cmd);
         }
     }
 

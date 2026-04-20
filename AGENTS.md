@@ -16,7 +16,7 @@ This document is read by AI agents when working on this codebase. It describes t
 
 1. User writes a config file: `createDdbTransfer({ source, target, pipeline })` or `createOsTransfer(...)`.
 2. CLI `transfer` command bootstraps a DI container, loads the named preset, spawns worker processes per segment.
-3. Each worker runs one or more shards: scans source → pipeline chain (filter + transformer list + auto-put) → processor buffers commands → executor writes to target.
+3. Each worker runs one or more shards: scans source → for each record, first-match-wins pipeline runs: filters → transformers → each processor's `onEnd?` hook (sequential, array order) → commands accumulate in a shared shard buffer. At shard end, each processor's `execute()` drains its own keys from that buffer (sequential, array order). `Commands.unclaimedKeys()` surfaces commands no processor claimed.
 
 **Read before big refactors:**
 
@@ -158,7 +158,7 @@ src/features/FeatureName/
 - **Merge group** = set of pipelines sharing the same scanner abstraction. Runner iterates one merge group at a time.
 - **First-match-wins** per record: within a merge group, the first pipeline whose filters all pass is the one that runs. Subsequent pipelines skip that record.
 - **Filter order matters**: register more-specific pipelines before catch-alls.
-- **Auto-put**: after the transformer chain runs, the runner calls `ctx.putRecord(ctx.record)` automatically. Pipelines with zero transformers still produce writes. See `src/features/PipelineRunner/PipelineRunner.ts:runShard`.
+- **Per-record `onEnd` hooks replace magic auto-put**: after filters + transformers run, the runner invokes each processor's `onEnd?(ctx)` sequentially in array order. `DdbProcessor.onEnd` and `OsProcessor.onEnd` call `ctx.putRecord(ctx.record)` via their slice helpers — so pipelines containing either get the "auto-put" behavior by virtue of the processor. `S3Processor` has no `onEnd` (no derivable per-record default). Pipelines with zero transformers still produce writes as long as a writer processor is in the list. See `src/features/PipelineRunner/PipelineRunner.ts:runRecord`.
 - **Hooks**: per merge group. Before-hooks run (dedup'd by token, in registration order) before any shards. After-hooks run (dedup'd, in REVERSE order) after all shards succeed. After-hooks are SKIPPED on shard failure. Each hook gets `{ runId, mergeGroupId }`.
 
 ### Context surface (slice-merged)
