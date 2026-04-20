@@ -3,7 +3,6 @@ import { Container } from "@webiny/di";
 import type { Abstraction } from "@webiny/di";
 import { ContainerToken, createAbstraction } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
 import {
@@ -86,10 +85,10 @@ function buildPipeline(
     } = {}
 ): AnyPipeline {
     const runner = container.resolve(PipelineRunner);
-    const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+    const builder = runner.pipeline({
         name,
-        scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-        processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+        scanner: FakeScannerImpl,
+        processor: FakeProcessorImpl
     });
     builder.filter(createFilter<FakeRecord>(extras.filterFn ?? (() => true)));
     if (extras.useTransformer) {
@@ -124,10 +123,10 @@ describe("PipelineRunner.pipeline()", () => {
     it("returns a typed PipelineBuilder", () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
-        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builder = runner.pipeline({
             name: "test",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         expect(builder).toBeInstanceOf(PipelineBuilder);
     });
@@ -185,10 +184,10 @@ describe("PipelineRunner.run()", () => {
         };
 
         const runner = container.resolve(PipelineRunner);
-        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builder = runner.pipeline({
             name: "with-cmd",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builder.filter(createFilter<FakeRecord>(() => true)).use(emit);
         runner.register(builder.build() as unknown as AnyPipeline);
@@ -220,17 +219,17 @@ describe("PipelineRunner.run()", () => {
 
         const runner = container.resolve(PipelineRunner);
 
-        const builderA = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builderA = runner.pipeline({
             name: "shared-foo",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builderA.filter(createFilter<FakeRecord>(r => r.type === "foo")).use(emit);
 
-        const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builderB = runner.pipeline({
             name: "shared-bar",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builderB.filter(createFilter<FakeRecord>(r => r.type === "bar")).use(emit);
 
@@ -253,10 +252,10 @@ describe("PipelineRunner.run()", () => {
 
         const runner = container.resolve(PipelineRunner);
         const acceptCalls: string[] = [];
-        const builderA = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builderA = runner.pipeline({
             name: "a",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builderA.filter(
             createFilter<FakeRecord>(r => {
@@ -264,10 +263,10 @@ describe("PipelineRunner.run()", () => {
                 return true;
             })
         );
-        const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builderB = runner.pipeline({
             name: "b",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builderB.filter(
             createFilter<FakeRecord>(r => {
@@ -365,10 +364,10 @@ describe("PipelineRunner — hook lifecycle", () => {
         const HookFirst = registerTimelineHook(container, timeline, "before-1");
         const HookSecond = registerTimelineHook(container, timeline, "before-2");
 
-        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builder = runner.pipeline({
             name: "ordered",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))
@@ -401,10 +400,10 @@ describe("PipelineRunner — hook lifecycle", () => {
         const HookFirst = registerTimelineHook(container, timeline, "after-1");
         const HookSecond = registerTimelineHook(container, timeline, "after-2");
 
-        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builder = runner.pipeline({
             name: "after-ordered",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))
@@ -428,20 +427,20 @@ describe("PipelineRunner — hook lifecycle", () => {
         const SharedHook = registerTimelineHook(container, timeline, "shared-before");
         const SharedAfter = registerTimelineHook(container, timeline, "shared-after");
 
-        const builderA = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builderA = runner.pipeline({
             name: "dedup-a",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builderA
             .filter(createFilter<FakeRecord>(r => r.id === "match-a"))
             .beforeExecuteCommands(SharedHook)
             .afterExecuteCommands(SharedAfter);
 
-        const builderB = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builderB = runner.pipeline({
             name: "dedup-b",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builderB
             .filter(createFilter<FakeRecord>(() => true))
@@ -474,10 +473,10 @@ describe("PipelineRunner — hook lifecycle", () => {
         const Before = registerTimelineHook(container, timeline, "before");
         const After = registerTimelineHook(container, timeline, "after");
 
-        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builder = runner.pipeline({
             name: "throws",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))
@@ -505,10 +504,10 @@ describe("PipelineRunner — hook lifecycle", () => {
         });
 
         const runner = container.resolve(PipelineRunner);
-        const builder = runner.pipeline<FakeRecord, FakeContext, FakeShard>({
+        const builder = runner.pipeline({
             name: "capture-params",
-            scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-            processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>
+            scanner: FakeScannerImpl,
+            processor: FakeProcessorImpl
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))

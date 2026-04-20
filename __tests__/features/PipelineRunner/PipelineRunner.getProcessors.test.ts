@@ -1,26 +1,20 @@
 import { describe, it, expect } from "vitest";
-import type { Abstraction } from "@webiny/di";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
+import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 
 type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
 
 function makeBuilder(runner: PipelineRunner.Interface, name: string) {
-    return runner.pipeline<BaseRecord, DdbTransformContext.Interface<BaseRecord>, DdbScanner.Shard>(
-        {
-            name,
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
-        }
-    );
+    return runner.pipeline({
+        name,
+        scanner: DdbScanner,
+        processor: DdbProcessor
+    });
 }
 
 describe("PipelineRunner.getProcessors", () => {

@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
-import type { Abstraction } from "@webiny/di";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
@@ -10,6 +8,7 @@ import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbCl
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
+import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 
 type AnyPipeline = Pipeline<unknown, Processor.Context, unknown>;
 
@@ -41,32 +40,20 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
 
         const runner = container.resolve(PipelineRunner);
 
-        const teamsBuilder = runner.pipeline<
-            BaseRecord,
-            DdbTransformContext.Interface<BaseRecord>,
-            DdbScanner.Shard
-        >({
+        const teamsBuilder = runner.pipeline({
             name: "teams",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
+            scanner: DdbScanner,
+            processor: DdbProcessor
         });
         teamsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
             .use(passthroughTransformer);
         runner.register(teamsBuilder.build() as unknown as AnyPipeline);
 
-        const groupsBuilder = runner.pipeline<
-            BaseRecord,
-            DdbTransformContext.Interface<BaseRecord>,
-            DdbScanner.Shard
-        >({
+        const groupsBuilder = runner.pipeline({
             name: "groups",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
+            scanner: DdbScanner,
+            processor: DdbProcessor
         });
         groupsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.group"))
@@ -87,30 +74,18 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const container = createDdbContainer();
         const runner = container.resolve(PipelineRunner);
 
-        const builderA = runner.pipeline<
-            BaseRecord,
-            DdbTransformContext.Interface<BaseRecord>,
-            DdbScanner.Shard
-        >({
+        const builderA = runner.pipeline({
             name: "dup",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
+            scanner: DdbScanner,
+            processor: DdbProcessor
         });
         builderA.filter(createFilter<BaseRecord>(() => true));
         runner.register(builderA.build() as unknown as AnyPipeline);
 
-        const builderB = runner.pipeline<
-            BaseRecord,
-            DdbTransformContext.Interface<BaseRecord>,
-            DdbScanner.Shard
-        >({
+        const builderB = runner.pipeline({
             name: "dup",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
+            scanner: DdbScanner,
+            processor: DdbProcessor
         });
         builderB.filter(createFilter<BaseRecord>(() => true));
 
@@ -134,16 +109,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline<
-            BaseRecord,
-            DdbTransformContext.Interface<BaseRecord>,
-            DdbScanner.Shard
-        >({
+        const builder = runner.pipeline({
             name: "passthrough",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
+            scanner: DdbScanner,
+            processor: DdbProcessor
         });
         // Intentionally no .filter() and no .use()
         runner.register(builder.build() as unknown as AnyPipeline);
@@ -169,16 +138,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline<
-            BaseRecord,
-            DdbTransformContext.Interface<BaseRecord>,
-            DdbScanner.Shard
-        >({
+        const builder = runner.pipeline({
             name: "mutation-only",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
+            scanner: DdbScanner,
+            processor: DdbProcessor
         });
         const tagTransformer = (ctx: DdbTransformContext.Interface<BaseRecord>): void => {
             (ctx.record as BaseRecord & { tagged?: boolean }).tagged = true;
@@ -207,16 +170,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         const runner = container.resolve(PipelineRunner);
 
-        const builder = runner.pipeline<
-            BaseRecord,
-            DdbTransformContext.Interface<BaseRecord>,
-            DdbScanner.Shard
-        >({
+        const builder = runner.pipeline({
             name: "single-shard-shardmode",
-            scanner: Scanner as Abstraction<Scanner.Interface<BaseRecord, DdbScanner.Shard>>,
-            processor: Processor as Abstraction<
-                Processor.Interface<BaseRecord, DdbTransformContext.Interface<BaseRecord>>
-            >
+            scanner: DdbScanner,
+            processor: DdbProcessor
         });
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"));
         runner.register(builder.build() as unknown as AnyPipeline);

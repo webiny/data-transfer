@@ -1,4 +1,4 @@
-import type { Container, Abstraction } from "@webiny/di";
+import { Metadata, type Abstraction, type Constructor, type Container } from "@webiny/di";
 import { ContainerToken } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
@@ -10,9 +10,10 @@ import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
-    type PipelineRunnerFactoryInput,
     type RunOptions
 } from "./abstractions/PipelineRunner.ts";
+
+type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
 interface AutoPutContext {
     record: Record<string, unknown>;
@@ -33,13 +34,21 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         private readonly transferContext: TransferContext.Interface
     ) {}
 
-    public pipeline<TRecord, TContext extends Processor.Context, TShard>(
-        config: PipelineRunnerFactoryInput<TRecord, TContext, TShard>
-    ): PipelineBuilder<TRecord, TContext, TShard> {
+    public pipeline<TRecord, TContext extends Processor.Context, TShard>(input: {
+        name: string;
+        scanner: AnyImpl;
+        processor: AnyImpl;
+    }): PipelineBuilder<TRecord, TContext, TShard> {
+        const scannerAbstraction = new Metadata(input.scanner).getAbstraction() as Abstraction<
+            Scanner.Interface<TRecord, TShard>
+        >;
+        const processorAbstraction = new Metadata(input.processor).getAbstraction() as Abstraction<
+            Processor.Interface<TRecord, TContext>
+        >;
         return new PipelineBuilder<TRecord, TContext, TShard>({
-            name: config.name,
-            scanner: config.scanner,
-            processor: config.processor
+            name: input.name,
+            scanner: scannerAbstraction,
+            processor: processorAbstraction
         });
     }
 
