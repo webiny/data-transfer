@@ -19,12 +19,10 @@ describe("PresetLoader Feature", () => {
     });
 
     describe("getBuiltInPresets", () => {
-        it("should return built-in preset names", () => {
+        it("returns an empty array — no built-in presets are bundled", () => {
             const container = createDdbContainer();
             const loader = container.resolve(PresetLoader);
-            const presets = loader.getBuiltInPresets();
-            expect(presets).toContain("v5-to-v6");
-            expect(presets).toContain("v5-to-v6-os");
+            expect(loader.getBuiltInPresets()).toEqual([]);
         });
     });
 
