@@ -27,16 +27,17 @@ This document is read by AI agents when working on this codebase. It describes t
 
 ## 2. Public API surface
 
-Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers or built-in pipeline definitions are re-exported. Those are user-land examples that still live under `src/transformers/` and `src/presets/v5-to-v6/pipelines/` but are consumed exclusively by the built-in `v5-to-v6` and `v5-to-v6-os` presets via internal paths. The presets themselves are resolved by name through `PresetLoader`, not imported by users.
+Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers, pipelines, or presets are re-exported. The package no longer ships any built-in preset; users always provide a path to their own preset file via `pipeline.preset`. `src/presets/example.ts` is the canonical reference for "how to write a preset" but is not on the public API surface.
 
 - **Config builders:** `createDdbTransfer`, `createOsTransfer`, `loadEnv`
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
-- **Pipeline factories:** `createPipeline`, `PipelineDefinition`, `createDdbPipeline`, `createOsPipeline`
 - **Filter factory:** `createFilter` + `Filter` type
 - **Scanner / processor tokens:** `DdbScanner`, `DdbProcessor`, `OsScanner`, `OsProcessor`
 - **MigrationPreset type**
 - **Context types:** `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext`
 - **Transformer type:** `Transformer` (namespace with `.Interface`)
+
+**Pipeline construction:** users call `runner.pipeline({ name, scanner, processor })` inside their preset's `configure(runner)` callback. Returns a typed `PipelineBuilder` (record + context types inferred from the scanner/processor pair). Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order, then `.build()` for an immutable `Pipeline`. Pass to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20.
 
 **Rule:** when adding something to `src/index.ts`, it must be infra (something a user building their own transformers/pipelines/presets genuinely needs). Built-ins stay internal until the transformer rewrite; re-exporting them encourages users to depend on examples that will change.
 
@@ -58,14 +59,11 @@ src/
 │   ├── processSegment/       # DDB worker — calls PipelineRunner.run({ segment, totalSegments })
 │   └── processOsSegment/     # OS worker — calls PipelineRunner.run({ segment, totalSegments })
 ├── domain/
-│   ├── pipeline/             # New (post-Plan-A) pipeline abstractions
+│   ├── pipeline/             # Pipeline abstractions
 │   │   ├── abstractions/     # Scanner, Processor, Hook, Transformer
-│   │   ├── Pipeline.ts       # Pipeline class (filters + transformerFns + hooks)
-│   │   ├── PipelineBuilder.ts# Fluent builder; .filter() and .use() BOTH optional
-│   │   ├── Filter.ts         # createFilter
-│   │   ├── createPipeline.ts # PipelineDefinition + createPipeline (accepts Abstraction | impl class)
-│   │   ├── createDdbPipeline.ts
-│   │   └── createOsPipeline.ts
+│   │   ├── Pipeline.ts       # Immutable Pipeline (returned by builder.build())
+│   │   ├── PipelineBuilder.ts# Fluent builder — typed via runner.pipeline(); .filter() + .use() chain freely
+│   │   └── Filter.ts         # createFilter
 │   └── transform/            # Primitives still used by runner + features
 │       ├── types/            # BaseRecord (PK/SK/_et/_ct/_md/TYPE + index sig)
 │       ├── commands/         # Commands + PutRecord + S3Copy
@@ -95,8 +93,9 @@ src/
 │   │   └── (cms/ also has fieldUtils.ts, fieldVisitor.ts, lexicalRenderer.ts,
 │   │       modelTypes.ts — helpers local to CMS transformers)
 │   └── index.ts              # Top-level barrel
-├── presets/                  # Built-in presets (v5-to-v6-ddb, v5-to-v6-os)
-│   └── v5-to-v6/pipelines/   # 9 pipeline definition files (camelCase)
+├── presets/                  # Internal example only — example.ts is the canonical
+│                             # "how to write a preset" reference; not a built-in.
+│                             # The v5-to-v6 internal preset was deleted 2026-04-20.
 └── utils/
     └── load-env.ts           # loadEnv(import.meta.url) — exposed as public API
 ```
@@ -111,8 +110,8 @@ Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/da
 
 - `createAbstraction<T>(name)` → `Abstraction<T>` (has `.token: symbol`).
 - `Abstraction.createImplementation({ implementation, dependencies })` → an Implementation class (`I & { __abstraction: A }`). **The Implementation class is NOT an Abstraction at runtime** — it has no `.token`. `container.resolve(ImplClass)` would fail, but `container.register(ImplClass)` works (reads abstraction via `Metadata`).
-- For this reason, `PipelineDefinition.register(runner, scannerTokenOrImpl, processorTokenOrImpl)` accepts **either** an Abstraction or an Implementation class — `createPipeline` resolves the abstraction via `Metadata.getAbstraction()` at runtime. See `src/domain/pipeline/createPipeline.ts`.
-- Similarly, `PipelineRunner.register` is generic over `Pipeline<TRecord, TContext, TShard>` — narrow types flow through and get erased at the storage boundary.
+- For this reason, `runner.pipeline({ name, scanner, processor })` accepts Implementation classes (not just abstractions). It uses `new Metadata(impl).getAbstraction()` at runtime to recover the abstraction token, while the type system infers `TRecord` / `TContext` / `TShard` from the Impl class instance types.
+- `runner.register(...pipelines: Pipeline<any, any, any>[])` widens the parameter type intentionally — TRecord is invariant in `Pipeline` (because `Filter<TRecord>` is contravariant), so a strict signature would force every caller to cast. The runner doesn't introspect type params at this boundary.
 
 ### Feature layout
 
@@ -226,14 +225,15 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - **Zero transformers must work** — infra supports pure data-transfer (prod→dev seeding). `PipelineBuilder.build()` never throws for missing `.filter()`; runner auto-puts when transformer chain is empty.
 - **Record carries everything** — processors + executors trust `ctx.record` at execute time; no side-channel queues or pre-transform snapshot passing. The OS refactor on 2026-04-19 made this explicit.
 - **`ctx.original` always present** — frozen pre-transform snapshot, on every context, permanently. Don't remove even if no built-in code consumes it.
-- **Transformers + presets are user-land** — the `src/transformers/` and `src/presets/v5-to-v6/` files are examples. They will be revisited when the core infra is stable. Don't design the infra around them; if a refactor breaks them, update the examples or flag for rewrite.
+- **Transformers + presets are user-land** — the `src/transformers/` files and `src/presets/example.ts` are examples. They will be revisited when the core infra is stable. Don't design the infra around them; if a refactor breaks them, update the examples or flag for rewrite. The package no longer ships any built-in preset; users always provide a path to their own preset file.
 - **First-match-wins + scanner-keyed merge groups** — registration order is semantic. More-specific pipelines before catch-alls. Different scanners = different merge groups.
-- **Impl-class-as-token accepted** — `PipelineDefinition.register(runner, DdbScanner, DdbProcessor)` works even though `DdbScanner` is an Implementation (not an Abstraction). Runtime extracts the abstraction via `Metadata`. Don't reintroduce an "abstraction-only" signature.
+- **Impl-class-as-token accepted** — `runner.pipeline({ scanner: DdbScanner, processor: DdbProcessor })` works even though `DdbScanner` is an Implementation (not an Abstraction). Runtime extracts the abstraction via `Metadata`; the type system infers `TRecord` / `TContext` / `TShard` from the Impl class instance types. Don't reintroduce an "abstraction-only" signature.
 - **PutRecord target is baked in** — `ctx.putRecord(record)` emits a PutRecord command with the target table resolved by the context factory. Transformers shouldn't need to know table names.
 - **Unified AWS retry classifier** — every outer retry loop goes through `isRetryableAwsError` (see `src/base/isRetryableAwsError.ts`). The SDK clients use `retryMode: "adaptive"` for internal self-tuning. Don't introduce per-client classifiers or hardcoded per-second rate caps — considered and rejected (limits vary per account).
 - **OS `ensureIndex` fails the transfer on retry-exhaustion** — the old swallow-and-continue path masked real schema / mapping bugs. If index prep exhausts retries, the whole run aborts so the user sees and fixes it.
 - **`@webiny/aws-sdk` wrapper** — AWS imports come from `@webiny/aws-sdk/client-{dynamodb,s3}` + helpers `getDocumentClient`, `createS3Client`. Don't import `@aws-sdk/client-*` directly. One exception: `QueryCommand` still comes from `@aws-sdk/lib-dynamodb` because the wrapper's re-export expects pre-marshalled AttributeValues — flagged for Webiny team to fix.
 - **One executor per command type** — each command-type executor is single-responsibility (`PutDynamoDbRecordExecutor`, `S3CopyExecutor`, `PutOsDynamoDbRecordExecutor`). Processors own dispatch + unknown-key warnings. Adding a new command = adding a new executor without touching existing ones. `PutOsDynamoDbRecordExecutor` composes `PutDynamoDbRecordExecutor` for the final DDB write; it does NOT duplicate put logic. Cross-cutting shard state (e.g. `TouchedIndexes`) lives in dedicated DI singletons, not on the processor.
+- **Pipeline construction lives on the runner** — `runner.pipeline({ name, scanner, processor })` is the only entry point. The deleted factory triad (`createPipeline` / `createDdbPipeline` / `createOsPipeline`) drove users through three near-identical functions and split type inference across config + register time. The runner-centric API infers `TRecord` / `TContext` / `TShard` from the Impl class pair at construction. `.build()` is explicit and type-enforced (returns immutable `Pipeline`); `runner.register(...)` is variadic, chainable, and throws on duplicate names. Multiple `.filter()` calls AND-compose regardless of position; `.use()` insertion order is preserved for transformer execution. Don't reintroduce a standalone factory.
 
 ---
 
