@@ -72,7 +72,7 @@ Type inference: `ctx` is `BaseTransformContext<BaseRecord> & DdbProcessorSlice &
 | 3 | Slice-key collision = the implicit "processor type". No `Role` enum. | The slice IS the contract. Two processors both contributing `putRecord` are by definition incompatible. |
 | 4 | Base context exposes `record`, `original`, `addCommand(cmd)`, `replace`, `queryRecord<T>(...)`, `modelProvider`, `cache`. **Raw `commands` bag is hidden** — `addCommand` is the only public push path. Processor slices contribute everything else. | Cleaner public surface; transformers shouldn't need bag introspection. The bag still exists internally for processor `execute(commands)`. |
 | 5 | One shared `DdbExecutor` (the actual batchPut implementation). `DdbProcessor` and `OsProcessor` both compose it as a dependency. | Single source of truth for "write records to a DDB table". OS adds gzip + ensureIndex preamble inside its `execute()`. |
-| 6 | Slice helpers stay synchronous wrappers (push commands to the bag). Async work (batched gzip, ensureIndex, batchPut, batchCopy) lives in `execute()`. | Slice helpers callable from sync contexts (onEnd, sync transformers). Lets us keep batched gzip with concurrency cap. |
+| 6 | Slice helpers split by responsibility: **command-pushing helpers are sync** (`putRecord`, `copyFile` — just construct + `addCommand`). **Read helpers can be async** (`getFile` — hits the network). Heavy batched async (gzip, ensureIndex, batchPut, batchCopy) lives in `execute()`. | Sync push helpers callable from sync contexts (onEnd, sync transformers). Async read helpers when the slice genuinely does I/O. Batched async stays at execute time for concurrency control. |
 | 7 | Both `onEnd` (per-record) and `execute()` (per-shard) run **sequentially in array order**. No `Promise.all` parallelism across processors. | "Don't hammer services" — one processor at a time. The few extra `await`s per record/shard are negligible vs scan time. Order is the user's lever. |
 | 8 | `.build()` takes no arg. Per-record terminal behavior comes entirely from each processor's `onEnd` hook. | No magic, no per-pipeline override config. If you want custom end logic, write a transformer at the end of `.use()` chain — it runs before all `onEnd` hooks. |
 | 9 | Slice-collision detection is **TypeScript-only** via `DisjointKeys<TProcessors>`. No runtime check. | If users cast their way past TS, the spread silently last-wins per JS spec — that's on them. Keeps runtime simple. |
@@ -349,6 +349,10 @@ runner.pipeline<
 Empty `processors: []` fails at the call site (`Type '[]' is not assignable to type 'NonEmptyArray<...>'`). `DisjointKeys` rejects mismatched-slice-keys (e.g., DdbProcessor + OsProcessor both contributing `putRecord`).
 
 `runner.register(...pipelines)` unchanged from current shape (variadic, throws on duplicate name).
+
+### Pipeline builder hooks (unchanged)
+
+`PipelineBuilder.beforeExecuteCommands(token)` and `.afterExecuteCommands(token)` survive from the current API — per-merge-group hooks taking `Abstraction<Hook.Interface>` tokens. Runner invokes them once before any shard runs / once after all shards succeed. After-hooks SKIPPED on shard failure (matches today). Out of scope for this spec — listed here so they're not assumed deleted.
 
 ### Setup file (user-side custom DI)
 

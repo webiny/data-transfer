@@ -26,7 +26,7 @@ export const v5ToV6Preset: MigrationPreset = {
         const fileSettingsPipeline = runner
             .pipeline({
                 name: "FileSettings",
-                processor: DdbProcessor,
+                processors: [DdbProcessor, S3Processor, CognitoUserProcessor],
                 scanner: DdbScanner
             })
             // all types must be inferred from the processor and the scanner
