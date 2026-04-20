@@ -265,9 +265,18 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 
 ## 7. Known open work (in priority order)
 
+### Branch `bruno/feat/di-features` (unmerged)
+
+The slice-merging-processors refactor landed here in April 2026 (19 commits, `d65e256..d5b4621`). Tests green (63 files / 359 tests), ts-check clean. Ready to merge but NOT yet on `main`. Review passed with these non-blocking follow-ups deferred by Bruno's choice:
+
+1. **Logger-spy regression test** — the false-unclaimed-warn bug was caught by review but there's no test asserting `logger.warn` is NOT called with "no processor claimed it" on a multi-processor pipeline. Without it, a similar regression could silently land. Low effort: inject a spy Logger in the PipelineRunner integration test and assert no unclaimed-warn fires. Bruno explicitly skipped this; flag if it becomes painful.
+
+### Broader open work
+
 1. **npm publish story** — the package isn't on npm yet. Needs version strategy, publish script, CI. `npx @webiny/data-transfer init` in the README won't work until this lands.
-2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. `templates/transformers/stampMigratedAt.ts`, `templates/presets/example.ts`, `templates/projects/example/custom.transfer.config.ts` exist now. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
+2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. All three scaffold files exist (`stampMigratedAt.ts`, `presets/example.ts`, `ddb.transfer.config.ts` + optional `setup.ts`). Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
 3. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
+4. **Public API audit pass (post-refactor)** — `src/index.ts` grew with `Processor`, `NonEmptyArray`, `InitDataTransferContext`, `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext`, `initDataTransfer`. Re-audit before publish to confirm the surface matches user-authoring intent (e.g., should `DdbTransformContext` stay as-is or split into the narrower `BaseTransformContext & DdbProcessorSlice` for users who don't include S3Processor?).
 
 ---
 
