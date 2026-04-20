@@ -1,17 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
+import { createFilter } from "~/domain/pipeline/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/DdbTransformContext.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
+import { S3Processor } from "~/features/S3Processor/index.ts";
+import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
+import { TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 
-const passthroughTransformer = (_ctx: DdbTransformContext.Interface<BaseRecord>): void => {
-    // no-op: the runner auto-emits a PutRecord for the final ctx.record
+// Pipelines built with processors:[DdbProcessor] expose only the DDB slice —
+// the S3-slice-bearing alias DdbTransformContext.Interface is too wide.
+interface DdbOnlyCtx extends BaseTransformContext.Interface<BaseRecord> {
+    putRecord(record: Record<string, unknown>): void;
+}
+
+const passthroughTransformer = (_ctx: DdbOnlyCtx): void => {
+    // no-op: DdbProcessor.onEnd auto-emits a PutRecord for ctx.record
 };
 
 function makeRecord(pk: string, sk: string, type: string): BaseRecord {
@@ -41,7 +50,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const teamsBuilder = runner.pipeline({
             name: "teams",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         teamsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
@@ -51,7 +60,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const groupsBuilder = runner.pipeline({
             name: "groups",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         groupsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.group"))
@@ -75,7 +84,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const builderA = runner.pipeline({
             name: "dup",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         builderA.filter(createFilter<BaseRecord>(() => true));
         runner.register(builderA.build());
@@ -83,7 +92,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const builderB = runner.pipeline({
             name: "dup",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         builderB.filter(createFilter<BaseRecord>(() => true));
 
@@ -93,8 +102,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
     it("pure passthrough: zero filters + zero transformers copies every source record to target unchanged", async () => {
         // Data-transfer use case: prod → dev seeding with no transformation.
         // Pipeline with no .filter() and no .use() must still work — accept
-        // every scanned record, emit it verbatim via auto-put. Nothing about
-        // the infrastructure should require a transformer or filter to exist.
+        // every scanned record, emit it verbatim via DdbProcessor.onEnd.
         const sourceRecords = [
             makeRecord("tenant-1", "a", "foo"),
             makeRecord("tenant-1", "b", "bar"),
@@ -108,7 +116,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const builder = runner.pipeline({
             name: "passthrough",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         // Intentionally no .filter() and no .use()
         runner.register(builder.build());
@@ -127,7 +135,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         }
     });
 
-    it("auto-puts the transformed record after the transformer chain (no manual ctx.putRecord needed)", async () => {
+    it("DdbProcessor.onEnd auto-puts the transformed record after the transformer chain", async () => {
         const sourceRecords = [makeRecord("tenant-1", "team-1", "security.team")];
         const container = createDdbContainer({
             sourceRecords: { "source-table": sourceRecords }
@@ -137,9 +145,9 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const builder = runner.pipeline({
             name: "mutation-only",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
-        const tagTransformer = (ctx: DdbTransformContext.Interface<BaseRecord>): void => {
+        const tagTransformer = (ctx: DdbOnlyCtx): void => {
             (ctx.record as BaseRecord & { tagged?: boolean }).tagged = true;
         };
         builder
@@ -156,6 +164,41 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         );
     });
 
+    it("multi-processor pipeline: DdbProcessor + S3Processor each drain their own commands at shard end", async () => {
+        // Two records. The transformer calls ctx.copyFile() (S3Processor slice) on
+        // each. DdbProcessor.onEnd still auto-puts record → target DDB; S3Processor
+        // drains S3Copy commands → MockS3Client.batchCopy.
+        const sourceRecords = [
+            makeRecord("tenant-1", "f1", "fm.file"),
+            makeRecord("tenant-1", "f2", "fm.file")
+        ];
+        const container = createDdbContainer({
+            sourceRecords: { "source-table": sourceRecords }
+        });
+        const runner = container.resolve(PipelineRunner);
+
+        const builder = runner.pipeline({
+            name: "files",
+            scanner: DdbScanner,
+            processors: [DdbProcessor, S3Processor]
+        });
+        const copyTransformer = (ctx: DdbTransformContext.Interface<BaseRecord>): void => {
+            ctx.copyFile(`src/${ctx.record.SK}`, `tgt/${ctx.record.SK}`);
+        };
+        builder.filter(createFilter<BaseRecord>(r => r.TYPE === "fm.file")).use(copyTransformer);
+        runner.register(builder.build());
+
+        await runner.run();
+
+        const targetDb = container.resolve(TargetDynamoDbClient) as MockDynamoDbClient;
+        expect(targetDb.batchPutRecords).toHaveLength(2);
+
+        const targetS3 = container.resolve(TargetS3Client) as MockS3Client;
+        expect(targetS3.copies).toHaveLength(2);
+        expect(targetS3.copies[0]?.sourceKey).toBe("src/f1");
+        expect(targetS3.copies[1]?.sourceKey).toBe("src/f2");
+    });
+
     it("run({segment:0, totalSegments:1}) on a single-shard scanner matches run()", async () => {
         const records = [
             makeRecord("tenant-1", "team-1", "security.team"),
@@ -169,7 +212,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         const builder = runner.pipeline({
             name: "single-shard-shardmode",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"));
         runner.register(builder.build());

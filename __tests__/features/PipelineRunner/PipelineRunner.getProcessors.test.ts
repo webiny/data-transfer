@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
+import { createFilter } from "~/domain/pipeline/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
+import { S3Processor } from "~/features/S3Processor/index.ts";
 
 function makeBuilder(runner: PipelineRunner.Interface, name: string) {
     return runner.pipeline({
         name,
         scanner: DdbScanner,
-        processor: DdbProcessor
+        processors: [DdbProcessor]
     });
 }
 
@@ -33,5 +33,26 @@ describe("PipelineRunner.getProcessors", () => {
 
         const processors = runner.getProcessors();
         expect(processors).toHaveLength(1);
+    });
+
+    it("returns distinct entries for distinct processor tokens across pipelines", () => {
+        const container = createDdbContainer();
+        const runner = container.resolve(PipelineRunner);
+
+        const onlyDdb = runner
+            .pipeline({ name: "ddb-only", scanner: DdbScanner, processors: [DdbProcessor] })
+            .filter(createFilter<BaseRecord>(() => true));
+        const bothProcessors = runner
+            .pipeline({
+                name: "ddb-and-s3",
+                scanner: DdbScanner,
+                processors: [DdbProcessor, S3Processor]
+            })
+            .filter(createFilter<BaseRecord>(() => true));
+
+        runner.register(onlyDdb.build()).register(bothProcessors.build());
+
+        const processors = runner.getProcessors();
+        expect(processors).toHaveLength(2);
     });
 });

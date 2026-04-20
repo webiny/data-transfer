@@ -5,14 +5,13 @@ import { ContainerToken, createAbstraction } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
-import {
-    Pipeline,
-    PipelineBuilder,
-    Scanner,
-    Processor,
-    Hook,
-    createFilter
-} from "~/domain/pipeline/index.ts";
+import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { Commands } from "~/domain/transform/commands/Commands.ts";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
+import { Processor, Hook, createFilter } from "~/domain/pipeline/index.ts";
+import type { Pipeline } from "~/domain/pipeline/index.ts";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import {
     FakeScannerImpl,
     FakeProcessorImpl,
@@ -55,6 +54,37 @@ class TestLogger implements Logger.Interface {
     }
 }
 
+/**
+ * Minimal stand-in for BaseTransformContextFactory. Real factory pulls in
+ * SourceDynamoDbClient + ModelProvider + MigrationConfig + Cache; for the
+ * runner tests in this file we only exercise record dispatch and command
+ * buffering, so a hand-rolled factory that wires addCommand into a fresh
+ * Commands bag per record is sufficient.
+ */
+class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
+    public create<TRecord>(
+        params: BaseTransformContextFactory.CreateParams<TRecord>
+    ): BaseTransformContextFactory.CreateResult<TRecord> {
+        const commands = new Commands();
+        const ctx: BaseTransformContext.Interface<TRecord> = {
+            record: params.record,
+            original: Object.freeze(params.record as TRecord) as Readonly<TRecord>,
+            modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
+            cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+            replace(newRecord: TRecord): void {
+                ctx.record = newRecord;
+            },
+            addCommand(cmd): void {
+                commands.add(cmd);
+            },
+            async queryRecord(): Promise<null> {
+                return null;
+            }
+        };
+        return { ctx, commands };
+    }
+}
+
 function makeContainer(options: { runId?: string } = {}): {
     container: Container;
     logger: TestLogger;
@@ -64,6 +94,7 @@ function makeContainer(options: { runId?: string } = {}): {
     container.registerInstance(ContainerToken, container);
     container.registerInstance(Logger, logger);
     container.registerInstance(TransferContext, { runId: options.runId ?? "test-run-id" });
+    container.registerInstance(BaseTransformContextFactory, new FakeBaseContextFactory());
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();
@@ -86,7 +117,7 @@ function buildPipeline(
     const builder = runner.pipeline({
         name,
         scanner: FakeScannerImpl,
-        processor: FakeProcessorImpl
+        processors: [FakeProcessorImpl]
     });
     builder.filter(createFilter<FakeRecord>(extras.filterFn ?? (() => true)));
     if (extras.useTransformer) {
@@ -98,7 +129,7 @@ function buildPipeline(
     if (extras.afterHook) {
         builder.afterExecuteCommands(extras.afterHook);
     }
-    return builder.build();
+    return builder.build() as unknown as Pipeline<FakeRecord, FakeContext, FakeShard>;
 }
 
 describe("PipelineRunner — DI registration", () => {
@@ -124,9 +155,11 @@ describe("PipelineRunner.pipeline()", () => {
         const builder = runner.pipeline({
             name: "test",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
-        expect(builder).toBeInstanceOf(PipelineBuilder);
+        expect(typeof builder.filter).toBe("function");
+        expect(typeof builder.use).toBe("function");
+        expect(typeof builder.build).toBe("function");
     });
 });
 
@@ -183,16 +216,14 @@ describe("runner.register variadic + duplicate-name guard", () => {
 });
 
 describe("PipelineRunner.run()", () => {
-    it("auto-emits a PutRecord per matched record when transformers emit no commands", async () => {
+    it("invokes onEnd per matched record so the processor flushes one command per record", async () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         const processor = container.resolve(Processor) as FakeProcessor;
         scanner.records = [{ id: "r1", type: "foo" }];
 
-        // TagTransformer pushes to ctx.emitted but adds nothing of its own to
-        // ctx.commands. The runner's auto-put (mirroring the legacy TransformPipeline
-        // contract) still emits a PutRecord for ctx.record, so the processor buffer
-        // is flushed with exactly one command.
+        // FakeProcessor.onEnd emits a PutRecord into the shared commands bag
+        // at shard end — mirrors DdbProcessor's auto-put semantic.
         const runner = container.resolve(PipelineRunner);
         runner.register(buildPipeline(container, "single", { useTransformer: true }));
         await runner.run();
@@ -201,7 +232,7 @@ describe("PipelineRunner.run()", () => {
         expect(processor.executed[0]?.size()).toBe(1);
     });
 
-    it("flushes per-processor buffers via execute() when commands are emitted", async () => {
+    it("flushes per-processor buffers via execute() when transformers emit commands", async () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         const processor = container.resolve(Processor) as FakeProcessor;
@@ -210,24 +241,24 @@ describe("PipelineRunner.run()", () => {
             { id: "r2", type: "foo" }
         ];
 
-        // Inline emitting transformer — a plain function that pushes a command per record.
+        // Emit an extra PutRecord per record via ctx.addCommand. onEnd adds
+        // one more PutRecord per record, so 4 commands total.
         const emit = (ctx: FakeContext): void => {
-            ctx.commands.add({ key: "TEST_CMD" });
+            ctx.addCommand(
+                PutRecord.create({ table: "target-table", record: { PK: ctx.record.id, SK: "a" } })
+            );
         };
 
         const runner = container.resolve(PipelineRunner);
         const builder = runner.pipeline({
             name: "with-cmd",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builder.filter(createFilter<FakeRecord>(() => true)).use(emit);
         runner.register(builder.build());
         await runner.run();
 
-        // One execute() call per processor at shard end (we have one shard, one processor).
-        // Buffer contains 4 commands: 2 from the emit transformer (one per record) plus
-        // 2 from the runner's auto-put (one PutRecord per record).
         expect(processor.executed).toHaveLength(1);
         expect(processor.executed[0]?.size()).toBe(4);
     });
@@ -236,9 +267,6 @@ describe("PipelineRunner.run()", () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         const processor = container.resolve(Processor) as FakeProcessor;
-        // Disjoint filters so each record is claimed by exactly one pipeline
-        // (first-match semantics) — both pipelines share the same processor
-        // token so their per-record commands accumulate in the same buffer.
         scanner.records = [
             { id: "r1", type: "foo" },
             { id: "r2", type: "bar" },
@@ -246,7 +274,9 @@ describe("PipelineRunner.run()", () => {
         ];
 
         const emit = (ctx: FakeContext): void => {
-            ctx.commands.add({ key: "TEST_CMD" });
+            ctx.addCommand(
+                PutRecord.create({ table: "target-table", record: { PK: ctx.record.id, SK: "a" } })
+            );
         };
 
         const runner = container.resolve(PipelineRunner);
@@ -254,23 +284,22 @@ describe("PipelineRunner.run()", () => {
         const builderA = runner.pipeline({
             name: "shared-foo",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builderA.filter(createFilter<FakeRecord>(r => r.type === "foo")).use(emit);
 
         const builderB = runner.pipeline({
             name: "shared-bar",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builderB.filter(createFilter<FakeRecord>(r => r.type === "bar")).use(emit);
 
         runner.register(builderA.build()).register(builderB.build());
         await runner.run();
 
-        // Single processor instance → one execute() call per shard. Buffer holds
-        // 6 commands total: 3 from the emit transformer (one per record across both
-        // pipelines) plus 3 from the runner's auto-put (one PutRecord per record).
+        // Single processor instance → one execute() call per shard. Buffer
+        // holds 6 commands: 3 emitted + 3 auto-put via onEnd.
         expect(processor.executed).toHaveLength(1);
         expect(processor.executed[0]?.size()).toBe(6);
     });
@@ -285,7 +314,7 @@ describe("PipelineRunner.run()", () => {
         const builderA = runner.pipeline({
             name: "a",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builderA.filter(
             createFilter<FakeRecord>(r => {
@@ -296,7 +325,7 @@ describe("PipelineRunner.run()", () => {
         const builderB = runner.pipeline({
             name: "b",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builderB.filter(
             createFilter<FakeRecord>(r => {
@@ -308,8 +337,6 @@ describe("PipelineRunner.run()", () => {
 
         await runner.run();
 
-        // Only the first matching pipeline (A) evaluates and runs — B's filter
-        // is never invoked because A already claimed the record.
         expect(acceptCalls).toEqual(["a:r1"]);
     });
 
@@ -331,7 +358,6 @@ describe("PipelineRunner.run()", () => {
     it("propagates exceptions thrown by the scanner", async () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
-        // Override scan to throw
         scanner.records = [];
         const original = scanner.scan.bind(scanner);
         scanner.scan = async function* () {
@@ -381,7 +407,6 @@ describe("PipelineRunner — hook lifecycle", () => {
         const timeline: string[] = [];
         scanner.records = [{ id: "r1", type: "foo" }];
 
-        // Wrap scanner.scan to push a timeline marker when scanning begins.
         const originalScan = scanner.scan.bind(scanner);
         scanner.scan = async function* (shard: FakeShard): AsyncIterable<FakeRecord> {
             timeline.push("scan-start");
@@ -395,7 +420,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const builder = runner.pipeline({
             name: "ordered",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))
@@ -431,7 +456,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const builder = runner.pipeline({
             name: "after-ordered",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))
@@ -458,7 +483,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const builderA = runner.pipeline({
             name: "dedup-a",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builderA
             .filter(createFilter<FakeRecord>(r => r.id === "match-a"))
@@ -468,7 +493,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const builderB = runner.pipeline({
             name: "dedup-b",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builderB
             .filter(createFilter<FakeRecord>(() => true))
@@ -479,7 +504,6 @@ describe("PipelineRunner — hook lifecycle", () => {
 
         await runner.run();
 
-        // SharedHook is registered twice (across both pipelines) but should fire once.
         const beforeCount = timeline.filter(s => s === "shared-before").length;
         const afterCount = timeline.filter(s => s === "shared-after").length;
         expect(beforeCount).toBe(1);
@@ -502,7 +526,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const builder = runner.pipeline({
             name: "throws",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))
@@ -512,7 +536,6 @@ describe("PipelineRunner — hook lifecycle", () => {
 
         await expect(runner.run()).rejects.toThrow("scanner-boom");
 
-        // before-hook fired (before scanner ran), after-hook did NOT fire.
         expect(timeline).toEqual(["before"]);
     });
 
@@ -533,7 +556,7 @@ describe("PipelineRunner — hook lifecycle", () => {
         const builder = runner.pipeline({
             name: "capture-params",
             scanner: FakeScannerImpl,
-            processor: FakeProcessorImpl
+            processors: [FakeProcessorImpl]
         });
         builder
             .filter(createFilter<FakeRecord>(() => true))
@@ -546,7 +569,6 @@ describe("PipelineRunner — hook lifecycle", () => {
         expect(captured).toHaveLength(2);
         expect(captured[0]?.runId).toBe("custom-run-42");
         expect(captured[1]?.runId).toBe("custom-run-42");
-        // Scanner abstraction name is "Core/Scanner" → "Core-Scanner" after sanitisation.
         expect(captured[0]?.mergeGroupId).toBe("Core-Scanner");
         expect(captured[1]?.mergeGroupId).toBe("Core-Scanner");
     });

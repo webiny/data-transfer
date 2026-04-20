@@ -2,7 +2,8 @@ import { Container } from "@webiny/di";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { Scanner, Processor, Hook } from "~/domain/pipeline/index.ts";
-import type { FakeRecord, FakeShard, FakeContext } from "./types.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { FakeRecord, FakeShard, FakeSlice, FakeContext } from "./types.ts";
 
 export class FakeScanner implements Scanner.Interface<FakeRecord, FakeShard> {
     public records: FakeRecord[] = [];
@@ -23,34 +24,46 @@ export const FakeScannerImpl = Scanner.createImplementation({
     dependencies: []
 });
 
-export class FakeProcessor implements Processor.Interface<FakeRecord, FakeContext> {
+/**
+ * FakeProcessor — new-shape (Task 5/6/8): implements Processor.Interface with
+ * TBase=BaseTransformContext.Interface<FakeRecord> and TSlice=FakeSlice.
+ * `extendContext` contributes the slice helpers (`emit`, `putRecord`) onto
+ * every transformer context; `onEnd` mirrors the DdbProcessor default of
+ * auto-putting ctx.record at shard end; `execute` records every Commands
+ * buffer it sees so tests can inspect shard-end flush behavior.
+ */
+export class FakeProcessor implements Processor.Interface<
+    BaseTransformContext.Interface<FakeRecord>,
+    FakeSlice
+> {
     public executed: Commands[] = [];
 
+    public extendContext(base: BaseTransformContext.Interface<FakeRecord>): FakeSlice {
+        const emitted: string[] = [];
+        const slice: FakeSlice = {
+            emitted,
+            emit(value: string): void {
+                emitted.push(value);
+            },
+            putRecord(rec: Record<string, unknown>): void {
+                base.addCommand(PutRecord.create({ table: "target-table", record: rec }));
+            }
+        };
+        return slice;
+    }
+
+    public onEnd(ctx: BaseTransformContext.Interface<FakeRecord> & FakeSlice): void {
+        ctx.putRecord(ctx.record as unknown as Record<string, unknown>);
+    }
+
     public async execute(commands: Commands): Promise<void> {
+        // Mark the well-known key we care about so unclaimed-tracking stays honest.
+        commands.get(PutRecord.key);
         this.executed.push(commands);
     }
 
     public getShardState(): { count: number } {
         return { count: this.executed.length };
-    }
-
-    public createContext(record: FakeRecord): FakeContext {
-        const commands = new Commands();
-        const ctx: FakeContext = {
-            record,
-            emitted: [],
-            commands,
-            emit(value: string): void {
-                ctx.emitted.push(value);
-            },
-            putRecord(rec: Record<string, unknown>): void {
-                // Mirror real DdbTransformContextFactory semantics: emit a PutRecord
-                // into the context's commands buffer. Keeps the fake honest so the
-                // runner's auto-put is observable in unit tests.
-                commands.add(PutRecord.create({ table: "target-table", record: rec }));
-            }
-        };
-        return ctx;
     }
 }
 

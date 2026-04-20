@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
+import { createFilter } from "~/domain/pipeline/index.ts";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
@@ -34,7 +33,7 @@ describe("PipelineRunner.run — shard mode", () => {
         const builder = runner.pipeline({
             name: "shard-test",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(() => true));
         runner.register(builder.build());
@@ -53,7 +52,7 @@ describe("PipelineRunner.run — shard mode", () => {
         const builder = runner.pipeline({
             name: "mismatch",
             scanner: DdbScanner,
-            processor: DdbProcessor
+            processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(() => true));
         runner.register(builder.build());

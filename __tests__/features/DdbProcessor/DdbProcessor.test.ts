@@ -1,13 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
-import { Processor } from "~/domain/pipeline/index.ts";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/index.ts";
-import { S3Processor } from "~/features/S3Processor/index.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
 function makeRecord(pk: string, sk: string): BaseRecord {
     return {
@@ -20,116 +18,128 @@ function makeRecord(pk: string, sk: string): BaseRecord {
     };
 }
 
+interface DdbProcessorSlice {
+    putRecord(record: Record<string, unknown>): void;
+}
+
+/**
+ * In the DDB container, DdbProcessor is the only impl registered against the
+ * generic Core/Processor abstraction (S3Processor has its own abstraction),
+ * so resolving by Processor gives back the DdbProcessor singleton.
+ */
+type DdbProcessorInstance = Processor.Interface<
+    BaseTransformContext.Interface<unknown>,
+    DdbProcessorSlice
+> & {
+    extendContext(base: BaseTransformContext.Interface<unknown>): DdbProcessorSlice;
+    onEnd(ctx: BaseTransformContext.Interface<unknown> & DdbProcessorSlice): void | Promise<void>;
+};
+
+interface BaseStub<TRecord> {
+    base: BaseTransformContext.Interface<TRecord>;
+    captured: unknown[];
+}
+
+/** Minimal BaseTransformContext stub for unit-testing extendContext + onEnd. */
+function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
+    const captured: unknown[] = [];
+    const base: BaseTransformContext.Interface<TRecord> = {
+        record,
+        original: Object.freeze(record) as Readonly<TRecord>,
+        modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
+        cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+        replace(newRecord: TRecord): void {
+            base.record = newRecord;
+        },
+        addCommand(cmd): void {
+            captured.push(cmd);
+        },
+        async queryRecord(): Promise<null> {
+            return null;
+        }
+    };
+    return { base, captured };
+}
+
 describe("DdbProcessor", () => {
-    it("dispatches puts and copies in parallel and warns once for unknown keys", async () => {
-        const container = createDdbContainer();
-        const processor = container.resolve(Processor);
-        const putExecutor = container.resolve(DdbExecutor);
-        const s3CopyExecutor = container.resolve(S3Processor);
-        const logger = container.resolve(Logger);
+    describe("extendContext", () => {
+        it("returns a slice with putRecord that pushes PutRecord commands via ctx.addCommand", () => {
+            const container = createDdbContainer();
+            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const { base, captured } = makeBase(makeRecord("PK1", "SK1"));
 
-        const putSpy = vi.spyOn(putExecutor, "execute");
-        const copySpy = vi.spyOn(s3CopyExecutor, "execute");
-        const warnSpy = vi.spyOn(logger, "warn");
+            const slice = processor.extendContext(base);
+            slice.putRecord({ PK: "x", SK: "y" });
 
-        const commands = new Commands();
-        const put = PutRecord.create({
-            table: "target-table",
-            record: { PK: "a", SK: "1" }
+            expect(captured).toHaveLength(1);
+            expect((captured[0] as PutRecord).key).toBe(PutRecord.key);
+            expect((captured[0] as PutRecord).record).toEqual({ PK: "x", SK: "y" });
+            expect((captured[0] as PutRecord).table).toBe("target-table");
         });
-        const copy = S3Copy.create({
-            sourceBucket: "source-bucket",
-            sourceKey: "src/key",
-            targetBucket: "target-bucket",
-            targetKey: "tgt/key"
+    });
+
+    describe("onEnd", () => {
+        it("auto-puts ctx.record through the slice helper", async () => {
+            const container = createDdbContainer();
+            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const record = makeRecord("PK1", "SK1");
+            const { base, captured } = makeBase(record);
+
+            const slice = processor.extendContext(base);
+            const ctx = { ...base, ...slice };
+            await processor.onEnd(ctx);
+
+            expect(captured).toHaveLength(1);
+            expect((captured[0] as PutRecord).record).toEqual(record);
         });
-        commands.add(put);
-        commands.add(copy);
-        commands.add({ key: "weird", dedupKey: undefined });
-
-        await processor.execute(commands);
-
-        expect(putSpy).toHaveBeenCalledTimes(1);
-        expect(putSpy).toHaveBeenCalledWith([put]);
-        expect(copySpy).toHaveBeenCalledTimes(1);
-        expect(copySpy).toHaveBeenCalledWith([copy]);
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining('DdbProcessor does not handle command key "weird"')
-        );
     });
 
-    it("calls both executors with empty arrays when Commands is empty and never warns", async () => {
-        const container = createDdbContainer();
-        const processor = container.resolve(Processor);
-        const putExecutor = container.resolve(DdbExecutor);
-        const s3CopyExecutor = container.resolve(S3Processor);
-        const logger = container.resolve(Logger);
+    describe("execute", () => {
+        it("drains PutRecord commands and delegates to DdbExecutor", async () => {
+            const container = createDdbContainer();
+            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const executor = container.resolve(DdbExecutor);
+            const executed: PutRecord[][] = [];
+            const original = executor.execute.bind(executor);
+            executor.execute = async (puts: PutRecord[]): Promise<void> => {
+                executed.push(puts);
+                await original(puts);
+            };
 
-        const putSpy = vi.spyOn(putExecutor, "execute");
-        const copySpy = vi.spyOn(s3CopyExecutor, "execute");
-        const warnSpy = vi.spyOn(logger, "warn");
+            const commands = new Commands();
+            const put = PutRecord.create({ table: "target-table", record: { PK: "a", SK: "1" } });
+            commands.add(put);
+            commands.add({ key: "weird", dedupKey: undefined });
 
-        await processor.execute(new Commands());
+            await processor.execute(commands);
 
-        expect(putSpy).toHaveBeenCalledTimes(1);
-        expect(putSpy).toHaveBeenCalledWith([]);
-        expect(copySpy).toHaveBeenCalledTimes(1);
-        expect(copySpy).toHaveBeenCalledWith([]);
-        expect(warnSpy).not.toHaveBeenCalled();
+            expect(executed).toHaveLength(1);
+            expect(executed[0]).toEqual([put]);
+        });
+
+        it("calls the executor with an empty array when Commands is empty", async () => {
+            const container = createDdbContainer();
+            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const executor = container.resolve(DdbExecutor);
+            const executed: PutRecord[][] = [];
+            const original = executor.execute.bind(executor);
+            executor.execute = async (puts: PutRecord[]): Promise<void> => {
+                executed.push(puts);
+                await original(puts);
+            };
+
+            await processor.execute(new Commands());
+
+            expect(executed).toHaveLength(1);
+            expect(executed[0]).toEqual([]);
+        });
     });
 
-    it("dedupes warnings: the same unknown key across calls only warns once", async () => {
-        const container = createDdbContainer();
-        const processor = container.resolve(Processor);
-        const logger = container.resolve(Logger);
-        const warnSpy = vi.spyOn(logger, "warn");
-
-        const first = new Commands();
-        first.add({ key: "weird", dedupKey: undefined });
-        await processor.execute(first);
-
-        const second = new Commands();
-        second.add({ key: "weird", dedupKey: undefined });
-        await processor.execute(second);
-
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-    });
-
-    it("warns again for a NEW unknown key in a later call", async () => {
-        const container = createDdbContainer();
-        const processor = container.resolve(Processor);
-        const logger = container.resolve(Logger);
-        const warnSpy = vi.spyOn(logger, "warn");
-
-        const first = new Commands();
-        first.add({ key: "weird", dedupKey: undefined });
-        await processor.execute(first);
-
-        const second = new Commands();
-        second.add({ key: "other", dedupKey: undefined });
-        await processor.execute(second);
-
-        expect(warnSpy).toHaveBeenCalledTimes(2);
-        expect(warnSpy).toHaveBeenNthCalledWith(1, expect.stringContaining('"weird"'));
-        expect(warnSpy).toHaveBeenNthCalledWith(2, expect.stringContaining('"other"'));
-    });
-
-    it("createContext returns a context carrying the record", () => {
-        const container = createDdbContainer();
-        const processor = container.resolve(Processor);
-
-        const record = makeRecord("a", "1");
-        const ctx = processor.createContext(record);
-
-        expect((ctx as unknown as { record: BaseRecord }).record).toEqual(record);
-        expect((ctx as unknown as { record: BaseRecord }).record.PK).toBe("a");
-    });
-
-    it("getShardState returns an empty object", () => {
-        const container = createDdbContainer();
-        const processor = container.resolve(Processor);
-
-        expect(processor.getShardState()).toEqual({});
+    describe("getShardState", () => {
+        it("returns an empty object", () => {
+            const container = createDdbContainer();
+            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            expect(processor.getShardState()).toEqual({});
+        });
     });
 });

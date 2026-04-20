@@ -2,8 +2,13 @@ import { describe, it, expect } from "vitest";
 import type { Abstraction } from "@webiny/di";
 import { Pipeline, Scanner, Processor, createFilter } from "~/domain/pipeline/index.ts";
 import type { PipelineConfig } from "~/domain/pipeline/Pipeline.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
+
+type ProcessorToken = Abstraction<
+    Processor.Interface<BaseTransformContext.Interface<FakeRecord>, any>
+>;
 
 function baseConfig(
     overrides: Partial<PipelineConfig<FakeRecord, FakeContext, FakeShard>> = {}
@@ -11,7 +16,7 @@ function baseConfig(
     return {
         name: "test-pipeline",
         scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
-        processor: Processor as Abstraction<Processor.Interface<FakeRecord, FakeContext>>,
+        processors: [Processor as ProcessorToken],
         filters: [],
         transformers: [],
         beforeHooks: [],
@@ -28,7 +33,7 @@ describe("Pipeline — construction + getters", () => {
 
         expect(pipeline.name).toBe("exposes-tokens");
         expect(pipeline.scannerToken).toBe(Scanner);
-        expect(pipeline.processorToken).toBe(Processor);
+        expect(pipeline.processorTokens).toEqual([Processor]);
         expect(pipeline.beforeHookTokens).toEqual([]);
         expect(pipeline.afterHookTokens).toEqual([]);
     });
