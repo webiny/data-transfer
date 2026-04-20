@@ -4,6 +4,7 @@ import { Logger } from "~/tools/Logger/index.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
+import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 
 export interface ProcessSegmentArgs {
     runId: string;
@@ -20,6 +21,8 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);
     const runner = container.resolve(PipelineRunner);
     const presetLoader = container.resolve(PresetLoader);
+
+    await loadUserSetup(argv.config, container, logger);
 
     const preset = await presetLoader.load(config.pipeline.preset);
     preset.configure(runner);

@@ -10,6 +10,7 @@
 export { createDdbTransfer } from "./features/MigrationConfig/createDdbTransfer.ts";
 export { createOsTransfer } from "./features/MigrationConfig/createOsTransfer.ts";
 export { loadEnv } from "./utils/load-env.ts";
+export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";
 
 // Transformer factories
 export { createTransformer } from "./transformers/createTransformer.ts";

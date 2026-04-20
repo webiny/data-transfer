@@ -10,6 +10,7 @@ import {
     AfterTransferHook,
     TransferContext
 } from "~/features/TransferLifecycle/index.ts";
+import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 
 export async function handler(configPath: string): Promise<void> {
     let container;
@@ -36,6 +37,8 @@ export async function handler(configPath: string): Promise<void> {
     const startTime = Date.now();
 
     try {
+        await loadUserSetup(configPath, container, logger);
+
         const beforeHook = container.resolve(BeforeTransferHook);
         logger.info("Running before-transfer hooks...");
         await beforeHook.execute();
