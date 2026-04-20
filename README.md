@@ -191,14 +191,18 @@ DDB context additionally provides:
 
 ## Writing a preset
 
-A preset is an object exported from a `.ts` file. It builds pipelines inside `configure({ runner, pipelineBuilderFactory, container })` using `pipelineBuilderFactory.create({...})`:
+A preset is an object exported as `default` from a `.ts` file. Wrap it in `createTransferPreset({...})` — a typed identity helper that gives you inference on `configure({...})` without needing to import and annotate `MigrationPreset`. Build pipelines via `pipelineBuilderFactory.create({...})`:
 
 ```typescript
-import type { MigrationPreset } from "@webiny/data-transfer";
-import { DdbScanner, DdbProcessor, createFilter } from "@webiny/data-transfer";
+import {
+  createTransferPreset,
+  DdbScanner,
+  DdbProcessor,
+  createFilter
+} from "@webiny/data-transfer";
 import { stampMigratedAt } from "./transformers/stampMigratedAt.ts";
 
-const preset: MigrationPreset = {
+export default createTransferPreset({
   name: "tagged-entries",
   description: "Stamp every internal-tagged CMS entry with migratedAt.",
   configure({ runner, pipelineBuilderFactory }) {
@@ -210,9 +214,7 @@ const preset: MigrationPreset = {
 
     runner.register(taggedEntries);
   }
-};
-
-export default preset;
+});
 ```
 
 Point `config.pipeline.preset` at the file path (relative to the config) — for example `"./presets/tagged-entries.ts"` or `"../shared/presets/foo.ts"`.
@@ -243,10 +245,9 @@ Builder methods:
 ### Zero-transformer preset (pure data copy)
 
 ```typescript
-import type { MigrationPreset } from "@webiny/data-transfer";
-import { DdbScanner, DdbProcessor } from "@webiny/data-transfer";
+import { createTransferPreset, DdbScanner, DdbProcessor } from "@webiny/data-transfer";
 
-const preset: MigrationPreset = {
+export default createTransferPreset({
   name: "copy",
   description: "Copy every record from source to target verbatim.",
   configure({ runner, pipelineBuilderFactory }) {
@@ -256,9 +257,7 @@ const preset: MigrationPreset = {
 
     runner.register(copyAll);
   }
-};
-
-export default preset;
+});
 ```
 
 `DdbProcessor.onEnd` emits a `PutRecord` for `ctx.record` at the end of each record. Pure-passthrough pipelines (no transformers, no filters) still produce writes.

@@ -1,5 +1,4 @@
-import type { MigrationPreset } from "@webiny/data-transfer";
-import { DdbScanner, DdbProcessor } from "@webiny/data-transfer";
+import { createTransferPreset, DdbScanner, DdbProcessor } from "@webiny/data-transfer";
 import { stampMigratedAt } from "../transformers/stampMigratedAt.ts";
 
 /**
@@ -20,7 +19,7 @@ import { stampMigratedAt } from "../transformers/stampMigratedAt.ts";
  * `container` is available if you need to `container.resolve(...)` any
  * custom service registered via a sibling `setup.ts`.
  */
-const preset: MigrationPreset = {
+export default createTransferPreset({
     name: "example",
     description: "Copy every record from source to target, stamping migratedAt on the way.",
     configure({ runner, pipelineBuilderFactory }) {
@@ -31,6 +30,4 @@ const preset: MigrationPreset = {
 
         runner.register(stampAll);
     }
-};
-
-export default preset;
+});
