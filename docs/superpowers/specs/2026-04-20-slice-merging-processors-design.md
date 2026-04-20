@@ -51,10 +51,13 @@ Inside a transformer:
 ```typescript
 const extractImageMetadata = createDdbTransformer("extractImageMetadata", async ctx => {
     // ctx has BaseContext + DdbProcessorSlice + S3ProcessorSlice merged
-    const buf = await ctx.getFile(ctx.record.key);          // S3 slice
+    const buf = await ctx.getFile(ctx.record.key);          // S3 slice helper
     ctx.record.metadata = sharp(buf).metadata();
-    ctx.copyFile(ctx.record.key, ctx.record.key);            // S3 slice
-    // ctx.putRecord auto-emitted by runner via DDB slice
+    ctx.copyFile(ctx.record.key, ctx.record.key);           // S3 slice helper
+    // OR raw command push if you need a custom command type:
+    // ctx.addCommand(MyCustomCmd.create({...}));
+    // After this transformer chain finishes, DdbProcessor.onEnd runs
+    // automatically and emits ctx.putRecord(ctx.record). No .build() arg.
 });
 ```
 
@@ -65,13 +68,15 @@ Type inference: `ctx` is `BaseTransformContext<BaseRecord> & DdbProcessorSlice &
 | # | Decision | Rationale |
 |---|---|---|
 | 1 | `runner.pipeline({ name, scanner, processors: [...] })` — array of processors per pipeline. | Explicit composition; per-pipeline opt-in to executor sets. |
-| 2 | Each processor exposes optional `extendContext(base) → slice`, `keys(): readonly string[]`, `execute(commands)`, `getShardState(): unknown`. | Slice is the helper contribution; keys declare what the processor consumes; execute drains; shard state is per-processor. |
+| 2 | Each processor exposes `keys()`, optional `extendContext(base) → slice`, optional `onEnd(ctx)`, `execute(commands)`, `getShardState(): unknown`. | Slice is the helper contribution; keys declare what the processor consumes; onEnd is the per-record terminal hook (replaces magic auto-put); execute drains; shard state is per-processor. |
 | 3 | Slice-key collision = the implicit "processor type". No `Role` enum. | The slice IS the contract. Two processors both contributing `putRecord` are by definition incompatible. Mechanical detection. |
-| 4 | Base context provides record + commands + original + modelProvider + cache + replace + queryRecord. Processor slices contribute everything else. | Record-shape concerns in base; target-side concerns in processors. |
+| 4 | Base context provides `record`, `original`, `commands`, `addCommand(cmd)`, `replace`, `queryRecord<T>(...)`, `modelProvider`, `cache`. Processor slices contribute everything else. | Record-shape + raw command access in base; target-side concerns in processors. |
 | 5 | One shared `DdbExecutor` (the actual batchPut implementation). `DdbProcessor` and `OsProcessor` both compose it as a dependency. | Single source of truth for "write records to a DDB table". OS adds gzip + ensureIndex preamble inside its `execute()`. |
-| 6 | Slice helpers stay synchronous wrappers (push commands to the bag). Async work (batched gzip, ensureIndex, batchPut, batchCopy) lives in `execute()`. | Auto-put runs sync. Lets us keep batched gzip with concurrency cap. |
-| 7 | Processors run `execute()` in parallel via `Promise.all` (matches today's behavior). | No sequencing constraints surfaced; revisit if needed. |
-| 8 | Compile-time slice-collision detection via TS conditional types (`DisjointKeys<TProcessors>`). Runtime throw as belt-and-suspenders for dynamic processor lists. | Best UX: bad pipeline configs fail at the call site, not at run time. |
+| 6 | Slice helpers stay synchronous wrappers (push commands to the bag). Async work (batched gzip, ensureIndex, batchPut, batchCopy) lives in `execute()`. | Slice helpers callable from sync contexts (onEnd, sync transformers). Lets us keep batched gzip with concurrency cap. |
+| 7 | Processors run `execute()` in parallel via `Promise.all` at shard end (matches today's behavior). `onEnd` runs sequentially per processor in array order, per record. | No sequencing constraints across processors at shard end; per-record onEnd order is deterministic and visible in the pipeline definition. |
+| 8 | `.build()` takes no arg. Per-record terminal behavior comes entirely from each processor's `onEnd` hook. | No magic, no per-pipeline override config. If you want custom end logic, write a transformer at the end of `.use()` chain — it runs before all `onEnd` hooks. |
+| 9 | Compile-time slice-collision detection via TS conditional types (`DisjointKeys<TProcessors>`). Runtime throw as belt-and-suspenders for dynamic processor lists. | Best UX: bad pipeline configs fail at the call site, not at run time. |
+| 10 | `addCommand(cmd)` on the base context is the canonical primitive. Slice helpers are sugar over it. Transformers can use slice helpers OR `addCommand` for raw command pushes. | Generic command emission must work for command types no slice provides (custom user commands, future processor types). |
 
 ## API surfaces
 
@@ -90,6 +95,18 @@ interface IProcessor<TBaseContext extends BaseTransformContext.Interface<unknown
 
     /** Per-record helper contribution. Called once per record; returns a slice that's spread onto the base ctx. Optional — pure execute-only processors omit it. */
     extendContext?(base: TBaseContext): TSlice;
+
+    /**
+     * Per-record terminal hook. Runs after the transformer chain completes,
+     * before processors' execute() is called at shard end. Same signature as
+     * a transformer — uses slice helpers (or addCommand) to push terminal
+     * commands. Optional — processors without a sensible per-record default
+     * (e.g., S3Processor) omit it.
+     *
+     * Replaces today's `runner auto-puts ctx.record` magic — now declared in
+     * the processor that owns the put.
+     */
+    onEnd?(ctx: TBaseContext & TSlice): void | Promise<void>;
 
     /** Drain the processor's commands from the bag and write to target. */
     execute(commands: Commands): Promise<void>;
@@ -117,10 +134,15 @@ interface IBaseTransformContext<TRecord> {
     record: TRecord;
     readonly original: Readonly<TRecord>;
     commands: Commands;
+    /** Convenience over commands.add(cmd). Transformers and onEnd hooks use this for raw command pushes (or use slice helpers for typed sugar). */
+    addCommand(cmd: Command): void;
     modelProvider: ModelProvider.Interface;
     cache: Cache.Interface;
     replace(newRecord: TRecord): void;
-    queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
+    queryRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
 }
 ```
 
@@ -149,9 +171,13 @@ class DdbProcessorImpl implements Processor.Interface<BaseTransformContext.Inter
         const targetTable = this.config.target.dynamodb.tableName;
         return {
             putRecord(record: Record<string, unknown>) {
-                base.commands.add(PutRecord.create({ table: targetTable, record }));
+                base.addCommand(PutRecord.create({ table: targetTable, record }));
             }
         };
+    }
+
+    public onEnd(ctx: BaseTransformContext.Interface<BaseRecord> & DdbProcessorSlice): void {
+        ctx.putRecord(ctx.record);
     }
 
     public async execute(commands: Commands): Promise<void> {
@@ -192,9 +218,13 @@ class OsProcessorImpl implements Processor.Interface<BaseTransformContext.Interf
         const targetTable = this.config.target.opensearch.tableName;
         return {
             putRecord(record: Record<string, unknown>) {
-                base.commands.add(PutRecord.create({ table: targetTable, record }));
+                base.addCommand(PutRecord.create({ table: targetTable, record }));
             }
         };
+    }
+
+    public onEnd(ctx: BaseTransformContext.Interface<BaseRecord> & OsProcessorSlice): void {
+        ctx.putRecord(ctx.record);
     }
 
     public async execute(commands: Commands): Promise<void> {
@@ -247,13 +277,16 @@ class S3ProcessorImpl implements Processor.Interface<BaseTransformContext.Interf
         const sourceS3 = this.sourceS3;
         return {
             copyFile(sourceKey: string, targetKey: string) {
-                base.commands.add(S3Copy.create({ sourceBucket, sourceKey, targetBucket, targetKey }));
+                base.addCommand(S3Copy.create({ sourceBucket, sourceKey, targetBucket, targetKey }));
             },
             async getFile(key: string): Promise<Buffer | null> {
                 return sourceS3.getObject(sourceBucket, key);
             }
         };
     }
+
+    // No onEnd — S3 doesn't have a sensible per-record default. Transformers
+    // call ctx.copyFile(...) explicitly when they want to emit a copy.
 
     public async execute(commands: Commands): Promise<void> {
         const copies = commands.get<S3Copy>(S3Copy.key);
@@ -393,7 +426,8 @@ ctx = mergeSlices(base, pipeline.processors)   // base + each processor's slice 
 if !pipeline.acceptsRecord(record): continue
 for transformer in pipeline.transformers:
     await transformer(ctx)
-ctx.putRecord(ctx.record)                      // auto-put — works because either DdbProcessor or OsProcessor contributed putRecord
+for processor in pipeline.processors:
+    await processor.onEnd?.(ctx)               // per-record terminal hook (e.g., DdbProcessor.onEnd → ctx.putRecord(ctx.record))
 ```
 
 At shard end:
