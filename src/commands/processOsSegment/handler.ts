@@ -50,12 +50,14 @@ export async function handler(argv: ProcessOsSegmentArgs): Promise<void> {
     const merged = new Map<string, string>();
     for (const processor of processors) {
         const state = (processor as { getShardState(): OsShardStateShape }).getShardState();
-        if (state && typeof state === "object" && Array.isArray(state.touchedIndexes)) {
-            for (const item of state.touchedIndexes) {
-                if (!merged.has(item.indexName)) {
-                    merged.set(item.indexName, item.originalRefresh);
-                }
+        if (!state || typeof state !== "object" || !Array.isArray(state.touchedIndexes)) {
+            continue;
+        }
+        for (const item of state.touchedIndexes) {
+            if (merged.has(item.indexName)) {
+                continue;
             }
+            merged.set(item.indexName, item.originalRefresh);
         }
     }
 
