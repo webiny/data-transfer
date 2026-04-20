@@ -5,7 +5,7 @@ import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/index.ts";
-import { S3CopyExecutor } from "~/features/S3CopyExecutor/index.ts";
+import { S3Processor } from "~/features/S3Processor/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
@@ -25,7 +25,7 @@ describe("DdbProcessor", () => {
         const container = createDdbContainer();
         const processor = container.resolve(Processor);
         const putExecutor = container.resolve(DdbExecutor);
-        const s3CopyExecutor = container.resolve(S3CopyExecutor);
+        const s3CopyExecutor = container.resolve(S3Processor);
         const logger = container.resolve(Logger);
 
         const putSpy = vi.spyOn(putExecutor, "execute");
@@ -63,7 +63,7 @@ describe("DdbProcessor", () => {
         const container = createDdbContainer();
         const processor = container.resolve(Processor);
         const putExecutor = container.resolve(DdbExecutor);
-        const s3CopyExecutor = container.resolve(S3CopyExecutor);
+        const s3CopyExecutor = container.resolve(S3Processor);
         const logger = container.resolve(Logger);
 
         const putSpy = vi.spyOn(putExecutor, "execute");

@@ -26,7 +26,7 @@ import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.t
 import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
-import { S3CopyExecutorFeature } from "../../src/features/S3CopyExecutor/index.ts";
+import { S3ProcessorFeature } from "../../src/features/S3Processor/index.ts";
 import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
 
@@ -99,7 +99,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     TransformContextFeature.register(container);
     PipelineRunnerFeature.register(container);
     DdbExecutorFeature.register(container);
-    S3CopyExecutorFeature.register(container);
+    S3ProcessorFeature.register(container);
     DdbScannerFeature.register(container);
     DdbProcessorFeature.register(container);
 
