@@ -17,9 +17,6 @@ export { createDdbTransformer } from "./transformers/createDdbTransformer.ts";
 export { createOsTransformer } from "./transformers/createOsTransformer.ts";
 
 // Pipeline factories
-export { createPipeline, type PipelineDefinition } from "./domain/pipeline/createPipeline.ts";
-export { createDdbPipeline } from "./domain/pipeline/createDdbPipeline.ts";
-export { createOsPipeline } from "./domain/pipeline/createOsPipeline.ts";
 export { createFilter, type Filter } from "./domain/pipeline/Filter.ts";
 
 // Scanner / processor implementation tokens — required when registering a
