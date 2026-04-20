@@ -3,6 +3,7 @@ import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelP
 import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
+import type { Command } from "~/domain/transform/commands/Command.ts";
 
 // ============================================================================
 // Base Context Interface
@@ -17,6 +18,13 @@ interface IBaseTransformContext<TRecord = Record<string, unknown>> {
     replace<TNew>(newRecord: TNew): void;
     putRecord(record: Record<string, unknown>): void;
     queryRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
+    /**
+     * Push a command to the bag. Convenience over `commands.add(cmd)`. Slice
+     * helpers (in the upcoming per-command-processor refactor) use this;
+     * transformers reach for it when emitting custom command types no slice
+     * helper provides.
+     */
+    addCommand(cmd: Command): void;
 }
 
 // ============================================================================

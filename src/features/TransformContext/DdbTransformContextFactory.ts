@@ -1,4 +1,5 @@
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { Command } from "~/domain/transform/commands/Command.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
@@ -45,6 +46,10 @@ class DdbTransformContextFactoryImpl implements DdbTransformContextFactoryAbstra
 
             replace(newRecord) {
                 ctx.record = newRecord;
+            },
+
+            addCommand: (cmd: Command) => {
+                commands.add(cmd);
             },
 
             putRecord: (record: Record<string, unknown>) => {

@@ -126,5 +126,19 @@ describe("DdbTransformContextFactory", () => {
             const ctx2 = factory.create({ record: testRecord });
             expect(ctx2.cache.get("shared-key")).toBe("shared-value");
         });
+
+        it("addCommand pushes to the underlying commands bag", () => {
+            const container = createDdbContainer();
+            const factory = container.resolve(DdbTransformContextFactory);
+
+            const ctx = factory.create({ record: testRecord });
+            const cmd = PutRecord.create({
+                table: "t",
+                record: { PK: "1", SK: "1" }
+            });
+            ctx.addCommand(cmd);
+
+            expect(ctx.commands.get<PutRecord>(PutRecord.key)).toEqual([cmd]);
+        });
     });
 });
