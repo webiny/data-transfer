@@ -255,7 +255,7 @@ The runner auto-emits a `PutRecord` for `ctx.record` at the end of each transfor
 
 ## Built-in presets
 
-The package ships none today. The `PresetLoader` does scan `node_modules/@webiny/data-transfer/src/presets/builtin/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. Until then, every preset is path-resolved from your config file.
+The package ships none today. The `PresetLoader` does scan `node_modules/@webiny/data-transfer/src/presets/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. `example.ts` is excluded from discovery (it's the canonical reference, not a real preset). Until a built-in lands, every preset is path-resolved from your config file.
 
 ## Pipeline runtime semantics
 

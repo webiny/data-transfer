@@ -27,7 +27,7 @@ This document is read by AI agents when working on this codebase. It describes t
 
 ## 2. Public API surface
 
-Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers, pipelines, or presets are re-exported. The package ships no built-in presets today; `PresetLoader` does scan `src/presets/builtin/` (resolved relative to its own `import.meta.url`, works from source or `node_modules/`) — convention is **filename = preset name**, drop a `.ts` file in there and it ships, no other code change. `src/presets/example.ts` is the canonical reference for "how to write a preset" but lives at the parent level (NOT scanned).
+Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers, pipelines, or presets are re-exported. The package ships no built-in presets today; `PresetLoader` does scan `src/presets/` (resolved relative to its own `import.meta.url`, works from source or `node_modules/`) — convention is **filename = preset name**, drop a `.ts` file in there and it ships, no other code change. `src/presets/example.ts` is the canonical reference for "how to write a preset" and is excluded from discovery by exact filename match.
 
 - **Config builders:** `createDdbTransfer`, `createOsTransfer`, `loadEnv`
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
@@ -93,9 +93,10 @@ src/
 │   │   └── (cms/ also has fieldUtils.ts, fieldVisitor.ts, lexicalRenderer.ts,
 │   │       modelTypes.ts — helpers local to CMS transformers)
 │   └── index.ts              # Top-level barrel
-├── presets/                  # example.ts — canonical reference (NOT auto-discovered).
-│   └── builtin/              # Auto-discovered by PresetLoader (filename = preset name).
-│                             # Empty today; drop a .ts file here and it ships.
+├── presets/                  # Built-in presets — auto-discovered by PresetLoader
+│                             # (filename = preset name). Empty today aside from
+│                             # example.ts (canonical reference; excluded from
+│                             # discovery by exact filename match).
 └── utils/
     └── load-env.ts           # loadEnv(import.meta.url) — exposed as public API
 ```
@@ -232,7 +233,7 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - **`@webiny/aws-sdk` wrapper** — AWS imports come from `@webiny/aws-sdk/client-{dynamodb,s3}` + helpers `getDocumentClient`, `createS3Client`. Don't import `@aws-sdk/client-*` directly. One exception: `QueryCommand` still comes from `@aws-sdk/lib-dynamodb` because the wrapper's re-export expects pre-marshalled AttributeValues — flagged for Webiny team to fix.
 - **One executor per command type** — each command-type executor is single-responsibility (`PutDynamoDbRecordExecutor`, `S3CopyExecutor`, `PutOsDynamoDbRecordExecutor`). Processors own dispatch + unknown-key warnings. Adding a new command = adding a new executor without touching existing ones. `PutOsDynamoDbRecordExecutor` composes `PutDynamoDbRecordExecutor` for the final DDB write; it does NOT duplicate put logic. Cross-cutting shard state (e.g. `TouchedIndexes`) lives in dedicated DI singletons, not on the processor.
 - **Pipeline construction lives on the runner** — `runner.pipeline({ name, scanner, processor })` is the only entry point. The deleted factory triad (`createPipeline` / `createDdbPipeline` / `createOsPipeline`) drove users through three near-identical functions and split type inference across config + register time. The runner-centric API infers `TRecord` / `TContext` / `TShard` from the Impl class pair at construction. `.build()` is explicit and type-enforced (returns immutable `Pipeline`); `runner.register(...)` is variadic, chainable, and throws on duplicate names. Multiple `.filter()` calls AND-compose regardless of position; `.use()` insertion order is preserved for transformer execution. Don't reintroduce a standalone factory.
-- **Built-in presets are auto-discovered** — `PresetLoader` scans `src/presets/builtin/` (relative to its own `import.meta.url`, so dev / installed layouts both work). Convention: **filename === preset name**. Adding a built-in is a file drop, not a code change. Don't reintroduce a hardcoded `BUILT_IN_PRESETS` map or a "register your preset here" registry.
+- **Built-in presets are auto-discovered** — `PresetLoader` scans `src/presets/` (relative to its own `import.meta.url`, so dev / installed layouts both work). Convention: **filename === preset name**. `example.ts` is excluded by exact filename match. Adding a built-in is a file drop, not a code change. Don't reintroduce a hardcoded `BUILT_IN_PRESETS` map or a "register your preset here" registry.
 
 ---
 
