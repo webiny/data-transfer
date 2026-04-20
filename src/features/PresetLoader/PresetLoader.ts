@@ -14,10 +14,6 @@ import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 // and it ships — no other code change.
 const BUILTIN_PRESETS_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../presets");
 
-// example.ts is the canonical "how to write a preset" reference and is NOT a
-// real shipped preset — exclude it from discovery by exact filename match.
-const EXCLUDED_FILENAMES: ReadonlySet<string> = new Set(["example.ts", "example.js"]);
-
 const PRESET_EXTENSIONS: ReadonlySet<string> = new Set([".ts", ".js"]);
 
 class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
@@ -68,7 +64,6 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
         }
         const entries = this.dirTool.readDir(BUILTIN_PRESETS_DIR) ?? [];
         return entries
-            .filter(name => !EXCLUDED_FILENAMES.has(name))
             .map(name => this.stripPresetExtension(name))
             .filter((name): name is string => name !== null)
             .sort();
@@ -116,11 +111,7 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
 
     private findBuiltInPath(presetName: string): string | null {
         for (const ext of PRESET_EXTENSIONS) {
-            const filename = `${presetName}${ext}`;
-            if (EXCLUDED_FILENAMES.has(filename)) {
-                continue;
-            }
-            const candidate = join(BUILTIN_PRESETS_DIR, filename);
+            const candidate = join(BUILTIN_PRESETS_DIR, `${presetName}${ext}`);
             if (this.fileTool.exists(candidate)) {
                 return candidate;
             }

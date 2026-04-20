@@ -8,7 +8,7 @@ A generic data-transfer tool for Webiny environments. Copies DynamoDB + S3 (or O
 - **Prod → dev seeding** — zero transformers, just copy.
 - **Custom transfers** — write your own transformers + pipelines + preset for bespoke data moves.
 
-The package ships no built-in presets — you author your own. See `templates/presets/example.ts` (scaffolded by `init`) and `src/presets/example.ts` (canonical reference).
+The package ships one built-in preset (`v5-to-v6-ddb`) plus full authoring support for your own. See `templates/presets/example.ts` (scaffolded by `init`) for the authoring pattern.
 
 ## Quick start
 
@@ -264,7 +264,7 @@ export default createTransferPreset({
 
 ## Built-in presets
 
-The package ships none today. The `PresetLoader` does scan `node_modules/@webiny/data-transfer/src/presets/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. `example.ts` is excluded from discovery (it's the canonical reference, not a real preset). Until a built-in lands, every preset is path-resolved from your config file.
+The package ships one: `v5-to-v6-ddb` — the full Webiny v5 → v6 DDB migration. Pass it by name via `config.pipeline.preset: "v5-to-v6-ddb"`. The `PresetLoader` scans `node_modules/@webiny/data-transfer/src/presets/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. Custom presets are still path-resolved from your config file (`"./presets/my-preset.ts"`).
 
 ## Pipeline runtime semantics
 
