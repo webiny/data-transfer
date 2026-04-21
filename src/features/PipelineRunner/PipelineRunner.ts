@@ -270,32 +270,32 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         // factory. Slice helpers close over this bag via ctx.addCommand.
         const { ctx, commands } = this.baseContextFactory.create<unknown>({ record });
 
-        // Spread each processor's slice over ctx in array order. Later
-        // processors may override earlier keys — type-level DisjointKeys
-        // makes that a compile error, but at runtime we just spread.
-        let merged: Record<string, unknown> = ctx as unknown as Record<string, unknown>;
+        // Merge each processor's slice ONTO the base ctx (by reference,
+        // not a spread copy). `ctx.replace(newRecord)` closes over this
+        // same ctx — if transformers received a spread copy instead, the
+        // replace would update the base ctx but the copy's .record would
+        // still point at the pre-replace record. Mutating ctx keeps one
+        // shared object across transformers, onEnd, and replace().
+        // Slice-key collisions are a compile-time error via DisjointKeys.
         for (const processor of processors) {
-            if (processor.extendContext) {
-                const slice = processor.extendContext(
-                    merged as unknown as BaseTransformContext.Interface<unknown>
-                );
-                merged = { ...merged, ...(slice as Record<string, unknown>) };
+            if (!processor.extendContext) {
+                continue;
             }
+            Object.assign(ctx, processor.extendContext(ctx));
         }
 
-        const effective = merged as unknown as BaseTransformContext.Interface<unknown> & object;
-
         for (const transformer of pipeline.transformerFns) {
-            await transformer(effective as never);
+            await transformer(ctx as never);
         }
 
         // Per-record terminal hooks: run each processor's onEnd in array
         // order. onEnd uses slice helpers to push terminal commands into
         // the same per-record bag.
         for (const processor of processors) {
-            if (processor.onEnd) {
-                await processor.onEnd(effective);
+            if (!processor.onEnd) {
+                continue;
             }
+            await processor.onEnd(ctx as never);
         }
 
         // Fold this record's commands into the single shared shard buffer.
