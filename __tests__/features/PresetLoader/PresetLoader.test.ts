@@ -19,32 +19,16 @@ describe("PresetLoader Feature", () => {
     });
 
     describe("getBuiltInPresets", () => {
-        it("should return built-in preset names", () => {
+        it("discovers built-ins from src/presets/", () => {
             const container = createDdbContainer();
             const loader = container.resolve(PresetLoader);
-            const presets = loader.getBuiltInPresets();
-            expect(presets).toContain("v5-to-v6");
-            expect(presets).toContain("v5-to-v6-os");
+            // Filename (without extension) IS the preset name — drop a .ts file
+            // in src/presets/ and it ships in the next release.
+            expect(loader.getBuiltInPresets()).toEqual(["v5-to-v6-ddb"]);
         });
     });
 
     describe("load", () => {
-        it("should load v5-to-v6 built-in preset", async () => {
-            const container = createDdbContainer();
-            const preset = await container.resolve(PresetLoader).load("v5-to-v6");
-            expect(preset.name).toBe("v5-to-v6");
-            expect(preset.description).toBeDefined();
-            expect(typeof preset.configure).toBe("function");
-        });
-
-        it("should load v5-to-v6-os built-in preset", async () => {
-            const container = createDdbContainer();
-            const preset = await container.resolve(PresetLoader).load("v5-to-v6-os");
-            expect(preset.name).toBe("v5-to-v6-os");
-            expect(preset.description).toBeDefined();
-            expect(typeof preset.configure).toBe("function");
-        });
-
         it("should throw on unknown preset name", async () => {
             const container = createDdbContainer();
             await expect(container.resolve(PresetLoader).load("nonexistent")).rejects.toThrow(

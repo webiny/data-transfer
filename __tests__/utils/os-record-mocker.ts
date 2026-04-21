@@ -1,6 +1,6 @@
-import { GzipCompression } from "../../src/utils/gzip-compression.ts";
+import { GzipCompressionImpl } from "../../src/tools/GzipCompression/GzipCompression.ts";
 
-const gzip = new GzipCompression();
+const gzip = new GzipCompressionImpl();
 
 // ============================================================================
 // Types

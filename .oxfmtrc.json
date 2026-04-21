@@ -30,17 +30,18 @@
     "docs",
     "node_modules",
     "plan",
-    ".transfer"
+    ".transfer",
+    "__tests__/data"
   ],
   "overrides": [
     {
       "files": [
         "__tests__/**/*.{js,ts,json}",
         "examples/**/*.{js,ts,json}",
+        "projects/**/*.{js,ts,json}",
         "src/**/*.{js,ts,json}",
         "templates/**/*.{js,ts,json}",
         "bin.js",
-        "jest-dynalite.config.js",
         "tsconfig.json",
         "vitest.config.ts"
       ],

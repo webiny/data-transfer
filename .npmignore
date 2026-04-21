@@ -1,0 +1,72 @@
+# What ships in the npm package:
+#   src/                     — TypeScript source (imported via package.json#exports)
+#   templates/               — scaffolded by `init` into user projects
+#   bin.js                   — CLI entrypoint (dereferences tsconfig.json)
+#   tsconfig.json            — bin.js hands this path to tsx's register()
+#   package.json
+#   README.md
+#   LICENSE
+#
+# Everything listed below MUST NEVER go in the package. Adding something
+# new and confidential at repo root? Add it here too.
+
+# Note on paths: leading `/` anchors to the package root so rules here
+# don't accidentally nuke the shipped templates/ (it has its own
+# AGENTS.md / CLAUDE.md / projects/ that MUST ship).
+
+# ─── Tests + fixtures ─────────────────────────────────────────────
+/__tests__/
+/vitest.config.ts
+
+# ─── Internal docs (README.md at root is the user-facing one) ─────
+/docs/
+/AGENTS.md
+/CLAUDE.md
+
+# ─── Dev-only planning + runtime state + dev projects ─────────────
+/plan/
+/projects/
+/scripts/
+/.transfer/
+/.sample/
+/.agents/
+
+# ─── Local Claude skills — users get them via templates/.claude/ ──
+.claude/
+
+# ─── Dev tooling config ───────────────────────────────────────────
+.oxfmtrc.json
+.oxfmtignore
+skills-lock.json
+
+# ─── Lockfiles + build output + package-manager internals ─────────
+yarn.lock
+.yarn/
+.pnp.*
+coverage/
+dist/
+*.tsbuildinfo
+
+# ─── Editor / CI / VCS ────────────────────────────────────────────
+.git/
+.gitignore
+.github/
+.idea/
+.vscode/
+.DS_Store
+
+# ─── Secrets — root-level only; templates/.env.example still ships ─
+/.env
+/.env.*
+
+# ─── Logs + temp + junk ───────────────────────────────────────────
+logs.txt
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.tmp/
+.swc/
+.nx/
+.changelog
+.history/
+.files/

@@ -29,7 +29,7 @@ To enable, set `modelsDir` in your config:
 
 ```typescript
 pipeline: {
-    preset: "v5-to-v6",
+    preset: "../../presets/example.ts",
     segments: 4,
     modelsDir: "./models"
 }

@@ -1,6 +1,6 @@
-import { SourceDynamoDbClient } from "../DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { Logger } from "../Logger/abstractions/Logger.ts";
-import { MigrationConfig } from "../MigrationConfig/abstractions/MigrationConfig.ts";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { TenantLocales as TenantLocalesAbstraction } from "./abstractions/TenantLocales.ts";
 
 class TenantLocalesImpl implements TenantLocalesAbstraction.Interface {

@@ -1,4 +1,4 @@
-import { createFeature } from "@/src/base/index.ts";
+import { createFeature } from "~/base/index.ts";
 import { WorkerSpawner } from "./WorkerSpawner.ts";
 
 export const WorkerSpawnerFeature = createFeature({

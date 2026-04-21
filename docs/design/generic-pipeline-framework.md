@@ -1,0 +1,695 @@
+# Generic Pipeline Framework — Design Exploration
+
+**Status:** Exploration / not implemented
+**Date:** 2026-04-17
+**Motivation:** The tool today is Webiny-specific (DDB + OS pipelines). We want it to be a generic data-transfer framework where any source (MySQL, S3, APIs) and any target can be plugged in via a preset.
+
+---
+
+## The tension
+
+The current codebase treats `BaseRecord` (PK/SK/_et/_ct/_md/TYPE) and `Command` keys (`PUT_RECORD`, `S3_COPY`) as baseline primitives. Two worker commands exist — `processSegment` and `processOsSegment` — each with ~90% identical preamble (config → bootstrap → preload tenants → preload models → load preset → configure runner → scan loop). The loop then diverges.
+
+Real-world divergence points (from a parallel explorer agent's diff):
+
+1. **Table name** — `config.source.dynamodb.tableName` vs `config.source.opensearch.tableName`
+2. **Preprocessor** — NoOp (DDB) vs `OsRecordDecompressor.decompress` (OS)
+3. **Flush protocol** — `DdbCommandExecutor.execute(commands)` vs `OsCommandExecutor.execute(items, touchedIndexes)` with per-item `{ metadata, locale }`
+4. **Finalizer** — nothing (DDB) vs persist `touchedIndexes` to `.transfer/<runId>/segment-N-indexes.json` (OS)
+
+That's the entire set of runtime differences between the two handlers.
+
+## Short-term unification (Webiny-only scope)
+
+If we stay within DDB+OS, the minimal design is a `SegmentStrategy` domain interface returned by the preset:
+
+```typescript
+export interface SegmentStrategy {
+    readonly sourceTableName: string;
+    preprocess(rawRecord: BaseRecord): Promise<BaseRecord | null>;
+    executeCommands(commands: Commands, sourceRecord: BaseRecord): Promise<void>;
+    finalize?(runId: string, segment: number): Promise<void>;
+}
+
+export interface MigrationPreset {
+    name: string;
+    description: string;
+    configure(runner: PipelineRunner.Interface): void;
+    createStrategy(container: Container): SegmentStrategy;
+}
+```
+
+Handler unifies into one file. `OsSegmentStrategy` owns its own `touchedIndexes: Map` and persists it in `finalize()` via injected `FileTool`. `processOsSegment` command gets deleted.
+
+**Concerns raised by reviewer agent:**
+
+- `touchedIndexes` is a cross-process contract (later consumed by the AfterTransferHook). If strategy owns it and writes the `.transfer/` file itself, the concern neutralizes.
+- Per-record aux data: OS needs `{ metadata, locale }` paired with each record. Addressed by `executeCommands(commands, sourceRecord)` — strategy can look up aux data from the source record. OS strategy keeps an internal WeakMap or similar.
+- `storage: "ddb" | "os"` config discriminator stays — it still gates which services `bootstrap.ts` registers (S3Client ddb-only, OpenSearchClient os-only). Preset relies on these being available when `createStrategy(container)` runs.
+- Bootstrap ordering (config → bootstrap → preset load) is preserved. Preset doesn't drive service registration; it consumes services already registered by bootstrap.
+
+This unification is achievable in a focused PR. Biggest risk is interface bloat — three abstractions to hide one decision.
+
+## Long-term: fully generic framework
+
+The bigger ambition is to support **any source + any target**. Examples the user raised:
+
+- MySQL source: reads rows via `SELECT ... LIMIT/OFFSET`, records are schema-defined rows
+- S3-direct source: reads file bytes directly from a bucket, records are `{ key, bytes, metadata }`
+- MongoDB target: writes via `insertMany`
+- HTTP API target: POSTs transformed records to an endpoint
+
+To support these, the abstractions in this codebase need to widen.
+
+### What has to change
+
+1. **`BaseRecord` is Webiny-specific.** A MySQL row doesn't have PK/SK. Pipeline, `Transformer`, `TransformContext` must be generic over `<TRecord>`. Today `TransformPipeline<TInput extends Record<string, unknown>>` is already generic — the only baked-in assumption is that the auto-put at end of `pipeline.run()` writes a `PutRecord` command. Make the auto-put opt-in (or preset-driven) and the pipeline is truly generic.
+
+2. **Commands are target-specific.** `PutRecord` and `S3Copy` presume DDB + S3. MySQL needs `InsertRow`/`UpdateRow`/`DeleteRow`. HTTP needs `HttpPost`. The `Command` interface is already abstract (just `key` + optional `dedupKey`) — each target ecosystem registers its own concrete commands.
+
+3. **`TenantLocales.preload()` + `ModelProvider.preloadModels()` are Webiny-specific preamble.** They move into the preset's `preload()` hook. The generic handler doesn't know about them.
+
+4. **Segmentation is source-specific.** DDB has native parallel scan. MySQL needs ID-range or LIMIT/OFFSET stripes. S3 listing needs prefix splitting. Sequential DB exports don't segment at all. The `{ segment, total }` params become source-specific — maybe `source.scan(shard)` where `shard` is opaque to the handler.
+
+5. **Filter is preset-specific.** `TenantLocales.isDefaultLocaleRecord` is a Webiny concept. Most pipelines won't need it. Filter belongs on the preset, not the handler.
+
+6. **Config schema becomes user-defined.** DDB config has `{ dynamodb, s3 }`. MySQL config has `{ host, port, database, username, password }`. The `storage` discriminator dies; the preset declares its own config slice and validates it.
+
+### Proposed generic preset shape
+
+```typescript
+export interface Preset<TRecord = unknown, TShard = unknown> {
+    name: string;
+    description: string;
+
+    // Source
+    source: Source<TRecord, TShard>;
+
+    // Target (per-preset; handles its own commands)
+    target: Target;
+
+    // Context factory — creates per-record context for transformers
+    contextFactory: ContextFactory<TRecord>;
+
+    // Transformations
+    pipelines: TransformPipeline<TRecord>[];
+
+    // Optional lifecycle
+    preload?: () => Promise<void>;
+    filter?: (record: TRecord) => boolean;
+    finalize?: (args: FinalizeArgs) => Promise<void>;
+}
+
+export interface Source<TRecord, TShard> {
+    /** List available shards for parallel processing (or [null] if non-segmentable) */
+    listShards(): Promise<TShard[]>;
+    /** Stream records in a given shard */
+    scan(shard: TShard): AsyncIterable<TRecord>;
+}
+
+export interface Target {
+    /** Flush accumulated commands */
+    execute(commands: Commands): Promise<void>;
+    /** Optional post-segment work (e.g., persist state for after-hooks) */
+    finalize?(args: FinalizeArgs): Promise<void>;
+}
+
+export interface ContextFactory<TRecord> {
+    create(params: { record: TRecord }): TransformContext<TRecord>;
+}
+```
+
+### Generic handler pseudocode
+
+```typescript
+export async function handler(argv: ProcessShardArgs): Promise<void> {
+    const config = await loadConfig(argv.config);
+    const container = bootstrap({ config });
+    const logger = container.resolve(Logger).child(`[shard ${argv.shard}] `);
+
+    const presetLoader = container.resolve(PresetLoader);
+    const preset = await presetLoader.load(config.pipeline.preset);
+
+    await preset.preload?.();
+
+    const runner = container.resolve(PipelineRunner);
+    for (const pipeline of preset.pipelines) {
+        runner.register(pipeline);
+    }
+
+    for await (const raw of preset.source.scan(argv.shard)) {
+        if (preset.filter && !preset.filter(raw)) { continue; }
+        const commands = await runner.processRecord(raw, preset.contextFactory);
+        batch.merge(commands);
+        if (batch.size() >= BATCH_SIZE) {
+            await preset.target.execute(batch);
+            batch.reset();
+        }
+    }
+
+    await preset.target.execute(batch);
+    await preset.target.finalize?.({ runId: argv.runId, shard: argv.shard });
+}
+```
+
+### Webiny v5-to-v6 as the first user
+
+Once generic, the existing v5-to-v6 work becomes preset code:
+
+- `V5ToV6DdbPreset.source` = new `DdbScanner(config.source.dynamodb.tableName)`
+- `V5ToV6DdbPreset.target` = new `DdbTarget(TargetDynamoDbClient, TargetS3Client)`
+- `V5ToV6DdbPreset.contextFactory` = `DdbTransformContextFactory`
+- `V5ToV6DdbPreset.preload` = `() => tenantLocales.preload().then(() => modelProvider.preloadModels(tenantLocales.getMap()))`
+- `V5ToV6DdbPreset.filter` = `record => tenantLocales.isDefaultLocaleRecord(record)`
+
+OS variant uses `OsScanner`, `OsTarget` (owns gzip + ensureIndex + touchedIndexes + finalize-write-file internally), and a different contextFactory.
+
+### Orchestrator changes
+
+The main `run` command currently spawns one worker process per segment with `--segment N --total T`. In the generic model, it spawns one per shard: `source.listShards()` returns the list, orchestrator maps each to a worker. For non-segmentable sources (sequential MySQL export), `listShards()` returns `[null]` and there's one worker.
+
+### Config
+
+Two options for config:
+
+**A) Generic envelope + preset-defined payload**
+```typescript
+{
+    preset: "mysql-to-postgres",
+    source: { host, port, database, user, password },
+    target: { host, port, database, user, password },
+    pipeline: { segments, modelsDir }
+}
+```
+Preset validates its own `source`/`target` slices via Zod.
+
+**B) Preset-defined entire config**
+```typescript
+createMysqlTransfer({ ... })  // user imports from preset package
+```
+Per-preset builder functions. No generic config shape.
+
+**Recommendation:** (A) for the core, (B) on top (builder functions live in preset packages and produce (A)-shaped objects).
+
+### Open questions
+
+- How does the preset access container services from inside `source` / `target` / `contextFactory`? Likely: preset is loaded AFTER bootstrap, so it resolves services from the container at construction time (the approach in the short-term unification plan).
+- What about presets that need their own DI services (e.g., a MySQLClient)? The preset file could register its own feature in bootstrap BEFORE the handler resolves anything. Requires a preset lifecycle hook `registerServices(container)`.
+- Testing story — today `createDdbContainer` / `createOsContainer` give us a full container for tests. A generic framework needs per-preset test containers, OR a builder that composes them.
+
+## Pipeline-centric refinement (from `src/presets/example.ts`)
+
+After the above was written, Bruno sketched `src/presets/example.ts` to make the ergonomics concrete. That sketch clarifies a better decomposition than "preset owns one source/target":
+
+**One preset can register multiple pipelines, each with its OWN source and processor.** Scanner/processor binding moves from preset level to pipeline level.
+
+```typescript
+export const example: MigrationPreset = {
+    name: "example",
+    description: "Example complex preset",
+    configure(runner: PipelineRunner.Interface): void {
+        const regularPipeline = new PipelineBuilder({
+            processor: RegularProcessor,
+            scanner: RegularDynamoDbTableScanner
+        })
+            .filter(someFilterWhichOnlyWorksOnDynamoDbRegularRecord)
+            .use(someTransformation)
+            .use(someOtherTransformation)
+            .build();
+
+        const s3Pipeline = new PipelineBuilder({
+            processor: S3Processor,
+            scanner: S3Scanner
+        })
+            .filter(filterFile)
+            .use(someS3Transformation)
+            .build();
+
+        const osPipeline = new PipelineBuilder({
+            processor: OSProcessor,
+            scanner: OSTableScanner
+        })
+            .filter(filterOsRecord)
+            .use(someOsTransformation)
+            .beforeExecuteCommands(DisableOsIndexesWhichAreGettingTouched)
+            .afterExecuteCommands(ReenableOsIndexes)
+            .build();
+
+        runner.register(regularPipeline)
+              .register(s3Pipeline)
+              .register(osPipeline);
+    }
+};
+```
+
+### Why this is better
+
+1. **Type safety through scanner binding.** `PipelineBuilder({ scanner: OSTableScanner })` fixes `TRecord` to `OsRecord`. Filters and transformers attached after that point are statically typechecked against `OsRecord`. Can't accidentally put a DDB-only filter on an OS pipeline.
+
+2. **Multi-source presets become trivial.** A single "v5-to-v6 full migration" preset can register:
+   - DDB regular records pipeline
+   - OS records pipeline
+   - S3 file copy pipeline
+   - (future) MySQL backup pipeline
+
+   These run in parallel (or staged) under one preset — no need to split into three presets that the user has to invoke separately.
+
+3. **Per-pipeline lifecycle hooks.** `beforeExecuteCommands` / `afterExecuteCommands` attach to the pipeline that needs them — OS pipeline disables indexes; DDB pipeline doesn't care. No shared "strategy.finalize" surface area that has to know about every pipeline's quirks.
+
+4. **`Source`/`Target` abstractions collapse into `Scanner` + `Processor`.** The pipeline is the unit that binds them. Preset is just a registration shell.
+
+### Implications for the generic framework
+
+- `Preset<TRecord, TShard>` from the earlier section becomes `Pipeline<TRecord, TShard>`. The preset-level generics go away — it's just a list of pipelines, each with its own generics.
+- `preset.source` / `preset.target` → `pipeline.scanner` / `pipeline.processor`.
+- `preset.filter` → per-pipeline `.filter()` on the builder (already there in the example).
+- `preset.finalize` → per-pipeline `.afterExecuteCommands()` (already there).
+- `preset.preload` → still useful at preset level, since multiple pipelines often share preloaded state (tenant locales, model definitions).
+
+### Pipeline merging & filter validation
+
+When a preset registers multiple pipelines that share the **same scanner** (regardless of processor), the runner merges them into a single scan pass. Scanning a 50M-row DDB table twice to feed two separate pipelines is wasted I/O *and* load on the source system — one scan can feed every pipeline that reads from that source.
+
+**Why the merge key is scanner-only (not `(scanner, processor)`):** the processor is execution-side — it owns command flushing and per-record context creation. It has nothing to do with walking the source. A single DDB scan can legitimately fan out to a DDB-target pipeline (write back to DDB) **and** an OS-target pipeline (index into OpenSearch) — each pipeline still owns its own processor, but they share the scan.
+
+**Validation rule (enforced at `PipelineBuilder.build()` time):**
+
+> Every pipeline MUST declare a `.filter(...)`. Filter-less pipelines are rejected at build time. If the user wants a pipeline that accepts every record from its scanner, they must explicitly create a "match-all" filter (`createFilter(() => true)`).
+
+Reason: explicitness. A filter-less pipeline silently consumes every record from the scanner — rarely what the user intends, and silently corrupts data when it isn't. Forcing an explicit filter makes intent visible at the call site.
+
+**Match semantics (within a merge group):**
+
+For each scanned record, pipelines in the group are evaluated **in registration order**. The **first pipeline** whose filters all pass is the one that runs for that record; subsequent pipelines in the group are skipped for that record. Pipeline registration order is therefore meaningful — the more specific filter goes first, the catch-all goes last.
+
+Records that match no pipeline in the group are silently dropped (with a `logger.debug(...)` for observability).
+
+To fan a single record out to multiple processors (e.g., write to DDB AND index to OS), use **two separate scanners** so each lane is its own merge group. Sharing a scanner means sharing a single dispatch decision per record.
+
+**Example — valid (catch the more specific filter first):**
+```typescript
+// FmFile records ARE technically cms.entry-shaped, so put the FmFile pipeline first.
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    .filter(isFmFileRecord)
+    .use(transformFmFile)
+    .build();
+
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    .filter(isCmsEntryRecord)  // would also match FmFile records, but FmFile pipeline runs first
+    .use(transformCmsEntry)
+    .build();
+```
+
+**Example — invalid (filter-less, rejected at build):**
+```typescript
+new PipelineBuilder({ scanner: DdbScanner, processor: DdbProcessor })
+    .use(transformEverything)
+    .build();
+// throws: PipelineBuilder "...": .filter() is required
+//         (use createFilter(() => true) for an explicit catch-all).
+```
+
+**Implementation sketch:**
+- `PipelineBuilder.build()` throws if no `.filter()` call was made.
+- `PipelineRunner.register(pipeline)` groups pipelines by `scannerToken` identity (single-key).
+- A pipeline-name uniqueness check happens at `register()` regardless of group.
+- On execution: scanner yields records once per shard; the runner evaluates each pipeline's filters; **every matching pipeline runs**, each producing commands routed to its own processor.
+
+### What `PipelineBuilder` does NOT commit to
+
+The builder from the example suggests an API shape, not a full type contract. Open questions:
+
+- Does `scanner: OSTableScanner` pass a class (DI token) or an instance? Probably a DI token, resolved via `container.resolve()` inside `.build()` so the pipeline ends up holding a concrete scanner.
+- Does `processor` mean "command executor" (DDB/OS-flavored flusher) or "preprocessor" (decompress raw record)? In the example they're distinct concepts — in the current codebase `OsRecordDecompressor` does preprocessing, `DdbCommandExecutor`/`OsCommandExecutor` does flushing. Likely both roles merge into the scanner+processor pair: scanner yields domain records, processor owns flush + hooks.
+- How do `.beforeExecuteCommands` / `.afterExecuteCommands` fire? Once per batch? Once per segment? Once per run? Probably per-segment (matching current OS `touchedIndexes` persist lifecycle), but this needs pinning down.
+- What identity test decides "same scanner/processor"? DI token equality is simplest — `scanner: DdbScanner` refers to the token, two pipelines passing the same token are in the same group. Works as long as presets don't pass different configured instances of conceptually the same scanner.
+
+---
+
+## Interactive orchestration & resume
+
+The pipeline-centric model unlocks a user-facing workflow that's not possible today: **a preset with N pipelines can be guided, paused, and resumed.**
+
+### Problem
+
+Realistic Webiny customer migrations will have 10+ presets (per environment, per tenant slice), each with 1–5 pipelines. Running everything in one `yarn start run` invocation means:
+
+- No visibility into which pipeline is at what progress.
+- A failure at pipeline 4 of 5 in preset 3 of 10 throws the entire run away.
+- No way to cherry-pick "just rerun the OS pipeline from preset 7".
+
+The user wants an inquirer-driven CLI that guides through this interactively and resumes cleanly from partial state.
+
+### User-facing flow sketch
+
+```
+$ yarn start run --config migration.json
+
+Loaded config: 10 presets, 27 pipelines total.
+
+? Previous run detected (run-2026-04-17-143022). What do you want to do?
+  > Resume failed pipelines only (3 failed, 24 done)
+    Resume from specific preset
+    Restart everything (fresh run)
+    Inspect state without running
+
+? Select preset to resume: (Use arrow keys)
+  > [✓] preset-1-tenant-roots       (3/3 pipelines done)
+    [✓] preset-2-tenant-security    (5/5 pipelines done)
+  > [✗] preset-3-content-records    (2/4 pipelines done, 1 failed)
+    [⏸] preset-4-media               (0/5 pipelines, pending)
+    ...
+
+? Preset "preset-3-content-records" — what to run?
+    [✓] pipeline-ddb-regular         (done — shard 7/8)
+    [✓] pipeline-ddb-refs            (done)
+  > [✗] pipeline-os-content          (failed at shard 3/8 — "OS index full")
+    [⏸] pipeline-s3-assets           (pending)
+
+  > Resume failed pipeline from shard 3
+    Rerun failed pipeline from scratch
+    Skip this pipeline, run pending ones
+    Abort
+
+Running pipeline-os-content on shard 3... [####      ] 37%
+```
+
+### State model
+
+Persisted to `.transfer/<runId>/state.json`:
+
+```typescript
+interface RunState {
+    runId: string;
+    configHash: string;          // invalidate if config changed mid-run
+    startedAt: string;
+    presets: PresetState[];
+}
+
+interface PresetState {
+    name: string;
+    status: "pending" | "running" | "done" | "failed" | "partial";
+    pipelines: PipelineState[];
+}
+
+interface PipelineState {
+    name: string;
+    status: "pending" | "running" | "done" | "failed";
+    startedAt?: string;
+    finishedAt?: string;
+    error?: { message: string; shard?: unknown };
+    shards: ShardState[];            // populated after scanner.listShards()
+    touchedIndexes?: Record<string, number>;  // OS-specific, merged from workers
+}
+
+interface ShardState {
+    shard: unknown;                  // opaque — scanner defines
+    status: "pending" | "running" | "done" | "failed";
+    recordsProcessed?: number;
+    startedAt?: string;
+    finishedAt?: string;
+}
+```
+
+Written atomically after each state change (file-per-segment worker writes its shard state; orchestrator merges into root `state.json` on worker exit). This is the same pattern as `segment-N-indexes.json` today — already proven.
+
+### Resume granularity — the one real decision
+
+**Pipeline-level (recommended first):**
+- Pipeline either completed or didn't. Failed = rerun the whole pipeline.
+- State flag per pipeline: `done | failed | pending`.
+- Simple to implement: orchestrator reads state, skips `done` pipelines.
+- Idempotency requirement: transforms must be idempotent at the pipeline level, which the current DDB+OS work already assumes (target PK/SK overwrites).
+
+**Shard-level (future, if needed):**
+- Pipeline's shards individually checkpointed.
+- Resumes mid-pipeline at the last completed shard boundary.
+- Costs:
+  - Shard cursor written to `state.json` on every worker completion (already happens today for segments, just not exposed).
+  - Partial-batch semantics: what if pipeline failed mid-batch inside shard 5? Either (a) re-process shard 5 fully (idempotent assumption stronger), or (b) checkpoint inside shards (major complexity — per-record cursor).
+  - Retry classification: was the failure transient (network blip, retry same shard) or fatal (bad data, don't retry)?
+
+**Record-level (reject):** Not worth it. Per-record cursors explode state size, retries get ambiguous, and users don't actually want this granularity — they want "don't redo the 6 hours that already worked".
+
+Recommendation: ship pipeline-level resume. Promote to shard-level only when real customer feedback shows pipelines running long enough (>1h) that pipeline-level reruns are unacceptable.
+
+### Orchestrator changes
+
+Today: `run` command = spawn N workers with `--segment` / `--total`, wait for all, done.
+
+With interactive orchestration:
+
+1. **Plan phase.** Load config → load all presets → for each preset, invoke `configure(runner)` in a dry-run mode that collects pipelines without running them. Build the initial `RunState`.
+2. **Resume detection.** If `.transfer/<mostRecentRunId>/state.json` exists and `configHash` matches, offer to resume. Otherwise fresh run.
+3. **Interactive selection** (inquirer). User picks preset → pipeline → action. Or `--non-interactive` flag auto-chooses "resume all failed + pending".
+4. **Execution.** For the selected pipeline(s), call `scanner.listShards()` → spawn worker per shard → workers update their `ShardState` via segment-file writes → orchestrator polls and renders progress (existing `cli-progress` integrates).
+5. **State update.** On worker exit, orchestrator merges shard state into pipeline state. On all shards done, pipeline marked `done`. On any failure, pipeline marked `failed` with error details.
+6. **Loop back to step 3** until user exits or all pipelines `done`.
+
+### Non-interactive mode
+
+For CI / scripted usage, flags that bypass prompts:
+
+- `--resume-failed` — rerun only pipelines in `failed` state
+- `--resume-from <preset>[:<pipeline>]` — start here, run everything after
+- `--only <preset>[:<pipeline>]` — run just this one
+- `--fresh` — ignore existing state, start from scratch (confirmation required)
+
+These mirror the inquirer choices so any interactive session can be replayed as a non-interactive command.
+
+### Progress display
+
+Each pipeline gets its own progress row. The existing `cli-progress` + `TransferLifecycle` machinery supports this — just needs to emit events per-pipeline, not globally.
+
+```
+preset-3-content-records
+  pipeline-ddb-regular  [##########] 100%  12,432 records
+  pipeline-os-content   [####      ] 37%    4,811 records
+  pipeline-s3-assets    [          ] 0%     pending
+```
+
+### What has to be wired up
+
+- `MigrationPreset.configure(runner)` already registers pipelines — that's the plan phase primitive we need. No preset change required.
+- `Pipeline` needs a `name` field so state can reference it.
+- `Scanner.listShards()` becomes a public method (today `segments` is a top-level config option — needs to move onto the scanner).
+- `.transfer/` directory convention stays; `state.json` is a new file alongside the per-segment files.
+- Inquirer is a new dependency (`@inquirer/prompts`). Small addition.
+- Orchestrator rewrites its main loop around the state machine above.
+
+### What this does NOT require
+
+- No changes to `PipelineRunner` record processing.
+- No changes to filter / transformer / command code.
+- No changes to DI container wiring.
+- No changes to worker command internals — workers still get `--shard` / `--runId`, just with state-file side effects added.
+
+---
+
+## Resolved design decisions (grilled 2026-04-17)
+
+This section captures concrete design locks from a long grill session. These are not speculation — they are the decisions to implement. Future agents should treat this as ground truth unless a later note supersedes it.
+
+> **Revision note (2026-04-17, later same day):** the merge-group key was originally `(scannerToken, processorToken)`. After realising that legitimate cases need one DDB scan to fan out into both a DDB-write lane and an OS-index lane, the key was reduced to **`scannerToken` only**. Match semantics stay **first-match wins** — pipelines are evaluated against each record in registration order, and the first one whose filters all pass is the only one that runs for that record. Pipeline registration order is therefore meaningful (the more specific filter goes first). The filter requirement was simultaneously tightened from "required only when group has 2+ pipelines" to **"always required, enforced at `PipelineBuilder.build()`"**. Sections "Pipeline merging & filter validation", "Merge groups", "Filters", "PipelineBuilder rules", and "State persistence" all reflect the new model. The `__tests__/security-teams.test.ts` and `src/presets/example.ts` files predate this revision; they are still useful as API-shape references but their semantics will need to be reread under the new rules.
+>
+> **Correction (2026-04-17, even later same day):** an earlier draft of this revision note temporarily flipped match semantics to "all matches run" (every accepting pipeline fires per record). That was a misread of intent — the locked semantics are first-match-wins, as above. Code, spec, and plan all corrected accordingly.
+
+### Core abstractions
+
+Four primitives drive the model:
+
+```typescript
+namespace Scanner {
+    interface Interface<TRecord, TShard> {
+        listShards(): Promise<TShard[]>;
+        scan(shard: TShard): AsyncIterable<TRecord>;
+    }
+}
+
+namespace Processor {
+    interface Interface<TRecord, TContext extends BaseTransformContext.Interface<TRecord>> {
+        execute(commands: Commands): Promise<void>;
+        getShardState(): unknown;
+        createContext(record: TRecord): TContext;
+    }
+}
+
+namespace Hook {
+    interface Interface {
+        run(params: { runId: string; mergeGroupId: string }): Promise<void>;
+    }
+}
+
+interface Filter<TRecord> {
+    readonly kind: "filter";
+    readonly check: (record: TRecord) => boolean;
+}
+```
+
+- **Scanner** is DI-registered, source-scoped. `TRecord` is fixed by scanner. `TShard` is JSON-serializable (crosses process boundary).
+- **Processor** is DI-registered, target-scoped. Owns context factory method. `TRecord` must match the scanner's TRecord (enforced by TypeScript via shared generic in the builder).
+- **Hook** is DI-registered. Single `run()` method. Receives runId + mergeGroupId at call time; everything else via constructor injection.
+- **Filter** is a plain function with a brand tag, produced via the `createFilter<TRecord>(fn)` helper.
+
+### `PipelineBuilder` + `Pipeline`
+
+Users never call `new PipelineBuilder(...)` directly. The runner exposes a factory method that internally injects container access:
+
+```typescript
+configure(runner: PipelineRunner.Interface): void {
+    const pipeline = runner.pipeline({
+        name: "ddb-regular",
+        scanner: RegularDynamoDbScanner,
+        processor: RegularDdbProcessor
+    })
+        .filter(isRegularRecord)     // single Filter OR Filter[]
+        .use(NormalizeKeys)          // DI token; multiple .use() calls chain
+        .use(TransformRegular)
+        .beforeExecuteCommands(DisableOsIndexes)   // optional, dedup'd at merge-group level
+        .afterExecuteCommands(ReenableOsIndexes)   // optional, dedup'd at merge-group level
+        .build();
+
+    runner.register(pipeline);
+}
+```
+
+**Builder rules:**
+
+- `.filter(input)` can be called **at most once**. Input is either a single `Filter<TRecord>` or a `Filter<TRecord>[]`. Array filters AND together, short-circuit on first false. Second `.filter()` call throws immediately.
+- `.filter()` with a type-predicate narrows `TRecord` for downstream `.use()` calls.
+- `.use(token)` accepts only DI tokens (not instances). Multiple `.use()` calls chain; registration order is preserved and meaningful (transformers run serially in order).
+- `.beforeExecuteCommands(token)` / `.afterExecuteCommands(token)` take DI tokens for `Hook.Interface` features. Multiple calls allowed.
+- `.build()` requires `name`, `scanner`, `processor`, **and at least one `.filter(...)` call**. Building without a filter throws (see "Pipeline merging & filter validation" — filters are mandatory). Hooks default to empty.
+- `.build()` returns a `Pipeline` **class instance** with container baked in (not a frozen data struct — see rationale below).
+
+**Why Pipeline is a class, not a data struct:**
+
+Initial grill concluded "plain frozen object" for serialization benefits. Rejected on reflection — DI tokens don't serialize cleanly, and rehydrating them across process boundaries depends on container registrations being identical, which we can't guarantee. Pipeline instead holds a container reference and resolves tokens on demand. State files persist runtime progress only (`touchedIndexes`, shard counts) — the pipeline definition itself is rebuilt from preset code on resume.
+
+### Pipeline identity
+
+- **Name is required** on every pipeline, passed via builder config.
+- **Uniqueness enforced at `runner.register()` time** — duplicate names across any two pipelines (regardless of merge group) throw.
+- Names are human-readable (`ddb-regular`, `os-content`). Surface in resume UI, state paths, error messages, progress display.
+
+### Merge groups
+
+A **merge group** is a runtime bucket formed implicitly when two or more pipelines share the same **scanner** DI token. Processor identity is irrelevant for grouping — different processors can coexist within the same merge group, each receiving commands from its own pipeline. Users don't declare merge groups; they emerge from registration.
+
+**Identity:** `mergeGroupId = sanitize(scannerToken.description)`. Slashes replaced with dashes for filesystem safety. Example: `Core-DdbScanner`.
+
+**Validation at `PipelineBuilder.build()`:**
+
+- Every pipeline MUST have at least one filter (from `.filter(...)`). Filterless `.build()` throws immediately. Applies regardless of whether the pipeline ends up alone or grouped — the rule is unconditional.
+
+**Validation at `runner.register()`:**
+
+- Pipeline names must be unique across the entire run (irrespective of merge group).
+
+**Runtime semantics (within a group):**
+
+- Scanner runs once per shard. Single scan, records dispatched into the group.
+- For each record, pipelines are evaluated **in registration order**. The **first** pipeline whose filters all pass is the one that runs for that record; subsequent pipelines in the group are skipped for that record. Pipeline registration order is meaningful — put the more specific filter first, the catch-all last.
+- Records that match no pipeline in the group are **silently dropped** (optional `logger.debug(...)` per dropped record for observability).
+- Each pipeline's commands flow to **its own processor**. Processors are DI singletons by default, so multiple pipelines that declare the same processor token share an instance and aggregate state on it.
+- `processor.getShardState()` aggregates state across all pipelines that share that processor token within the group. State is **per-processor within the group**, not per-pipeline.
+
+**Runtime semantics (across groups):**
+
+- Merge groups execute **sequentially in registration order** (order of the first-registered pipeline in each group). Parallel execution across groups is rejected as a default; can be added later as opt-in.
+- Shards within a group run in parallel — one worker per shard.
+
+### Hooks
+
+**When they fire:** per merge-group lifecycle, in the orchestrator process. Not per-batch, not per-shard, not per-worker.
+
+Sequence for each merge group:
+1. Deduplicated before-hooks run in registration order (sequentially).
+2. Workers spawn, one per shard. Each worker: scans, routes, transforms, batches, flushes via processor, writes shard state file at end.
+3. If all workers succeed → deduplicated after-hooks run in reverse-registration order (LIFO, sequentially).
+4. If any worker fails → **after-hooks do NOT run**. Pipeline marked `failed`. User reruns to recover (before-hooks must be idempotent).
+
+**Deduplication:** within a merge group, hooks with the same DI token deduplicate. 5 OS pipelines each declaring `.beforeExecuteCommands(DisableOsIndexes)` → `DisableOsIndexes` runs once, not five times.
+
+**Across groups:** a hook token shared between two merge groups fires once per group (not once globally). Groups are independent lifecycles.
+
+**Error policy:**
+
+- Before-hook throws → merge group aborts (no workers spawned), run continues with next group.
+- Worker throws → pipeline marked `failed`, after-hook skipped, run continues with next group.
+- After-hook throws → pipeline marked `failed`, run continues with next group. User fixes and reruns whole pipeline.
+
+**Idempotency requirement:** before-hooks must be idempotent because the user's recovery model is rerun. `DisableOsIndexes` must be safe to call twice (second call: no-op or re-disable gracefully).
+
+### Filters
+
+- Produced via `createFilter<TRecord>(fn: (r: TRecord) => boolean): Filter<TRecord>`. Branded return type prevents passing random functions to `.filter()`.
+- **Filters are mandatory.** Every pipeline must call `.filter(...)` exactly once before `.build()`. A pipeline that wants to consume every record from its scanner must declare an explicit `createFilter(() => true)`. There is no implicit "no filter = match all" mode — that ambiguity was the entire reason the rule exists.
+- Filters are **pure functions**, not DI features. Rationale: every existing filter in `src/domain/transform/filters.ts` is a pure predicate; no DI needs today. The one DI-touching gate (`tenantLocales.isDefaultLocaleRecord`) is currently inline in the handler, not a registered filter. When we migrate it, the preset's `configure` can close over a resolved `TenantLocales` instance.
+- If future demand requires DI-enabled filters, a second `createFilter({ deps, check })` form can be added non-breakingly.
+- Transformers and hooks stay DI classes — they have more complex dependencies and more ceremony is justified.
+
+### Context lifecycle
+
+- Context is **created per-record** by `processor.createContext(record)`. One fresh context per scanned record.
+- Context holds: `record` (mutable), `original` (readonly snapshot), `commands` (buffer for this record), plus DI-resolved deps (`modelProvider`, `cache`, target-specific emitters).
+- Transformers run sequentially on the context, each mutating or emitting commands.
+- After all transformers finish, commands are extracted from the context and merged into the worker's batch. Context is discarded.
+- Batching is the **worker framework's** responsibility, not the processor's. Worker accumulates N records' commands, calls `processor.execute(batch)` when threshold hit.
+
+### State persistence
+
+- Workers write `.transfer/<runId>/<mergeGroupId>/<processorId>/<shard>.json` at end of shard. `processorId = sanitize(processorToken.description)`.
+- Two-level layout reflects the new model: one merge group per scanner, one sub-directory per processor token within the group. A merge group with one DDB processor + one OS processor produces two sibling sub-trees.
+- Content: JSON output of `processor.getShardState()`. Processor-defined shape (OS: `{ touchedIndexes: Record<string, number> }`; DDB: `{}` or minimal stats).
+- After-hooks read all shard-state files for their (merge group, processor) tuple and act on aggregated state. A hook declared on multiple pipelines that share a processor only sees that processor's state.
+- Processor itself never touches the filesystem — worker framework owns file I/O. Separation of concerns: processor owns *what* the state is; framework owns *where/when* to persist.
+
+### Summary of concrete changes needed to implement this
+
+**New in `src/domain/transform/`:**
+
+- `Pipeline.ts` — class with container-held reference, exposes tokens + accepts/run methods.
+- `PipelineBuilder.ts` — internal builder; exposed only through `runner.pipeline()` factory.
+- `Filter.ts` — `Filter<T>` type + `createFilter` helper.
+
+**New abstractions (shapes, not implementations yet):**
+
+- `Scanner` abstraction namespace.
+- `Processor` abstraction namespace.
+- `Hook` abstraction namespace.
+
+**Changes to `src/features/PipelineRunner/`:**
+
+- Adds `pipeline(...)` factory method.
+- Adds `register()` with merge-group grouping + validation.
+- Internal state: `pipelinesByName: Map`, `mergeGroups: Map<groupId, PipelineGroup>`, registration order preserved.
+
+**Deferred until later PRs:**
+
+- Real `DdbScanner`, `OsScanner`, `DdbProcessor`, `OsProcessor` implementations.
+- Handler unification (the current `processSegment` / `processOsSegment` stay unchanged for now).
+- Preset migration (v5-to-v6-ddb, v5-to-v6-os stay on current API).
+- Interactive orchestration & resume state layer.
+
+This lets us build and TDD the builder in isolation — pure domain code, fake scanners/processors in tests, no DI surgery yet.
+
+---
+
+## Recommendation
+
+**Short-term (Webiny only):** Either unify now via `SegmentStrategy` OR accept the small duplication between the two handlers and extract only the preamble into `__tests__/containers`-style shared helpers in `src/commands/`. Either is defensible.
+
+**Medium-term (pipeline-centric refactor):** Move to `PipelineBuilder` API from Bruno's example. This is a real refactor — the payoff is type safety, multi-source presets, and it unblocks interactive orchestration. Do this BEFORE the interactive-CLI work, because the pipeline-as-unit-of-progress assumption is what makes the state model clean.
+
+**Long-term (interactive orchestration & resume):** Build once the pipeline-centric refactor lands. Start with pipeline-level resume; defer shard-level until customer feedback shows it's needed.
+
+**Long-term (fully generic framework):** Do this AFTER v5-to-v6 ships and we have real non-Webiny user feedback. Premature generalization before even one non-Webiny user exists is a big risk — the abstractions designed today will be wrong tomorrow.
+
+**Concrete next step:** keep `src/presets/example.ts` as the API target. Next PR after DI stabilization is introducing `PipelineBuilder` in `src/domain/transform/` with scanner/processor binding, then migrating one existing preset (v5-to-v6-ddb is the obvious pilot) to the new API.
+
+---
+
+## Parallel agent reports (raw)
+
+Three agents produced independent analyses that fed into this doc — diff of current handlers, proposed unification design, adversarial critique. Their full reports are not preserved here; re-run if needed. The concerns from the critique (stateful side-channel, bootstrap ordering, config schema validity) are baked into the "Concerns raised by reviewer agent" section above.

@@ -1,30 +1,45 @@
 import { Container } from "@webiny/di";
+import { ContainerToken } from "../../src/base/index.ts";
 import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
-import { LoggerFeature } from "../../src/features/Logger/index.ts";
-import { CacheFeature } from "../../src/features/Cache/index.ts";
-import { GzipCompressionFeature } from "../../src/features/GzipCompression/index.ts";
-import { DirectoryToolFeature } from "../../src/features/DirectoryTool/index.ts";
-import { FileToolFeature } from "../../src/features/FileTool/index.ts";
+import { LoggerFeature } from "../../src/tools/Logger/index.ts";
+import { CacheFeature } from "../../src/tools/Cache/index.ts";
+import { GzipCompressionFeature } from "../../src/tools/GzipCompression/index.ts";
+import { DirectoryToolFeature } from "../../src/tools/DirectoryTool/index.ts";
+import { FileToolFeature } from "../../src/tools/FileTool/index.ts";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
-} from "../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { OpenSearchClient } from "../../src/features/OpenSearchClient/abstractions/OpenSearchClient.ts";
+} from "../../src/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { OpenSearchClient } from "../../src/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { PresetLoaderFeature } from "../../src/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts";
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts";
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
-import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
-import { MockOpenSearchClient } from "../features/OpenSearchClient/MockOpenSearchClient.ts";
+import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
+import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
+import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
+import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
+import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
+import { TouchedIndexesFeature } from "../../src/features/TouchedIndexes/index.ts";
+import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
+import { OsScannerFeature } from "../../src/features/OsScanner/index.ts";
+import { OsProcessorFeature } from "../../src/features/OsProcessor/index.ts";
+import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockOpenSearchClient } from "../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
+
+export interface OsContainerPipelineOverride {
+    segments?: number;
+}
 
 export interface OsContainerOptions {
     sourceRecords?: Record<string, SourceDynamoDbClient.Record[]>;
     modelsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
+    pipelineOverride?: OsContainerPipelineOverride;
 }
 
 export function createOsContainer(options: OsContainerOptions = {}): Container {
@@ -51,11 +66,16 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
         },
         pipeline: {
             preset: "v5-to-v6-os",
-            modelsDir: options.modelsDir
+            modelsDir: options.modelsDir,
+            ...(options.pipelineOverride?.segments !== undefined
+                ? { segments: options.pipelineOverride.segments }
+                : {})
         }
     };
 
     const container = new Container();
+    container.registerInstance(ContainerToken, container);
+    container.registerInstance(TransferContext, { runId: "test-run-id" });
 
     // Core
     MigrationConfigFeature.register(container, { config });
@@ -78,6 +98,14 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
+    TransformContextFeature.register(container);
+    PipelineBuilderFactoryFeature.register(container);
+    PipelineRunnerFeature.register(container);
+    TouchedIndexesFeature.register(container);
+    DdbExecutorFeature.register(container);
+    OsRecordDecompressorFeature.register(container);
+    OsScannerFeature.register(container);
+    OsProcessorFeature.register(container);
 
     return container;
 }

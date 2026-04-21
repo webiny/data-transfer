@@ -1,22 +1,33 @@
 import { Container } from "@webiny/di";
-import { MigrationConfig } from "./features/MigrationConfig/index.ts";
-import { MigrationConfigFeature } from "./features/MigrationConfig/index.ts";
-import { DynamoDbClientConfig, DynamoDbClientFeature } from "./features/DynamoDbClient/index.ts";
-import { LoggerFeature } from "./features/Logger/index.ts";
-import { CacheFeature } from "./features/Cache/index.ts";
-import { GzipCompressionFeature } from "./features/GzipCompression/index.ts";
-import { DirectoryToolFeature } from "./features/DirectoryTool/index.ts";
-import { FileToolFeature } from "./features/FileTool/index.ts";
-import { ModelProviderFeature } from "./features/ModelProvider/index.ts";
-import { TenantLocalesFeature } from "./features/TenantLocales/index.ts";
-import { S3ClientConfig, S3ClientFeature } from "./features/S3Client/index.ts";
+import { ContainerToken } from "~/base/index.ts";
+import { MigrationConfig, MigrationConfigFeature } from "~/features/MigrationConfig/index.ts";
+import { LoggerFeature } from "~/tools/Logger/index.ts";
+import { CacheFeature } from "~/tools/Cache/index.ts";
+import { GzipCompressionFeature } from "~/tools/GzipCompression/index.ts";
+import { DirectoryToolFeature } from "~/tools/DirectoryTool/index.ts";
+import { FileToolFeature } from "~/tools/FileTool/index.ts";
+import { DynamoDbClientConfig, DynamoDbClientFeature } from "~/services/DynamoDbClient/index.ts";
+import { S3ClientConfig, S3ClientFeature } from "~/services/S3Client/index.ts";
 import {
     OpenSearchClientConfig,
     OpenSearchClientFeature
-} from "./features/OpenSearchClient/index.ts";
-import { PresetLoaderFeature } from "./features/PresetLoader/index.ts";
-import { WorkerSpawnerFeature } from "./features/WorkerSpawner/index.ts";
-import { TransferLifecycleFeature } from "./features/TransferLifecycle/index.ts";
+} from "~/services/OpenSearchClient/index.ts";
+import { ModelProviderFeature } from "~/features/ModelProvider/index.ts";
+import { TenantLocalesFeature } from "~/features/TenantLocales/index.ts";
+import { PresetLoaderFeature } from "~/features/PresetLoader/index.ts";
+import { WorkerSpawnerFeature } from "~/features/WorkerSpawner/index.ts";
+import { TransferLifecycleFeature } from "~/features/TransferLifecycle/index.ts";
+import { TransformContextFeature } from "~/features/TransformContext/index.ts";
+import { PipelineBuilderFactoryFeature } from "~/features/PipelineBuilderFactory/index.ts";
+import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
+import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
+import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
+import { DdbExecutorFeature } from "~/features/DdbExecutor/index.ts";
+import { S3ProcessorFeature } from "~/features/S3Processor/index.ts";
+import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/index.ts";
+import { OsScannerFeature } from "~/features/OsScanner/index.ts";
+import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
+import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.ts";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -27,9 +38,12 @@ export interface BootstrapOptions {
 export function bootstrap(options: BootstrapOptions): Container {
     const { config } = options;
     const container = new Container();
+    container.registerInstance(ContainerToken, container);
 
-    // Core: config + logger + cache + gzip
+    // Config
     MigrationConfigFeature.register(container, { config });
+
+    // Tools
     LoggerFeature.register(container, {
         logLevel: options.logLevel || "info",
         json: options.json || false
@@ -39,7 +53,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     DirectoryToolFeature.register(container);
     FileToolFeature.register(container);
 
-    // DynamoDB clients
+    // Services
     container.registerInstance(DynamoDbClientConfig, {
         source: {
             region: config.source.region,
@@ -48,11 +62,11 @@ export function bootstrap(options: BootstrapOptions): Container {
         target: {
             region: config.target.region,
             credentials: config.target.credentials
-        }
+        },
+        tuning: config.tuning?.ddb
     });
     DynamoDbClientFeature.register(container);
 
-    // S3 clients (ddb mode only)
     if (config.storage === "ddb") {
         container.registerInstance(S3ClientConfig, {
             source: {
@@ -62,30 +76,45 @@ export function bootstrap(options: BootstrapOptions): Container {
             target: {
                 region: config.target.region,
                 credentials: config.target.credentials
-            }
+            },
+            tuning: config.tuning?.s3
         });
         S3ClientFeature.register(container);
     }
 
-    // OpenSearch client (os mode only)
     if (config.storage === "os") {
         container.registerInstance(OpenSearchClientConfig, {
             endpoint: config.target.opensearch.endpoint,
             region: config.target.region,
             service: config.target.opensearch.service,
-            credentials: config.target.credentials
+            credentials: config.target.credentials,
+            maxRetries: config.tuning?.os?.maxRetries
         });
         OpenSearchClientFeature.register(container);
     }
 
-    // Transfer lifecycle hooks (composite — collects all registered hooks)
+    // Features
     TransferLifecycleFeature.register(container);
-
-    // Preset loader + worker spawner + model provider + tenant locales
     PresetLoaderFeature.register(container);
     WorkerSpawnerFeature.register(container);
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
+    TransformContextFeature.register(container);
+    PipelineBuilderFactoryFeature.register(container);
+    PipelineRunnerFeature.register(container);
+
+    if (config.storage === "ddb") {
+        DdbExecutorFeature.register(container);
+        S3ProcessorFeature.register(container);
+        DdbScannerFeature.register(container);
+        DdbProcessorFeature.register(container);
+    } else {
+        TouchedIndexesFeature.register(container);
+        DdbExecutorFeature.register(container);
+        OsRecordDecompressorFeature.register(container);
+        OsScannerFeature.register(container);
+        OsProcessorFeature.register(container);
+    }
 
     return container;
 }

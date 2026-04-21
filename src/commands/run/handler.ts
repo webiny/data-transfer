@@ -1,19 +1,31 @@
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
-import { bootstrap } from "../../bootstrap.ts";
-import { loadConfig } from "../../features/MigrationConfig/loadConfig.ts";
-import { Logger } from "../../features/Logger/index.ts";
-import { MigrationConfig } from "../../features/MigrationConfig/index.ts";
+import { bootstrap } from "~/bootstrap.ts";
+import { formatError } from "~/base/index.ts";
+import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
+import { Logger } from "~/tools/Logger/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
 import {
     BeforeTransferHook,
     AfterTransferHook,
     TransferContext
-} from "../../features/TransferLifecycle/index.ts";
+} from "~/features/TransferLifecycle/index.ts";
+import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 
 export async function handler(configPath: string): Promise<void> {
-    const config = await loadConfig(configPath);
-    const container = bootstrap({ config });
-    const logger = container.resolve(Logger);
+    let container;
+    let logger;
+    let config;
+    try {
+        config = await loadConfig(configPath);
+        container = bootstrap({ config });
+        logger = container.resolve(Logger);
+    } catch (error) {
+        // Config-load / Zod validation failures happen before we have a logger
+        // — write directly to stderr so the user sees the friendly format.
+        process.stderr.write(`\n${formatError(error)}\n`);
+        process.exit(1);
+    }
 
     const runId = String(Date.now());
     const segments = config.pipeline.segments || 1;
@@ -25,18 +37,30 @@ export async function handler(configPath: string): Promise<void> {
     const startTime = Date.now();
 
     try {
+        await loadUserSetup(configPath, container, logger);
+
         const beforeHook = container.resolve(BeforeTransferHook);
         logger.info("Running before-transfer hooks...");
         await beforeHook.execute();
 
-        const workerCommand = config.storage === "os" ? "process-os-segment" : "process-segment";
         const workers: Promise<void>[] = [];
 
         for (let segment = 0; segment < segments; segment++) {
-            workers.push(spawnWorker(segment, segments, runId, configPath, workerCommand));
+            workers.push(spawnWorker(segment, segments, runId, configPath));
         }
 
-        await Promise.all(workers);
+        const results = await Promise.allSettled(workers);
+        const failures: number[] = [];
+        results.forEach((result, segment) => {
+            if (result.status === "rejected") {
+                failures.push(segment);
+                logger.error(`Segment ${segment} failed: ${formatError(result.reason)}`);
+            }
+        });
+        logger.info(
+            `${segments - failures.length} of ${segments} shards succeeded` +
+                (failures.length > 0 ? ` (failed: ${failures.join(", ")})` : "")
+        );
 
         try {
             const afterHook = container.resolve(AfterTransferHook);
@@ -44,14 +68,20 @@ export async function handler(configPath: string): Promise<void> {
             await afterHook.execute();
         } catch (error) {
             logger.error(
-                `After-transfer hooks failed. Data transfer succeeded, but post-transfer actions may need manual intervention. Error: ${error}`
+                `After-transfer hooks failed. Data transfer state may need manual intervention. ${formatError(error)}`
             );
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        if (failures.length > 0) {
+            logger.error(
+                `Transfer completed with ${failures.length} failed shard(s) in ${duration}s`
+            );
+            process.exit(1);
+        }
         logger.info(`Transfer completed successfully in ${duration}s`);
     } catch (error) {
-        logger.error(`Transfer failed: ${error}`);
+        logger.error(`Transfer failed: ${formatError(error)}`);
         process.exit(1);
     }
 }
@@ -89,14 +119,13 @@ async function spawnWorker(
     segment: number,
     total: number,
     runId: string,
-    configPath: string,
-    command: string
+    configPath: string
 ): Promise<void> {
     const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
 
     const args = [
         binPath,
-        command,
+        "process-segment",
         "--runId",
         runId,
         "--segment",

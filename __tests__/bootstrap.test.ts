@@ -4,18 +4,18 @@ import { MigrationConfig } from "../src/features/MigrationConfig/index.ts";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
-} from "../src/features/DynamoDbClient/index.ts";
-import { Logger } from "../src/features/Logger/index.ts";
-import { Cache } from "../src/features/Cache/index.ts";
-import { GzipCompression } from "../src/features/GzipCompression/index.ts";
+} from "../src/services/DynamoDbClient/index.ts";
+import { Logger } from "../src/tools/Logger/index.ts";
+import { Cache } from "../src/tools/Cache/index.ts";
+import { GzipCompression } from "../src/tools/GzipCompression/index.ts";
 import { ModelProvider } from "../src/features/ModelProvider/index.ts";
 import { TenantLocales } from "../src/features/TenantLocales/index.ts";
-import { SourceS3Client, TargetS3Client } from "../src/features/S3Client/index.ts";
+import { SourceS3Client, TargetS3Client } from "../src/services/S3Client/index.ts";
 import { PresetLoader } from "../src/features/PresetLoader/index.ts";
 import { WorkerSpawner } from "../src/features/WorkerSpawner/index.ts";
-import { DirectoryTool } from "../src/features/DirectoryTool/index.ts";
-import { FileTool } from "../src/features/FileTool/index.ts";
-import { OpenSearchClient } from "../src/features/OpenSearchClient/index.ts";
+import { DirectoryTool } from "../src/tools/DirectoryTool/index.ts";
+import { FileTool } from "../src/tools/FileTool/index.ts";
+import { OpenSearchClient } from "../src/services/OpenSearchClient/index.ts";
 
 describe("bootstrap", () => {
     const ddbConfig: MigrationConfig.Interface = {

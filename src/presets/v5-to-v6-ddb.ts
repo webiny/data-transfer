@@ -1,31 +1,37 @@
-import { MigrationRunner } from "../core/runner.ts";
-import { MigrationPreset } from "../core/types.ts";
-import { PipelineBuilder, isFlpRecord, isSecurityTeam } from "../core/pipelines.ts";
-
-// Import global transformers
-import { wrapInData } from "../transformers/global/wrap-in-data.ts";
-import { addGsiTenant } from "../transformers/global/add-gsi-tenant.ts";
-import { removeLocale } from "../transformers/global/remove-locale.ts";
-import { removeAttributes } from "../transformers/global/remove-attributes.ts";
-
-// Import File Manager transformers
-import { migrateFileManagerSettings } from "../transformers/file-manager/migrate-settings.ts";
-
-// Import Folder transformers
-import { updateFlpIds } from "../transformers/folders/update-flp-ids.ts";
-
-// Import Mailer transformers
-import { migrateMailerSettings } from "../transformers/mailer/migrate-settings.ts";
-
-// Import Security transformers
-import { groupsToRoles } from "../transformers/security/groups-to-roles.ts";
-import { transformPermissions } from "../transformers/security/transform-permissions.ts";
-import { isBuiltInSecurityRole } from "../core/pipelines.ts";
-import { byType } from "../core/pipelines.ts";
-import { CmsEntryPipeline } from "./v5-to-v6/CmsEntryPipeline.ts";
-import { CmsModelPipeline } from "./v5-to-v6/CmsModelPipeline.ts";
-import { FmFilePipeline } from "./v5-to-v6/FmFilePipeline.ts";
-
+import { createTransferPreset } from "~/utils/createTransferPreset.ts";
+import { DdbScanner } from "~/features/DdbScanner/index.ts";
+import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
+import { S3Processor } from "~/features/S3Processor/index.ts";
+import { createFilter } from "~/domain/pipeline/Filter.ts";
+import {
+    byType,
+    isBuiltInSecurityRole,
+    isCmsEntry,
+    isCmsModel,
+    isFlpRecord,
+    isFmFile,
+    isSecurityTeam
+} from "~/domain/transform/filters.ts";
+import {
+    addGsiTenant,
+    createMetadata,
+    extractImageMetadata,
+    fixBrokenStorageKeys,
+    fixCmePk,
+    groupsToRoles,
+    migrateFileManagerSettings,
+    migrateMailerSettings,
+    removeAttributes,
+    removeFolderRevision,
+    removeLocale,
+    renameFieldAttributes,
+    transformModelGroup,
+    transformPermissions,
+    transformRichText,
+    updateFlpIds,
+    updateModelIds,
+    wrapInData
+} from "~/transformers/index.ts";
 // ============================================================================
 // Webiny v5 to v6 Migration Preset
 // ============================================================================
@@ -43,15 +49,20 @@ import { FmFilePipeline } from "./v5-to-v6/FmFilePipeline.ts";
  *
  * Uses pre-configured pipelines for consistent, well-tested transformations.
  */
-export const v5ToV6Preset: MigrationPreset = {
-    name: "v5-to-v6",
-    description: "Webiny v5 to v6 migration with all necessary transformations",
-    configure(runner: MigrationRunner): void {
+export default createTransferPreset({
+    name: "v5-to-v6-ddb",
+    description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
+    configure({ runner, pipelineBuilderFactory: factory }): void {
         // ========================================================================
         // File Manager Settings
         // ========================================================================
-        const fmSettings = new PipelineBuilder()
-            .filter(byType("fm.settings"))
+        const fmSettings = factory
+            .create({
+                name: "FileManagerSettings",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(byType("fm.settings")))
             .use(wrapInData)
             .use(migrateFileManagerSettings)
             .use(removeAttributes)
@@ -61,15 +72,43 @@ export const v5ToV6Preset: MigrationPreset = {
         // File Manager Files
         // IMPORTANT: Must be registered BEFORE CmsEntryPipeline due to first-match-wins
         // ========================================================================
-        const fmFiles = new FmFilePipeline().build();
+        const fmFiles = factory
+            .create({
+                name: "FileManagerFiles",
+                scanner: DdbScanner,
+                processors: [DdbProcessor, S3Processor]
+            })
+            // Configure filter
+            .filter(createFilter(isFmFile))
+            // Configure transformers (wrapInData MUST be first)
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(fixCmePk)
+            .use(fixBrokenStorageKeys)
+            .use(transformRichText)
+            .use(updateModelIds)
+            .use(removeFolderRevision)
+            .use(removeAttributes)
+            // File Manager-specific transformers
+            .use(createMetadata)
+            .use(extractImageMetadata)
+            .build();
 
         // ========================================================================
         // Mailer Settings
         // ========================================================================
-        const mailerSettings = new PipelineBuilder()
-            .filter(record => {
-                return record.SK === "L" && record.modelId === "mailerSettings";
+        const mailerSettings = factory
+            .create({
+                name: "MailerSettings",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
             })
+            .filter(
+                createFilter(record => {
+                    return record.SK === "L" && record.modelId === "mailerSettings";
+                })
+            )
             .use(wrapInData)
             .use(migrateMailerSettings)
             .use(removeAttributes)
@@ -78,8 +117,17 @@ export const v5ToV6Preset: MigrationPreset = {
         // ========================================================================
         // Security Groups → Roles
         // ========================================================================
-        const securityGroups = new PipelineBuilder()
-            .filter(r => r.TYPE === "security.group" && !isBuiltInSecurityRole(r))
+        const securityGroups = factory
+            .create({
+                name: "SecurityGroups",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(
+                createFilter(r => {
+                    return r.TYPE === "security.group" && !isBuiltInSecurityRole(r);
+                })
+            )
             .use(wrapInData)
             .use(addGsiTenant)
             .use(groupsToRoles)
@@ -90,8 +138,13 @@ export const v5ToV6Preset: MigrationPreset = {
         // ========================================================================
         // Security Teams
         // ========================================================================
-        const securityTeams = new PipelineBuilder()
-            .filter(isSecurityTeam)
+        const securityTeams = factory
+            .create({
+                name: "SecurityTeams",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isSecurityTeam))
             .use(wrapInData)
             .use(addGsiTenant)
             .use(removeAttributes)
@@ -100,13 +153,31 @@ export const v5ToV6Preset: MigrationPreset = {
         // ========================================================================
         // CMS Models
         // ========================================================================
-        const cmsModels = new CmsModelPipeline().build();
+        const cmsModels = factory
+            .create({
+                name: "CmsModels",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isCmsModel))
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(transformModelGroup)
+            .use(renameFieldAttributes)
+            .use(removeAttributes)
+            .build();
 
         // ========================================================================
         // Folder Permissions (FLP records)
         // ========================================================================
-        const folderPermissions = new PipelineBuilder()
-            .filter(isFlpRecord)
+        const folderPermissions = factory
+            .create({
+                name: "FolderPermissions",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isFlpRecord))
             .use(wrapInData)
             .use(addGsiTenant)
             .use(removeLocale)
@@ -117,8 +188,27 @@ export const v5ToV6Preset: MigrationPreset = {
         // ========================================================================
         // CMS Entries (catch-all for remaining CMS entries)
         // IMPORTANT: Must be registered AFTER FmFilePipeline
-        // ==================================================v5-to-v6.ts======================
-        const cmsEntries = new CmsEntryPipeline().build();
+        // ========================================================================
+        const cmsEntries = factory
+            .create({
+                name: "CmsEntries",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            // Configure filter
+            .filter(createFilter(isCmsEntry))
+
+            // Configure transformers (wrapInData MUST be first)
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(fixCmePk)
+            .use(fixBrokenStorageKeys)
+            .use(transformRichText)
+            .use(updateModelIds)
+            .use(removeFolderRevision)
+            .use(removeAttributes)
+            .build();
 
         // ========================================================================
         // Register pipelines with runner
@@ -134,7 +224,4 @@ export const v5ToV6Preset: MigrationPreset = {
             .register(folderPermissions)
             .register(cmsEntries); // After fmFiles
     }
-};
-
-// Export as default for easier importing
-export default v5ToV6Preset;
+});

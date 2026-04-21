@@ -1,0 +1,78 @@
+import { createTransformer } from "~/transformers/createTransformer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { ModelField, Template } from "./modelTypes.ts";
+
+/**
+ * Recursively renames field attributes in CMS model definitions:
+ * - helpText → description
+ * - placeholderText → placeholder
+ */
+export const renameFieldAttributes = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
+    "renameFieldAttributes",
+    ctx => {
+        const { record } = ctx;
+
+        const data = record.data as Record<string, unknown> | undefined;
+        if (!data) {
+            return;
+        }
+
+        const fields = data.fields;
+        if (!Array.isArray(fields)) {
+            return;
+        }
+
+        renameFieldAttributesRecursive(fields);
+    }
+);
+
+function renameFieldAttributesRecursive(fields: ModelField[]): void {
+    for (const field of fields) {
+        renameAttributes(field);
+
+        if (field.settings) {
+            // Object nested fields
+            if (Array.isArray(field.settings.fields)) {
+                renameFieldAttributesRecursive(field.settings.fields);
+            }
+
+            // Dynamic zone templates
+            if (Array.isArray(field.settings.templates)) {
+                for (const template of field.settings.templates) {
+                    if (Array.isArray(template.fields)) {
+                        renameFieldAttributesRecursive(template.fields);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function renameAttributes(field: ModelField): void {
+    const fieldAny = field as any;
+
+    // helpText → description
+    if ("helpText" in fieldAny) {
+        if (!("note" in fieldAny)) {
+            fieldAny.note = fieldAny.helpText;
+        }
+        delete fieldAny.helpText;
+    }
+
+    // placeholderText → placeholder
+    if ("placeholderText" in fieldAny) {
+        if (!("placeholder" in fieldAny)) {
+            fieldAny.placeholder = fieldAny.placeholderText;
+        }
+        delete fieldAny.placeholderText;
+    }
+
+    // multipleValues → list
+    if ("multipleValues" in fieldAny) {
+        if (!("list" in fieldAny)) {
+            fieldAny.list = fieldAny.multipleValues;
+        }
+        delete fieldAny.multipleValues;
+    }
+}

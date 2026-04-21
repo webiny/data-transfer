@@ -1,29 +1,47 @@
 import { Container } from "@webiny/di";
+import { ContainerToken } from "../../src/base/index.ts";
 import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
-import { LoggerFeature } from "../../src/features/Logger/index.ts";
-import { CacheFeature } from "../../src/features/Cache/index.ts";
-import { GzipCompressionFeature } from "../../src/features/GzipCompression/index.ts";
-import { DirectoryToolFeature } from "../../src/features/DirectoryTool/index.ts";
-import { FileToolFeature } from "../../src/features/FileTool/index.ts";
+import { LoggerFeature } from "../../src/tools/Logger/index.ts";
+import { CacheFeature } from "../../src/tools/Cache/index.ts";
+import { GzipCompressionFeature } from "../../src/tools/GzipCompression/index.ts";
+import { DirectoryToolFeature } from "../../src/tools/DirectoryTool/index.ts";
+import { FileToolFeature } from "../../src/tools/FileTool/index.ts";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
-} from "../../src/features/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { S3ClientConfig, S3ClientFeature } from "../../src/features/S3Client/index.ts";
+} from "../../src/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import {
+    SourceS3Client,
+    TargetS3Client
+} from "../../src/services/S3Client/abstractions/S3Client.ts";
 import { PresetLoaderFeature } from "../../src/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts";
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts";
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
-import { MockDynamoDbClient } from "../features/DynamoDbClient/MockDynamoDbClient.ts";
+import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
+import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
+import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
+import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
+import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
+import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
+import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
+import { S3ProcessorFeature } from "../../src/features/S3Processor/index.ts";
+import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
+import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
+
+export interface DdbContainerPipelineOverride {
+    segments?: number;
+}
 
 export interface DdbContainerOptions {
     sourceRecords?: Record<string, SourceDynamoDbClient.Record[]>;
     modelsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
+    pipelineOverride?: DdbContainerPipelineOverride;
 }
 
 export function createDdbContainer(options: DdbContainerOptions = {}): Container {
@@ -46,11 +64,16 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
         },
         pipeline: {
             preset: "v5-to-v6",
-            modelsDir: options.modelsDir
+            modelsDir: options.modelsDir,
+            ...(options.pipelineOverride?.segments !== undefined
+                ? { segments: options.pipelineOverride.segments }
+                : {})
         }
     };
 
     const container = new Container();
+    container.registerInstance(ContainerToken, container);
+    container.registerInstance(TransferContext, { runId: "test-run-id" });
 
     // Core
     MigrationConfigFeature.register(container, { config });
@@ -64,12 +87,9 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     container.registerInstance(SourceDynamoDbClient, sourceDb);
     container.registerInstance(TargetDynamoDbClient, targetDb);
 
-    // S3
-    container.registerInstance(S3ClientConfig, {
-        source: { region: "us-east-1", credentials: DEFAULT_CREDS },
-        target: { region: "eu-central-1", credentials: DEFAULT_CREDS }
-    });
-    S3ClientFeature.register(container);
+    // S3 — mock instances
+    container.registerInstance(SourceS3Client, new MockS3Client());
+    container.registerInstance(TargetS3Client, new MockS3Client());
 
     // Pipeline
     PresetLoaderFeature.register(container);
@@ -77,6 +97,13 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
+    TransformContextFeature.register(container);
+    PipelineBuilderFactoryFeature.register(container);
+    PipelineRunnerFeature.register(container);
+    DdbExecutorFeature.register(container);
+    S3ProcessorFeature.register(container);
+    DdbScannerFeature.register(container);
+    DdbProcessorFeature.register(container);
 
     return container;
 }
