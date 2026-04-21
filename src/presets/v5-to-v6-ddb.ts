@@ -80,8 +80,16 @@ export default createTransferPreset({
             })
             // Configure filter
             .filter(createFilter(isFmFile))
-            // TODO determine if its actually required
+            // Configure transformers (wrapInData MUST be first)
             .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(fixCmePk)
+            .use(fixBrokenStorageKeys)
+            .use(transformRichText)
+            .use(updateModelIds)
+            .use(removeFolderRevision)
+            .use(removeAttributes)
             // File Manager-specific transformers
             .use(createMetadata)
             .use(extractImageMetadata)
@@ -97,19 +105,11 @@ export default createTransferPreset({
                 processors: [DdbProcessor]
             })
             .filter(
-                createFilter((record: Record<string, unknown>) => {
+                createFilter(record => {
                     return record.SK === "L" && record.modelId === "mailerSettings";
                 })
             )
             .use(wrapInData)
-            .use(addGsiTenant)
-            .use(removeLocale)
-            .use(fixCmePk)
-            .use(fixBrokenStorageKeys)
-            .use(transformRichText)
-            .use(updateModelIds)
-            .use(removeFolderRevision)
-            .use(removeAttributes)
             .use(migrateMailerSettings)
             .use(removeAttributes)
             .build();
@@ -124,10 +124,9 @@ export default createTransferPreset({
                 processors: [DdbProcessor]
             })
             .filter(
-                createFilter(
-                    (r: Record<string, unknown>) =>
-                        r.TYPE === "security.group" && !isBuiltInSecurityRole(r)
-                )
+                createFilter(r => {
+                    return r.TYPE === "security.group" && !isBuiltInSecurityRole(r);
+                })
             )
             .use(wrapInData)
             .use(addGsiTenant)
