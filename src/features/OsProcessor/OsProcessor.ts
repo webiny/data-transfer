@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration";
 import { isRetryableAwsError } from "~/base/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
@@ -6,11 +7,13 @@ import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenS
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { OsShardState } from "./abstractions/OsProcessor.ts";
 
 const DEFAULT_RETRY_SCHEDULE: number[] = [5000, 10000, 20000, 30000, 30000];
 const DEFAULT_REFRESH_INTERVAL = "1s";
@@ -31,7 +34,10 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly osClient: OpenSearchClient.Interface,
         private readonly gzip: GzipCompression.Interface,
         private readonly touchedIndexes: TouchedIndexes.Interface,
-        private readonly config: MigrationConfig.Interface
+        private readonly config: MigrationConfig.Interface,
+        private readonly transferContext: TransferContext.Interface,
+        private readonly dirTool: DirectoryTool.Interface,
+        private readonly fileTool: FileTool.Interface
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): OsProcessorSlice {
@@ -66,8 +72,15 @@ class OsProcessorImpl implements Processor.Interface<
         await this.ddbExecutor.execute(gzippedPuts);
     }
 
-    public getShardState(): OsShardState {
-        return { touchedIndexes: this.touchedIndexes.all() };
+    public afterShard(ctx: Processor.AfterShardContext): void {
+        const items = this.touchedIndexes.all();
+        if (items.length === 0) {
+            return;
+        }
+        const transferDir = join(process.cwd(), ".transfer", this.transferContext.runId);
+        this.dirTool.create(transferDir);
+        const stateFile = join(transferDir, `${ctx.segment}-indexes.json`);
+        this.fileTool.writeFileOrThrow(stateFile, JSON.stringify(items));
     }
 
     private async buildGzippedPuts(puts: PutRecord[]): Promise<PutRecord[]> {
@@ -209,10 +222,9 @@ export const OsProcessor = Processor.createImplementation({
         OpenSearchClient,
         GzipCompression,
         TouchedIndexes,
-        MigrationConfig
+        MigrationConfig,
+        TransferContext,
+        DirectoryTool,
+        FileTool
     ]
 });
-
-export namespace OsProcessor {
-    export type ShardState = OsShardState;
-}
