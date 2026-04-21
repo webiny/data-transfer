@@ -25,7 +25,8 @@ export async function loadUserSetup(
     const configDir = dirname(absoluteConfigPath);
 
     const setupPath = join(configDir, SETUP_FILENAME);
-    if (!container.resolve(FileTool).exists(setupPath)) {
+    const fileTool = container.resolve(FileTool);
+    if (!fileTool.exists(setupPath)) {
         return;
     }
 
