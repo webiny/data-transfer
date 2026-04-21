@@ -229,7 +229,8 @@ No custom token-bucket pacing — the AWS SDK's adaptive mode handles remote-sig
 - **Mock clients**: `__tests__/services/DynamoDbClient/MockDynamoDbClient.ts` + `OpenSearchClient/MockOpenSearchClient.ts` + `S3Client/MockS3Client.ts`.
 - **Transformer unit tests** use `__tests__/transformers/fakeContext.ts` → `makeFakeBaseContext<T>(record, overrides?)`. For DDB-specific fields, cast at the test site.
 - **PipelineRunner tests** under `__tests__/features/PipelineRunner/` cover register dedup, multi-pipeline merge groups, shard slicing.
-- **End-to-end integration** in `__tests__/features/PipelineRunner/PipelineRunner.integration.test.ts` — includes a zero-transformer passthrough case.
+- **Pipeline dataflow integration** in `__tests__/features/PipelineRunner/PipelineRunner.integration.test.ts` — Mock-client-based, exercises a zero-transformer passthrough case. Does NOT hit the AWS SDK.
+- **Real-SDK integration tests** live under `__tests__/integration/` and run against a local **dynalite** HTTP server. Harness: `__tests__/integration/dynalite.ts` → `startDynalite()` returns `{ endpoint, port, stop() }`. Container: `createDdbIntegrationContainer({ endpoint, sourceTable, targetTable, segments? })` wires the real `DynamoDbClientFeature` (S3 stays mocked). See `pipeline.dataTransfer.test.ts` (4-record roundtrip) and `pipeline.bulkAndRetry.test.ts` (10k faker records + SDK-middleware throttle injection). Patterns + gotchas (ambient.d.ts naming, region-separation, `getInternalDocClient` private-field reach) documented in memory `project_integration_tests.md`.
 - `vitest.config.ts` excludes: **empty** (aside from `**/node_modules/**`). All excluded-legacy-tests from the old refactor were ported during Plan B.
 
 Verification before any commit:
