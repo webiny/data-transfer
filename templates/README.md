@@ -19,7 +19,7 @@ cp -r projects/example projects/my-project
 cp projects/my-project/.env.example projects/my-project/.env
 ```
 
-Edit `projects/my-project/.env` with your AWS credentials and resource names.
+Edit `projects/my-project/.env` with your region, table, and bucket names. AWS credentials come from `~/.aws/credentials` — set `SOURCE_PROFILE` / `TARGET_PROFILE` if you want a non-default profile.
 
 ### 3. Run the DynamoDB transfer
 

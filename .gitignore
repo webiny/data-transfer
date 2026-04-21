@@ -24,6 +24,7 @@ logs.txt
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+projects/**/.env
 
 
 CLAUDE.*.md

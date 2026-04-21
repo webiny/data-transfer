@@ -32,32 +32,32 @@ yarn add @webiny/data-transfer
 Create a config file:
 
 ```typescript
-import { loadEnv, createDdbTransfer } from "@webiny/data-transfer";
+import {
+  loadEnv,
+  createDdbTransfer,
+  fromAwsProfile,
+  fromEnv,
+  numberFromEnv
+} from "@webiny/data-transfer";
 
 loadEnv(import.meta.url);
 
 export default createDdbTransfer({
   source: {
-    region: process.env.SOURCE_REGION!,
-    credentials: {
-      accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
-    },
-    dynamodb: { tableName: "webiny-v5-table" },
-    s3: { bucket: "webiny-v5-files" }
+    region: fromEnv("SOURCE_REGION", "us-east-1"),
+    credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
+    dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
+    s3: { bucket: fromEnv("SOURCE_S3_BUCKET") }
   },
   target: {
-    region: process.env.TARGET_REGION!,
-    credentials: {
-      accessKeyId: process.env.TARGET_AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.TARGET_AWS_SECRET_ACCESS_KEY!
-    },
-    dynamodb: { tableName: "webiny-v6-table" },
-    s3: { bucket: "webiny-v6-files" }
+    region: fromEnv("TARGET_REGION", "us-east-1"),
+    credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", "default") }),
+    dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
+    s3: { bucket: fromEnv("TARGET_S3_BUCKET") }
   },
   pipeline: {
     preset: "./presets/my-preset.ts", // path relative to this config file
-    segments: 4,
+    segments: numberFromEnv("SEGMENTS", 4),
     modelsDir: "./path/to/models"
   }
 });
@@ -68,6 +68,17 @@ Run it:
 ```bash
 yarn webiny-data-transfer --config=./my-config.ts
 ```
+
+**Credentials:** `fromAwsProfile({profile})` reads from `~/.aws/credentials` — the same profile you'd use with the AWS CLI. Don't want profile-based auth? Pass a literal object instead:
+
+```typescript
+credentials: {
+  accessKeyId: fromEnv("AWS_ACCESS_KEY_ID"),
+  secretAccessKey: fromEnv("AWS_SECRET_ACCESS_KEY")
+}
+```
+
+Either shape is accepted. `fromEnv(name)` throws if the variable is unset or empty; `fromEnv(name, default)` falls back. `numberFromEnv` is the typed numeric sibling — no more `Number(process.env.X!)` ritual, and a bad value like `SEGMENTS=four` fails fast with a named error.
 
 ## Storage modes
 
@@ -81,35 +92,35 @@ Run DDB transfer first, then OS transfer with a separate config file. They don't
 ## OpenSearch config shape
 
 ```typescript
-import { loadEnv, createOsTransfer } from "@webiny/data-transfer";
+import {
+  loadEnv,
+  createOsTransfer,
+  fromAwsProfile,
+  fromEnv,
+  numberFromEnv
+} from "@webiny/data-transfer";
 
 loadEnv(import.meta.url);
 
 export default createOsTransfer({
   source: {
-    region: "us-east-1",
-    credentials: {
-      accessKeyId: process.env.SOURCE_AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.SOURCE_AWS_SECRET_ACCESS_KEY!
-    },
-    dynamodb: { tableName: "webiny-v5-table" }, // primary table (models, tenants)
-    opensearch: { tableName: "webiny-v5-es-table" } // OS companion DDB table
+    region: fromEnv("SOURCE_REGION", "us-east-1"),
+    credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
+    dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") }, // primary table (models, tenants)
+    opensearch: { tableName: fromEnv("SOURCE_OS_TABLE") } // OS companion DDB table
   },
   target: {
-    region: "us-east-1",
-    credentials: {
-      accessKeyId: process.env.TARGET_AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.TARGET_AWS_SECRET_ACCESS_KEY!
-    },
+    region: fromEnv("TARGET_REGION", "us-east-1"),
+    credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", "default") }),
     opensearch: {
-      endpoint: "https://search-xxx.us-east-1.es.amazonaws.com",
-      tableName: "webiny-v6-es-table",
+      endpoint: fromEnv("TARGET_OS_ENDPOINT"),
+      tableName: fromEnv("TARGET_OS_TABLE"),
       service: "opensearch" // or "opensearch-serverless"
     }
   },
   pipeline: {
     preset: "./presets/my-os-preset.ts",
-    segments: 4
+    segments: numberFromEnv("SEGMENTS", 4)
   }
 });
 ```

@@ -29,7 +29,9 @@ This document is read by AI agents when working on this codebase. It describes t
 
 Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers or pipelines are re-exported. The package ships one built-in preset today (`v5-to-v6-ddb`). `PresetLoader` scans `src/presets/` (resolved relative to its own `import.meta.url`, works from source or `node_modules/`) — convention is **filename = preset name**, drop a `.ts` file in there and it ships, no other code change. The authoring reference lives in `templates/presets/example.ts` (scaffolded into user projects by `init`).
 
-- **Config builders:** `createDdbTransfer`, `createOsTransfer`, `loadEnv`
+- **Config builders:** `createDdbTransfer`, `createOsTransfer`
+- **Env helpers:** `loadEnv` (dotenv loader), `fromEnv(name, default?)` (required string env, throws on missing), `numberFromEnv(name, default?)` (typed numeric, throws on parse failure). Empty string counts as missing in both — `.env`'s `KEY=` is almost always a forgotten value, not an intentional empty override.
+- **AWS credential helper:** `fromAwsProfile` — re-export of `fromIni` from `@aws-sdk/credential-providers`, renamed so the `ini` implementation detail doesn't leak. `credentials` in config accepts either a literal `{accessKeyId, secretAccessKey, sessionToken?}` or a provider function (the union is schema-validated at `createDdbTransfer` / `createOsTransfer` time).
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
 - **Filter factory:** `createFilter` + `Filter` type
 - **Scanner tokens:** `DdbScanner`, `OsScanner`
@@ -113,7 +115,8 @@ src/
 │                             # example.ts (canonical reference; excluded from
 │                             # discovery by exact filename match).
 └── utils/
-    └── load-env.ts           # loadEnv(import.meta.url) — exposed as public API
+    ├── load-env.ts           # loadEnv(import.meta.url) — dotenv loader, public API
+    └── fromEnv.ts            # fromEnv + numberFromEnv — public API, used in user configs
 ```
 
 Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/database/`, `src/config/`, `src/storage/`, `src/opensearch/`, `src/models/`, `src/utils/{logger,tenants,record-guards,gzip-compression,field-visitor,LexicalRenderer}.ts`. The transformer-adjacent helpers that lived under `src/models/` and `src/utils/` now live in `src/transformers/cms/` (they're CMS-transformer-only). Don't expect to find them elsewhere.
@@ -294,11 +297,17 @@ The slice-merging-processors refactor landed here in April 2026 plus follow-ups 
 ## 8. Commands / running the tool
 
 - Install: `yarn install`
-- Format: `yarn format:fix`
+- Format: `yarn format:fix` / `yarn format:check`
 - Type-check: `yarn ts-check`
 - Test: `yarn test` (or `yarn test:coverage`)
 - Scaffold a project: `npx @webiny/data-transfer init my-transfer-folder`
-- Run a transfer: `yarn transfer --config=./projects/example/ddb.transfer.config.ts`
+- **Dry-run the preset against real AWS (dev use, from this repo):**
+  ```bash
+  cp projects/v5-to-v6/.env.example projects/v5-to-v6/.env
+  # edit .env — set region, DDB/S3 tables, optional profiles
+  yarn dev --config=./projects/v5-to-v6/ddb.transfer.config.ts
+  ```
+  `projects/v5-to-v6/ddb.transfer.config.ts` drives the built-in `v5-to-v6-ddb` preset via env vars (`fromEnv`/`numberFromEnv`) with credentials from `~/.aws/credentials` via `fromAwsProfile`. `.env*` is gitignored — credentials never commit.
 
 ---
 
