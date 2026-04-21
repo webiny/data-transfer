@@ -13,6 +13,19 @@ export { loadEnv } from "./utils/load-env.ts";
 export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";
 export { createTransferPreset } from "./utils/createTransferPreset.ts";
 
+// AWS credential provider — re-exported so users don't need a separate
+// `@aws-sdk/credential-providers` dep. Named `fromAwsProfile` to avoid
+// leaking the `ini` implementation detail that `fromIni` carries in the
+// AWS SDK. Usage:
+//
+//     import { fromAwsProfile } from "@webiny/data-transfer";
+//     ...
+//     credentials: fromAwsProfile({ profile: "my-profile" })
+//
+// If no `profile` is given, falls back to the default profile
+// (same behavior as setting AWS_PROFILE in the environment).
+export { fromIni as fromAwsProfile } from "@aws-sdk/credential-providers";
+
 // Transformer factories
 export { createTransformer } from "./transformers/createTransformer.ts";
 export { createDdbTransformer } from "./transformers/createDdbTransformer.ts";

@@ -6,6 +6,32 @@ export const awsCredentialsSchema = z.object({
     sessionToken: z.string().optional()
 });
 
+/**
+ * Async function returning AWS credentials — matches the shape the AWS
+ * SDK v3 accepts for `credentials` (e.g., `fromAwsProfile`, `fromEnv`,
+ * `fromNodeProviderChain`). We pass it through to the underlying client
+ * unchanged; the SDK invokes it when it needs credentials.
+ */
+export type AwsCredentialsProvider = () => Promise<{
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+    expiration?: Date;
+}>;
+
+/**
+ * Credentials shape accepted in user config: either a literal credentials
+ * object, or an AWS credential-provider function (e.g., `fromAwsProfile`).
+ * Required — users must pick one, but both are first-class.
+ */
+export const credentialsOrProviderSchema = z.union([
+    awsCredentialsSchema,
+    z.custom<AwsCredentialsProvider>(val => typeof val === "function", {
+        message:
+            "credentials must be an object with accessKeyId+secretAccessKey, or an AWS credential-provider function"
+    })
+]);
+
 export const pipelineSettingsSchema = z.object({
     preset: z.string(),
     segments: z.number().int().positive().optional(),

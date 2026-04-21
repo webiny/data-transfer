@@ -1,9 +1,15 @@
 import { z } from "zod";
-import { awsCredentialsSchema, pipelineSettingsSchema, tuningSchema } from "./shared.schema.ts";
+import {
+    credentialsOrProviderSchema,
+    pipelineSettingsSchema,
+    tuningSchema
+} from "./shared.schema.ts";
 
 const ddbAccountConfigSchema = z.object({
     region: z.string(),
-    credentials: awsCredentialsSchema,
+    // Required. Either a literal credentials object, or a provider
+    // function (e.g. fromAwsProfile({profile: "dev"})).
+    credentials: credentialsOrProviderSchema,
     dynamodb: z.object({ tableName: z.string() }),
     s3: z.object({ bucket: z.string() })
 });

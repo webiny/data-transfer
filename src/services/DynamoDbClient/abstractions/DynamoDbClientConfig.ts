@@ -10,9 +10,17 @@ export interface AwsCredentials {
     sessionToken?: string;
 }
 
+export type AwsCredentialsProvider = () => Promise<AwsCredentials & { expiration?: Date }>;
+
 export interface DynamoDbConnectionConfig {
     region: string;
-    credentials?: AwsCredentials;
+    /**
+     * Either a literal credentials object, or an AWS SDK credential-
+     * provider function (e.g. `fromAwsProfile`). Optional because
+     * integration tests default to dynalite with dummy creds — user
+     * config requires it via the Zod schema.
+     */
+    credentials?: AwsCredentials | AwsCredentialsProvider;
     /** Override endpoint (for local testing with dynalite) */
     endpoint?: string;
 }

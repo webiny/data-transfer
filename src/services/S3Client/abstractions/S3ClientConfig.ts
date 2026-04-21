@@ -6,9 +6,14 @@ interface AwsCredentials {
     sessionToken?: string;
 }
 
+type AwsCredentialsProvider = () => Promise<AwsCredentials & { expiration?: Date }>;
+
 interface S3ConnectionConfig {
     region: string;
-    credentials: AwsCredentials;
+    // Either a literal object or an AWS credential-provider function
+    // (e.g. `fromAwsProfile`). Optional at this layer to keep test wiring
+    // trivial; user config enforces presence via Zod.
+    credentials?: AwsCredentials | AwsCredentialsProvider;
 }
 
 interface S3Tuning {

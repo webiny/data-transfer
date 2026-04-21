@@ -29,6 +29,7 @@
   "author": "Webiny",
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/credential-providers": "^3.1033.0",
     "@opensearch-project/opensearch": "^3.5.1",
     "@webiny/api-opensearch": "^6.2.0",
     "@webiny/aws-sdk": "^6.2.0",

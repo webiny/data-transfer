@@ -1,16 +1,20 @@
 import { z } from "zod";
-import { awsCredentialsSchema, pipelineSettingsSchema, tuningSchema } from "./shared.schema.ts";
+import {
+    credentialsOrProviderSchema,
+    pipelineSettingsSchema,
+    tuningSchema
+} from "./shared.schema.ts";
 
 const osSourceAccountConfigSchema = z.object({
     region: z.string(),
-    credentials: awsCredentialsSchema,
+    credentials: credentialsOrProviderSchema,
     dynamodb: z.object({ tableName: z.string() }),
     opensearch: z.object({ tableName: z.string() })
 });
 
 const osTargetAccountConfigSchema = z.object({
     region: z.string(),
-    credentials: awsCredentialsSchema,
+    credentials: credentialsOrProviderSchema,
     opensearch: z.object({
         endpoint: z.url(),
         tableName: z.string(),

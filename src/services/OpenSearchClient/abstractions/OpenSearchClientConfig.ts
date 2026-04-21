@@ -4,15 +4,21 @@ import { createAbstraction } from "~/base/index.ts";
 // Types
 // ============================================================================
 
+interface AwsCredentials {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+}
+
+type AwsCredentialsProvider = () => Promise<AwsCredentials & { expiration?: Date }>;
+
 export interface IOpenSearchClientConfig {
     endpoint: string;
     region: string;
     service: "opensearch" | "opensearch-serverless";
-    credentials: {
-        accessKeyId: string;
-        secretAccessKey: string;
-        sessionToken?: string;
-    };
+    // Either a literal credentials object or a provider function (e.g.
+    // `fromAwsProfile`). OpenSearchClient normalizes at construction time.
+    credentials: AwsCredentials | AwsCredentialsProvider;
     maxRetries?: number;
 }
 

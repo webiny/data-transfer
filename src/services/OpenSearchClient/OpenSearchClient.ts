@@ -7,15 +7,31 @@ class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
     private client: Client;
 
     public constructor(config: OpenSearchClientConfig.Interface) {
+        // Normalize credentials: user config may pass either a literal
+        // object or a provider function (fromAwsProfile). AwsSigv4Signer
+        // wants a `getCredentials` async function, so wrap either shape.
+        const credentialsInput = config.credentials;
+        const getCredentials = async (): Promise<{
+            accessKeyId: string;
+            secretAccessKey: string;
+            sessionToken?: string;
+        }> => {
+            const resolved =
+                typeof credentialsInput === "function"
+                    ? await credentialsInput()
+                    : credentialsInput;
+            return {
+                accessKeyId: resolved.accessKeyId,
+                secretAccessKey: resolved.secretAccessKey,
+                sessionToken: resolved.sessionToken
+            };
+        };
+
         this.client = new Client({
             ...AwsSigv4Signer({
                 region: config.region,
                 service: config.service === "opensearch-serverless" ? "aoss" : "es",
-                getCredentials: async () => ({
-                    accessKeyId: config.credentials.accessKeyId,
-                    secretAccessKey: config.credentials.secretAccessKey,
-                    sessionToken: config.credentials.sessionToken
-                })
+                getCredentials
             }),
             node: config.endpoint,
             maxRetries: config.maxRetries ?? 3
