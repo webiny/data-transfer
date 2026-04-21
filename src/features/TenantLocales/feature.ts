@@ -1,4 +1,4 @@
-import { createFeature } from "@/src/base/index.ts";
+import { createFeature } from "~/base/index.ts";
 import { TenantLocales } from "./TenantLocales.ts";
 
 export const TenantLocalesFeature = createFeature({

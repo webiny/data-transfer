@@ -1,4 +1,4 @@
-import { createFeature } from "@/src/base/index.ts";
+import { createFeature } from "~/base/index.ts";
 import { DynamoDbClientImpl } from "./DynamoDbClient.ts";
 import { SourceDynamoDbClient, TargetDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";

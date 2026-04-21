@@ -1,4 +1,4 @@
-import { createAbstraction } from "@/src/base/index.ts";
+import { createAbstraction } from "~/base/index.ts";
 
 // ============================================================================
 // Types

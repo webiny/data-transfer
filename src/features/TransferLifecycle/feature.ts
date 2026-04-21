@@ -1,4 +1,4 @@
-import { createFeature } from "@/src/base/index.ts";
+import { createFeature } from "~/base/index.ts";
 import { BeforeTransferHookComposite } from "./BeforeTransferHookComposite.ts";
 import { AfterTransferHookComposite } from "./AfterTransferHookComposite.ts";
 

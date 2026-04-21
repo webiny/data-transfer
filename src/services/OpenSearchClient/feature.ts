@@ -1,4 +1,4 @@
-import { createFeature } from "@/src/base/index.ts";
+import { createFeature } from "~/base/index.ts";
 import { OpenSearchClient } from "./OpenSearchClient.ts";
 import { EnableRefreshHook } from "./hooks/EnableRefreshHook.ts";
 

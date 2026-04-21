@@ -1,4 +1,4 @@
-import { createAbstraction } from "@/src/base/index.ts";
+import { createAbstraction } from "~/base/index.ts";
 
 interface ITenantLocales {
     /** Fetch all tenants with their default locales from the source DB */
