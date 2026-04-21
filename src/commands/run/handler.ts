@@ -11,8 +11,9 @@ import {
     TransferContext
 } from "~/features/TransferLifecycle/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
+import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
-export async function handler(configPath: string): Promise<void> {
+export async function handler(configPath: string, segmentsFilter?: number[]): Promise<void> {
     const runId = String(Date.now());
     let container;
     let logger;
@@ -30,9 +31,17 @@ export async function handler(configPath: string): Promise<void> {
 
     const segments = config.pipeline.segments || 1;
 
+    let segmentsToRun: number[];
+    try {
+        segmentsToRun = resolveSegmentsToRun(segments, segmentsFilter);
+    } catch (error) {
+        process.stderr.write(`\n${formatError(error)}\n`);
+        process.exit(1);
+    }
+
     container.registerInstance(TransferContext, { runId });
 
-    logConfig(logger, config, runId, segments);
+    logConfig(logger, config, runId, segments, segmentsToRun);
 
     const startTime = Date.now();
 
@@ -43,22 +52,21 @@ export async function handler(configPath: string): Promise<void> {
         logger.info("Running before-transfer hooks...");
         await beforeHook.execute();
 
-        const workers: Promise<void>[] = [];
-
-        for (let segment = 0; segment < segments; segment++) {
-            workers.push(spawnWorker(segment, segments, runId, configPath));
-        }
+        const workers = segmentsToRun.map(segment =>
+            spawnWorker(segment, segments, runId, configPath)
+        );
 
         const results = await Promise.allSettled(workers);
         const failures: number[] = [];
-        results.forEach((result, segment) => {
+        results.forEach((result, index) => {
             if (result.status === "rejected") {
+                const segment = segmentsToRun[index];
                 failures.push(segment);
                 logger.error(`Segment ${segment} failed: ${formatError(result.reason)}`);
             }
         });
         logger.info(
-            `${segments - failures.length} of ${segments} shards succeeded` +
+            `${segmentsToRun.length - failures.length} of ${segmentsToRun.length} shards succeeded` +
                 (failures.length > 0 ? ` (failed: ${failures.join(", ")})` : "")
         );
 
@@ -90,13 +98,18 @@ function logConfig(
     logger: Logger.Interface,
     config: MigrationConfig.Interface,
     runId: string,
-    segments: number
+    segments: number,
+    segmentsToRun: number[]
 ): void {
     logger.info("Starting transfer with configuration:");
     logger.info(`  Run ID: ${runId}`);
     logger.info(`  Storage: ${config.storage}`);
     logger.info(`  Preset: ${config.pipeline.preset}`);
-    logger.info(`  Segments: ${segments}`);
+    if (segmentsToRun.length === segments) {
+        logger.info(`  Segments: ${segments}`);
+    } else {
+        logger.info(`  Segments: ${segments} (running only [${segmentsToRun.join(", ")}])`);
+    }
 
     if (config.storage === "ddb") {
         logger.info(`  Source Region: ${config.source.region}`);

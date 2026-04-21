@@ -312,6 +312,7 @@ The slice-merging-processors refactor landed here in April 2026 plus follow-ups 
   yarn dev --config=./projects/v5-to-v6/ddb.transfer.config.ts
   ```
   `projects/v5-to-v6/ddb.transfer.config.ts` drives the built-in `v5-to-v6-ddb` preset via env vars (`fromEnv`/`numberFromEnv`) with credentials from `~/.aws/credentials` via `fromAwsProfile`. `.env*` is gitignored — credentials never commit.
+- **Re-drive specific shards after a partial failure:** `yarn dev --config=... --segments=1,3` runs only the listed indices. The workers still receive `--total=<pipeline.segments>`, so each shard scans the same slice as in a full run. Parsing + validation live in `src/commands/run/segmentsFilter.ts`.
 
 ---
 
