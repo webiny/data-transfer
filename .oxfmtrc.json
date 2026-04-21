@@ -30,7 +30,8 @@
     "docs",
     "node_modules",
     "plan",
-    ".transfer"
+    ".transfer",
+    "__tests__/data"
   ],
   "overrides": [
     {
