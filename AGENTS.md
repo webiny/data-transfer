@@ -280,9 +280,7 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 
 ### Branch `bruno/feat/di-features` (unmerged)
 
-The slice-merging-processors refactor landed here in April 2026 (19 commits, `d65e256..d5b4621`). Tests green (63 files / 359 tests), ts-check clean. Ready to merge but NOT yet on `main`. Review passed with these non-blocking follow-ups deferred by Bruno's choice:
-
-1. **Logger-spy regression test** — the false-unclaimed-warn bug was caught by review but there's no test asserting `logger.warn` is NOT called with "no processor claimed it" on a multi-processor pipeline. Without it, a similar regression could silently land. Low effort: inject a spy Logger in the PipelineRunner integration test and assert no unclaimed-warn fires. Bruno explicitly skipped this; flag if it becomes painful.
+The slice-merging-processors refactor landed here in April 2026 plus follow-ups (afterShard hook, ctx-by-reference runner fix, unified process-segment command, dynalite-backed integration suite, v5-to-v6-ddb golden-file preset test). Tests green, ts-check clean, oxfmt clean. Ready to merge but NOT yet on `main`.
 
 ### Broader open work
 

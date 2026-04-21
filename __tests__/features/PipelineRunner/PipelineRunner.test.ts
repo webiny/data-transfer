@@ -605,3 +605,100 @@ describe("PipelineRunner — hook lifecycle", () => {
         expect(captured[1]?.mergeGroupId).toBe("Core-Scanner");
     });
 });
+
+// Minimal second processor with a slice disjoint from FakeProcessor's —
+// needed to test multi-processor pipelines without using the real
+// Ddb/S3/Os processors (which require heavy container wiring).
+// Slice contributes only `label()`, and execute() is a no-op: it
+// doesn't drain any command key. A pipeline that includes this
+// processor alongside FakeProcessor should NOT emit a false
+// "no processor claimed it" warning when FakeProcessor fully drains
+// the command bag.
+interface SecondarySlice {
+    label(): string;
+}
+
+class SecondaryFakeProcessor implements Processor.Interface<
+    BaseTransformContext.Interface<FakeRecord>,
+    SecondarySlice
+> {
+    public extendContext(): SecondarySlice {
+        return { label: () => "secondary" };
+    }
+
+    public async execute(): Promise<void> {
+        // No-op — this processor doesn't claim any command key.
+    }
+}
+
+const SecondaryFakeProcessorImpl = Processor.createImplementation({
+    implementation: SecondaryFakeProcessor,
+    dependencies: []
+});
+
+describe("PipelineRunner.run() — unclaimed-command warnings", () => {
+    const UNCLAIMED_PATTERN = /no processor claimed it/;
+
+    it("does NOT warn when a multi-processor pipeline fully drains the bag", async () => {
+        const { container, logger } = makeContainer();
+        container.register(SecondaryFakeProcessorImpl).inSingletonScope();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        // FakeProcessor.onEnd emits a PutRecord (auto-put); FakeProcessor.execute
+        // drains PutRecord.key. SecondaryFakeProcessor contributes only a slice
+        // method and drains nothing. All emitted commands are claimed, so the
+        // runner's warn-once path must stay silent. Regression guard: the
+        // original false-unclaimed-warn bug fired here because the runner
+        // wasn't attributing drains correctly.
+        const runner = container.resolve(PipelineRunner);
+        const builder = container.resolve(PipelineBuilderFactory).create({
+            name: "multi-processor-fully-drained",
+            scanner: FakeScannerImpl,
+            processors: [FakeProcessorImpl, SecondaryFakeProcessorImpl]
+        });
+        builder.filter(createFilter<FakeRecord>(() => true));
+        runner.register(builder.build());
+
+        await runner.run();
+
+        const unclaimedWarns = logger.entries.filter(
+            e => e.level === "warn" && UNCLAIMED_PATTERN.test(e.message)
+        );
+        expect(unclaimedWarns).toEqual([]);
+    });
+
+    it("warns once when a transformer emits a command key no processor drains", async () => {
+        const { container, logger } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" }
+        ];
+
+        // Emit a command whose key nobody drains. FakeProcessor drains
+        // PutRecord.key (via its own onEnd + execute), but "orphan-key"
+        // gets pushed by the transformer and never claimed. Runner should
+        // warn ONCE per runner lifetime (not once per record).
+        const emitOrphan = (ctx: FakeContext): void => {
+            ctx.addCommand({ key: "orphan-key" });
+        };
+
+        const runner = container.resolve(PipelineRunner);
+        const builder = container.resolve(PipelineBuilderFactory).create({
+            name: "orphan-emitter",
+            scanner: FakeScannerImpl,
+            processors: [FakeProcessorImpl]
+        });
+        builder.filter(createFilter<FakeRecord>(() => true)).use(emitOrphan);
+        runner.register(builder.build());
+
+        await runner.run();
+
+        const unclaimedWarns = logger.entries.filter(
+            e => e.level === "warn" && UNCLAIMED_PATTERN.test(e.message)
+        );
+        expect(unclaimedWarns).toHaveLength(1);
+        expect(unclaimedWarns[0]!.message).toContain('"orphan-key"');
+    });
+});
