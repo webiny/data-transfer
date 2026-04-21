@@ -347,6 +347,15 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             );
         }
 
+        // Blackhole: drop every command this record emitted instead of
+        // folding it into the shard buffer. Filters + transformers + onEnd
+        // still ran (useful side effects stay intact) — only the write
+        // path is suppressed. Snapshot above still recorded the commands,
+        // so users can diff "what would have been written".
+        if (pipeline.isBlackhole) {
+            return;
+        }
+
         // Fold this record's commands into the single shared shard buffer.
         // Each processor.execute will .get(key) from this shared buffer at
         // shard end, which marks that key as claimed. Any key nobody claims

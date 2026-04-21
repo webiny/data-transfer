@@ -734,3 +734,109 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
         expect(unclaimedWarns[0]!.message).toContain('"orphan-key"');
     });
 });
+
+describe("PipelineRunner.run() — blackhole pipelines", () => {
+    it("drops every emitted command — processor.execute sees an empty bag", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        const builder = container.resolve(PipelineBuilderFactory).create({
+            name: "observe-only",
+            scanner: FakeScannerImpl,
+            processors: [FakeProcessorImpl]
+        });
+        builder.filter(createFilter<FakeRecord>(() => true));
+        builder.blackhole();
+        runner.register(builder.build());
+
+        await runner.run();
+
+        // FakeProcessor.onEnd would normally push a PutRecord per record —
+        // 2 commands total. Blackhole drops all of them before the shard
+        // fold, so .execute() sees an empty Commands bag (size 0).
+        expect(processor.executed).toHaveLength(1);
+        expect(processor.executed[0]?.size()).toBe(0);
+    });
+
+    it("still runs transformers for their side effects", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" }
+        ];
+
+        // Transformer side effect — append to a captured list.
+        const observed: string[] = [];
+        const observe = (ctx: FakeContext): void => {
+            observed.push(ctx.record.id);
+        };
+
+        const runner = container.resolve(PipelineRunner);
+        const builder = container.resolve(PipelineBuilderFactory).create({
+            name: "observer",
+            scanner: FakeScannerImpl,
+            processors: [FakeProcessorImpl]
+        });
+        builder
+            .filter(createFilter<FakeRecord>(() => true))
+            .use(observe)
+            .blackhole();
+        runner.register(builder.build());
+
+        await runner.run();
+
+        expect(observed).toEqual(["r1", "r2"]);
+    });
+
+    it("does not leak commands from other non-blackholed pipelines in the same merge group", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "a", type: "foo" },
+            { id: "b", type: "bar" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        const factory = container.resolve(PipelineBuilderFactory);
+
+        // First-match-wins: foo records hit the blackhole pipeline, bar
+        // records fall through to the normal one.
+        const blackholePipeline = factory
+            .create({
+                name: "blackhole-foo",
+                scanner: FakeScannerImpl,
+                processors: [FakeProcessorImpl]
+            })
+            .filter(createFilter<FakeRecord>(r => r.type === "foo"))
+            .blackhole()
+            .build();
+
+        const normalPipeline = factory
+            .create({
+                name: "normal-bar",
+                scanner: FakeScannerImpl,
+                processors: [FakeProcessorImpl]
+            })
+            .filter(createFilter<FakeRecord>(r => r.type === "bar"))
+            .build();
+
+        runner.register(blackholePipeline);
+        runner.register(normalPipeline);
+
+        await runner.run();
+
+        // FakeProcessor.onEnd auto-puts one command per matched record.
+        // 1 foo → blackholed → dropped. 1 bar → normal → 1 PutRecord in
+        // the shard bag. The blackhole pipeline must NOT eat the normal
+        // pipeline's output.
+        expect(processor.executed[0]?.size()).toBe(1);
+    });
+});

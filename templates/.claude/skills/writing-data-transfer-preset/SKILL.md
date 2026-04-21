@@ -84,6 +84,7 @@ All methods are chainable and can be called in any order (multiple `.use()` call
 - `.filter(filter)` — AND-composes if called multiple times.
 - `.use(transformer)` — insertion order IS execution order.
 - `.beforeExecuteCommands(hook)` / `.afterExecuteCommands(hook)` — optional merge-group hooks.
+- `.blackhole()` — observe-only mode. Filters + transformers + `onEnd` still run; every emitted command is discarded at the per-record → shard fold step. Useful for validation-only pipelines or dry-running a single pipeline inside an otherwise real transfer. Snapshot (if enabled) still captures what would have been written, so you can diff the blackholed pipeline's intended output without touching the target.
 - `.build()` — snapshot into an immutable `Pipeline`. Required before `runner.register()`.
 
 ## Filter semantics

@@ -35,6 +35,7 @@ export class PipelineBuilder<
     private transformers: Transformer.Interface<TContext>[] = [];
     private beforeHooks: Abstraction<Hook.Interface>[] = [];
     private afterHooks: Abstraction<Hook.Interface>[] = [];
+    private blackholeCommands: boolean = false;
 
     public constructor(config: PipelineBuilderConfig<TRecord, TContext, TShard>) {
         if (!config.name || config.name.trim().length === 0) {
@@ -76,6 +77,19 @@ export class PipelineBuilder<
         return this;
     }
 
+    /**
+     * Observe-only mode. Filters + transformers + onEnd all run as usual,
+     * but every command emitted during a blackholed record is dropped at
+     * the per-record → shard fold step, so nothing from this pipeline
+     * lands on the target. Useful for dry-runs of a single pipeline
+     * inside an otherwise real transfer, or for validation-only passes
+     * that don't produce writes.
+     */
+    public blackhole(): this {
+        this.blackholeCommands = true;
+        return this;
+    }
+
     public build(): Pipeline<TRecord, TContext, TShard> {
         const pipelineConfig: PipelineConfig<TRecord, TContext, TShard> = {
             name: this.name,
@@ -84,7 +98,8 @@ export class PipelineBuilder<
             filters: [...this.filters],
             transformers: [...this.transformers],
             beforeHooks: [...this.beforeHooks],
-            afterHooks: [...this.afterHooks]
+            afterHooks: [...this.afterHooks],
+            blackhole: this.blackholeCommands
         };
         return new Pipeline(pipelineConfig);
     }

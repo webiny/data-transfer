@@ -20,6 +20,15 @@ export interface PipelineConfig<
     readonly transformers: readonly Transformer.Interface<TContext>[];
     readonly beforeHooks: readonly Abstraction<Hook.Interface>[];
     readonly afterHooks: readonly Abstraction<Hook.Interface>[];
+    /**
+     * When true, the runner runs filters + transformers + onEnd as
+     * usual but discards every command at the per-record fold step —
+     * no puts, no copies, nothing lands in the target. Useful for
+     * observe-only pipelines (validation, logging, dry-runs of a
+     * single pipeline inside an otherwise real transfer). Optional —
+     * defaults to false via the Pipeline class getter.
+     */
+    readonly blackhole?: boolean;
 }
 
 export class Pipeline<
@@ -60,6 +69,10 @@ export class Pipeline<
 
     public get hasFilter(): boolean {
         return this.config.filters.length > 0;
+    }
+
+    public get isBlackhole(): boolean {
+        return this.config.blackhole === true;
     }
 
     public accepts(record: TRecord): boolean {

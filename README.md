@@ -265,6 +265,7 @@ Builder methods:
 - `.filter(filter)` — one filter per call. Multiple `.filter()` calls AND-compose; order doesn't matter for execution.
 - `.use(transformer)` — one transformer per call. Insertion order IS preserved at execution time.
 - `.beforeExecuteCommands(hook)` / `.afterExecuteCommands(hook)` — optional per-merge-group hooks.
+- `.blackhole()` — observe-only mode. Filters + transformers + `onEnd` still run but every emitted command is discarded — nothing lands in the target for this pipeline. Useful for validation-only passes or dry-running a specific pipeline. Pair with `debug.snapshot` to record what WOULD have been written.
 - `.build()` — snapshots into an immutable `Pipeline`. Required before `runner.register()`.
 
 `runner.register(p1, p2, ...)` is variadic, chainable, and throws on duplicate pipeline name.
