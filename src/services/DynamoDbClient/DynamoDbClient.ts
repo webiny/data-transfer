@@ -12,11 +12,16 @@ import {
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
-import { isRetryableAwsError } from "~/base/index.ts";
+import { isRetryableAwsError, retryBackoffMs } from "~/base/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 const BATCH_SIZE = 25; // AWS-enforced BatchWriteItem limit — not user-tunable
-const DEFAULT_MAX_RETRIES = 3;
+// Default retry budget — enough to weather a multi-second transient
+// (100 / 200 / 400 / 800 / 1600 / 3200 ms base; +±25% jitter ≈ 4.7-7.9 s
+// total). AWS's adaptive retry middleware only auto-retries on
+// throttling flags, so our outer loop carries most of the server-error
+// coverage.
+const DEFAULT_MAX_RETRIES = 6;
 const DEFAULT_INITIAL_BACKOFF = 100;
 
 export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
@@ -163,7 +168,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
                     throw error;
                 }
 
-                const backoff = this.initialBackoff * Math.pow(2, attempt);
+                const backoff = retryBackoffMs(attempt, this.initialBackoff);
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }

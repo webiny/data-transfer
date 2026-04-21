@@ -6,9 +6,12 @@ import {
 } from "@webiny/aws-sdk/client-s3";
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
-import { isRetryableAwsError } from "~/base/index.ts";
+import { isRetryableAwsError, retryBackoffMs } from "~/base/index.ts";
 
-const DEFAULT_MAX_RETRIES = 3;
+// See DynamoDbClient for the rationale on 6 retries + the jittered
+// capped backoff. S3 mirrors the DDB defaults for consistency — same
+// underlying SDK retry semantics, same class of server-side hiccups.
+const DEFAULT_MAX_RETRIES = 6;
 const DEFAULT_INITIAL_BACKOFF = 100;
 const DEFAULT_CONCURRENCY = 10;
 
@@ -75,7 +78,7 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                     throw error;
                 }
 
-                const backoff = this.initialBackoff * Math.pow(2, attempt);
+                const backoff = retryBackoffMs(attempt, this.initialBackoff);
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }
