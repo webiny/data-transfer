@@ -28,7 +28,17 @@ projects/**/.env
 
 
 CLAUDE.*.md
-.claude/
+# Ignore .claude/ except the two shipped skills — config/preset writing
+# guides live here and ship with the init template. Other personal
+# skills (tdd, etc.) stay ignored. The two entries below intentionally
+# omit trailing slashes so they match symlinks as well as directories —
+# the repo uses symlinks into templates/.claude/skills/ to avoid
+# duplication.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/writing-data-transfer-config
+!.claude/skills/writing-data-transfer-preset
 .sample/
 .transfer/
 coverage/
