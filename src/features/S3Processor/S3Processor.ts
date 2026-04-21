@@ -54,10 +54,6 @@ class S3ProcessorImpl implements Processor.Interface<
             }))
         );
     }
-
-    public getShardState(): unknown {
-        return {};
-    }
 }
 
 export const S3Processor = S3ProcessorAbstraction.createImplementation({

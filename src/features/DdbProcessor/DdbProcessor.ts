@@ -38,10 +38,6 @@ class DdbProcessorImpl implements Processor.Interface<
         const puts = commands.get<PutRecord>(PutRecord.key);
         await this.executor.execute(puts);
     }
-
-    public getShardState(): unknown {
-        return {};
-    }
 }
 
 export const DdbProcessor = Processor.createImplementation({
