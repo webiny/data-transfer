@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createOsContainer } from "../../containers/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
@@ -172,23 +175,48 @@ describe("OsProcessor", () => {
         });
     });
 
-    describe("getShardState", () => {
-        it("returns an initial empty touchedIndexes list", () => {
-            const container = createOsContainer();
-            const processor = container.resolve(Processor) as OsProcessorInstance;
-            expect(processor.getShardState()).toEqual({ touchedIndexes: [] });
+    describe("afterShard", () => {
+        let originalCwd: string;
+        let workDir: string;
+
+        beforeEach(async () => {
+            originalCwd = process.cwd();
+            workDir = await mkdtemp(join(tmpdir(), "os-processor-aftershard-"));
+            process.chdir(workDir);
         });
 
-        it("reflects TouchedIndexes.record() mutations from the container singleton", () => {
+        afterEach(() => {
+            process.chdir(originalCwd);
+        });
+
+        it("writes <segment>-indexes.json when touchedIndexes has entries", async () => {
             const container = createOsContainer();
             const processor = container.resolve(Processor) as OsProcessorInstance;
             const touchedIndexes = container.resolve(TouchedIndexes);
 
             touchedIndexes.record("idx-foo", "1s");
+            touchedIndexes.record("idx-bar", "5s");
 
-            expect(processor.getShardState()).toEqual({
-                touchedIndexes: [{ indexName: "idx-foo", originalRefresh: "1s" }]
-            });
+            await processor.afterShard!({ segment: 2, totalSegments: 4 });
+
+            const filePath = join(workDir, ".transfer", "test-run-id", "2-indexes.json");
+            const content = await readFile(filePath, "utf-8");
+            expect(JSON.parse(content)).toEqual([
+                { indexName: "idx-foo", originalRefresh: "1s" },
+                { indexName: "idx-bar", originalRefresh: "5s" }
+            ]);
+        });
+
+        it("writes nothing when touchedIndexes is empty", async () => {
+            const container = createOsContainer();
+            const processor = container.resolve(Processor) as OsProcessorInstance;
+
+            await processor.afterShard!({ segment: 0, totalSegments: 1 });
+
+            const transferDir = join(workDir, ".transfer", "test-run-id");
+            // Directory must not exist — EnableRefreshHook treats its absence
+            // as "no indexes were touched" and early-returns.
+            await expect(readdir(transferDir)).rejects.toThrow(/ENOENT/);
         });
     });
 });

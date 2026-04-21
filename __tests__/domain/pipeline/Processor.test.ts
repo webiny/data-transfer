@@ -25,6 +25,7 @@ type TestContext = TestBase & TestSlice;
  */
 class FakeProcessor implements Processor.Interface<TestBase, TestSlice> {
     public readonly executed: Commands[] = [];
+    public readonly afterShardCalls: Processor.AfterShardContext[] = [];
     public lastEmitted: string[] = [];
 
     public extendContext(_base: TestBase): TestSlice {
@@ -52,8 +53,8 @@ class FakeProcessor implements Processor.Interface<TestBase, TestSlice> {
         this.executed.push(commands);
     }
 
-    public getShardState(): { emittedCount: number } {
-        return { emittedCount: this.lastEmitted.length };
+    public afterShard(ctx: Processor.AfterShardContext): void {
+        this.afterShardCalls.push(ctx);
     }
 }
 
@@ -120,15 +121,17 @@ describe("Processor abstraction", () => {
         expect(processor.executed[0]).toBe(commands);
     });
 
-    it("getShardState reflects slice mutation from the latest extendContext", () => {
+    it("afterShard receives the shard coordinates", async () => {
         const container = new Container();
         container.register(TestProcessor).inSingletonScope();
         const processor = container.resolve(Processor) as FakeProcessor;
 
-        const slice = processor.extendContext({ record: { id: "x" } } as unknown as TestBase);
-        slice.emit("one");
-        slice.emit("two");
+        await processor.afterShard!({ segment: 3, totalSegments: 8 });
+        await processor.afterShard!({ segment: 4, totalSegments: 8 });
 
-        expect(processor.getShardState()).toEqual({ emittedCount: 2 });
+        expect(processor.afterShardCalls).toEqual([
+            { segment: 3, totalSegments: 8 },
+            { segment: 4, totalSegments: 8 }
+        ]);
     });
 });

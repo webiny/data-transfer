@@ -236,6 +236,34 @@ describe("PipelineRunner.run()", () => {
         expect(processor.executed[0]?.size()).toBe(1);
     });
 
+    it("invokes afterShard once per shard with {segment, totalSegments}", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "aftershard-fullrun"));
+        await runner.run();
+
+        // FakeScanner.listShards returns a single shard — full-run mode
+        // threads segment=0, totalSegments=1.
+        expect(processor.afterShardCalls).toEqual([{ segment: 0, totalSegments: 1 }]);
+    });
+
+    it("threads {segment, totalSegments} from shard mode into afterShard", async () => {
+        const { container } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [{ id: "r1", type: "foo" }];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "aftershard-shardmode"));
+        await runner.run({ segment: 0, totalSegments: 1 });
+
+        expect(processor.afterShardCalls).toEqual([{ segment: 0, totalSegments: 1 }]);
+    });
+
     it("flushes per-processor buffers via execute() when transformers emit commands", async () => {
         const { container } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;

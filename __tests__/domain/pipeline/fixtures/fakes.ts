@@ -62,8 +62,10 @@ export class FakeProcessor implements Processor.Interface<
         this.executed.push(commands);
     }
 
-    public getShardState(): { count: number } {
-        return { count: this.executed.length };
+    public afterShardCalls: Processor.AfterShardContext[] = [];
+
+    public afterShard(ctx: Processor.AfterShardContext): void {
+        this.afterShardCalls.push(ctx);
     }
 }
 

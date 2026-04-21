@@ -1,11 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mkdtemp, readFile } from "node:fs/promises";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const runSpy = vi.fn();
-const touchedIndexesMap = new Map<string, string>();
 const loadSpy = vi.fn(async () => ({
     name: "test-os-preset",
     description: "test",
@@ -26,23 +21,14 @@ vi.mock("~/bootstrap.ts", () => ({
 
 import { handler } from "~/commands/processOsSegment/handler.ts";
 import { Logger } from "~/tools/Logger/index.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
 import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 
 describe("processOsSegment handler", () => {
-    let originalCwd: string;
-    let workDir: string;
-
-    beforeEach(async () => {
-        originalCwd = process.cwd();
-        workDir = await mkdtemp(join(tmpdir(), "os-handler-"));
-        process.chdir(workDir);
-
+    beforeEach(() => {
         runSpy.mockReset();
-        touchedIndexesMap.clear();
         loadSpy.mockReset().mockResolvedValue({
             name: "test-os-preset",
             description: "test",
@@ -56,55 +42,26 @@ describe("processOsSegment handler", () => {
             debug: vi.fn(),
             child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })
         });
-        const fakeOsProcessor = {
-            execute: vi.fn(),
-            createContext: vi.fn(),
-            getShardState: () => ({
-                touchedIndexes: [...touchedIndexesMap.entries()].map(
-                    ([indexName, originalRefresh]) => ({ indexName, originalRefresh })
-                )
-            })
-        };
-        resolveMap.set(PipelineRunner, {
-            run: runSpy,
-            getProcessors: () => [fakeOsProcessor]
-        });
+        resolveMap.set(PipelineRunner, { run: runSpy });
         resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
-        resolveMap.set(DirectoryTool, {
-            create: (p: string) => mkdirSync(p, { recursive: true })
-        });
-        resolveMap.set(FileTool, {
-            exists: existsSync,
-            writeFileOrThrow: (p: string, content: string) => writeFileSync(p, content)
-        });
+        // loadUserSetup resolves FileTool to look for setup.ts; no-op here.
+        resolveMap.set(FileTool, { exists: () => false });
     });
 
-    afterEach(() => {
-        process.chdir(originalCwd);
-    });
-
-    it("writes <segment>-indexes.json after successful run", async () => {
-        touchedIndexesMap.set("root-headless-cms-category", "1s");
-        touchedIndexesMap.set("root-headless-cms-article", "5s");
-
+    it("delegates shard execution to the runner with {segment, totalSegments}", async () => {
         await handler({ runId: "r1", segment: 2, total: 4, config: "./x.ts" });
 
-        const filePath = join(workDir, ".transfer", "r1", "2-indexes.json");
-        const content = await readFile(filePath, "utf-8");
-        const parsed = JSON.parse(content);
-        expect(parsed).toEqual([
-            { indexName: "root-headless-cms-category", originalRefresh: "1s" },
-            { indexName: "root-headless-cms-article", originalRefresh: "5s" }
-        ]);
+        expect(runSpy).toHaveBeenCalledWith({ segment: 2, totalSegments: 4 });
     });
 
-    it("writes empty indexes file when no indexes touched", async () => {
-        await handler({ runId: "r2", segment: 0, total: 1, config: "./x.ts" });
+    it("registers TransferContext with the provided runId", async () => {
+        await handler({ runId: "r-xyz", segment: 0, total: 1, config: "./x.ts" });
 
-        const filePath = join(workDir, ".transfer", "r2", "0-indexes.json");
-        const content = await readFile(filePath, "utf-8");
-        expect(JSON.parse(content)).toEqual([]);
+        expect(registerInstanceSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ runId: "r-xyz" })
+        );
     });
 
     it("re-throws on runner failure", async () => {

@@ -135,11 +135,11 @@ describe("DdbProcessor", () => {
         });
     });
 
-    describe("getShardState", () => {
-        it("returns an empty object", () => {
+    describe("afterShard", () => {
+        it("is not implemented (no cross-boundary state)", () => {
             const container = createDdbContainer();
             const processor = container.resolve(Processor) as DdbProcessorInstance;
-            expect(processor.getShardState()).toEqual({});
+            expect(processor.afterShard).toBeUndefined();
         });
     });
 });
