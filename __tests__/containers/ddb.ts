@@ -24,6 +24,7 @@ import { TransferContext } from "../../src/features/TransferLifecycle/abstractio
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
+import { SnapshotWriterFeature } from "../../src/features/SnapshotWriter/index.ts";
 import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
@@ -99,6 +100,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
     PipelineBuilderFactoryFeature.register(container);
+    SnapshotWriterFeature.register(container);
     PipelineRunnerFeature.register(container);
     DdbExecutorFeature.register(container);
     S3ProcessorFeature.register(container);

@@ -21,6 +21,7 @@ import { TransferContext } from "../../src/features/TransferLifecycle/abstractio
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "../../src/features/PipelineRunner/index.ts";
+import { SnapshotWriterFeature } from "../../src/features/SnapshotWriter/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
 import { TouchedIndexesFeature } from "../../src/features/TouchedIndexes/index.ts";
 import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
@@ -100,6 +101,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     TransferLifecycleFeature.register(container);
     TransformContextFeature.register(container);
     PipelineBuilderFactoryFeature.register(container);
+    SnapshotWriterFeature.register(container);
     PipelineRunnerFeature.register(container);
     TouchedIndexesFeature.register(container);
     DdbExecutorFeature.register(container);

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
     credentialsOrProviderSchema,
+    debugSettingsSchema,
     pipelineSettingsSchema,
     trimmedString,
     tuningSchema
@@ -20,7 +21,8 @@ export const ddbTransferInputSchema = z
         source: ddbAccountConfigSchema,
         target: ddbAccountConfigSchema,
         pipeline: pipelineSettingsSchema,
-        tuning: tuningSchema
+        tuning: tuningSchema,
+        debug: debugSettingsSchema
     })
     .superRefine((data, ctx) => {
         // S3 bucket names are globally unique — same name means same bucket,

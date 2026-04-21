@@ -9,6 +9,7 @@ import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
+import { SnapshotWriter } from "~/features/SnapshotWriter/abstractions/SnapshotWriter.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
     type RunOptions
@@ -39,7 +40,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         private readonly container: Container,
         private readonly logger: Logger.Interface,
         private readonly transferContext: TransferContext.Interface,
-        private readonly baseContextFactory: BaseTransformContextFactory.Interface
+        private readonly baseContextFactory: BaseTransformContextFactory.Interface,
+        private readonly snapshotWriter: SnapshotWriter.Interface
     ) {}
 
     public register(...pipelines: AnyPipeline[]): this {
@@ -84,6 +86,16 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     }
 
     public async run(opts?: RunOptions): Promise<void> {
+        try {
+            await this.runInternal(opts);
+        } finally {
+            // Snapshot streams hold file descriptors — close in `finally`
+            // so a thrown scanner/transformer doesn't leave them dangling.
+            await this.snapshotWriter.close();
+        }
+    }
+
+    private async runInternal(opts?: RunOptions): Promise<void> {
         if (!opts) {
             for (const [scannerToken, pipelines] of this.mergeGroups) {
                 await this.runMergeGroup(scannerToken, pipelines);
@@ -237,7 +249,11 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                     pipeline.name,
                     (perPipelineCounts.get(pipeline.name) ?? 0) + 1
                 );
-                await this.runRecord(pipeline, processors, record, shardCommands);
+                await this.snapshotWriter.write(
+                    `${pipeline.name}/segment-${shardCtx.segment}.source.jsonl`,
+                    record
+                );
+                await this.runRecord(pipeline, processors, record, shardCommands, shardCtx);
                 // First-match-wins: subsequent pipelines in this group are
                 // skipped for this record. Pipeline registration order
                 // determines priority.
@@ -248,6 +264,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 this.logger.debug(
                     "record dropped: no matching pipeline in merge group",
                     mergeGroupId
+                );
+                await this.snapshotWriter.write(
+                    `dropped/segment-${shardCtx.segment}.jsonl`,
+                    record
                 );
             }
         }
@@ -278,7 +298,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         pipeline: AnyPipeline,
         processors: ProcessorInstance[],
         record: unknown,
-        shardCommands: Commands
+        shardCommands: Commands,
+        shardCtx: Processor.AfterShardContext
     ): Promise<void> {
         // Build the base ctx + its per-record commands bag via the shared
         // factory. Slice helpers close over this bag via ctx.addCommand.
@@ -310,6 +331,20 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 continue;
             }
             await processor.onEnd(ctx as never);
+        }
+
+        // Snapshot: post-transform record + every command this record
+        // emitted (the auto-put PutRecord, any extra copyFile / custom
+        // addCommand calls). Both no-op when snapshot is disabled.
+        await this.snapshotWriter.write(
+            `${pipeline.name}/segment-${shardCtx.segment}.post-transform.jsonl`,
+            ctx.record
+        );
+        for (const cmd of commands.all()) {
+            await this.snapshotWriter.write(
+                `${pipeline.name}/segment-${shardCtx.segment}.commands.jsonl`,
+                cmd
+            );
         }
 
         // Fold this record's commands into the single shared shard buffer.
@@ -393,5 +428,11 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
 export const PipelineRunner = PipelineRunnerAbstraction.createImplementation({
     implementation: PipelineRunnerImpl,
-    dependencies: [ContainerToken, Logger, TransferContext, BaseTransformContextFactory]
+    dependencies: [
+        ContainerToken,
+        Logger,
+        TransferContext,
+        BaseTransformContextFactory,
+        SnapshotWriter
+    ]
 });

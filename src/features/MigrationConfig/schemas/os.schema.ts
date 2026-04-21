@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
     credentialsOrProviderSchema,
+    debugSettingsSchema,
     pipelineSettingsSchema,
     trimmedString,
     tuningSchema
@@ -29,7 +30,8 @@ export const osTransferInputSchema = z
         source: osSourceAccountConfigSchema,
         target: osTargetAccountConfigSchema,
         pipeline: pipelineSettingsSchema,
-        tuning: tuningSchema
+        tuning: tuningSchema,
+        debug: debugSettingsSchema
     })
     .superRefine((data, ctx) => {
         // Same region + same OS companion DDB table is the classic copy-
