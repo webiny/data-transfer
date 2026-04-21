@@ -55,7 +55,7 @@
     "@vitest/coverage-v8": "4.1.4",
     "dynalite": "^4.0.0",
     "jest-dynalite": "^3.6.1",
-    "oxfmt": "^0.45.0",
+    "oxfmt": "^0.46.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
