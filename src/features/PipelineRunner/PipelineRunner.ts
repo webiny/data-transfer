@@ -18,6 +18,15 @@ type ProcessorInstance = Processor.Interface<BaseTransformContext.Interface<unkn
 
 type AnyPipeline = Pipeline<any, any, any>;
 
+interface RunShardParams {
+    mergeGroupId: string;
+    pipelines: AnyPipeline[];
+    scanner: Scanner.Interface<unknown, unknown>;
+    shard: unknown;
+    pipelineProcessors: Map<AnyPipeline, ProcessorInstance[]>;
+    shardCtx: Processor.AfterShardContext;
+}
+
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     private mergeGroups: Map<Abstraction<Scanner.Interface<unknown, unknown>>, AnyPipeline[]> =
         new Map();
@@ -116,7 +125,14 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         const mergeGroupId = this.deriveMergeGroupId(scannerToken);
         const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
         const shard = shards[opts.segment];
-        await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineProcessors);
+        await this.runShard({
+            mergeGroupId,
+            pipelines,
+            scanner,
+            shard,
+            pipelineProcessors,
+            shardCtx: { segment: opts.segment, totalSegments: opts.totalSegments }
+        });
     }
 
     private async runMergeGroup(
@@ -139,8 +155,15 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
 
         const shards = await scanner.listShards();
-        for (const shard of shards) {
-            await this.runShard(mergeGroupId, pipelines, scanner, shard, pipelineProcessors);
+        for (let i = 0; i < shards.length; i++) {
+            await this.runShard({
+                mergeGroupId,
+                pipelines,
+                scanner,
+                shard: shards[i],
+                pipelineProcessors,
+                shardCtx: { segment: i, totalSegments: shards.length }
+            });
         }
 
         const afterHookTokens = this.dedupHookTokens(pipelines, "after");
@@ -184,13 +207,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return result;
     }
 
-    private async runShard(
-        mergeGroupId: string,
-        pipelines: AnyPipeline[],
-        scanner: Scanner.Interface<unknown, unknown>,
-        shard: unknown,
-        pipelineProcessors: Map<AnyPipeline, ProcessorInstance[]>
-    ): Promise<void> {
+    private async runShard(params: RunShardParams): Promise<void> {
+        const { mergeGroupId, pipelines, scanner, shard, pipelineProcessors, shardCtx } = params;
         // Single shared command buffer for the whole shard. Per-record
         // transformers + processor.onEnd hooks push into it via slice
         // helpers / addCommand. At shard end, each processor.execute drains
@@ -228,6 +246,17 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         for (const processor of processorOrder) {
             await processor.execute(shardCommands);
         }
+
+        // Per-shard terminal hooks: each processor persists its own
+        // cross-boundary state (e.g., OsProcessor writes touchedIndexes).
+        // Sequential, processor array order — same as execute().
+        for (const processor of processorOrder) {
+            if (!processor.afterShard) {
+                continue;
+            }
+            await processor.afterShard(shardCtx);
+        }
+
         this.warnUnclaimedKeys(shardCommands);
     }
 
