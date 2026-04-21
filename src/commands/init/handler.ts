@@ -44,7 +44,13 @@ export async function handler(folderName: string): Promise<void> {
     console.log(`\nCreated "${folderName}" with the following structure:\n`);
     console.log(`  ${folderName}/`);
     console.log(`  ├── package.json`);
+    console.log(
+        `  ├── tsconfig.json        # TypeScript config for your transformers / presets / configs`
+    );
     console.log(`  ├── README.md`);
+    console.log(`  ├── AGENTS.md            # project guide for you + any AI agents`);
+    console.log(`  ├── CLAUDE.md            # pointer at AGENTS.md`);
+    console.log(`  ├── .claude/skills/      # Claude skills for writing configs + presets`);
     console.log(`  ├── .gitignore`);
     console.log(`  ├── .env.example`);
     console.log(`  ├── projects/`);
