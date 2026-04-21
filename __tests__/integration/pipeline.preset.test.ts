@@ -142,25 +142,34 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
 
         const transferred = await scanAll(doc, target);
 
-        // The preset drops records whose TYPE matches no pipeline filter
-        // (SocketsConnectionRegistry, migration, tenancy.tenant, the 14
-        // undefined-TYPE rows, etc). We expect SOMETHING transferred but
-        // fewer than the source count.
+        // Two competing effects on target count:
+        //   - Records filtered out (undefined TYPE, migration.run, etc) → fewer.
+        //   - createMetadata emits extra KV metadata records per fmFile → more.
+        // Net: at least SOMETHING transferred; exact count is fixture-shape-
+        // dependent and not load-bearing.
         expect(transferred.length).toBeGreaterThan(0);
-        expect(transferred.length).toBeLessThanOrEqual(fixture.length);
 
-        // Spot-check: at least one record shows the hallmark of the
-        // `wrapInData` transformer — top-level fields nested under `data`.
-        // Passes today for records that were ALREADY wrapped in v5
-        // (fm.settings, mailer settings) — records that need wrapping are
-        // landing unwrapped due to a separate runner bug (see PR notes:
-        // `ctx.replace()` updates the base ctx but not the per-record
-        // merged context the runner hands to onEnd / subsequent
-        // transformers, so the writes at shard end go out with the
-        // pre-wrap shape).
-        const hasWrappedData = transferred.some(
-            r => typeof r["data"] === "object" && r["data"] !== null
+        // Spot-check: records that went through `wrapInData` end up with
+        // top-level non-reserved fields nested under `data`. True only if
+        // the runner's per-record ctx is mutated by ctx.replace() —
+        // regression guard for the spread-vs-reference fix in
+        // PipelineRunner.runRecord.
+        const wrappedModelIds = transferred
+            .map(r => (r["data"] as { modelId?: string } | undefined)?.modelId)
+            .filter((id): id is string => typeof id === "string");
+        expect(wrappedModelIds.length).toBeGreaterThan(0);
+
+        // createMetadata fires for fmFile records inside the fmFiles
+        // pipeline: emits a KV metadata record per matched file.
+        // PK shape: "KV#global:FileManager/File/<id>/Metadata"
+        const fileMetadataRecords = transferred.filter(
+            r => typeof r.PK === "string" && r.PK.startsWith("KV#global:FileManager/File/")
         );
-        expect(hasWrappedData).toBe(true);
+        expect(fileMetadataRecords.length).toBeGreaterThan(0);
+
+        // S3Processor drains S3Copy commands through the real S3ClientImpl.
+        // aws-sdk-client-mock captures the CopyObjectCommand invocations
+        // so we can assert the wire-level call count.
+        expect(s3Mock.commandCalls(CopyObjectCommand).length).toBeGreaterThan(0);
     }, 30_000);
 });
