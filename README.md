@@ -69,16 +69,32 @@ Run it:
 yarn webiny-data-transfer --config=./my-config.ts
 ```
 
-**Credentials:** `fromAwsProfile({profile})` reads from `~/.aws/credentials` — the same profile you'd use with the AWS CLI. Don't want profile-based auth? Pass a literal object instead:
+**Credentials** — three shapes accepted, pick what matches your deploy:
+
+- **`fromAwsProfile({profile})`** — reads `~/.aws/credentials`. Explicit about which profile. Best for local dev with multiple accounts — no risk of a stray `AWS_ACCESS_KEY_ID` env var silently hijacking the wrong account.
+- **`fromAwsCredentialChain()`** — the AWS SDK default chain. Tries env vars → shared credentials file → SSO → EC2/ECS IAM role. Best for CI / cloud runs where creds come from the environment, and for one-config-fits-everywhere setups.
+- **Literal `{accessKeyId, secretAccessKey, sessionToken?}`** — explicit strings. Use for temporary STS credentials or CI environments that inject the values as env vars directly.
 
 ```typescript
+import {
+  createDdbTransfer,
+  fromAwsProfile,         // explicit profile
+  fromAwsCredentialChain, // env → ini → SSO → IMDS
+  fromEnv
+} from "@webiny/data-transfer";
+
+// …
+credentials: fromAwsCredentialChain() // one line, works anywhere
+// or
+credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") })
+// or
 credentials: {
   accessKeyId: fromEnv("AWS_ACCESS_KEY_ID"),
   secretAccessKey: fromEnv("AWS_SECRET_ACCESS_KEY")
 }
 ```
 
-Either shape is accepted. `fromEnv(name)` throws if the variable is unset or empty; `fromEnv(name, default)` falls back. `numberFromEnv` is the typed numeric sibling — no more `Number(process.env.X!)` ritual, and a bad value like `SEGMENTS=four` fails fast with a named error.
+`fromEnv(name)` throws if the variable is unset or empty; `fromEnv(name, default)` falls back. `numberFromEnv` is the typed numeric sibling — no more `Number(process.env.X!)` ritual, and a bad value like `SEGMENTS=four` fails fast with a named error.
 
 ## Storage modes
 

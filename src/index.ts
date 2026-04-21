@@ -14,18 +14,27 @@ export { fromEnv, numberFromEnv } from "./utils/fromEnv.ts";
 export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";
 export { createTransferPreset } from "./utils/createTransferPreset.ts";
 
-// AWS credential provider — re-exported so users don't need a separate
-// `@aws-sdk/credential-providers` dep. Named `fromAwsProfile` to avoid
-// leaking the `ini` implementation detail that `fromIni` carries in the
-// AWS SDK. Usage:
+// AWS credential providers — re-exported so users don't need a separate
+// `@aws-sdk/credential-providers` dep.
+//
+// `fromAwsProfile` (= `fromIni`): explicit profile from ~/.aws/credentials.
+// Use when you want a specific account named in code and don't want stray
+// env vars to silently override it.
 //
 //     import { fromAwsProfile } from "@webiny/data-transfer";
-//     ...
-//     credentials: fromAwsProfile({ profile: "my-profile" })
+//     credentials: fromAwsProfile({ profile: "prod-reader" })
 //
-// If no `profile` is given, falls back to the default profile
-// (same behavior as setting AWS_PROFILE in the environment).
-export { fromIni as fromAwsProfile } from "@aws-sdk/credential-providers";
+// `fromAwsCredentialChain` (= `fromNodeProviderChain`): the AWS SDK's
+// default credential resolution. Tries env vars → shared credentials file
+// → SSO/web-identity → EC2/ECS IAM role. Pick when the same config has
+// to run locally AND in CI / on a cloud box without code changes.
+//
+//     import { fromAwsCredentialChain } from "@webiny/data-transfer";
+//     credentials: fromAwsCredentialChain()
+export {
+    fromIni as fromAwsProfile,
+    fromNodeProviderChain as fromAwsCredentialChain
+} from "@aws-sdk/credential-providers";
 
 // Transformer factories
 export { createTransformer } from "./transformers/createTransformer.ts";

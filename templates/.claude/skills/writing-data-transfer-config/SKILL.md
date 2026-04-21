@@ -45,19 +45,27 @@ export default createDdbTransfer({
 });
 ```
 
-## Credentials — two accepted shapes
+## Credentials — three accepted shapes
 
-The `credentials` field accepts **either** shape. Pick one per account; mixing is fine across source/target.
+The `credentials` field accepts any of the three. Pick what matches where the transfer runs; mixing is fine across source/target.
 
-### A) Profile (reads `~/.aws/credentials`)
+### A) Profile — explicit (`fromAwsProfile`)
 
 ```ts
 credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") })
 ```
 
-`fromAwsProfile` is re-exported from `@aws-sdk/credential-providers` as `fromIni`. Renamed because "ini" leaks the implementation detail. Use this when the machine already has AWS CLI profiles configured — no secrets in env vars.
+Reads `~/.aws/credentials` using the named profile (re-export of `fromIni`; renamed because "ini" leaks the implementation detail). **Use locally** when you have multiple AWS accounts — explicit profile selection prevents a stray `AWS_ACCESS_KEY_ID` in your shell from silently overriding the wrong account.
 
-### B) Literal credentials from env
+### B) Default credential chain — flexible (`fromAwsCredentialChain`)
+
+```ts
+credentials: fromAwsCredentialChain()
+```
+
+Runs the AWS SDK's default resolution: env vars → shared credentials file → SSO / web identity → EC2/ECS IAM role. **Use in CI / cloud** where the credentials source depends on the deploy target, or when you want one config that "just works" locally AND on a build agent AND on an IAM-instance-profile box.
+
+### C) Literal credentials from env — explicit strings
 
 ```ts
 credentials: {
@@ -67,7 +75,17 @@ credentials: {
 }
 ```
 
-Use this in CI environments (no `~/.aws/credentials`), for temporary STS credentials, or when you want the creds scoped to a single `.env` file.
+Use when your CI injects credentials as env vars directly, when you have temporary STS credentials to pass in, or when you prefer creds in a single `.env` file over a shared profile.
+
+### Picking between them
+
+| Scenario | Pick |
+| --- | --- |
+| Local dev, multiple AWS accounts | **A** — `fromAwsProfile` |
+| CI with IAM role or env-based creds | **B** — `fromAwsCredentialChain` |
+| CI that injects `AWS_*` env vars explicitly | **B** or **C** |
+| One-config-works-everywhere | **B** — `fromAwsCredentialChain` |
+| Temporary STS creds (session token) | **C** — literal object |
 
 ## `fromEnv(name, default?)`
 

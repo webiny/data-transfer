@@ -31,7 +31,7 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 
 - **Config builders:** `createDdbTransfer`, `createOsTransfer`
 - **Env helpers:** `loadEnv` (dotenv loader), `fromEnv(name, default?)` (required string env, throws on missing), `numberFromEnv(name, default?)` (typed numeric, throws on parse failure). Empty string counts as missing in both — `.env`'s `KEY=` is almost always a forgotten value, not an intentional empty override.
-- **AWS credential helper:** `fromAwsProfile` — re-export of `fromIni` from `@aws-sdk/credential-providers`, renamed so the `ini` implementation detail doesn't leak. `credentials` in config accepts either a literal `{accessKeyId, secretAccessKey, sessionToken?}` or a provider function (the union is schema-validated at `createDdbTransfer` / `createOsTransfer` time).
+- **AWS credential helpers:** re-exports from `@aws-sdk/credential-providers` so users don't need the direct dep. `fromAwsProfile` (= `fromIni`) binds an explicit profile from `~/.aws/credentials` — best for local dev where a stray env var shouldn't hijack auth. `fromAwsCredentialChain` (= `fromNodeProviderChain`) runs the AWS SDK default chain (env → ini → SSO → EC2/ECS IAM) — best for CI / cloud. `credentials` in config also accepts a literal `{accessKeyId, secretAccessKey, sessionToken?}`; the union is schema-validated at `createDdbTransfer` / `createOsTransfer` time.
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
 - **Filter factory:** `createFilter` + `Filter` type
 - **Scanner tokens:** `DdbScanner`, `OsScanner`
