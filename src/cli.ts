@@ -4,13 +4,11 @@ import { hideBin } from "yargs/helpers";
 import {
     registerRunCommand,
     registerInitCommand,
-    registerProcessSegmentCommand,
-    registerProcessOsSegmentCommand
+    registerProcessSegmentCommand
 } from "./commands/index.ts";
 
 let cli = yargs(hideBin(process.argv));
 cli = registerInitCommand(cli);
 cli = registerRunCommand(cli);
 cli = registerProcessSegmentCommand(cli);
-cli = registerProcessOsSegmentCommand(cli);
 cli.help().parse();

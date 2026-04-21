@@ -9,6 +9,7 @@ const loadSpy = vi.fn(async () => ({
     configure(_ctx: unknown): void {}
 }));
 const resolveMap = new Map<unknown, unknown>();
+const registerInstanceSpy = vi.fn();
 
 vi.mock("~/features/MigrationConfig/loadConfig.ts", () => ({
     loadConfig: vi.fn(async (_path: string) => ({ storage: "ddb", pipeline: { preset: "x" } }))
@@ -16,7 +17,7 @@ vi.mock("~/features/MigrationConfig/loadConfig.ts", () => ({
 vi.mock("~/bootstrap.ts", () => ({
     bootstrap: vi.fn(() => ({
         resolve: (token: unknown) => resolveMap.get(token),
-        registerInstance: vi.fn()
+        registerInstance: registerInstanceSpy
     }))
 }));
 
@@ -31,6 +32,7 @@ describe("processSegment handler", () => {
     beforeEach(() => {
         runSpy.mockReset();
         getProcessorsSpy.mockReset().mockReturnValue([]);
+        registerInstanceSpy.mockReset();
         loadSpy.mockReset().mockResolvedValue({
             name: "test-preset",
             description: "test",
@@ -55,6 +57,15 @@ describe("processSegment handler", () => {
 
         expect(loadSpy).toHaveBeenCalledWith("x");
         expect(runSpy).toHaveBeenCalledWith({ segment: 2, totalSegments: 4 });
+    });
+
+    it("registers TransferContext with the provided runId", async () => {
+        await handler({ runId: "r-xyz", segment: 0, total: 1, config: "./x.ts" });
+
+        expect(registerInstanceSpy).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ runId: "r-xyz" })
+        );
     });
 
     it("re-throws on runner failure", async () => {

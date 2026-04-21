@@ -63,8 +63,8 @@ src/
 ├── commands/                 # Self-registering CLI commands
 │   ├── init/                 # Scaffolds a new transfer project from templates/
 │   ├── run/                  # Main orchestrator ($0)
-│   ├── processSegment/       # DDB worker — calls PipelineRunner.run({ segment, totalSegments })
-│   └── processOsSegment/     # OS worker — calls PipelineRunner.run({ segment, totalSegments })
+│   └── processSegment/       # Worker — calls PipelineRunner.run({ segment, totalSegments })
+│                             # (storage-agnostic; OsProcessor.afterShard handles OS state)
 ├── domain/
 │   ├── pipeline/             # Pipeline abstractions
 │   │   ├── abstractions/

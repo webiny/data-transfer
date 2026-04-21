@@ -43,11 +43,10 @@ export async function handler(configPath: string): Promise<void> {
         logger.info("Running before-transfer hooks...");
         await beforeHook.execute();
 
-        const workerCommand = config.storage === "os" ? "process-os-segment" : "process-segment";
         const workers: Promise<void>[] = [];
 
         for (let segment = 0; segment < segments; segment++) {
-            workers.push(spawnWorker(segment, segments, runId, configPath, workerCommand));
+            workers.push(spawnWorker(segment, segments, runId, configPath));
         }
 
         const results = await Promise.allSettled(workers);
@@ -120,14 +119,13 @@ async function spawnWorker(
     segment: number,
     total: number,
     runId: string,
-    configPath: string,
-    command: string
+    configPath: string
 ): Promise<void> {
     const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
 
     const args = [
         binPath,
-        command,
+        "process-segment",
         "--runId",
         runId,
         "--segment",
