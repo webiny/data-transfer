@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { readFile } from "node:fs/promises";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
 import { sdkStreamMixin } from "@smithy/util-stream";
@@ -18,19 +18,24 @@ import { startDynalite, type DynaliteInstance } from "./dynalite.ts";
 import { createDdbIntegrationContainer } from "./integrationContainer.ts";
 
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
-const FIXTURE_PATH = fileURLToPath(new URL("../data/small-one.json", import.meta.url));
+const SOURCE_PATH = fileURLToPath(new URL("../data/small-one.json", import.meta.url));
+const EXPECTED_PATH = fileURLToPath(new URL("../data/small-one.expected.json", import.meta.url));
 
-// Valid 1x1 PNG. sharp + exifreader need a parseable image to stay on
-// the extractImageMetadata happy path; this is the smallest payload
-// that satisfies both.
+// Frozen clock so createMetadata's `new Date().toISOString()` produces a
+// stable timestamp across runs — otherwise the golden file would churn
+// every time the test runs.
+const FROZEN_NOW = new Date("2026-04-21T12:00:00.000Z");
+
+// 1x1 PNG; sharp + exifreader parse it without throwing so
+// extractImageMetadata stays on the happy path.
 const TINY_PNG = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC",
     "base64"
 );
 
-async function loadFixture(path: string): Promise<BaseRecord[]> {
+async function loadJson<T>(path: string): Promise<T> {
     const raw = await readFile(path, "utf-8");
-    return JSON.parse(raw) as BaseRecord[];
+    return JSON.parse(raw) as T;
 }
 
 async function createDdbTable(doc: DynamoDBDocument, tableName: string): Promise<void> {
@@ -78,20 +83,25 @@ async function scanAll(doc: DynamoDBDocument, tableName: string): Promise<BaseRe
         }
         lastKey = response.LastEvaluatedKey;
     } while (lastKey);
+    // Stable ordering for deterministic golden-file comparison.
+    items.sort((a, b) => {
+        const pk = (a.PK as string).localeCompare(b.PK as string);
+        return pk !== 0 ? pk : (a.SK as string).localeCompare(b.SK as string);
+    });
     return items;
 }
 
-describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
+describe("preset — v5-to-v6-ddb golden-file correctness", () => {
     let instance: DynaliteInstance;
     let doc: DynamoDBDocument;
-    let fixture: BaseRecord[];
+    let source: BaseRecord[];
 
-    // aws-sdk-client-mock patches the S3Client class globally. Restore in
-    // afterAll so unrelated suites aren't affected if vitest reuses the
-    // module graph across files.
     const s3Mock = mockClient(S3Client);
 
     beforeAll(async () => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(FROZEN_NOW);
+
         instance = await startDynalite();
         const client = new DynamoDBClient({
             endpoint: instance.endpoint,
@@ -99,34 +109,31 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
             credentials: FAKE_CREDS
         });
         doc = DynamoDBDocument.from(client);
-        fixture = await loadFixture(FIXTURE_PATH);
+        source = await loadJson<BaseRecord[]>(SOURCE_PATH);
 
-        // GetObject: return a fresh stream per call — the SDK reads the
-        // Body exactly once via transformToByteArray, so a shared stream
-        // would ECONNRESET on the second caller.
-        s3Mock.on(GetObjectCommand).callsFake(() => {
-            return { Body: sdkStreamMixin(Readable.from(TINY_PNG)) };
-        });
-        // CopyObject: silent no-op success.
+        s3Mock.on(GetObjectCommand).callsFake(() => ({
+            Body: sdkStreamMixin(Readable.from(TINY_PNG))
+        }));
         s3Mock.on(CopyObjectCommand).resolves({});
     });
 
     afterAll(async () => {
         s3Mock.restore();
         await instance.stop();
+        vi.useRealTimers();
     });
 
-    it("loads the preset, runs it over 314 v5 records, and writes transformed output to the target", async () => {
-        const source = "preset-src";
-        const target = "preset-tgt";
-        await createDdbTable(doc, source);
-        await createDdbTable(doc, target);
-        await seedRecords(doc, source, fixture);
+    it("runs the full v5-to-v6-ddb preset over __tests__/data/small-one.json and produces the committed golden target state", async () => {
+        const sourceTable = "golden-src";
+        const targetTable = "golden-tgt";
+        await createDdbTable(doc, sourceTable);
+        await createDdbTable(doc, targetTable);
+        await seedRecords(doc, sourceTable, source);
 
         const container = createDdbIntegrationContainer({
             endpoint: instance.endpoint,
-            sourceTable: source,
-            targetTable: target,
+            sourceTable,
+            targetTable,
             segments: 1,
             useRealS3Client: true
         });
@@ -137,39 +144,20 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
             pipelineBuilderFactory: container.resolve(PipelineBuilderFactory),
             container
         });
-
         await container.resolve(PipelineRunner).run({ segment: 0, totalSegments: 1 });
 
-        const transferred = await scanAll(doc, target);
+        const transferred = await scanAll(doc, targetTable);
 
-        // Two competing effects on target count:
-        //   - Records filtered out (undefined TYPE, migration.run, etc) → fewer.
-        //   - createMetadata emits extra KV metadata records per fmFile → more.
-        // Net: at least SOMETHING transferred; exact count is fixture-shape-
-        // dependent and not load-bearing.
-        expect(transferred.length).toBeGreaterThan(0);
+        // Golden-file mode. When UPDATE_EXPECTED=1 the test OVERWRITES
+        // small-one.expected.json from the live target and passes trivially.
+        // Use to regenerate after an intentional preset or transformer
+        // change, then code-review the diff before committing.
+        if (process.env.UPDATE_EXPECTED === "1") {
+            await writeFile(EXPECTED_PATH, `${JSON.stringify(transferred, null, 2)}\n`);
+            return;
+        }
 
-        // Spot-check: records that went through `wrapInData` end up with
-        // top-level non-reserved fields nested under `data`. True only if
-        // the runner's per-record ctx is mutated by ctx.replace() —
-        // regression guard for the spread-vs-reference fix in
-        // PipelineRunner.runRecord.
-        const wrappedModelIds = transferred
-            .map(r => (r["data"] as { modelId?: string } | undefined)?.modelId)
-            .filter((id): id is string => typeof id === "string");
-        expect(wrappedModelIds.length).toBeGreaterThan(0);
-
-        // createMetadata fires for fmFile records inside the fmFiles
-        // pipeline: emits a KV metadata record per matched file.
-        // PK shape: "KV#global:FileManager/File/<id>/Metadata"
-        const fileMetadataRecords = transferred.filter(
-            r => typeof r.PK === "string" && r.PK.startsWith("KV#global:FileManager/File/")
-        );
-        expect(fileMetadataRecords.length).toBeGreaterThan(0);
-
-        // S3Processor drains S3Copy commands through the real S3ClientImpl.
-        // aws-sdk-client-mock captures the CopyObjectCommand invocations
-        // so we can assert the wire-level call count.
-        expect(s3Mock.commandCalls(CopyObjectCommand).length).toBeGreaterThan(0);
-    }, 30_000);
+        const expected = await loadJson<BaseRecord[]>(EXPECTED_PATH);
+        expect(transferred).toEqual(expected);
+    }, 60_000);
 });
