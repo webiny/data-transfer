@@ -10,7 +10,7 @@
 export { createDdbTransfer } from "./features/MigrationConfig/createDdbTransfer.ts";
 export { createOsTransfer } from "./features/MigrationConfig/createOsTransfer.ts";
 export { loadEnv } from "./utils/load-env.ts";
-export { fromEnv } from "./utils/fromEnv.ts";
+export { fromEnv, numberFromEnv } from "./utils/fromEnv.ts";
 export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";
 export { createTransferPreset } from "./utils/createTransferPreset.ts";
 

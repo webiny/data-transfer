@@ -1,4 +1,4 @@
-import { loadEnv, createDdbTransfer, fromAwsProfile, fromEnv } from "~/index.ts";
+import { loadEnv, createDdbTransfer, fromAwsProfile, fromEnv, numberFromEnv } from "~/index.ts";
 
 // Loads projects/v5-to-v6/.env (next to this file). `.env*` is gitignored.
 // Region / tables / buckets come from .env. AWS credentials come from
@@ -26,6 +26,6 @@ export default createDdbTransfer({
     },
     pipeline: {
         preset: "v5-to-v6-ddb",
-        segments: Number(fromEnv("SEGMENTS", "4"))
+        segments: numberFromEnv("SEGMENTS", 4)
     }
 });

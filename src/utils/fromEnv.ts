@@ -1,7 +1,7 @@
 /**
- * Read a required environment variable with an optional default.
+ * Read a required string environment variable with an optional default.
  *
- * - If `process.env[name]` is set to a non-empty string, return it.
+ * - If `process.env[name]` is a non-empty string, return it.
  * - Else if `defaultValue` is provided, return it.
  * - Else throw, naming the missing variable — fail fast, no silent
  *   coercion to `undefined`.
@@ -16,12 +16,47 @@
 export function fromEnv(name: string): string;
 export function fromEnv(name: string, defaultValue: string): string;
 export function fromEnv(name: string, defaultValue?: string): string {
-    const value = process.env[name];
-    if (typeof value === "string" && value.length > 0) {
+    const value = readEnvValue(name) ?? defaultValue;
+    if (value !== undefined) {
         return value;
     }
-    if (defaultValue !== undefined) {
-        return defaultValue;
+    throw missingVariableError(name);
+}
+
+/**
+ * Read a required numeric environment variable with an optional default.
+ * Parses via `Number(...)`; throws when the value is set but not
+ * parseable (e.g., `SEGMENTS=four`) so typos surface immediately.
+ *
+ * @example
+ *   const segments = numberFromEnv("SEGMENTS", 4);
+ *   const port     = numberFromEnv("PORT"); // throws if absent
+ */
+export function numberFromEnv(name: string): number;
+export function numberFromEnv(name: string, defaultValue: number): number;
+export function numberFromEnv(name: string, defaultValue?: number): number {
+    const raw = readEnvValue(name);
+    if (raw === undefined) {
+        if (defaultValue !== undefined) {
+            return defaultValue;
+        }
+        throw missingVariableError(name);
     }
-    throw new Error(`Environment variable "${name}" is not set and no default was provided.`);
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) {
+        throw new Error(`Environment variable "${name}" is not a valid number (got "${raw}").`);
+    }
+    return parsed;
+}
+
+function readEnvValue(name: string): string | undefined {
+    const raw = process.env[name];
+    if (typeof raw === "string" && raw.length > 0) {
+        return raw;
+    }
+    return undefined;
+}
+
+function missingVariableError(name: string): Error {
+    return new Error(`Environment variable "${name}" is not set and no default was provided.`);
 }
