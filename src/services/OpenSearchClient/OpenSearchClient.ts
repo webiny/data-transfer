@@ -11,11 +11,7 @@ class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
         // object or a provider function (fromAwsProfile). AwsSigv4Signer
         // wants a `getCredentials` async function, so wrap either shape.
         const credentialsInput = config.credentials;
-        const getCredentials = async (): Promise<{
-            accessKeyId: string;
-            secretAccessKey: string;
-            sessionToken?: string;
-        }> => {
+        const getCredentials = async (): Promise<OpenSearchClientConfig.Credentials> => {
             const resolved =
                 typeof credentialsInput === "function"
                     ? await credentialsInput()

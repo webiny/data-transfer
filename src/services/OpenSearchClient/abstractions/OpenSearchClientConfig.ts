@@ -8,9 +8,11 @@ interface AwsCredentials {
     accessKeyId: string;
     secretAccessKey: string;
     sessionToken?: string;
+    /** Populated when credentials come from a provider that rotates them. */
+    expiration?: Date;
 }
 
-type AwsCredentialsProvider = () => Promise<AwsCredentials & { expiration?: Date }>;
+type AwsCredentialsProvider = () => Promise<AwsCredentials>;
 
 export interface IOpenSearchClientConfig {
     endpoint: string;
@@ -32,4 +34,6 @@ export const OpenSearchClientConfig = createAbstraction<IOpenSearchClientConfig>
 
 export namespace OpenSearchClientConfig {
     export type Interface = IOpenSearchClientConfig;
+    export type Credentials = AwsCredentials;
+    export type CredentialsProvider = AwsCredentialsProvider;
 }

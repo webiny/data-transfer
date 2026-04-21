@@ -4,9 +4,11 @@ interface AwsCredentials {
     accessKeyId: string;
     secretAccessKey: string;
     sessionToken?: string;
+    /** Populated when credentials come from a provider that rotates them. */
+    expiration?: Date;
 }
 
-type AwsCredentialsProvider = () => Promise<AwsCredentials & { expiration?: Date }>;
+type AwsCredentialsProvider = () => Promise<AwsCredentials>;
 
 interface S3ConnectionConfig {
     region: string;

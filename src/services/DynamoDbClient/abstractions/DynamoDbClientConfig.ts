@@ -8,9 +8,11 @@ export interface AwsCredentials {
     accessKeyId: string;
     secretAccessKey: string;
     sessionToken?: string;
+    /** Populated when credentials come from a provider that rotates them. */
+    expiration?: Date;
 }
 
-export type AwsCredentialsProvider = () => Promise<AwsCredentials & { expiration?: Date }>;
+export type AwsCredentialsProvider = () => Promise<AwsCredentials>;
 
 export interface DynamoDbConnectionConfig {
     region: string;

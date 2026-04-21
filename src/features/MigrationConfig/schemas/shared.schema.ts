@@ -7,17 +7,24 @@ export const awsCredentialsSchema = z.object({
 });
 
 /**
+ * Resolved shape a credential provider may return — AWS SDK providers
+ * optionally attach an `expiration` to signal rotation. Literal user
+ * config never has it; callers should treat it as optional.
+ */
+export interface AwsResolvedCredentials {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+    expiration?: Date;
+}
+
+/**
  * Async function returning AWS credentials — matches the shape the AWS
  * SDK v3 accepts for `credentials` (e.g., `fromAwsProfile`, `fromEnv`,
  * `fromNodeProviderChain`). We pass it through to the underlying client
  * unchanged; the SDK invokes it when it needs credentials.
  */
-export type AwsCredentialsProvider = () => Promise<{
-    accessKeyId: string;
-    secretAccessKey: string;
-    sessionToken?: string;
-    expiration?: Date;
-}>;
+export type AwsCredentialsProvider = () => Promise<AwsResolvedCredentials>;
 
 /**
  * Credentials shape accepted in user config: either a literal credentials
