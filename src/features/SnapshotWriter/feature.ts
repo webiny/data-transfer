@@ -1,14 +1,14 @@
 import { createFeature } from "~/base/createFeature.ts";
-import { JsonlSnapshotWriter } from "./JsonlSnapshotWriter.ts";
+import { SnapshotWriter } from "./SnapshotWriter.ts"; // the createImplementation export
 
 /**
- * Registers the SnapshotWriter abstraction. JsonlSnapshotWriter handles
- * both modes (enabled via `config.debug.snapshot` / disabled = no-op)
- * so this feature doesn't need to inspect the config itself.
+ * Registers the SnapshotWriter abstraction. The single impl handles
+ * both enabled and disabled modes — when `config.debug.snapshot` is
+ * falsy, write() and close() are cheap no-ops.
  */
 export const SnapshotWriterFeature = createFeature({
     name: "Core/SnapshotWriterFeature",
     register(container) {
-        container.register(JsonlSnapshotWriter).inSingletonScope();
+        container.register(SnapshotWriter).inSingletonScope();
     }
 });

@@ -20,7 +20,9 @@ Every service lives behind an **abstraction** — a typed token. Implementations
 // Abstraction = "what this thing can do"
 export const Logger = createAbstraction<Logger.Interface>("Core/Logger");
 
-// Implementation = "how it does it"
+// Implementation = "how it does it" — strategy-named (Pino) because there can
+// be multiple loggers. When a feature has a SINGLE implementation, the impl
+// export reuses the abstraction's short name via a local rename alias — see §6.
 class PinoLoggerImpl implements Logger.Interface { ... }
 
 export const PinoLogger = Logger.createImplementation({
@@ -357,12 +359,15 @@ export { FeatureName } from "./FeatureName.ts";
 
 #### `FeatureName.ts` (the implementation)
 
-```ts
-import { FeatureName } from "./abstractions/FeatureName.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { Config } from "~/features/Config/abstractions/Config.ts";
+**Key convention: the short name `FeatureName` is reused at two layers** — as the abstraction token (what consumers import) AND as the `createImplementation` export (what the feature registers). The impl file uses a **local rename alias** to avoid the name clash, so consumers never see a `DefaultX` / `XAbstraction` suffix.
 
-class FeatureNameImpl implements FeatureName.Interface {
+```ts
+// Local alias only — "Abstraction" suffix never leaks out of this file.
+import { FeatureName as FeatureNameAbstraction } from "./abstractions/index.ts";
+import { Logger } from "~/tools/Logger/index.ts";
+import { Config } from "~/features/Config/index.ts";
+
+class FeatureNameImpl implements FeatureNameAbstraction.Interface {
     public constructor(
         private readonly logger: Logger.Interface,
         private readonly config: Config.Interface
@@ -373,41 +378,52 @@ class FeatureNameImpl implements FeatureName.Interface {
     }
 }
 
-export const DefaultFeatureName = FeatureName.createImplementation({
+// Same short name as the abstraction token. Consumers never import this —
+// the feature registers it, that's where it's used.
+export const FeatureName = FeatureNameAbstraction.createImplementation({
     implementation: FeatureNameImpl,
     dependencies: [Logger, Config]
 });
 ```
 
-**House rule**: every class method has an explicit `public` / `private` / `protected` modifier. Single-line `if` / `for` always with braces. No inline structural types in generics / params / return types — extract to a named `interface` / `type`.
+**Why the alias:** consumers import `FeatureName` from the feature's `index.ts`, which re-exports the **abstraction**. They write `dependencies: [FeatureName]` and `private readonly featureName: FeatureName.Interface` — clean short name, no `Abstraction` suffix visible anywhere in their code. The impl file needs a different local binding for the abstraction because it wants to export its own `const FeatureName = ...createImplementation(...)`. That's the only place the alias is needed.
+
+**When there are multiple implementations** of the same abstraction, the impls get strategy-prefixed names instead (`PinoLogger`, `ConsoleLogger`) — the short-name reuse is specifically for the single-impl case. (See §10.4 for the ambiguity around registering two under the same abstraction.)
+
+**House rule**: every class method has an explicit `public` / `private` / `protected` modifier. Single-line `if` / `for` always with braces. No inline structural types in generics / params / return types — extract to a named `interface` / `type`. Every constructor dep is `private readonly` with explicit type from the dep's `XxxAbstraction.Interface` or `Xxx.Interface` namespace.
 
 #### `feature.ts`
 
 ```ts
 import { createFeature } from "~/base/createFeature.ts";
-import { DefaultFeatureName } from "./FeatureName.ts";
+import { FeatureName } from "./FeatureName.ts";  // the createImplementation export
 
 export const FeatureNameFeature = createFeature({
     name: "Area/FeatureNameFeature",
     register(container) {
-        container.register(DefaultFeatureName).inSingletonScope();
+        container.register(FeatureName).inSingletonScope();
     }
 });
 ```
 
+Note: `FeatureName` here is the createImplementation output from `./FeatureName.ts` — NOT the abstraction from `./abstractions/`. The name is the same; the path is different. This file is the one place inside the feature that imports the impl.
+
 #### `index.ts` (public surface)
 
 ```ts
-export { FeatureName } from "./abstractions/FeatureName.ts";
+// The abstraction is the public API; the implementation stays inside the
+// feature folder and is only touched by feature.ts.
+export { FeatureName } from "./abstractions/index.ts";
 export { FeatureNameFeature } from "./feature.ts";
 ```
 
-The `.ts` class itself (`DefaultFeatureName`) is usually NOT re-exported — callers register via the feature, not the class directly.
+The `FeatureName` exported here is the **abstraction token**, imported from `./abstractions/index.ts`. The `createImplementation` result in `./FeatureName.ts` shares the same short name but is a different symbol; it is NEVER re-exported from this file. Consumers register features (not classes) and resolve / depend on abstractions (not impls).
 
 ### What NOT to export
 
 - Bare `interface IFeatureName` — always accessed via `FeatureName.Interface`, no direct export.
-- Implementation classes — registration is the feature's job.
+- Implementation classes (`FeatureNameImpl`) — stay inside the feature folder.
+- createImplementation outputs — the `const FeatureName = FeatureNameAbstraction.createImplementation(...)` in `./FeatureName.ts` is for `./feature.ts` only. Do not re-export it from the feature's `index.ts`.
 - `reflect-metadata` — imported by the library, never by user code.
 
 ### Path aliases

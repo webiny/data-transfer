@@ -3,7 +3,7 @@ import type { WriteStream } from "node:fs";
 import { dirname, join } from "node:path";
 import { once } from "node:events";
 import { createGzip, type Gzip } from "node:zlib";
-import { SnapshotWriter } from "./abstractions/SnapshotWriter.ts";
+import { SnapshotWriter as SnapshotWriterAbstraction } from "./abstractions/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
@@ -38,7 +38,7 @@ const DEFAULT_SNAPSHOT_DIR_NAME = "snapshot";
  * Failure policy: write errors are logged at `warn` but never thrown —
  * snapshot is a best-effort debugging aid, not a blocking feature.
  */
-class JsonlSnapshotWriterImpl implements SnapshotWriter.Interface {
+class SnapshotWriterImpl implements SnapshotWriterAbstraction.Interface {
     private readonly streams: Map<string, OpenStream> = new Map();
     private readonly writeQueues: Map<string, Promise<void>> = new Map();
     private readonly resolution: Resolution;
@@ -143,7 +143,7 @@ class JsonlSnapshotWriterImpl implements SnapshotWriter.Interface {
     }
 }
 
-export const JsonlSnapshotWriter = SnapshotWriter.createImplementation({
-    implementation: JsonlSnapshotWriterImpl,
+export const SnapshotWriter = SnapshotWriterAbstraction.createImplementation({
+    implementation: SnapshotWriterImpl,
     dependencies: [MigrationConfig, TransferContext, DirectoryTool, Logger]
 });

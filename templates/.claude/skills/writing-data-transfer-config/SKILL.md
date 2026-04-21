@@ -124,6 +124,24 @@ Enforced by Zod at build time:
 - **A built-in name**: `"v5-to-v6-ddb"` (filename in `src/presets/` without extension). The runner auto-discovers built-ins.
 - **A file path**: `"./presets/my-preset.ts"` or `"../shared/presets/foo.ts"`. Resolved relative to the CONFIG file's directory.
 
+## Snapshot / debug (optional)
+
+```ts
+debug: {
+    snapshot: true
+    // or: snapshot: { dir: "./my-snapshot", compress: false }
+}
+```
+
+Dumps every record the pipeline touches to local JSONL files. Useful for diffing source vs post-transform on a specific record without re-scanning AWS. Layout (one file per shard per pipeline per category):
+
+- `<dir>/<pipelineName>/segment-<n>.source.jsonl.gz` — post-filter, pre-transform records.
+- `<dir>/<pipelineName>/segment-<n>.post-transform.jsonl.gz` — after the transformer chain + onEnd.
+- `<dir>/<pipelineName>/segment-<n>.commands.jsonl.gz` — every emitted command (PutRecord, S3Copy, custom).
+- `<dir>/dropped/segment-<n>.jsonl.gz` — records that matched no pipeline filter.
+
+Default `dir`: `.transfer/<runId>/snapshot`. Default `compress`: `true`. Best-effort — write errors log `warn` but never fail the transfer.
+
 ## Tuning (optional)
 
 ```ts

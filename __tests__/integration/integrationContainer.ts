@@ -35,6 +35,11 @@ import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
 
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 
+interface SnapshotOverride {
+    dir?: string;
+    compress?: boolean;
+}
+
 export interface DdbIntegrationContainerOptions {
     endpoint: string;
     sourceTable: string;
@@ -50,6 +55,8 @@ export interface DdbIntegrationContainerOptions {
      * Default: MockS3Client (simpler for tests that don't touch S3).
      */
     useRealS3Client?: boolean;
+    /** Enable snapshot dumps for tests that want to assert per-record output. */
+    snapshot?: boolean | SnapshotOverride;
 }
 
 /**
@@ -79,7 +86,8 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
         pipeline: {
             preset: "integration",
             segments: options.segments ?? 1
-        }
+        },
+        debug: options.snapshot !== undefined ? { snapshot: options.snapshot } : undefined
     };
 
     const container = new Container();
