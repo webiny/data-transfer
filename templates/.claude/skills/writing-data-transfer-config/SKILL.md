@@ -142,6 +142,8 @@ Dumps every record the pipeline touches to local JSONL files. Useful for diffing
 
 Default `dir`: `.transfer/<runId>/snapshot`. Default `compress`: `true`. Best-effort — write errors log `warn` but never fail the transfer.
 
+**Snapshot files may contain production data.** The default `.transfer/` location is gitignored by the `init` template. If you override `dir` to a path outside `.transfer/`, add your override path to `.gitignore` yourself — these files typically contain full source records + transformed records + emitted commands, which are usually not things you want committed.
+
 ## Tuning (optional)
 
 ```ts
