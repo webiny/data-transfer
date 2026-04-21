@@ -301,6 +301,46 @@ The package ships one: `v5-to-v6-ddb` — the full Webiny v5 → v6 DDB migratio
 - **Hooks**: each pipeline may declare before-hooks + after-hooks. Before-hooks fire once per merge group before any shard runs; after-hooks fire once after all shards in the merge group succeed. After-hooks are skipped on shard failure.
 - **Parallelism**: the `pipeline.segments` config field controls the number of scanner segments (shards). Each shard runs in parallel via a child process.
 
+## Debugging: per-record snapshot
+
+Add `debug: { snapshot: true }` to your config to dump every record the pipeline touches to local JSONL files. Useful for seeing exactly what a transformer did to a specific record, without going back to AWS.
+
+```typescript
+export default createDdbTransfer({
+  source: {
+    /* ... */
+  },
+  target: {
+    /* ... */
+  },
+  pipeline: { preset: "./presets/my-preset.ts" },
+  debug: {
+    snapshot: true
+    // or: snapshot: { dir: "./my-snapshot", compress: false }
+  }
+});
+```
+
+Layout (default `dir`: `.transfer/<runId>/snapshot`, gzipped):
+
+```
+.transfer/<runId>/snapshot/
+├── <pipelineName>/
+│   ├── segment-0.source.jsonl.gz         ← post-filter, pre-transform
+│   ├── segment-0.post-transform.jsonl.gz ← after the whole transformer chain
+│   └── segment-0.commands.jsonl.gz       ← PutRecord + S3Copy + etc.
+└── dropped/
+    └── segment-0.jsonl.gz                ← records matching no pipeline filter
+```
+
+One file per shard per pipeline per category. Inspect with `zcat` + `jq`:
+
+```bash
+zcat .transfer/<runId>/snapshot/cmsEntries/segment-0.source.jsonl.gz | jq 'select(.PK=="T#tenant#CME#abc")'
+```
+
+Snapshot is best-effort — write errors log `warn` but never break the transfer. Set `compress: false` if you want to `grep` the files directly without `zcat`.
+
 ## Troubleshooting
 
 - **AWS throttling** — the SDK already self-tunes via `retryMode: "adaptive"`. If you still hit the outer retry cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; consider lowering `tuning.s3.concurrency` for S3-heavy transfers.

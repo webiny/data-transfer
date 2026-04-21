@@ -53,6 +53,28 @@ export const pipelineSettingsSchema = z.object({
     modelsDir: trimmedString().optional()
 });
 
+/**
+ * Snapshot settings — when enabled, the runner dumps per-record JSONL
+ * files to `dir` (default: `.transfer/<runId>/snapshot`). Useful for
+ * debugging transformer behavior against specific source records.
+ *
+ * File layout (one file per shard per pipeline per category):
+ *   <dir>/<pipelineName>/segment-<n>.source.jsonl[.gz]
+ *   <dir>/<pipelineName>/segment-<n>.post-transform.jsonl[.gz]
+ *   <dir>/<pipelineName>/segment-<n>.commands.jsonl[.gz]
+ *   <dir>/dropped/segment-<n>.jsonl[.gz]
+ */
+export const snapshotSettingsSchema = z.object({
+    dir: trimmedString().optional(),
+    compress: z.boolean().optional()
+});
+
+export const debugSettingsSchema = z
+    .object({
+        snapshot: z.union([z.boolean(), snapshotSettingsSchema]).optional()
+    })
+    .optional();
+
 // Per-client operational knobs. All optional — clients fall back to module
 // defaults. Use to throttle parallelism or adjust retry behavior against a
 // rate-limited AWS account.

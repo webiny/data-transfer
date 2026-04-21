@@ -9,6 +9,7 @@ import {
     PipelineBuilderFactory,
     PipelineBuilderFactoryFeature
 } from "~/features/PipelineBuilderFactory/index.ts";
+import { SnapshotWriter } from "~/features/SnapshotWriter/index.ts";
 import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
@@ -99,6 +100,10 @@ function makeContainer(options: { runId?: string } = {}): {
     container.registerInstance(Logger, logger);
     container.registerInstance(TransferContext, { runId: options.runId ?? "test-run-id" });
     container.registerInstance(BaseTransformContextFactory, new FakeBaseContextFactory());
+    container.registerInstance(SnapshotWriter, {
+        async write(): Promise<void> {},
+        async close(): Promise<void> {}
+    });
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();

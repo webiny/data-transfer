@@ -20,6 +20,7 @@ import { TransferLifecycleFeature } from "~/features/TransferLifecycle/index.ts"
 import { TransformContextFeature } from "~/features/TransformContext/index.ts";
 import { PipelineBuilderFactoryFeature } from "~/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
+import { SnapshotWriterFeature } from "~/features/SnapshotWriter/index.ts";
 import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "~/features/DdbExecutor/index.ts";
@@ -101,6 +102,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     TenantLocalesFeature.register(container);
     TransformContextFeature.register(container);
     PipelineBuilderFactoryFeature.register(container);
+    SnapshotWriterFeature.register(container);
     PipelineRunnerFeature.register(container);
 
     if (config.storage === "ddb") {
