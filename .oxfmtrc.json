@@ -38,6 +38,7 @@
       "files": [
         "__tests__/**/*.{js,ts,json}",
         "examples/**/*.{js,ts,json}",
+        "projects/**/*.{js,ts,json}",
         "src/**/*.{js,ts,json}",
         "templates/**/*.{js,ts,json}",
         "bin.js",
