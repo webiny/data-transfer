@@ -15,6 +15,8 @@ import {
     SourceS3Client,
     TargetS3Client
 } from "../../src/services/S3Client/abstractions/S3Client.ts";
+import { S3ClientConfig } from "../../src/services/S3Client/abstractions/S3ClientConfig.ts";
+import { S3ClientFeature } from "../../src/services/S3Client/index.ts";
 import { PresetLoaderFeature } from "../../src/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts";
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
@@ -38,6 +40,15 @@ export interface DdbIntegrationContainerOptions {
     targetTable: string;
     segments?: number;
     runId?: string;
+    /**
+     * Wires the real S3ClientFeature (with dummy region + creds). Pair with
+     * `mockClient(S3Client)` from `aws-sdk-client-mock` in the test to
+     * intercept all S3 calls at the SDK boundary — we exercise the real
+     * S3ClientImpl (retry, command construction) without ever hitting AWS.
+     *
+     * Default: MockS3Client (simpler for tests that don't touch S3).
+     */
+    useRealS3Client?: boolean;
 }
 
 /**
@@ -95,8 +106,16 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
     });
     DynamoDbClientFeature.register(container);
 
-    container.registerInstance(SourceS3Client, new MockS3Client());
-    container.registerInstance(TargetS3Client, new MockS3Client());
+    if (options.useRealS3Client) {
+        container.registerInstance(S3ClientConfig, {
+            source: { region: "us-east-1", credentials: FAKE_CREDS },
+            target: { region: "us-east-1", credentials: FAKE_CREDS }
+        });
+        S3ClientFeature.register(container);
+    } else {
+        container.registerInstance(SourceS3Client, new MockS3Client());
+        container.registerInstance(TargetS3Client, new MockS3Client());
+    }
 
     PresetLoaderFeature.register(container);
     WorkerSpawnerFeature.register(container);

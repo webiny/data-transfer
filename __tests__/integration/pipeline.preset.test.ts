@@ -1,25 +1,28 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { Readable } from "node:stream";
+import { sdkStreamMixin } from "@smithy/util-stream";
+import { mockClient } from "aws-sdk-client-mock";
 import {
     DynamoDBClient,
     CreateTableCommand as CreateDdbTableCommand
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument, BatchWriteCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { S3Client, GetObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
-import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { startDynalite, type DynaliteInstance } from "./dynalite.ts";
 import { createDdbIntegrationContainer } from "./integrationContainer.ts";
-import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
 
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 const FIXTURE_PATH = fileURLToPath(new URL("../data/small-one.json", import.meta.url));
 
-// Valid 1x1 PNG. sharp + exifreader need a parseable image; this is the
-// smallest payload that keeps extractImageMetadata on the happy path.
+// Valid 1x1 PNG. sharp + exifreader need a parseable image to stay on
+// the extractImageMetadata happy path; this is the smallest payload
+// that satisfies both.
 const TINY_PNG = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC",
     "base64"
@@ -83,6 +86,11 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
     let doc: DynamoDBDocument;
     let fixture: BaseRecord[];
 
+    // aws-sdk-client-mock patches the S3Client class globally. Restore in
+    // afterAll so unrelated suites aren't affected if vitest reuses the
+    // module graph across files.
+    const s3Mock = mockClient(S3Client);
+
     beforeAll(async () => {
         instance = await startDynalite();
         const client = new DynamoDBClient({
@@ -92,9 +100,19 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
         });
         doc = DynamoDBDocument.from(client);
         fixture = await loadFixture(FIXTURE_PATH);
+
+        // GetObject: return a fresh stream per call — the SDK reads the
+        // Body exactly once via transformToByteArray, so a shared stream
+        // would ECONNRESET on the second caller.
+        s3Mock.on(GetObjectCommand).callsFake(() => {
+            return { Body: sdkStreamMixin(Readable.from(TINY_PNG)) };
+        });
+        // CopyObject: silent no-op success.
+        s3Mock.on(CopyObjectCommand).resolves({});
     });
 
     afterAll(async () => {
+        s3Mock.restore();
         await instance.stop();
     });
 
@@ -109,17 +127,9 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
             endpoint: instance.endpoint,
             sourceTable: source,
             targetTable: target,
-            segments: 1
+            segments: 1,
+            useRealS3Client: true
         });
-
-        // MockS3Client is DDB-container-default. Override getObject to
-        // always return a valid tiny PNG so fmFiles → extractImageMetadata
-        // stays on the happy path (sharp + exifreader are satisfied).
-        // batchCopy is already a silent no-op; copies are recorded on
-        // targetMock.copies for assertion.
-        const sourceMock = container.resolve(SourceS3Client) as MockS3Client;
-        sourceMock.getObject = async () => TINY_PNG;
-        const targetMock = container.resolve(TargetS3Client) as MockS3Client;
 
         const preset = await container.resolve(PresetLoader).load("v5-to-v6-ddb");
         await preset.configure({
@@ -133,8 +143,8 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
         const transferred = await scanAll(doc, target);
 
         // The preset drops records whose TYPE matches no pipeline filter
-        // (e.g., SocketsConnectionRegistry, migration, tenancy.tenant, the
-        // 14 undefined-TYPE rows). We expect SOMETHING transferred but
+        // (SocketsConnectionRegistry, migration, tenancy.tenant, the 14
+        // undefined-TYPE rows, etc). We expect SOMETHING transferred but
         // fewer than the source count.
         expect(transferred.length).toBeGreaterThan(0);
         expect(transferred.length).toBeLessThanOrEqual(fixture.length);
@@ -145,11 +155,5 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
             r => typeof r["data"] === "object" && r["data"] !== null
         );
         expect(hasWrappedData).toBe(true);
-
-        // Harmless guard so MockS3 typing doesn't rot if the preset wiring
-        // stops touching S3 entirely. Not asserting on count — whether
-        // fmFiles produces copies depends on both preset wiring and
-        // fixture-record content (see test discovery notes in the PR).
-        expect(targetMock.copies).toBeInstanceOf(Array);
     }, 30_000);
 });
