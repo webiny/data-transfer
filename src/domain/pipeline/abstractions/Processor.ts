@@ -2,6 +2,11 @@ import { createAbstraction } from "~/base/index.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 
+interface IAfterShardContext {
+    segment: number;
+    totalSegments: number;
+}
+
 interface IProcessor<
     TBaseContext extends BaseTransformContext.Interface<unknown> =
         BaseTransformContext.Interface<unknown>,
@@ -34,8 +39,14 @@ interface IProcessor<
      */
     execute(commands: Commands): Promise<void>;
 
-    /** Per-shard state for the worker handler to serialize and pass to after-hooks. */
-    getShardState(): unknown;
+    /**
+     * Per-shard terminal hook for persisting side-effect state the processor
+     * owns (e.g., OsProcessor writing touchedIndexes state for the orchestrator-
+     * side EnableRefreshHook to consume). Runs after execute() drains the
+     * buffer, sequentially in processor array order. Optional — processors
+     * without cross-boundary state omit it.
+     */
+    afterShard?(ctx: IAfterShardContext): void | Promise<void>;
 }
 
 export const Processor = createAbstraction<IProcessor<any, any>>("Core/Processor");
@@ -46,6 +57,8 @@ export namespace Processor {
             BaseTransformContext.Interface<unknown>,
         TSlice = {}
     > = IProcessor<TBaseContext, TSlice>;
+
+    export type AfterShardContext = IAfterShardContext;
 
     /**
      * Backwards-compatible alias referenced by Pipeline, PipelineBuilder,
