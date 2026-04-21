@@ -12,6 +12,9 @@ const DEFAULT_REGION = "eu-central-1";
 const DEFAULT_PROFILE = "default";
 
 export default createDdbTransfer({
+    debug: {
+        logFile: true
+    },
     source: {
         region: fromEnv("SOURCE_REGION", DEFAULT_REGION),
         credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", DEFAULT_PROFILE) }),

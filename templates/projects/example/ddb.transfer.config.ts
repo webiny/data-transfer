@@ -53,4 +53,21 @@ export default createDdbTransfer({
         segments: numberFromEnv("SEGMENTS", 4)
         // modelsDir: "./models"
     }
+    //
+    // Optional debug helpers — uncomment either or both to enable.
+    //
+    // debug: {
+    //     // Dump every source/post-transform/command record to JSONL
+    //     // files under `.transfer/<runId>/snapshot/`. Great for seeing
+    //     // exactly what a transformer did to a specific record without
+    //     // re-scanning AWS. Gzipped by default; set `{compress: false}`
+    //     // to grep directly.
+    //     snapshot: true,
+    //     // Write the runner's pino log to disk alongside stdout. `true`
+    //     // gives each process its own file at
+    //     // `.transfer/<runId>/logs/<orchestrator|segment-N>.log`
+    //     // (safe under worker parallelism). Pass a string to write
+    //     // every process to the same path.
+    //     logFile: true
+    // }
 });

@@ -82,6 +82,25 @@ See `projects/example/os.transfer.config.ts` for the full template.
 - `segments` - Number of parallel workers for scanning (default: 1)
 - `modelsDir` - Path to a directory with custom CMS model JSON files (optional). Resolved relative to the config file's directory.
 
+### Debug Options
+
+Opt-in via a top-level `debug: { ... }` block on your config. See the commented block in `projects/example/ddb.transfer.config.ts` for the full shape.
+
+- `debug.snapshot` — dump every source/post-transform/command record to local JSONL files under `.transfer/<runId>/snapshot/` (gzipped by default). Use `true` for defaults, or `{ dir, compress }` to override. Great for diffing exactly what a transformer did to a specific record without re-scanning AWS.
+- `debug.logFile` — write the runner's pino log to disk alongside stdout. `true` → `.transfer/<runId>/logs/<orchestrator|segment-N>.log` (one file per process, safe under worker parallelism). String → all processes append to the path you provide. Replay with `cat .transfer/<runId>/logs/*.log | pino-pretty`.
+
+Both outputs land under `.transfer/` by default, which the `init` template gitignores. If you set a custom path outside `.transfer/`, add it to your own `.gitignore` — these files typically contain production data and full log payloads.
+
+### Re-running Specific Shards
+
+If a run finishes with only some shards failing, you can re-drive just those indices instead of the whole table:
+
+```bash
+yarn transfer --config=./projects/my-project/ddb.transfer.config.ts --segments=1,3
+```
+
+Workers still receive the full `--total` (from `pipeline.segments`), so each shard scans the exact same slice it would in a fresh run. Out-of-range indices fail fast before any worker spawns.
+
 ## Writing a Custom Preset
 
 The package ships with starter files so you can compose your own transfer:

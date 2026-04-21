@@ -46,4 +46,12 @@ export default createOsTransfer({
         segments: numberFromEnv("SEGMENTS", 4)
         // modelsDir: "./models"
     }
+    //
+    // Optional debug helpers — see ddb.transfer.config.ts for full
+    // comments. Both fields are opt-in.
+    //
+    // debug: {
+    //     snapshot: true, // dump to .transfer/<runId>/snapshot/
+    //     logFile: true   // log to .transfer/<runId>/logs/*.log
+    // }
 });

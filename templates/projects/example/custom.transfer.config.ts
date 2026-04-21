@@ -41,4 +41,12 @@ export default createDdbTransfer({
         preset: "../../presets/example.ts",
         segments: numberFromEnv("SEGMENTS", 1)
     }
+    //
+    // Optional debug helpers — see ddb.transfer.config.ts for full
+    // comments. Both fields are opt-in.
+    //
+    // debug: {
+    //     snapshot: true, // dump to .transfer/<runId>/snapshot/
+    //     logFile: true   // log to .transfer/<runId>/logs/*.log
+    // }
 });
