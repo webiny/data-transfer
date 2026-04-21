@@ -5,7 +5,7 @@ import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import type { InitDataTransferFn } from "~/utils/initDataTransfer.ts";
 
-const SETUP_FILENAMES: ReadonlyArray<string> = ["setup.ts", "setup.js"];
+const SETUP_FILENAME = "setup.ts";
 
 /**
  * Look for a sibling `setup.ts` next to the user's config file and, if
@@ -14,6 +14,7 @@ const SETUP_FILENAMES: ReadonlyArray<string> = ["setup.ts", "setup.js"];
  * can register custom processors / abstractions ahead of preset wiring.
  *
  * The file is entirely optional — pure-config / pure-preset users skip it.
+ * Only `.ts` is supported; all user code in this project is typed.
  */
 export async function loadUserSetup(
     configPath: string,
@@ -23,8 +24,8 @@ export async function loadUserSetup(
     const absoluteConfigPath = isAbsolute(configPath) ? configPath : resolve(configPath);
     const configDir = dirname(absoluteConfigPath);
 
-    const setupPath = resolveSetupPath(configDir, container.resolve(FileTool));
-    if (!setupPath) {
+    const setupPath = join(configDir, SETUP_FILENAME);
+    if (!container.resolve(FileTool).exists(setupPath)) {
         return;
     }
 
@@ -41,14 +42,4 @@ export async function loadUserSetup(
     }
 
     await (setupFn as InitDataTransferFn)({ container });
-}
-
-function resolveSetupPath(configDir: string, fileTool: FileTool.Interface): string | null {
-    for (const filename of SETUP_FILENAMES) {
-        const candidate = join(configDir, filename);
-        if (fileTool.exists(candidate)) {
-            return candidate;
-        }
-    }
-    return null;
 }
