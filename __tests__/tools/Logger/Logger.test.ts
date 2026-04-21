@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PinoLogger } from "../../../src/tools/Logger/PinoLogger.ts";
 
 const captureStdout = (): { lines: string[]; restore: () => void } => {
@@ -115,6 +118,53 @@ describe("PinoLogger", () => {
             expect(capture.lines).toHaveLength(2);
             expect(parseLine(capture.lines[0]).type).toBe("error");
             expect(parseLine(capture.lines[1]).type).toBe("fatal");
+        });
+    });
+
+    describe("logFile", () => {
+        let workDir: string;
+
+        beforeEach(async () => {
+            workDir = await mkdtemp(join(tmpdir(), "pino-logfile-"));
+        });
+
+        it("appends raw pino JSONL to the configured file path", async () => {
+            const path = join(workDir, "logs", "transfer.log");
+            const logger = new PinoLogger({
+                logLevel: "debug",
+                transport: "pretty",
+                logFile: path
+            });
+            logger.info("hello file");
+            logger.warn("heads up");
+
+            // pino's file destination is sync-ish but we defer a tick
+            // so the multistream flush settles on slow CI.
+            await new Promise(r => setTimeout(r, 50));
+
+            const raw = await readFile(path, "utf-8");
+            const lines = raw.split("\n").filter(l => l.length > 0);
+            expect(lines).toHaveLength(2);
+            const first = JSON.parse(lines[0]!);
+            expect(first.msg).toBe("hello file");
+            expect(first.level).toBe(30); // info
+            const second = JSON.parse(lines[1]!);
+            expect(second.msg).toBe("heads up");
+            expect(second.level).toBe(40); // warn
+        });
+
+        it("creates intermediate directories on the log file's path", async () => {
+            const path = join(workDir, "a", "b", "c", "out.log");
+            const logger = new PinoLogger({
+                logLevel: "info",
+                transport: "pretty",
+                logFile: path
+            });
+            logger.info("creates dirs");
+            await new Promise(r => setTimeout(r, 50));
+
+            const raw = await readFile(path, "utf-8");
+            expect(raw).toContain("creates dirs");
         });
     });
 });

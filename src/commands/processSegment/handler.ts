@@ -16,7 +16,7 @@ export interface ProcessSegmentArgs {
 
 export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const config = await loadConfig(argv.config);
-    const container = bootstrap({ config });
+    const container = bootstrap({ config, runId: argv.runId });
     container.registerInstance(TransferContext, { runId: argv.runId });
 
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);

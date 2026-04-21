@@ -1,4 +1,7 @@
-import pino, { type LevelWithSilentOrString } from "pino";
+import pino, { multistream, type LevelWithSilentOrString, type StreamEntry } from "pino";
+import pretty from "pino-pretty";
+import { createWriteStream, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { Writable } from "node:stream";
 import { Logger } from "./abstractions/Logger.ts";
 
@@ -7,6 +10,13 @@ type LogTransport = "pretty" | "json";
 interface PinoLoggerParams {
     logLevel: LevelWithSilentOrString;
     transport?: LogTransport;
+    /**
+     * Optional absolute path. When set, the logger fans out to stdout
+     * (via transport) AND appends raw pino JSONL to this file. The
+     * caller is responsible for mkdir-ing the parent if it doesn't
+     * exist — the impl does it defensively anyway.
+     */
+    logFile?: string;
     /** Internal: prefix prepended to every message (used by child loggers) */
     prefix?: string;
     /** Internal: reuse parent pino instance (used by child loggers) */
@@ -44,13 +54,29 @@ const createJsonDestination = (): Writable => {
     });
 };
 
+const createPrettyDestination = (): Writable => {
+    return pretty({
+        colorize: true,
+        customColors: "fatal:red,error:red,warn:yellow,info:blue,debug:gray",
+        ignore: "pid,hostname,time",
+        messageFormat: "{msg}"
+    });
+};
+
+const createFileDestination = (path: string): Writable => {
+    mkdirSync(dirname(path), { recursive: true });
+    return createWriteStream(path, { flags: "a" });
+};
+
 export class PinoLogger implements Logger.Interface {
     private readonly logger: pino.Logger;
     private readonly transport?: LogTransport;
+    private readonly logFile?: string;
     private readonly prefix: string;
 
     public constructor(params: PinoLoggerParams) {
         this.transport = params.transport;
+        this.logFile = params.logFile;
         this.prefix = params.prefix ?? "";
 
         if (params.pinoLogger) {
@@ -58,24 +84,25 @@ export class PinoLogger implements Logger.Interface {
             return;
         }
 
-        const base = { level: params.logLevel };
+        const consoleStream =
+            this.transport === "json" ? createJsonDestination() : createPrettyDestination();
 
-        if (this.transport === "json") {
-            this.logger = pino(base, createJsonDestination());
-        } else {
-            this.logger = pino({
-                ...base,
-                transport: {
-                    target: "pino-pretty",
-                    options: {
-                        colorize: true,
-                        customColors: "fatal:red,error:red,warn:yellow,info:blue,debug:gray",
-                        ignore: "pid,hostname,time",
-                        messageFormat: "{msg}"
-                    }
-                }
-            });
+        // Single-stream fast path when there's no log file. Pino routes
+        // writes directly to the destination without the multistream
+        // wrapper — preserves the synchronous stdout.write semantics the
+        // existing JSON-transport tests rely on.
+        if (!this.logFile) {
+            this.logger = pino({ level: params.logLevel }, consoleStream);
+            return;
         }
+
+        // Fan-out: console + raw pino JSONL to file. File content is
+        // machine-readable; post-hoc `pino-pretty < file.log` for humans.
+        const streams: StreamEntry[] = [
+            { stream: consoleStream },
+            { stream: createFileDestination(this.logFile) }
+        ];
+        this.logger = pino({ level: params.logLevel }, multistream(streams));
     }
 
     public debug(message: string, ...args: unknown[]): void {
@@ -111,6 +138,7 @@ export class PinoLogger implements Logger.Interface {
         return new PinoLogger({
             logLevel: this.logger.level as LevelWithSilentOrString,
             transport: this.transport,
+            logFile: this.logFile,
             prefix: this.prefix + prefix,
             pinoLogger: this.logger
         });

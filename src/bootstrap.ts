@@ -1,3 +1,4 @@
+import { isAbsolute, join as joinPath } from "node:path";
 import { Container } from "@webiny/di";
 import { ContainerToken } from "~/base/index.ts";
 import { MigrationConfig, MigrationConfigFeature } from "~/features/MigrationConfig/index.ts";
@@ -34,6 +35,14 @@ export interface BootstrapOptions {
     config: MigrationConfig.Interface;
     logLevel?: "debug" | "info" | "warn" | "error";
     json?: boolean;
+    /**
+     * Run ID — used to resolve the default log file path under
+     * `.transfer/<runId>/logs/...`. Required when
+     * `config.debug.logFile === true` (default-path mode); optional
+     * otherwise. Handlers pass this from argv.runId (workers) or a
+     * freshly generated value (orchestrator).
+     */
+    runId?: string;
 }
 
 export function bootstrap(options: BootstrapOptions): Container {
@@ -47,7 +56,8 @@ export function bootstrap(options: BootstrapOptions): Container {
     // Tools
     LoggerFeature.register(container, {
         logLevel: options.logLevel || "info",
-        json: options.json || false
+        json: options.json || false,
+        logFile: resolveLogFile(config, options.runId)
     });
     CacheFeature.register(container);
     GzipCompressionFeature.register(container);
@@ -119,4 +129,40 @@ export function bootstrap(options: BootstrapOptions): Container {
     }
 
     return container;
+}
+
+/**
+ * Turn `config.debug.logFile` into an absolute path for the pino file
+ * stream. `true` → `.transfer/<runId>/logs/<orchestrator|segment-N>.log`.
+ * Workers are detected via `--segment <N>` in argv so each one writes
+ * to its own file (concurrent appends to a shared file can interleave).
+ */
+function resolveLogFile(
+    config: MigrationConfig.Interface,
+    runId: string | undefined
+): string | undefined {
+    const raw = config.debug?.logFile;
+    if (!raw) {
+        return undefined;
+    }
+    if (typeof raw === "string") {
+        return isAbsolute(raw) ? raw : joinPath(process.cwd(), raw);
+    }
+    if (!runId) {
+        // Default path needs a runId to anchor the directory; without
+        // it there's nowhere sensible to write. Silent no-op keeps the
+        // feature opt-in-forgiving.
+        return undefined;
+    }
+    const kind = detectProcessKind();
+    return joinPath(process.cwd(), ".transfer", runId, "logs", `${kind}.log`);
+}
+
+function detectProcessKind(): string {
+    const argv = process.argv;
+    const idx = argv.indexOf("--segment");
+    if (idx >= 0 && argv[idx + 1] !== undefined) {
+        return `segment-${argv[idx + 1]}`;
+    }
+    return "orchestrator";
 }

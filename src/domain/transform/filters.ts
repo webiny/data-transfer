@@ -15,6 +15,15 @@ export const isCmsModel = byType("cms.model");
 
 export const isCmsEntry = byTypePrefix("cms.entry");
 
+export const isBackgroundTask = (item: Record<string, unknown>) => {
+    if (item.modelId === "webinyTask" || item.modelId === "webinyTaskLog") {
+        return true;
+    } else if (typeof item.GSI1_PK !== "string") {
+        return false;
+    }
+    return item.GSI1_PK.includes("webinyTask") || item.GSI1_PK.includes("webinyTaskLog");
+};
+
 export const isFmFile = (record: Record<string, unknown>): boolean => {
     const modelId =
         (record.modelId as string) ||

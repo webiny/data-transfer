@@ -13,12 +13,13 @@ import {
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 
 export async function handler(configPath: string): Promise<void> {
+    const runId = String(Date.now());
     let container;
     let logger;
     let config;
     try {
         config = await loadConfig(configPath);
-        container = bootstrap({ config });
+        container = bootstrap({ config, runId });
         logger = container.resolve(Logger);
     } catch (error) {
         // Config-load / Zod validation failures happen before we have a logger
@@ -27,7 +28,6 @@ export async function handler(configPath: string): Promise<void> {
         process.exit(1);
     }
 
-    const runId = String(Date.now());
     const segments = config.pipeline.segments || 1;
 
     container.registerInstance(TransferContext, { runId });

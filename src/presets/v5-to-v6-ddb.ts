@@ -5,6 +5,7 @@ import { S3Processor } from "~/features/S3Processor/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
     byType,
+    isBackgroundTask,
     isBuiltInSecurityRole,
     isCmsEntry,
     isCmsModel,
@@ -14,8 +15,6 @@ import {
 } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
-    createMetadata,
-    extractImageMetadata,
     fixBrokenStorageKeys,
     fixCmePk,
     groupsToRoles,
@@ -54,6 +53,18 @@ export default createTransferPreset({
     description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
     configure({ runner, pipelineBuilderFactory: factory }): void {
         // ========================================================================
+        // Background Tasks
+        // ========================================================================
+        const backgroundTasks = factory
+            .create({
+                name: "BackgroundTasks",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isBackgroundTask))
+            .blackhole()
+            .build();
+        // ========================================================================
         // File Manager Settings
         // ========================================================================
         const fmSettings = factory
@@ -91,8 +102,10 @@ export default createTransferPreset({
             .use(removeFolderRevision)
             .use(removeAttributes)
             // File Manager-specific transformers
-            .use(createMetadata)
-            .use(extractImageMetadata)
+            // .use(createMetadata)
+            // .use(extractImageMetadata)
+            // TODO we dont want to copy files from S3, so discard all commands produced in this pipeline.
+            .blackhole()
             .build();
 
         // ========================================================================
@@ -215,6 +228,7 @@ export default createTransferPreset({
         // IMPORTANT: Order matters due to first-match-wins behavior
         // ========================================================================
         runner
+            .register(backgroundTasks)
             .register(fmSettings)
             .register(fmFiles) // Before cmsEntries
             .register(mailerSettings)

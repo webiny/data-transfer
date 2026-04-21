@@ -342,6 +342,19 @@ zcat .transfer/<runId>/snapshot/cmsEntries/segment-0.source.jsonl.gz | jq 'selec
 
 Snapshot is best-effort — write errors log `warn` but never break the transfer. Set `compress: false` if you want to `grep` the files directly without `zcat`.
 
+### Persistent log file
+
+Pair snapshot with `debug.logFile` to capture the full runner log for later inspection — useful when a shard fails mid-transfer and you want to see what happened hours later.
+
+```typescript
+debug: {
+  logFile: true; // default: .transfer/<runId>/logs/<orchestrator|segment-N>.log
+  // or: logFile: "./my-transfer.log"
+}
+```
+
+`true` → each process (orchestrator + each worker) writes to its own file under `.transfer/<runId>/logs/`, so concurrent appends can't interleave. String → all processes write to the one path you give. Content is raw pino JSONL — `cat .transfer/<runId>/logs/*.log | pino-pretty` for a pretty post-hoc view.
+
 ## Troubleshooting
 
 - **AWS throttling** — the SDK already self-tunes via `retryMode: "adaptive"`. If you still hit the outer retry cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; consider lowering `tuning.s3.concurrency` for S3-heavy transfers.
