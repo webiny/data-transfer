@@ -6,7 +6,9 @@ import {
     DynamoDbClientConfig,
     DynamoDbClientFeature
 } from "../../../src/services/DynamoDbClient/index.ts";
+import { Logger } from "../../../src/tools/Logger/abstractions/Logger.ts";
 import { MockDynamoDbClient } from "./MockDynamoDbClient.ts";
+import { NoopLogger } from "../../helpers/NoopLogger.ts";
 
 describe("DynamoDbClient Feature", () => {
     describe("DI registration", () => {
@@ -17,6 +19,7 @@ describe("DynamoDbClient Feature", () => {
                 source: { region: "us-east-1" },
                 target: { region: "eu-central-1" }
             });
+            container.registerInstance(Logger, new NoopLogger());
 
             DynamoDbClientFeature.register(container);
 
@@ -35,6 +38,7 @@ describe("DynamoDbClient Feature", () => {
                 source: { region: "us-east-1" },
                 target: { region: "eu-central-1" }
             });
+            container.registerInstance(Logger, new NoopLogger());
 
             DynamoDbClientFeature.register(container);
 

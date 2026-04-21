@@ -13,6 +13,7 @@ import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
 import { isRetryableAwsError, retryBackoffMs } from "~/base/index.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 const BATCH_SIZE = 25; // AWS-enforced BatchWriteItem limit — not user-tunable
@@ -28,11 +29,14 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
     private client: DynamoDBDocument;
     private readonly maxRetries: number;
     private readonly initialBackoff: number;
+    private readonly logger: Logger.Interface;
 
     public constructor(
         config: DynamoDbClientConfig.Connection,
+        logger: Logger.Interface,
         tuning?: DynamoDbClientConfig.Tuning
     ) {
+        this.logger = logger;
         // getDocumentClient bakes in marshall options (convertEmptyValues,
         // removeUndefinedValues, convertClassInstanceToMap) and caches by
         // config hash — no manual DynamoDBClient/DynamoDBDocument wiring.
@@ -134,24 +138,34 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
                 }
             });
 
-            await this.executeWithRetry(async () => {
-                const response = await this.client.send(command);
+            try {
+                await this.executeWithRetry(async () => {
+                    const response = await this.client.send(command);
 
-                if (
-                    response.UnprocessedItems &&
-                    Object.keys(response.UnprocessedItems).length > 0
-                ) {
-                    const unprocessedItems = response.UnprocessedItems[tableName];
-                    if (unprocessedItems) {
-                        const unprocessedRecords = unprocessedItems.map(
-                            item => item.PutRequest!.Item as T
-                        );
-                        if (unprocessedRecords.length > 0) {
-                            await this.batchPut(tableName, unprocessedRecords);
+                    if (
+                        response.UnprocessedItems &&
+                        Object.keys(response.UnprocessedItems).length > 0
+                    ) {
+                        const unprocessedItems = response.UnprocessedItems[tableName];
+                        if (unprocessedItems) {
+                            const unprocessedRecords = unprocessedItems.map(
+                                item => item.PutRequest!.Item as T
+                            );
+                            if (unprocessedRecords.length > 0) {
+                                await this.batchPut(tableName, unprocessedRecords);
+                            }
                         }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                const keys = batch.map(record => ({ PK: record.PK, SK: record.SK }));
+                this.logger.error(
+                    `DynamoDB batchPut failed after ${this.maxRetries + 1} attempts ` +
+                        `against table "${tableName}" — batch of ${batch.length} records. ` +
+                        `Keys: ${JSON.stringify(keys)}`
+                );
+                throw error;
+            }
         }
     }
 

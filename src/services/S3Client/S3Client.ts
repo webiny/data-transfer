@@ -7,6 +7,7 @@ import {
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
 import { isRetryableAwsError, retryBackoffMs } from "~/base/index.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 // See DynamoDbClient for the rationale on 6 retries + the jittered
 // capped backoff. S3 mirrors the DDB defaults for consistency — same
@@ -20,8 +21,14 @@ export class S3ClientImpl implements SourceS3Client.Interface {
     private readonly maxRetries: number;
     private readonly initialBackoff: number;
     private readonly concurrency: number;
+    private readonly logger: Logger.Interface;
 
-    public constructor(config: S3ClientConfig.Connection, tuning?: S3ClientConfig.Tuning) {
+    public constructor(
+        config: S3ClientConfig.Connection,
+        logger: Logger.Interface,
+        tuning?: S3ClientConfig.Tuning
+    ) {
+        this.logger = logger;
         this.client = createS3Client({
             region: config.region,
             credentials: config.credentials,
@@ -61,7 +68,20 @@ export class S3ClientImpl implements SourceS3Client.Interface {
 
         for (let i = 0; i < operations.length; i += this.concurrency) {
             const batch = operations.slice(i, i + this.concurrency);
-            await Promise.all(batch.map(op => this.copy(op)));
+            await Promise.all(
+                batch.map(async op => {
+                    try {
+                        await this.copy(op);
+                    } catch (error) {
+                        this.logger.error(
+                            `S3 copy failed after ${this.maxRetries + 1} attempts — ` +
+                                `${op.sourceBucket}/${op.sourceKey} → ` +
+                                `${op.targetBucket}/${op.targetKey}`
+                        );
+                        throw error;
+                    }
+                })
+            );
         }
     }
 
