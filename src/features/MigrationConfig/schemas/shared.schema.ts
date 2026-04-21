@@ -1,9 +1,17 @@
 import { z } from "zod";
 
+/**
+ * Non-empty string that trims whitespace before validating. Catches the
+ * common copy-paste mistake of a trailing/leading space — which AWS
+ * would otherwise accept as part of a table/bucket/region name and then
+ * fail with a cryptic ResourceNotFoundException at query time.
+ */
+export const trimmedString = (): z.ZodString => z.string().trim().min(1);
+
 export const awsCredentialsSchema = z.object({
-    accessKeyId: z.string(),
-    secretAccessKey: z.string(),
-    sessionToken: z.string().optional()
+    accessKeyId: trimmedString(),
+    secretAccessKey: trimmedString(),
+    sessionToken: trimmedString().optional()
 });
 
 /**
@@ -40,9 +48,9 @@ export const credentialsOrProviderSchema = z.union([
 ]);
 
 export const pipelineSettingsSchema = z.object({
-    preset: z.string(),
+    preset: trimmedString(),
     segments: z.number().int().positive().optional(),
-    modelsDir: z.string().optional()
+    modelsDir: trimmedString().optional()
 });
 
 // Per-client operational knobs. All optional — clients fall back to module
