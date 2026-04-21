@@ -151,6 +151,13 @@ describe("preset — v5-to-v6-ddb end-to-end against real fixture", () => {
 
         // Spot-check: at least one record shows the hallmark of the
         // `wrapInData` transformer — top-level fields nested under `data`.
+        // Passes today for records that were ALREADY wrapped in v5
+        // (fm.settings, mailer settings) — records that need wrapping are
+        // landing unwrapped due to a separate runner bug (see PR notes:
+        // `ctx.replace()` updates the base ctx but not the per-record
+        // merged context the runner hands to onEnd / subsequent
+        // transformers, so the writes at shard end go out with the
+        // pre-wrap shape).
         const hasWrappedData = transferred.some(
             r => typeof r["data"] === "object" && r["data"] !== null
         );

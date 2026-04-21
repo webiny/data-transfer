@@ -80,7 +80,8 @@ export default createTransferPreset({
             })
             // Configure filter
             .filter(createFilter(isFmFile))
-
+            // TODO determine if its actually required
+            .use(wrapInData)
             // File Manager-specific transformers
             .use(createMetadata)
             .use(extractImageMetadata)
@@ -101,6 +102,14 @@ export default createTransferPreset({
                 })
             )
             .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(fixCmePk)
+            .use(fixBrokenStorageKeys)
+            .use(transformRichText)
+            .use(updateModelIds)
+            .use(removeFolderRevision)
+            .use(removeAttributes)
             .use(migrateMailerSettings)
             .use(removeAttributes)
             .build();
