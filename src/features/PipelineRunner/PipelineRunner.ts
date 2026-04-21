@@ -218,6 +218,13 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         // the processor that drains X).
         const shardCommands = new Commands();
 
+        // Track per-shard dispatch counts — aggregate at shard end instead
+        // of per-record so a real prod run surfaces silent drops (records
+        // matching no pipeline filter) in the default `info` log instead
+        // of being invisible at `debug`.
+        let droppedCount = 0;
+        const perPipelineCounts: Map<string, number> = new Map();
+
         for await (const record of scanner.scan(shard)) {
             let matched = false;
             for (const pipeline of pipelines) {
@@ -226,6 +233,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 }
                 matched = true;
                 const processors = pipelineProcessors.get(pipeline)!;
+                perPipelineCounts.set(
+                    pipeline.name,
+                    (perPipelineCounts.get(pipeline.name) ?? 0) + 1
+                );
                 await this.runRecord(pipeline, processors, record, shardCommands);
                 // First-match-wins: subsequent pipelines in this group are
                 // skipped for this record. Pipeline registration order
@@ -233,12 +244,15 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 break;
             }
             if (!matched) {
+                droppedCount++;
                 this.logger.debug(
                     "record dropped: no matching pipeline in merge group",
                     mergeGroupId
                 );
             }
         }
+
+        this.logShardSummary(mergeGroupId, shardCtx, perPipelineCounts, droppedCount);
 
         // Shard end: each unique processor (across pipelines in this group)
         // drains the shared buffer in first-seen registration order.
@@ -326,6 +340,27 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
         }
         return ordered;
+    }
+
+    private logShardSummary(
+        mergeGroupId: string,
+        shardCtx: Processor.AfterShardContext,
+        perPipelineCounts: Map<string, number>,
+        droppedCount: number
+    ): void {
+        let transferredTotal = 0;
+        for (const count of perPipelineCounts.values()) {
+            transferredTotal += count;
+        }
+        const scannedTotal = transferredTotal + droppedCount;
+        const perPipeline = Array.from(perPipelineCounts.entries())
+            .map(([name, count]) => `${name}=${count}`)
+            .join(", ");
+        const detail = perPipeline.length > 0 ? ` (${perPipeline})` : "";
+        this.logger.info(
+            `[${mergeGroupId} shard ${shardCtx.segment + 1}/${shardCtx.totalSegments}] ` +
+                `scanned ${scannedTotal}, transferred ${transferredTotal}${detail}, dropped ${droppedCount}`
+        );
     }
 
     /**

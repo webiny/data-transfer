@@ -668,6 +668,33 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
         expect(unclaimedWarns).toEqual([]);
     });
 
+    it("logs a per-shard summary at info level (transferred/dropped + per-pipeline breakdown)", async () => {
+        const { container, logger } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        // 3 foo records match the pipeline, 2 bar records don't.
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "bar" },
+            { id: "r3", type: "foo" },
+            { id: "r4", type: "bar" },
+            { id: "r5", type: "foo" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "only-foo", { filterFn: r => r.type === "foo" }));
+        await runner.run();
+
+        const summaryLines = logger.entries.filter(
+            e => e.level === "info" && /shard \d+\/\d+.*scanned/.test(e.message)
+        );
+        expect(summaryLines).toHaveLength(1);
+        const line = summaryLines[0]!.message;
+        expect(line).toMatch(/scanned 5/);
+        expect(line).toMatch(/transferred 3/);
+        expect(line).toMatch(/only-foo=3/);
+        expect(line).toMatch(/dropped 2/);
+    });
+
     it("warns once when a transformer emits a command key no processor drains", async () => {
         const { container, logger } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
