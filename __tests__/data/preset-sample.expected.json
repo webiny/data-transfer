@@ -1,0 +1,2371 @@
+[
+  {
+    "PK": "KV#global:FileManager/File/6022814891bd1300087bd24c/Metadata",
+    "SK": "A",
+    "GSI_TENANT": "global",
+    "data": {
+      "key": "FileManager/File/6022814891bd1300087bd24c/Metadata",
+      "scope": "global",
+      "value": {
+        "bucketKey": "tenants/root/files/demo-pages/6022814891bd1300087bd24c/welcome-to-webiny__webiny-infrastructure-overview.svg",
+        "contentType": "image/svg+xml",
+        "id": "6022814891bd1300087bd24c",
+        "size": 90163,
+        "tenant": "root"
+      }
+    },
+    "TYPE": "KeyValueStore",
+    "_ct": "2026-04-21T12:00:00.000Z",
+    "_et": "KeyValueStore",
+    "_md": "2026-04-21T12:00:00.000Z"
+  },
+  {
+    "PK": "KV#root:FileManager/General",
+    "SK": "A",
+    "data": {
+      "key": "FileManager/General",
+      "scope": "root",
+      "value": {
+        "srcPrefix": "https://d1t4g36i765k59.cloudfront.net/files/",
+        "uploadMinFileSize": 0,
+        "uploadMaxFileSize": 10737418240
+      }
+    },
+    "TYPE": "KeyValueStore",
+    "GSI_TENANT": "root",
+    "_ct": "2026-04-21T12:00:00.000Z",
+    "_et": "KeyValueStore",
+    "_md": "2026-04-21T12:00:00.000Z"
+  },
+  {
+    "TYPE": "cms.model",
+    "_md": "2026-04-21T08:07:23.195Z",
+    "SK": "multiLevelMultiField",
+    "_et": "CmsModels",
+    "_ct": "2026-04-21T08:07:23.195Z",
+    "PK": "T#root#CMS#CM",
+    "data": {
+      "modelId": "multiLevelMultiField",
+      "icon": "fab/rev",
+      "pluralApiName": "MlMfs",
+      "group": "asco-hub",
+      "descriptionFieldId": "description",
+      "imageFieldId": "image",
+      "createdBy": {
+        "type": "admin",
+        "displayName": "Bruno Zorić",
+        "id": "69e72c8b2a49780002fc55ad"
+      },
+      "name": "All fields - level one",
+      "titleFieldId": "title",
+      "fields": [
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Title",
+          "type": "text",
+          "tags": [],
+          "id": "qx2jdkz3",
+          "validation": [
+            {
+              "name": "required",
+              "message": "Title is a required field.",
+              "settings": {}
+            }
+          ],
+          "storageId": "text@qx2jdkz3",
+          "fieldId": "title",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Description",
+          "type": "long-text",
+          "tags": [],
+          "id": "m2h9zcyv",
+          "validation": [],
+          "storageId": "long-text@m2h9zcyv",
+          "fieldId": "description",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "imagesOnly": true
+          },
+          "renderer": {
+            "name": "file-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Image",
+          "type": "file",
+          "tags": [],
+          "id": "n7m5mftv",
+          "validation": [],
+          "storageId": "file@n7m5mftv",
+          "fieldId": "image",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text List of text",
+          "type": "text",
+          "tags": [],
+          "id": "ku8hnq2l",
+          "validation": [],
+          "storageId": "text@ku8hnq2l",
+          "fieldId": "textListOfText",
+          "note": "help text one",
+          "placeholder": "placeholder text one",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "radio-buttons",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": true,
+            "values": [
+              {
+                "value": "1",
+                "selected": false,
+                "label": "one"
+              },
+              {
+                "value": "2",
+                "selected": false,
+                "label": "two"
+              },
+              {
+                "value": "3",
+                "selected": false,
+                "label": "three"
+              },
+              {
+                "value": "4",
+                "selected": false,
+                "label": "four"
+              },
+              {
+                "value": "5",
+                "selected": false,
+                "label": "five"
+              }
+            ]
+          },
+          "label": "Text predefined values",
+          "type": "text",
+          "tags": [],
+          "id": "7xelqzme",
+          "validation": [],
+          "storageId": "text@7xelqzme",
+          "fieldId": "textPredefinedValues",
+          "note": "random text 1",
+          "placeholder": "random text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "checkboxes",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": true,
+            "values": [
+              {
+                "value": "1",
+                "selected": false,
+                "label": "yellow"
+              },
+              {
+                "value": "2",
+                "selected": false,
+                "label": "green"
+              },
+              {
+                "value": "3",
+                "selected": false,
+                "label": "black"
+              },
+              {
+                "value": "undefined",
+                "selected": false,
+                "label": "blue"
+              }
+            ]
+          },
+          "label": "Text list and predefined",
+          "type": "text",
+          "tags": [],
+          "id": "t9xhqoe5",
+          "validation": [],
+          "storageId": "text@t9xhqoe5",
+          "fieldId": "textListAndPredefined",
+          "note": "random text 1",
+          "placeholder": "random text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "radio-buttons",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": true,
+            "values": [
+              {
+                "value": "1",
+                "selected": false,
+                "label": "cat"
+              },
+              {
+                "value": "2",
+                "selected": false,
+                "label": "dog"
+              },
+              {
+                "value": "3",
+                "selected": false,
+                "label": "bird"
+              },
+              {
+                "value": "4",
+                "selected": true,
+                "label": "lion"
+              }
+            ]
+          },
+          "label": "Text predefined with default",
+          "type": "text",
+          "tags": [],
+          "id": "7et1aukk",
+          "validation": [],
+          "storageId": "text@7et1aukk",
+          "fieldId": "textPredefinedWithDefault",
+          "note": "random text 1",
+          "placeholder": "random text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text Length validator",
+          "type": "text",
+          "tags": [],
+          "id": "2o2qliqr",
+          "validation": [
+            {
+              "name": "required",
+              "message": "Value is required.",
+              "settings": {}
+            },
+            {
+              "name": "minLength",
+              "message": "Value is too short.",
+              "settings": {
+                "value": "10"
+              }
+            },
+            {
+              "name": "maxLength",
+              "message": "Value is too long.",
+              "settings": {
+                "value": "12"
+              }
+            }
+          ],
+          "storageId": "text@2o2qliqr",
+          "fieldId": "textValidators",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text - email",
+          "type": "text",
+          "tags": [],
+          "id": "wcebxpxk",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Please enter a valid e-mail.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "email"
+              }
+            }
+          ],
+          "storageId": "text@wcebxpxk",
+          "fieldId": "text",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text URL",
+          "type": "text",
+          "tags": [],
+          "id": "vkwsaunk",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Please enter a valid URL.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "url"
+              }
+            }
+          ],
+          "storageId": "text@vkwsaunk",
+          "fieldId": "textUrl",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text lower case",
+          "type": "text",
+          "tags": [],
+          "id": "bnxdv1j5",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only lower case characters are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "lowerCase"
+              }
+            }
+          ],
+          "storageId": "text@bnxdv1j5",
+          "fieldId": "textLowerCase",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text upper case",
+          "type": "text",
+          "tags": [],
+          "id": "tkaitbf4",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only upper case characters are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "upperCase"
+              }
+            }
+          ],
+          "storageId": "text@tkaitbf4",
+          "fieldId": "textUpperCase",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text lower case with space",
+          "type": "text",
+          "tags": [],
+          "id": "5ywysrdy",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only lower case characters and space are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "lowerCaseSpace"
+              }
+            }
+          ],
+          "storageId": "text@5ywysrdy",
+          "fieldId": "textLowerCaseWithSpace",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text upper case with space",
+          "type": "text",
+          "tags": [],
+          "id": "2mhzs9d8",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only upper case characters and space are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "upperCaseSpace"
+              }
+            }
+          ],
+          "storageId": "text@2mhzs9d8",
+          "fieldId": "textUpperCaseWithSpace",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text unique plus",
+          "type": "text",
+          "tags": [],
+          "id": "7of8meqf",
+          "validation": [
+            {
+              "name": "unique",
+              "message": "Value must be unique.",
+              "settings": {}
+            },
+            {
+              "name": "required",
+              "message": "Value is required.",
+              "settings": {}
+            },
+            {
+              "name": "minLength",
+              "message": "Value is too short.",
+              "settings": {}
+            }
+          ],
+          "storageId": "text@7of8meqf",
+          "fieldId": "textUniquePlus",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text",
+          "type": "long-text",
+          "tags": [],
+          "id": "h1u5lgk6",
+          "validation": [],
+          "storageId": "long-text@h1u5lgk6",
+          "fieldId": "longText",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text List",
+          "type": "text",
+          "tags": [],
+          "id": "qsx442w7",
+          "validation": [],
+          "storageId": "text@qsx442w7",
+          "fieldId": "longTextList",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text validation min length  10",
+          "type": "long-text",
+          "tags": [],
+          "id": "ix94nkuc",
+          "validation": [
+            {
+              "name": "minLength",
+              "message": "Value is too short.",
+              "settings": {
+                "value": "10"
+              }
+            },
+            {
+              "name": "maxLength",
+              "message": "Value is too long.",
+              "settings": {}
+            }
+          ],
+          "storageId": "long-text@ix94nkuc",
+          "fieldId": "longTextValidationMinLenght",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text Validation Max length 12",
+          "type": "long-text",
+          "tags": [],
+          "id": "x7klu8to",
+          "validation": [
+            {
+              "name": "maxLength",
+              "message": "Value is too long.",
+              "settings": {
+                "value": "12"
+              }
+            }
+          ],
+          "storageId": "long-text@x7klu8to",
+          "fieldId": "longTextValidationMaxLength12",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text Email",
+          "type": "long-text",
+          "tags": [],
+          "id": "8sqcjw45",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Please enter a valid e-mail.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "email"
+              }
+            }
+          ],
+          "storageId": "long-text@8sqcjw45",
+          "fieldId": "longTextEmail",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text URL",
+          "type": "long-text",
+          "tags": [],
+          "id": "lf2ay7xn",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Please enter a valid URL.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "url"
+              }
+            }
+          ],
+          "storageId": "long-text@lf2ay7xn",
+          "fieldId": "longTextUrl",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text lower case",
+          "type": "long-text",
+          "tags": [],
+          "id": "cv5nnm9o",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only lower case characters are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "lowerCase"
+              }
+            }
+          ],
+          "storageId": "long-text@cv5nnm9o",
+          "fieldId": "longTextLowerCase",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text Upper case",
+          "type": "long-text",
+          "tags": [],
+          "id": "awhn41u2",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only upper case characters are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "upperCase"
+              }
+            }
+          ],
+          "storageId": "long-text@awhn41u2",
+          "fieldId": "longTextUpperCase",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text lower case with space",
+          "type": "long-text",
+          "tags": [],
+          "id": "66le69tv",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only lower case characters and space are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "lowerCaseSpace"
+              }
+            }
+          ],
+          "storageId": "long-text@66le69tv",
+          "fieldId": "longTextLowerCaseWithSpace",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "long-text-text-area",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Long Text  upper case with space",
+          "type": "long-text",
+          "tags": [],
+          "id": "kjnxia5o",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only upper case characters and space are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "upperCaseSpace"
+              }
+            }
+          ],
+          "storageId": "long-text@kjnxia5o",
+          "fieldId": "longTextUpperCaseWithSpace",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Test email list",
+          "type": "text",
+          "tags": [],
+          "id": "dze6oywc",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Please enter a valid e-mail.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "email"
+              }
+            }
+          ],
+          "storageId": "text@dze6oywc",
+          "fieldId": "testEmailList",
+          "note": null,
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text URL list",
+          "type": "text",
+          "tags": [],
+          "id": "qra96ii1",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Please enter a valid URL.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "url"
+              }
+            }
+          ],
+          "storageId": "text@qra96ii1",
+          "fieldId": "textUrlList",
+          "note": null,
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text lower case list",
+          "type": "text",
+          "tags": [],
+          "id": "3gd8y95x",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only lower case characters are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "lowerCase"
+              }
+            }
+          ],
+          "storageId": "text@3gd8y95x",
+          "fieldId": "textLowerCaseList",
+          "note": null,
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text upper case list",
+          "type": "text",
+          "tags": [],
+          "id": "2qvi9a2b",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only upper case characters are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "upperCase"
+              }
+            }
+          ],
+          "storageId": "text@2qvi9a2b",
+          "fieldId": "textUpperCaseList",
+          "note": null,
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text lower case with spaces list",
+          "type": "text",
+          "tags": [],
+          "id": "3t5q9liv",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only lower case characters and space are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "lowerCaseSpace"
+              }
+            }
+          ],
+          "storageId": "text@3t5q9liv",
+          "fieldId": "textLowerCaseWithSpacesList",
+          "note": null,
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text upper case with spaces list",
+          "type": "text",
+          "tags": [],
+          "id": "o3e4zw6t",
+          "validation": [
+            {
+              "name": "pattern",
+              "message": "Only upper case characters and space are allowed.",
+              "settings": {
+                "flags": null,
+                "regex": null,
+                "preset": "upperCaseSpace"
+              }
+            }
+          ],
+          "storageId": "text@o3e4zw6t",
+          "fieldId": "textUpperCaseWithSpacesList",
+          "note": null,
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "lexical-text-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "RTF",
+          "type": "rich-text",
+          "tags": [],
+          "id": "mc63eebi",
+          "validation": [],
+          "storageId": "rich-text@mc63eebi",
+          "fieldId": "rtf",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "lexical-text-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "RTF list",
+          "type": "rich-text",
+          "tags": [],
+          "id": "qbukt1jf",
+          "validation": [],
+          "storageId": "rich-text@qbukt1jf",
+          "fieldId": "rtfList",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "hidden",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "RTF hidden",
+          "type": "rich-text",
+          "tags": [],
+          "id": "djwo6a2b",
+          "validation": [],
+          "storageId": "rich-text@djwo6a2b",
+          "fieldId": "rtfHidden",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "hidden",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text hidden",
+          "type": "text",
+          "tags": [],
+          "id": "2k126xxh",
+          "validation": [],
+          "storageId": "text@2k126xxh",
+          "fieldId": "textHidden",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "hidden",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text list hidden",
+          "type": "text",
+          "tags": [],
+          "id": "6nks60wc",
+          "validation": [],
+          "storageId": "text@6nks60wc",
+          "fieldId": "textListHidden",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "tags",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Text list tags render",
+          "type": "text",
+          "tags": [],
+          "id": "ttwinycs",
+          "validation": [],
+          "storageId": "text@ttwinycs",
+          "fieldId": "textListTagsRender",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "number-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Number",
+          "type": "number",
+          "tags": [],
+          "id": "umeiwduy",
+          "validation": [],
+          "storageId": "number@umeiwduy",
+          "fieldId": "number",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "number-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Number list",
+          "type": "number",
+          "tags": [],
+          "id": "go3y700r",
+          "validation": [],
+          "storageId": "number@go3y700r",
+          "fieldId": "numberList",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "radio-buttons",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": true,
+            "values": [
+              {
+                "value": "1",
+                "selected": false,
+                "label": "1"
+              },
+              {
+                "value": "2",
+                "selected": false,
+                "label": "2"
+              },
+              {
+                "value": "3",
+                "selected": false,
+                "label": "3"
+              },
+              {
+                "value": "4",
+                "selected": false,
+                "label": "4"
+              },
+              {
+                "value": "5",
+                "selected": false,
+                "label": "5"
+              }
+            ]
+          },
+          "label": "Number predefined",
+          "type": "number",
+          "tags": [],
+          "id": "7odsp0nj",
+          "validation": [],
+          "storageId": "number@7odsp0nj",
+          "fieldId": "numberPredefined",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "checkboxes",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": true,
+            "values": [
+              {
+                "value": "1",
+                "selected": true,
+                "label": "one"
+              },
+              {
+                "value": "2",
+                "selected": false,
+                "label": "two"
+              },
+              {
+                "value": "3",
+                "selected": false,
+                "label": "three"
+              }
+            ]
+          },
+          "label": "Nmber predefined list with default",
+          "type": "number",
+          "tags": [],
+          "id": "tmdplj4z",
+          "validation": [],
+          "storageId": "number@tmdplj4z",
+          "fieldId": "nmberPredefinedListWithDefault",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "checkboxes",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": true,
+            "values": [
+              {
+                "value": "1",
+                "selected": true,
+                "label": "yellow"
+              },
+              {
+                "value": "2",
+                "selected": true,
+                "label": "blue"
+              },
+              {
+                "value": "3",
+                "selected": false,
+                "label": "green"
+              },
+              {
+                "value": "4",
+                "selected": false,
+                "label": "black"
+              }
+            ]
+          },
+          "label": "Number predefined with default list",
+          "type": "number",
+          "tags": [],
+          "id": "keeixvk2",
+          "validation": [],
+          "storageId": "number@keeixvk2",
+          "fieldId": "numberPredefinedWithDefaultList",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "hidden",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Number - hidden",
+          "type": "number",
+          "tags": [],
+          "id": "9w1bvym9",
+          "validation": [],
+          "storageId": "number@9w1bvym9",
+          "fieldId": "numberHidden",
+          "note": "Random Text 1",
+          "placeholder": "Random Text 2",
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "defaultValue": true
+          },
+          "renderer": {
+            "name": "boolean-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Boolean True",
+          "type": "boolean",
+          "tags": [],
+          "id": "vm27ase2",
+          "validation": [],
+          "storageId": "boolean@vm27ase2",
+          "fieldId": "booleanTrue",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "defaultValue": false
+          },
+          "renderer": {
+            "name": "boolean-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Boolean false",
+          "type": "boolean",
+          "tags": [],
+          "id": "pcgpnf7e",
+          "validation": [],
+          "storageId": "boolean@pcgpnf7e",
+          "fieldId": "booleanFalse",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "defaultValue": false
+          },
+          "renderer": {
+            "name": "hidden",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Boolean hidden",
+          "type": "boolean",
+          "tags": [],
+          "id": "nazo8176",
+          "validation": [],
+          "storageId": "boolean@nazo8176",
+          "fieldId": "booleanHidden",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "file-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Files basic",
+          "type": "file",
+          "tags": [],
+          "id": "94n560i5",
+          "validation": [],
+          "storageId": "file@94n560i5",
+          "fieldId": "filesBasic",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "imagesOnly": true
+          },
+          "renderer": {
+            "name": "file-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Images basic",
+          "type": "file",
+          "tags": [],
+          "id": "iy45xut3",
+          "validation": [],
+          "storageId": "file@iy45xut3",
+          "fieldId": "imagesBasic",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "file-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Files gallery",
+          "type": "file",
+          "tags": [],
+          "id": "ajfclng3",
+          "validation": [],
+          "storageId": "file@ajfclng3",
+          "fieldId": "filesGallery",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "imagesOnly": true
+          },
+          "renderer": {
+            "name": "file-inputs",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Images gallery",
+          "type": "file",
+          "tags": [],
+          "id": "moaurc1s",
+          "validation": [],
+          "storageId": "file@moaurc1s",
+          "fieldId": "imagesGallery",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "file-input",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Files required",
+          "type": "file",
+          "tags": [],
+          "id": "lsti66ei",
+          "validation": [
+            {
+              "name": "required",
+              "message": "Value is required. Please upload an image",
+              "settings": {}
+            }
+          ],
+          "storageId": "file@lsti66ei",
+          "fieldId": "filesRequired",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {},
+          "renderer": {
+            "name": "hidden",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Files hidden",
+          "type": "file",
+          "tags": [],
+          "id": "r7d4avps",
+          "validation": [],
+          "storageId": "file@r7d4avps",
+          "fieldId": "filesHidden",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "models": [
+              {
+                "modelId": "multiLevelMultiField"
+              }
+            ]
+          },
+          "renderer": {
+            "name": "ref-advanced-single",
+            "settings": {}
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Self-reference",
+          "type": "ref",
+          "tags": [],
+          "id": "2dz3plal",
+          "validation": [],
+          "storageId": "ref@2dz3plal",
+          "fieldId": "selfReference",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "models": [
+              {
+                "modelId": "multiLevelMultiField"
+              }
+            ]
+          },
+          "renderer": {
+            "name": "ref-advanced-multiple",
+            "settings": {
+              "newItemPosition": "last"
+            }
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "Self-refence list",
+          "type": "ref",
+          "tags": [],
+          "id": "6tq48k30",
+          "validation": [],
+          "storageId": "ref@6tq48k30",
+          "fieldId": "selfRefenceList",
+          "note": "Random Text 1",
+          "placeholder": null,
+          "list": true
+        },
+        {
+          "listValidation": [],
+          "settings": {
+            "models": [
+              {
+                "modelId": "article"
+              }
+            ]
+          },
+          "renderer": {
+            "name": "ref-advanced-single"
+          },
+          "predefinedValues": {
+            "enabled": false,
+            "values": []
+          },
+          "label": "REf 2",
+          "type": "ref",
+          "tags": [],
+          "id": "0qgg1iv9",
+          "validation": [],
+          "storageId": "ref@0qgg1iv9",
+          "fieldId": "rEf2",
+          "note": null,
+          "placeholder": null,
+          "list": false
+        }
+      ],
+      "singularApiName": "MlMf",
+      "tags": [
+        "type:model"
+      ],
+      "savedOn": "2026-04-21T07:53:52.608Z",
+      "layout": [
+        [
+          "qx2jdkz3"
+        ],
+        [
+          "7of8meqf"
+        ],
+        [
+          "m2h9zcyv",
+          "n7m5mftv"
+        ],
+        [
+          "2o2qliqr"
+        ],
+        [
+          "wcebxpxk"
+        ],
+        [
+          "dze6oywc"
+        ],
+        [
+          "vkwsaunk"
+        ],
+        [
+          "qra96ii1"
+        ],
+        [
+          "bnxdv1j5"
+        ],
+        [
+          "3gd8y95x"
+        ],
+        [
+          "tkaitbf4"
+        ],
+        [
+          "2qvi9a2b"
+        ],
+        [
+          "5ywysrdy"
+        ],
+        [
+          "3t5q9liv"
+        ],
+        [
+          "2mhzs9d8"
+        ],
+        [
+          "o3e4zw6t"
+        ],
+        [
+          "ku8hnq2l"
+        ],
+        [
+          "7xelqzme"
+        ],
+        [
+          "t9xhqoe5"
+        ],
+        [
+          "7et1aukk"
+        ],
+        [
+          "ttwinycs"
+        ],
+        [
+          "2k126xxh"
+        ],
+        [
+          "6nks60wc"
+        ],
+        [
+          "h1u5lgk6"
+        ],
+        [
+          "qsx442w7"
+        ],
+        [
+          "ix94nkuc"
+        ],
+        [
+          "x7klu8to"
+        ],
+        [
+          "8sqcjw45"
+        ],
+        [
+          "lf2ay7xn"
+        ],
+        [
+          "cv5nnm9o"
+        ],
+        [
+          "awhn41u2"
+        ],
+        [
+          "66le69tv"
+        ],
+        [
+          "kjnxia5o"
+        ],
+        [
+          "mc63eebi"
+        ],
+        [
+          "qbukt1jf"
+        ],
+        [
+          "djwo6a2b"
+        ],
+        [
+          "umeiwduy"
+        ],
+        [
+          "go3y700r"
+        ],
+        [
+          "7odsp0nj"
+        ],
+        [
+          "tmdplj4z"
+        ],
+        [
+          "keeixvk2"
+        ],
+        [
+          "9w1bvym9"
+        ],
+        [
+          "vm27ase2"
+        ],
+        [
+          "pcgpnf7e"
+        ],
+        [
+          "nazo8176"
+        ],
+        [
+          "94n560i5"
+        ],
+        [
+          "iy45xut3"
+        ],
+        [
+          "ajfclng3"
+        ],
+        [
+          "moaurc1s"
+        ],
+        [
+          "lsti66ei"
+        ],
+        [
+          "r7d4avps"
+        ],
+        [
+          "2dz3plal"
+        ],
+        [
+          "6tq48k30",
+          "0qgg1iv9"
+        ]
+      ],
+      "lockedFields": [
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@qx2jdkz3"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@m2h9zcyv"
+        },
+        {
+          "multipleValues": false,
+          "type": "file",
+          "fieldId": "file@n7m5mftv"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@ku8hnq2l"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@7xelqzme"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@t9xhqoe5"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@7et1aukk"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@2o2qliqr"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@wcebxpxk"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@vkwsaunk"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@bnxdv1j5"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@tkaitbf4"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@5ywysrdy"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@2mhzs9d8"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@7of8meqf"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@h1u5lgk6"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@qsx442w7"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@ix94nkuc"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@x7klu8to"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@8sqcjw45"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@lf2ay7xn"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@cv5nnm9o"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@awhn41u2"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@66le69tv"
+        },
+        {
+          "multipleValues": false,
+          "type": "long-text",
+          "fieldId": "long-text@kjnxia5o"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@dze6oywc"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@qra96ii1"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@3gd8y95x"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@2qvi9a2b"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@3t5q9liv"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@o3e4zw6t"
+        },
+        {
+          "multipleValues": false,
+          "type": "rich-text",
+          "fieldId": "rich-text@mc63eebi"
+        },
+        {
+          "multipleValues": true,
+          "type": "rich-text",
+          "fieldId": "rich-text@qbukt1jf"
+        },
+        {
+          "multipleValues": false,
+          "type": "rich-text",
+          "fieldId": "rich-text@djwo6a2b"
+        },
+        {
+          "multipleValues": false,
+          "type": "text",
+          "fieldId": "text@2k126xxh"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@6nks60wc"
+        },
+        {
+          "multipleValues": true,
+          "type": "text",
+          "fieldId": "text@ttwinycs"
+        },
+        {
+          "multipleValues": false,
+          "type": "number",
+          "fieldId": "number@umeiwduy"
+        },
+        {
+          "multipleValues": true,
+          "type": "number",
+          "fieldId": "number@go3y700r"
+        },
+        {
+          "multipleValues": false,
+          "type": "number",
+          "fieldId": "number@7odsp0nj"
+        },
+        {
+          "multipleValues": true,
+          "type": "number",
+          "fieldId": "number@tmdplj4z"
+        },
+        {
+          "multipleValues": true,
+          "type": "number",
+          "fieldId": "number@keeixvk2"
+        },
+        {
+          "multipleValues": false,
+          "type": "number",
+          "fieldId": "number@9w1bvym9"
+        },
+        {
+          "multipleValues": false,
+          "type": "boolean",
+          "fieldId": "boolean@vm27ase2"
+        },
+        {
+          "multipleValues": false,
+          "type": "boolean",
+          "fieldId": "boolean@pcgpnf7e"
+        },
+        {
+          "multipleValues": false,
+          "type": "boolean",
+          "fieldId": "boolean@nazo8176"
+        },
+        {
+          "multipleValues": false,
+          "type": "file",
+          "fieldId": "file@94n560i5"
+        },
+        {
+          "multipleValues": false,
+          "type": "file",
+          "fieldId": "file@iy45xut3"
+        },
+        {
+          "multipleValues": true,
+          "type": "file",
+          "fieldId": "file@ajfclng3"
+        },
+        {
+          "multipleValues": true,
+          "type": "file",
+          "fieldId": "file@moaurc1s"
+        },
+        {
+          "multipleValues": false,
+          "type": "file",
+          "fieldId": "file@lsti66ei"
+        },
+        {
+          "multipleValues": false,
+          "type": "file",
+          "fieldId": "file@r7d4avps"
+        },
+        {
+          "multipleValues": false,
+          "type": "ref",
+          "fieldId": "ref@2dz3plal"
+        },
+        {
+          "multipleValues": true,
+          "type": "ref",
+          "fieldId": "ref@6tq48k30"
+        },
+        {
+          "multipleValues": false,
+          "type": "ref",
+          "fieldId": "ref@0qgg1iv9"
+        }
+      ],
+      "tenant": "root",
+      "createdOn": "2026-04-21T07:53:52.608Z",
+      "description": "Testing all fields"
+    },
+    "GSI_TENANT": "root"
+  },
+  {
+    "TYPE": "cms.entry.l",
+    "_md": "2026-04-21T08:09:48.399Z",
+    "GSI1_SK": "69e730cc058f2a0002d2e9ca#0001",
+    "SK": "L",
+    "_et": "CmsEntries",
+    "_ct": "2026-04-21T08:09:48.399Z",
+    "PK": "T#root#CMS#CME#69e730cc058f2a0002d2e9ca",
+    "GSI1_PK": "T#root#CMS#CME#M#multiLevelMultiField#L",
+    "data": {
+      "modelId": "multiLevelMultiField",
+      "revisionCreatedOn": "2026-04-21T08:09:48.376Z",
+      "status": "draft",
+      "revisionCreatedBy": {
+        "type": "api-key",
+        "displayName": "cms",
+        "id": "69e72cd142e4920002f2f955"
+      },
+      "createdBy": {
+        "type": "api-key",
+        "displayName": "cms",
+        "id": "69e72cd142e4920002f2f955"
+      },
+      "entryId": "69e730cc058f2a0002d2e9ca",
+      "id": "69e730cc058f2a0002d2e9ca#0001",
+      "savedBy": {
+        "type": "api-key",
+        "displayName": "cms",
+        "id": "69e72cd142e4920002f2f955"
+      },
+      "version": 1,
+      "location": {
+        "folderId": "root"
+      },
+      "revisionSavedOn": "2026-04-21T08:09:48.376Z",
+      "savedOn": "2026-04-21T08:09:48.376Z",
+      "values": {
+        "file@lsti66ei": "https://orderly-relative.net/",
+        "text@7et1aukk": "1",
+        "text@2mhzs9d8": null,
+        "file@94n560i5": "https://dual-wafer.com",
+        "long-text@lf2ay7xn": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA8soKSkottLXT0oszkzWTUosKclJ1csvStcHAJiz74EZAAAA"
+        },
+        "text@ku8hnq2l": [
+          "aranea tandem tam conscendo consuasor cimentarius aetas conatus assentator libero territo sperno cop"
+        ],
+        "long-text@cv5nnm9o": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+        },
+        "text@bnxdv1j5": null,
+        "text@7of8meqf": "vallum umerus venustas crapula alii sui absens canis degenero illum tertius attero cervus capio usqu",
+        "text@qra96ii1": [
+          "https://upright-nectarine.info"
+        ],
+        "text@3gd8y95x": [],
+        "file@n7m5mftv": "https://linear-makeover.info/",
+        "number@tmdplj4z": [
+          2
+        ],
+        "text@wcebxpxk": "Samantha.Wisozk@yahoo.com",
+        "text@dze6oywc": [
+          "Kayden67@yahoo.com",
+          "Marlon.Russel57@hotmail.com"
+        ],
+        "number@go3y700r": [
+          89,
+          10,
+          2
+        ],
+        "rich-text@djwo6a2b": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA32OsW7EMAxDf0XQnKVrfqXooJN5jgCfFMh2UOCQfy9yaNHtJg7kI/nkIZVXLnbwwrpZKwnn9fP5a2wfvPDA9+CVEztag5fZSYrP4HP5y+2SUlP27T+OA24YJHmLpAKFdzqQ0OnF5D2syPGaecSBoL5DLfrspHAhDa+JKsOCpJhakMZmNwQVdPOgvDwHqcwBivvd1KyT2ggaeOyRoCMyqM9acWk08vCLj3bVeZ/SI9/fnH1YCz6/zh/4Y0A9SgEAAA=="
+        },
+        "text@qsx442w7": [
+          "allatus terga vere adfectus crebro theologus ars celebrer coepi terreo annus temptatio ciminatio ume"
+        ],
+        "text@2qvi9a2b": [],
+        "text@o3e4zw6t": [],
+        "text@t9xhqoe5": [
+          "2",
+          "undefined"
+        ],
+        "text@5ywysrdy": null,
+        "long-text@m2h9zcyv": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA0tMTs7Pzc1PyVdIzs/JL1JILipNSc3JLFYAALnAN0wZAAAA"
+        },
+        "text@2k126xxh": "vindico coerceo bibo civitas similique tricesimus allatus pariatur vigor patruus delicate amaritudo ",
+        "number@umeiwduy": 87,
+        "ref@2dz3plal": null,
+        "text@3t5q9liv": [],
+        "text@vkwsaunk": "https://admired-consistency.net",
+        "long-text@x7klu8to": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAystLi1WSM7PyyzJLwIAReqCrAwAAAA="
+        },
+        "long-text@66le69tv": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+        },
+        "text@2o2qliqr": "beatae ager ",
+        "rich-text@qbukt1jf": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA5VUyW7cSAz9FUJnX+bqXwlyoFicNoGqYpmL0EGQfw+o7rbn5B6fBIni9hb++L0FXrbXrcmxvWz0Jr0Zz+31xyPw9s/2sgVfY3vdDuni25+XR2yh4cVwvX3+QjqdKTjSgJSNWIF0/qsW+iQzTdQl0AGJ7UiHSNsR0C45eEYO8MBIBF0hCoF7dgTPXXJeFFwb9jNfmwS4TgXs8p7Svu4cb7/GbgiUHtqkSg4FkikOzu8pj1bYdIXCzhg1nYY0HnCo4RVwykgH7AenwyEh6unQeKYCLvXQfgZI3CWyKUx2kpyx/fn5Od//IgKzsQJf2UgCQ3Ty+HpHzCahBqG9K2BLU8iJkFGcQoWrIDTxkEkhz9jS/t+18ECTKOiQF3+dKmkMB1sohOF0COyiQP22lS+m7Dkg2Hg3hcgQB+n17cAuLR2WITvPkPovd5l8Yn1hU5jZiysjBNxztmpx6GArJd11lLszKeDlzKhODpS7RI7vs9FYZnuytOdYJRoy3rmsYcYrpGSEO9fAoZFPzOVhPLNUpD1XKb0cWc/3RBdYmCRAOoZMNSC0mwhx7NnvZkBYeIWDfbEVnKyAvoREAccqLoknArI/HYdyLS6/RG0zHTDKLHeTejrJkoDGnaeEFMw1jacVwadJEDCA2E5o7gI43Vuz8PUGGJZwkS/GIA2O7KU1tk/ilQiZMASwubRkyEoh7V0uCoTVdnEvaLhpzfuerN9nWiZJOx375T3RXqpConSso7CrAzZZ4qQn6I3vy5OcwlvSysdlC6cnzsurGvCVeEVagbpOR5DaUpOqZoKAN4O1pPMsPbCllLtWDimB1JXFDEAPywF7x9mk0D7P2JM1b3Tu2Pez/xCHCumHrk4A6r3hmHWmKlA2JoyTcb1MHTzv5+exysHGNdVJGpF+2LWq387V4Dh17Dkgbf+AV87kmkBangT//AsSbUEA4wYAAA=="
+        },
+        "text@tkaitbf4": null,
+        "ref@0qgg1iv9": null,
+        "long-text@awhn41u2": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+        },
+        "long-text@kjnxia5o": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAwMAAAAAAAAAAAA="
+        },
+        "boolean@vm27ase2": true,
+        "file@iy45xut3": "https://utilized-bench.name",
+        "file@r7d4avps": "https://proud-mythology.net/",
+        "text@qx2jdkz3": "cum vinculum subiungo defluo vinitor valens quod aer succedo possimus",
+        "number@7odsp0nj": 2,
+        "text@7xelqzme": "2",
+        "text@6nks60wc": [
+          "apparatus autus commemoro tamquam communis terminatio uredo subito bibo sopor carpo dolorem conitor ",
+          "comparo adicio suspendo argentum ascisco acsi administratio suscipio umbra nobis cattus sufficio anc"
+        ],
+        "file@ajfclng3": [
+          "https://legal-filter.net/",
+          "https://lean-forage.net/"
+        ],
+        "number@9w1bvym9": 82,
+        "long-text@8sqcjw45": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA3PMy4sPzyzOz660NHSoTMzIz9dLzs8FADAMU6gWAAAA"
+        },
+        "ref@6tq48k30": null,
+        "boolean@nazo8176": false,
+        "file@moaurc1s": [
+          "https://superb-cricket.org",
+          "https://pretty-minister.name",
+          "https://menacing-obedience.net/"
+        ],
+        "long-text@h1u5lgk6": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAysrzUnPV0guSk0qylcoTkwtSFVISS3ILygFAHnQZ8YZAAAA"
+        },
+        "text@ttwinycs": [
+          "sub terebro delectus adipisci cometes optio strenuus desipio repudiandae aegrus ater atrox peior cre",
+          "clibanus absens uredo debitis curo amiculum comptus pecus bibo umbra ars adinventitias vigilo tam vi"
+        ],
+        "boolean@pcgpnf7e": false,
+        "long-text@ix94nkuc": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAysuTUxJzVcoK81Jz1coLkhNLs0pzVVIzs8DANZk2W8ZAAAA"
+        },
+        "number@keeixvk2": [
+          2
+        ],
+        "rich-text@mc63eebi": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAA4XOO2rEUAyF4a0I1W7SeishhXKtXAvuQ+hhDIP3HhwS0s3U5+fjPDCo4oqbHLhg2aVtxgPX98fvsL/hgsFn4IqFNAMO9mCDbI06XstfqGRUjXT/72V8NeqdQiZ4mmcHT+XW+IRglS0dPD+dy3wOKZ1w8Ii7V7YxYePB9VbTgWpleyGU2aYBewAN6ekQxn1C8Ejx2xaCMs2y64QyWQVKjhI/3/ksrJEmoFwiHa+P6xs0rOAJOQEAAA=="
+        }
+      },
+      "revisionSavedBy": {
+        "type": "api-key",
+        "displayName": "cms",
+        "id": "69e72cd142e4920002f2f955"
+      },
+      "tenant": "root",
+      "createdOn": "2026-04-21T08:09:48.376Z",
+      "locked": false
+    },
+    "GSI_TENANT": "root"
+  },
+  {
+    "TYPE": "cms.entry.l",
+    "_md": "2026-04-21T07:51:57.846Z",
+    "GSI1_SK": "6022814891bd1300087bd24c#0001",
+    "SK": "L",
+    "_et": "CmsEntries",
+    "_ct": "2026-04-21T07:51:57.846Z",
+    "PK": "T#root#L#en-US#CMS#CME#CME#6022814891bd1300087bd24c",
+    "GSI1_PK": "T#root#L#en-US#CMS#CME#M#fmFile#L",
+    "data": {
+      "modelId": "fmFile",
+      "revisionCreatedOn": "2026-04-21T07:51:57.795Z",
+      "status": "draft",
+      "revisionCreatedBy": {
+        "type": "admin",
+        "displayName": "Bruno Zorić",
+        "id": "69e72c8b2a49780002fc55ad"
+      },
+      "createdBy": {
+        "type": "admin",
+        "displayName": "Bruno Zorić",
+        "id": "69e72c8b2a49780002fc55ad"
+      },
+      "entryId": "6022814891bd1300087bd24c",
+      "id": "6022814891bd1300087bd24c#0001",
+      "savedBy": {
+        "type": "admin",
+        "displayName": "Bruno Zorić",
+        "id": "69e72c8b2a49780002fc55ad"
+      },
+      "version": 1,
+      "location": {
+        "folderId": "root"
+      },
+      "revisionSavedOn": "2026-04-21T07:51:57.795Z",
+      "locale": "en-US",
+      "savedOn": "2026-04-21T07:51:57.786Z",
+      "values": {
+        "object@location": {
+          "text@folderId": "root"
+        },
+        "text@key": "demo-pages/6022814891bd1300087bd24c/welcome-to-webiny__webiny-infrastructure-overview.svg",
+        "text@aliases": [],
+        "number@size": 90163,
+        "text@name": "webiny-infrastructure-overview.svg",
+        "text@type": "image/svg+xml",
+        "text@tags": [],
+        "object@metadata": {}
+      },
+      "revisionSavedBy": {
+        "type": "admin",
+        "displayName": "Bruno Zorić",
+        "id": "69e72c8b2a49780002fc55ad"
+      },
+      "tenant": "root",
+      "createdOn": "2026-04-21T07:51:57.786Z",
+      "locked": false,
+      "webinyVersion": "5.44.0"
+    }
+  }
+]
