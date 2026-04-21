@@ -13,6 +13,9 @@ export default defineConfig({
         environment: "node",
         include: ["**/*.test.ts"],
         exclude: ["**/node_modules/**"],
+        // Installs the DEP0151 filter before any test module loads — tests
+        // also pull @webiny/lexical-* via transformer imports.
+        setupFiles: ["./src/utils/suppressDeprecations.ts"],
         coverage: {
             provider: "v8",
             reporter: ["text", "json", "html"]
