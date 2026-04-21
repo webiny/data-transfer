@@ -55,7 +55,11 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
             s3: { bucket: "source-bucket" }
         },
         target: {
-            region: "us-east-1",
+            // Different region from source so `getDocumentClient`'s config-hash
+            // cache returns a distinct DocumentClient for the target. Integration
+            // tests that install middleware on the target shouldn't leak into
+            // scans against the source.
+            region: "eu-central-1",
             credentials: FAKE_CREDS,
             dynamodb: { tableName: options.targetTable },
             s3: { bucket: "target-bucket" }
