@@ -40,7 +40,6 @@
         "src/**/*.{js,ts,json}",
         "templates/**/*.{js,ts,json}",
         "bin.js",
-        "jest-dynalite.config.js",
         "tsconfig.json",
         "vitest.config.ts"
       ],
