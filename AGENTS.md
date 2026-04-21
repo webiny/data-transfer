@@ -68,7 +68,7 @@ src/
 ├── domain/
 │   ├── pipeline/             # Pipeline abstractions
 │   │   ├── abstractions/
-│   │   │   ├── Processor.ts  # extendContext? + onEnd? + execute + getShardState; slice type parameter.
+│   │   │   ├── Processor.ts  # extendContext? + onEnd? + execute + afterShard?; slice type parameter.
 │   │   │   ├── Scanner.ts    # Scanner.Interface<TRecord, TShard>
 │   │   │   ├── Hook.ts       # per-merge-group hook
 │   │   │   └── Transformer.ts
@@ -191,7 +191,7 @@ Type aliases `DdbTransformContext` (= Base ∧ DdbProcessorSlice ∧ S3Processor
 ### Scanner / Processor / Executor
 
 - **Scanner** = source iterator. Yields records per shard. `DynamoDbClient.scan<T>` is generic so scanners can narrow the raw row type.
-- **Processor** = per-command-type unit implementing `Processor.Interface<TBase, TSlice>`. Has optional `extendContext(base) → slice` (context helpers), optional `onEnd(ctx) → void | Promise<void>` (per-record terminal hook, replaces legacy auto-put magic), `execute(commands) → Promise<void>` (drains its command keys), `getShardState() → unknown` (per-shard state for the worker→orchestrator boundary).
+- **Processor** = per-command-type unit implementing `Processor.Interface<TBase, TSlice>`. Has optional `extendContext(base) → slice` (context helpers), optional `onEnd(ctx) → void | Promise<void>` (per-record terminal hook, replaces legacy auto-put magic), `execute(commands) → Promise<void>` (drains its command keys), optional `afterShard({ segment, totalSegments }) → void | Promise<void>` (per-shard persistence hook for processors that carry state across the worker→orchestrator boundary — only OsProcessor implements it today, to write `<segment>-indexes.json`).
 - Per-record orchestration: runner builds base ctx → spreads each processor's slice → applies filters → runs transformers → runs each processor's `onEnd?` SEQUENTIALLY IN ARRAY ORDER.
 - Per-shard orchestration: each processor's `execute()` runs SEQUENTIALLY IN ARRAY ORDER. After all processors drain, runner checks `Commands.unclaimedKeys()` and warns once per unmatched key ("transformer pushed X but no processor drained X").
 - **`DdbExecutor`** is a SHARED primitive (not a Processor) — `batchPut` against a target DDB table. Both `DdbProcessor.execute` and `OsProcessor.execute` compose it. OS adds gzip + ensureIndex preamble before delegating.
@@ -263,6 +263,7 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - **`preset.configure` takes an object arg bag** — signature is `configure({ runner, pipelineBuilderFactory, container }): void | Promise<void>`. Async returns allowed. `container` exposed so users can resolve custom services they registered in `setup.ts`. Object shape is forward-compat — add fields without breaking existing presets.
 - **User-side custom DI via `setup.ts`** — CLI looks for `setup.ts` sibling of the config file; loads `await fn({ container })` BEFORE `preset.configure({...})`. Use the `initDataTransfer` typed helper. Optional — pure-config users skip it. Canonical location for registering user-authored processors, transformers, or overriding defaults. Don't reintroduce auto-registration-via-inspection magic.
 - **Built-in presets are auto-discovered** — `PresetLoader` scans `src/presets/` (relative to its own `import.meta.url`, so dev / installed layouts both work). Convention: **filename === preset name**. `example.ts` is excluded by exact filename match. Adding a built-in is a file drop, not a code change. Don't reintroduce a hardcoded `BUILT_IN_PRESETS` map or a "register your preset here" registry.
+- **Processors persist their own state via `afterShard`** (2026-04-21) — the previous `getShardState()` + handler-side collection/serialization was the worker handler pulling state OUT of processors, then writing it. `afterShard({ segment, totalSegments })` inverts the direction: the processor owns its state AND its persistence end-to-end, injecting `TransferContext` / `FileTool` / `DirectoryTool` directly. The `processOsSegment` handler is now identical to `processSegment` (bootstrap → configure → run). Runner fires `afterShard` sequentially in array order after `execute()`, before `warnUnclaimedKeys`. Optional hook — DdbProcessor / S3Processor skip it (no cross-boundary state). When `touchedIndexes` is empty, OsProcessor writes nothing — `EnableRefreshHook` tolerates a missing `.transfer/<runId>/` dir. Don't reintroduce a handler-side state-collection loop.
 
 ---
 
