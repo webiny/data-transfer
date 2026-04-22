@@ -12,14 +12,7 @@ interface OsCompressedRecord extends BaseRecord {
 }
 
 interface IOsRecordDecompressor {
-    /**
-     * Decompress a CmsEntriesElasticsearch OS DynamoDB record.
-     * Returns the inner CMS entry (with PK/SK/TYPE from the outer record),
-     * plus outer metadata and the locale extracted from the PK.
-     * Returns null for non-CMS records, unexpected SK values, missing locale,
-     * or failed decompression.
-     */
-    decompress(osRecord: OsCompressedRecord): Promise<BaseRecord | null>;
+    decompress(osRecord: OsCompressedRecord): Promise<Record<string, unknown> | null>;
 }
 
 export const OsRecordDecompressor = createAbstraction<IOsRecordDecompressor>(
@@ -29,5 +22,5 @@ export const OsRecordDecompressor = createAbstraction<IOsRecordDecompressor>(
 export namespace OsRecordDecompressor {
     export type Interface = IOsRecordDecompressor;
     export type Compressed = OsCompressedRecord;
-    export type Decompressed = BaseRecord;
+    export type Decompressed = Record<string, unknown>;
 }
