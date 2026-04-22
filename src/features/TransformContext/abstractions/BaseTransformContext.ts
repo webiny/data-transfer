@@ -22,7 +22,7 @@ interface IBaseTransformContext<TRecord = unknown> {
      * no slice helper provides.
      */
     addCommand(cmd: Command): void;
-    queryRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+    querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(
         pk: string,
         sk?: string
     ): Promise<T | null>;

@@ -54,7 +54,7 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         addCommand(cmd): void {
             captured.push(cmd);
         },
-        async queryRecord(): Promise<null> {
+        async querySourceRecord(): Promise<null> {
             return null;
         }
     };

@@ -147,7 +147,7 @@ export const stampMigratedAt = createDdbTransformer(
 | `ctx.replace(newRecord)`   | Replace `ctx.record` wholesale. Propagates to subsequent transformers + onEnd.          |
 | `ctx.putRecord(r)`         | Emit an EXTRA `PutRecord` beyond the auto-put. Don't call this on `ctx.record` itself — that's a duplicate. |
 | `ctx.addCommand(cmd)`      | Low-level — push any command into the shared bag. Prefer `putRecord` / `copyFile`.      |
-| `ctx.queryRecord(pk, sk?)` | Lookup on the SOURCE primary table. Returns `null` if not found.                        |
+| `ctx.querySourceRecord(pk, sk?)` | Lookup on the SOURCE primary table. Returns `null` if not found.                        |
 | `ctx.modelProvider`        | Loaded CMS models from `config.pipeline.modelsDir` if set.                              |
 | `ctx.cache`                | `Map`-like cache, persists across records in the same worker.                           |
 | `ctx.copyFile(src, tgt)`   | DDB ctx only — emit an S3 copy command (source bucket → target bucket).                 |

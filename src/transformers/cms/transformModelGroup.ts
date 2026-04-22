@@ -2,6 +2,14 @@ import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
+const getLocale = (record: BaseRecord): string => {
+    // Try to get locale from record attributes
+    if (typeof record.locale === "string" && !!record.locale) {
+        return record.locale;
+    }
+    // Fallback to default locale
+    return "en-US";
+};
 /**
  * Transforms CMS model records:
  * NOTE: This transformer expects wrapInData to run FIRST, so group is in data.group.
@@ -10,7 +18,7 @@ import type { BaseRecord } from "~/domain/transform/types/records.ts";
 export const transformModelGroup = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "transformModelGroup",
     async ctx => {
-        const { record } = ctx;
+        const { record, original } = ctx;
 
         // Extract data envelope
         const data = record.data as Record<string, unknown> | undefined;
@@ -30,11 +38,16 @@ export const transformModelGroup = createTransformer<BaseTransformContext.Interf
             return;
         }
 
+        const locale = getLocale(original);
+
         // Extract tenant for group lookup
         const tenant = data.tenant || "root";
 
         // Look up the group record to get its slug
-        const groupRecord = await ctx.queryRecord(`T#${tenant}#GROUP#${group.id}`, "A");
+        const groupRecord = await ctx.querySourceRecord(
+            `T#${tenant}#L#${locale}#CMS#CMG`,
+            group.id
+        );
 
         if (groupRecord && groupRecord.slug) {
             // Replace group object with slug string

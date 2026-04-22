@@ -27,7 +27,10 @@ describe("transformPermissions", () => {
         const ctx = makeFakeBaseContext(record);
 
         const queried: Array<{ pk: string; sk?: string }> = [];
-        (ctx as { queryRecord: unknown }).queryRecord = async (pk: string, sk?: string) => {
+        (ctx as { querySourceRecord: unknown }).querySourceRecord = async (
+            pk: string,
+            sk?: string
+        ) => {
             queried.push({ pk, sk });
             if (pk === "T#root#GROUP#group-1") {
                 return { slug: "content" };

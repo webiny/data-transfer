@@ -16,8 +16,8 @@ describe("transformModelGroup", () => {
             },
             {}
         );
-        // Override queryRecord to return a matching group record
-        (ctx as unknown as Record<string, unknown>).queryRecord = async (
+        // Override querySourceRecord to return a matching group record
+        (ctx as unknown as Record<string, unknown>).querySourceRecord = async (
             pk: string,
             _sk?: string
         ) => {
@@ -44,8 +44,8 @@ describe("transformModelGroup", () => {
             },
             {}
         );
-        // queryRecord returns null (not found)
-        (ctx as unknown as Record<string, unknown>).queryRecord = async () => null;
+        // querySourceRecord returns null (not found)
+        (ctx as unknown as Record<string, unknown>).querySourceRecord = async () => null;
         await transformModelGroup(ctx);
         const data = ctx.record.data as Record<string, unknown>;
         expect(data.group).toBe("my-group-name");

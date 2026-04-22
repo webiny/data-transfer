@@ -104,7 +104,10 @@ async function resolveFileKeyFromDb(
         return undefined;
     }
 
-    const existing = await ctx.queryRecord(`KV#global:FileManager/File/${fileId}/Metadata`, "A");
+    const existing = await ctx.querySourceRecord(
+        `KV#global:FileManager/File/${fileId}/Metadata`,
+        "A"
+    );
     if (existing) {
         const value = (existing.data as any)?.value;
         if (value?.bucketKey) {

@@ -58,7 +58,7 @@ export const transformPermissions = createTransformer<BaseTransformContext.Inter
                     // Look up each group and get its slug
                     const groupSlugs = [];
                     for (const groupId of groupIds) {
-                        const groupRecord = await ctx.queryRecord(
+                        const groupRecord = await ctx.querySourceRecord(
                             `T#${tenant}#GROUP#${groupId}`,
                             "A"
                         );

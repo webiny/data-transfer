@@ -32,7 +32,10 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
         addCommand(cmd: unknown): void {
             commands.add(cmd as Parameters<Commands["add"]>[0]);
         },
-        async queryRecord(_pk: string, _sk?: string): Promise<Record<string, unknown> | null> {
+        async querySourceRecord(
+            _pk: string,
+            _sk?: string
+        ): Promise<Record<string, unknown> | null> {
             return null;
         }
     };

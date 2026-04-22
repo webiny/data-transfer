@@ -16,7 +16,7 @@ describe("BaseTransformContextFactory", () => {
         expect(typeof factory.create).toBe("function");
     });
 
-    it("creates a context with record, original, modelProvider, cache, addCommand, replace, queryRecord", () => {
+    it("creates a context with record, original, modelProvider, cache, addCommand, replace, querySourceRecord", () => {
         const container = createDdbContainer();
         const factory = container.resolve(BaseTransformContextFactory);
         const record: SampleRecord = { PK: "a", SK: "1", name: "alice" };
@@ -30,7 +30,7 @@ describe("BaseTransformContextFactory", () => {
         expect(ctx.cache).toBeDefined();
         expect(typeof ctx.addCommand).toBe("function");
         expect(typeof ctx.replace).toBe("function");
-        expect(typeof ctx.queryRecord).toBe("function");
+        expect(typeof ctx.querySourceRecord).toBe("function");
         expect(commands.size()).toBe(0);
     });
 

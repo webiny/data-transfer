@@ -36,7 +36,7 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
             addCommand(cmd): void {
                 commands.add(cmd);
             },
-            async queryRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+            async querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(
                 pk: string,
                 sk?: string
             ): Promise<T | null> {
