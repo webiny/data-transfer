@@ -56,7 +56,7 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     // Tools
     LoggerFeature.register(container, {
-        logLevel: options.logLevel || "info",
+        logLevel: options.logLevel || config.debug?.logLevel || "info",
         json: options.json || false,
         logFile: resolveLogFile(config, options.runId)
     });
