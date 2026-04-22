@@ -92,7 +92,13 @@ export class PinoLogger implements Logger.Interface {
         // wrapper — preserves the synchronous stdout.write semantics the
         // existing JSON-transport tests rely on.
         if (!this.logFile) {
+            const _orig = (consoleStream as any).write.bind(consoleStream);
+            (consoleStream as any).write = function (chunk: unknown, enc: unknown, cb: unknown) {
+                process.stderr.write(`[STREAM WRITE] ${String(chunk).substring(0, 60)}\n`);
+                return _orig(chunk, enc, cb);
+            };
             this.logger = pino({ level: params.logLevel }, consoleStream);
+            process.stderr.write(`[PINOlogger] created with level=${params.logLevel} actual=${this.logger.level}\n`);
             return;
         }
 
