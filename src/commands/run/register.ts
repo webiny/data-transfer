@@ -19,10 +19,15 @@ export function registerRunCommand(yargs: Argv): Argv {
                         "Comma-separated list of segment indices to run (e.g. `1,3`). " +
                         "Use to re-run specific shards after a failure. Defaults to all."
                 })
-                .coerce("segments", parseSegmentsFilter);
+                .coerce("segments", parseSegmentsFilter)
+                .option("log-level", {
+                    type: "string",
+                    choices: ["debug", "info", "warn", "error"] as const,
+                    description: "Log level (default: info)"
+                });
         },
         async argv => {
-            await handler(argv.config, argv.segments);
+            await handler(argv.config, argv.segments, argv["log-level"] as string | undefined);
         }
     );
 }

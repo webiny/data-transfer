@@ -13,14 +13,22 @@ import {
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
-export async function handler(configPath: string, segmentsFilter?: number[]): Promise<void> {
+export async function handler(
+    configPath: string,
+    segmentsFilter?: number[],
+    logLevel?: string
+): Promise<void> {
     const runId = String(Date.now());
     let container;
     let logger;
     let config;
     try {
         config = await loadConfig(configPath);
-        container = bootstrap({ config, runId });
+        container = bootstrap({
+            config,
+            runId,
+            logLevel: (logLevel ?? config.debug?.logLevel) as "debug" | "info" | "warn" | "error" | undefined
+        });
         logger = container.resolve(Logger);
     } catch (error) {
         // Config-load / Zod validation failures happen before we have a logger
@@ -53,7 +61,7 @@ export async function handler(configPath: string, segmentsFilter?: number[]): Pr
         await beforeHook.execute();
 
         const workers = segmentsToRun.map(segment =>
-            spawnWorker(segment, segments, runId, configPath)
+            spawnWorker(segment, segments, runId, configPath, logLevel ?? config.debug?.logLevel)
         );
 
         const results = await Promise.allSettled(workers);
@@ -132,7 +140,8 @@ async function spawnWorker(
     segment: number,
     total: number,
     runId: string,
-    configPath: string
+    configPath: string,
+    logLevel?: string
 ): Promise<void> {
     const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
 
@@ -146,7 +155,8 @@ async function spawnWorker(
         "--total",
         total.toString(),
         "--config",
-        configPath
+        configPath,
+        ...(logLevel ? ["--log-level", logLevel] : [])
     ];
 
     const { exitCode } = await execa("node", args, {

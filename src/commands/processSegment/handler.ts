@@ -13,11 +13,18 @@ export interface ProcessSegmentArgs {
     segment: number;
     total: number;
     config: string;
+    logLevel?: string;
 }
 
 export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const config = await loadConfig(argv.config);
-    const container = bootstrap({ config, runId: argv.runId });
+    const resolvedLogLevel = (argv.logLevel ?? config.debug?.logLevel) as
+        | "debug"
+        | "info"
+        | "warn"
+        | "error"
+        | undefined;
+    const container = bootstrap({ config, runId: argv.runId, logLevel: resolvedLogLevel });
     container.registerInstance(TransferContext, { runId: argv.runId });
 
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);
