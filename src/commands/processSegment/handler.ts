@@ -5,6 +5,8 @@ import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
+import { TenantLocales } from "~/features/TenantLocales/index.ts";
+import { ModelProvider } from "~/features/ModelProvider/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 
 export interface ProcessSegmentArgs {
@@ -31,6 +33,10 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
         pipelineBuilderFactory: container.resolve(PipelineBuilderFactory),
         container
     });
+
+    const tenantLocales = container.resolve(TenantLocales);
+    await tenantLocales.preload();
+    await container.resolve(ModelProvider).preloadModels(tenantLocales.getMap());
 
     logger.info(`Processing shard ${argv.segment + 1}/${argv.total}...`);
 
