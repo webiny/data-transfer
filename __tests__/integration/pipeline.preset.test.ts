@@ -20,6 +20,7 @@ import { createDdbIntegrationContainer } from "./integrationContainer.ts";
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 const SOURCE_PATH = fileURLToPath(new URL("../data/small-one.json", import.meta.url));
 const EXPECTED_PATH = fileURLToPath(new URL("../data/small-one.expected.json", import.meta.url));
+const MODELS_DIR = fileURLToPath(new URL("../data", import.meta.url));
 
 // Frozen clock so createMetadata's `new Date().toISOString()` produces a
 // stable timestamp across runs — otherwise the golden file would churn
@@ -135,7 +136,8 @@ describe("preset — v5-to-v6-ddb golden-file correctness", () => {
             sourceTable,
             targetTable,
             segments: 1,
-            useRealS3Client: true
+            useRealS3Client: true,
+            modelsDir: MODELS_DIR
         });
 
         const preset = await container.resolve(PresetLoader).load("v5-to-v6-ddb");

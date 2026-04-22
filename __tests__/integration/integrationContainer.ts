@@ -46,6 +46,7 @@ export interface DdbIntegrationContainerOptions {
     targetTable: string;
     segments?: number;
     runId?: string;
+    modelsDir?: string;
     /**
      * Wires the real S3ClientFeature (with dummy region + creds). Pair with
      * `mockClient(S3Client)` from `aws-sdk-client-mock` in the test to
@@ -85,7 +86,8 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
         },
         pipeline: {
             preset: "integration",
-            segments: options.segments ?? 1
+            segments: options.segments ?? 1,
+            modelsDir: options.modelsDir
         },
         debug: options.snapshot !== undefined ? { snapshot: options.snapshot } : undefined
     };
