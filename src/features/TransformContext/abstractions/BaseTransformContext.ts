@@ -3,6 +3,7 @@ import type { Command } from "~/domain/transform/commands/Command.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
 import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 // ============================================================================
 // Base Context Interface
@@ -13,6 +14,7 @@ interface IBaseTransformContext<TRecord = unknown> {
     readonly original: Readonly<TRecord>;
     readonly modelProvider: ModelProvider.Interface;
     readonly cache: Cache.Interface;
+    readonly compressionHandler: CompressionHandler.Interface;
     replace(newRecord: TRecord): void;
     /**
      * Push a command to the bag. Slice helpers (DdbProcessor.putRecord,

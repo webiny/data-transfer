@@ -5,11 +5,13 @@ import {
     BaseTransformContext as BaseTransformContextAbstraction,
     BaseTransformContextFactory as BaseTransformContextFactoryAbstraction
 } from "./abstractions/BaseTransformContext.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbstraction.Interface {
     public constructor(
         private readonly modelProvider: ModelProvider.Interface,
-        private readonly cache: Cache.Interface
+        private readonly cache: Cache.Interface,
+        private readonly compressionHandler: CompressionHandler.Interface
     ) {}
 
     public create<TRecord>(
@@ -18,12 +20,14 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
         const commands = new Commands();
         const modelProvider = this.modelProvider;
         const cache = this.cache;
+        const compressionHandler = this.compressionHandler;
 
         const ctx: BaseTransformContextAbstraction.Interface<TRecord> = {
             record: structuredClone(params.record),
             original: Object.freeze(structuredClone(params.record)) as Readonly<TRecord>,
             modelProvider,
             cache,
+            compressionHandler,
             replace(newRecord: TRecord): void {
                 ctx.record = newRecord;
             },
@@ -39,5 +43,5 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
 export const BaseTransformContextFactory =
     BaseTransformContextFactoryAbstraction.createImplementation({
         implementation: BaseTransformContextFactoryImpl,
-        dependencies: [ModelProvider, Cache]
+        dependencies: [ModelProvider, Cache, CompressionHandler]
     });

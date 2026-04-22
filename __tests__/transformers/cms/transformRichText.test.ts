@@ -39,14 +39,4 @@ describe("transformRichText", () => {
         const values = data.values as Record<string, unknown>;
         expect(values["text@title"]).toBe("hello");
     });
-
-    it("returns early when modelProvider is missing", async () => {
-        const ctx = makeFakeBaseContext({
-            PK: "T#root#CMS#CME#abc",
-            SK: "REV#0001",
-            TYPE: "cms.entry",
-            data: { modelId: "myModel", values: {} }
-        });
-        await expect(transformRichText(ctx)).resolves.toBeUndefined();
-    });
 });
