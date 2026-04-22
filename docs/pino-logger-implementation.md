@@ -138,6 +138,40 @@ The logger is configured with:
 - Hidden `pid` and `hostname` fields
 - Human-readable timestamps (`HH:MM:ss.l`)
 
+## Gotchas
+
+### `pino.multistream` silently drops sub-info messages when stream entries have no `level`
+
+**Symptom:** setting `debug.logLevel: "debug"` (or `--log-level debug`) produces no debug output,
+even though the pino logger reports `level = "debug"` and the level reaches the worker correctly.
+
+**Root cause:** `pino.multistream` assigns `DEFAULT_INFO_LEVEL` (30 = info) to any stream entry
+that omits a `level` property. Multistream then filters each stream independently — so messages
+below info (e.g. debug = 20) are dropped at the stream level, regardless of the logger's own level.
+
+This only manifests when `debug.logFile` is set (truthy) in the config, because that is the only
+code path that uses `pino.multistream`. The single-stream path (`pino(opts, consoleStream)`) is
+unaffected — pino handles level filtering itself there.
+
+**Fix applied in `PinoLogger.ts`:** pass `level: params.logLevel` explicitly on each stream entry:
+
+```ts
+// WRONG — multistream silently defaults both streams to DEFAULT_INFO_LEVEL
+const streams: StreamEntry[] = [
+    { stream: consoleStream },
+    { stream: createFileDestination(this.logFile) }
+];
+
+// CORRECT — level propagated to every stream entry
+const streams: StreamEntry[] = [
+    { stream: consoleStream, level: params.logLevel as pino.Level },
+    { stream: createFileDestination(this.logFile), level: params.logLevel as pino.Level }
+];
+```
+
+**Rule of thumb:** whenever you add a stream to `pino.multistream`, always set `level` explicitly.
+The omitted-level default is almost never what you want.
+
 ## Future Enhancements
 
 Based on the DDB-ES migration reference, these features can be added:
