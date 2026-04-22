@@ -29,8 +29,12 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
 
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);
     logger.info(`argv.logLevel=${argv.logLevel} config.debug?.logLevel=${config.debug?.logLevel} resolvedLogLevel=${resolvedLogLevel}`);
+    process.stderr.write(`[STDERR A] about to call logger.debug\n`);
     logger.debug("debug level test — if you see this, debug logging works");
-    process.stderr.write(`[STDERR] pino level check — resolvedLogLevel=${resolvedLogLevel}\n`);
+    process.stderr.write(`[STDERR B] called logger.debug\n`);
+    const baseLogger = container.resolve(Logger);
+    process.stderr.write(`[STDERR C] base logger type=${baseLogger.constructor.name}\n`);
+    process.stderr.write(`[STDERR D] resolvedLogLevel=${resolvedLogLevel}\n`);
     const runner = container.resolve(PipelineRunner);
     const presetLoader = container.resolve(PresetLoader);
 
