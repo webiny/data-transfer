@@ -35,6 +35,7 @@
     "@webiny/aws-sdk": "^6.2.0",
     "@webiny/di": "^0.2.3",
     "@webiny/lexical-converter": "^6.2.0",
+    "@webiny/utils": "^6.2.0",
     "dotenv": "^17.4.2",
     "execa": "^9.6.1",
     "exifreader": "^4.38.1",

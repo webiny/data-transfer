@@ -8,7 +8,6 @@ import {
     TargetDynamoDbClient
 } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
-import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
@@ -18,6 +17,7 @@ import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 const DEFAULT_RETRY_SCHEDULE: number[] = [5000, 10000, 20000, 30000, 30000];
 const DEFAULT_REFRESH_INTERVAL = "1s";
@@ -44,7 +44,7 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly logger: Logger.Interface,
         private readonly ddbExecutor: DdbExecutor.Interface,
         private readonly osClient: OpenSearchClient.Interface,
-        private readonly gzip: GzipCompression.Interface,
+        private readonly compression: CompressionHandler.Interface,
         private readonly touchedIndexes: TouchedIndexes.Interface,
         private readonly config: MigrationConfig.Interface,
         private readonly transferContext: TransferContext.Interface,
@@ -122,7 +122,7 @@ class OsProcessorImpl implements Processor.Interface<
             const slice = puts.slice(i, i + concurrency);
             const gzipped = await Promise.all(
                 slice.map(async put => {
-                    const compressed = await this.gzip.compress(put.record.data);
+                    const compressed = await this.compression.compress(put.record.data);
                     return PutRecord.create({
                         table: put.table,
                         record: {
@@ -251,7 +251,7 @@ export const OsProcessor = Processor.createImplementation({
         Logger,
         DdbExecutor,
         OpenSearchClient,
-        GzipCompression,
+        CompressionHandler,
         TouchedIndexes,
         MigrationConfig,
         TransferContext,

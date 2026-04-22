@@ -4,7 +4,6 @@ import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "../../src/tools/Logger/index.ts";
 import { CacheFeature } from "../../src/tools/Cache/index.ts";
-import { GzipCompressionFeature } from "../../src/tools/GzipCompression/index.ts";
 import { DirectoryToolFeature } from "../../src/tools/DirectoryTool/index.ts";
 import { FileToolFeature } from "../../src/tools/FileTool/index.ts";
 import {
@@ -32,6 +31,7 @@ import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
 import { S3ProcessorFeature } from "../../src/features/S3Processor/index.ts";
 import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 
@@ -97,7 +97,7 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
     MigrationConfigFeature.register(container, { config });
     LoggerFeature.register(container, { logLevel: "error", json: false });
     CacheFeature.register(container);
-    GzipCompressionFeature.register(container);
+    CompressionFeature.register(container);
     DirectoryToolFeature.register(container);
     FileToolFeature.register(container);
 

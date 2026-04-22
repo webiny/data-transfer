@@ -4,7 +4,6 @@ import { ContainerToken } from "~/base/index.ts";
 import { MigrationConfig, MigrationConfigFeature } from "~/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "~/tools/Logger/index.ts";
 import { CacheFeature } from "~/tools/Cache/index.ts";
-import { GzipCompressionFeature } from "~/tools/GzipCompression/index.ts";
 import { DirectoryToolFeature } from "~/tools/DirectoryTool/index.ts";
 import { FileToolFeature } from "~/tools/FileTool/index.ts";
 import { DynamoDbClientConfig, DynamoDbClientFeature } from "~/services/DynamoDbClient/index.ts";
@@ -30,6 +29,7 @@ import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/ind
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
 import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.ts";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -60,7 +60,7 @@ export function bootstrap(options: BootstrapOptions): Container {
         logFile: resolveLogFile(config, options.runId)
     });
     CacheFeature.register(container);
-    GzipCompressionFeature.register(container);
+    CompressionFeature.register(container);
     DirectoryToolFeature.register(container);
     FileToolFeature.register(container);
 
