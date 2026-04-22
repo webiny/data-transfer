@@ -49,7 +49,7 @@ export async function handler(
 
     container.registerInstance(TransferContext, { runId });
 
-    logConfig(logger, config, runId, segments, segmentsToRun, logLevel ?? config.debug?.logLevel);
+    logConfig({ logger, config, runId, segments, segmentsToRun, logLevel: logLevel ?? config.debug?.logLevel });
 
     const startTime = Date.now();
 
@@ -102,14 +102,16 @@ export async function handler(
     }
 }
 
-function logConfig(
-    logger: Logger.Interface,
-    config: MigrationConfig.Interface,
-    runId: string,
-    segments: number,
-    segmentsToRun: number[],
-    logLevel?: string
-): void {
+interface LogConfigParams {
+    logger: Logger.Interface;
+    config: MigrationConfig.Interface;
+    runId: string;
+    segments: number;
+    segmentsToRun: number[];
+    logLevel?: string;
+}
+
+function logConfig({ logger, config, runId, segments, segmentsToRun, logLevel }: LogConfigParams): void {
     logger.info("Starting transfer with configuration:");
     logger.info(`  Run ID: ${runId}`);
     logger.info(`  Storage: ${config.storage}`);
