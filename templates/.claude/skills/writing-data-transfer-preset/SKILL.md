@@ -140,19 +140,41 @@ export const stampMigratedAt = createDdbTransformer(
 
 ### Context API
 
+**Base context** — always present regardless of processors:
+
 | Member                     | Description                                                                             |
 | -------------------------- | --------------------------------------------------------------------------------------- |
 | `ctx.record`               | Mutable. Transformers modify this.                                                      |
 | `ctx.original`             | **Frozen** pre-transform snapshot. Always present. Use for audit/gate-checks.           |
 | `ctx.replace(newRecord)`   | Replace `ctx.record` wholesale. Propagates to subsequent transformers + onEnd.          |
-| `ctx.putRecord(r)`         | Emit an EXTRA `PutRecord` beyond the auto-put. Don't call this on `ctx.record` itself — that's a duplicate. |
 | `ctx.addCommand(cmd)`      | Low-level — push any command into the shared bag. Prefer `putRecord` / `copyFile`.      |
-| `ctx.querySourceRecord(pk, sk?)` | Lookup on the SOURCE primary DDB table. Returns `null` if not found.                    |
-| `ctx.queryTargetRecord(pk, sk?)` | Lookup on the TARGET primary DDB table. DDB transfers only — throws in OS transfers.     |
 | `ctx.modelProvider`        | Loaded CMS models from `config.pipeline.modelsDir` if set.                              |
 | `ctx.cache`                | `Map`-like cache, persists across records in the same worker.                           |
-| `ctx.copyFile(src, tgt)`   | DDB ctx only — emit an S3 copy command (source bucket → target bucket).                 |
-| `ctx.getFile(key)`         | DDB ctx only — read a file from the SOURCE bucket. Returns `Buffer`.                    |
+
+**DdbProcessor slice** — available when pipeline includes `DdbProcessor`:
+
+| Member                     | Description                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| `ctx.putRecord(r)`         | Emit an EXTRA `PutRecord` beyond the auto-put. Don't call this on `ctx.record` itself — that's a duplicate. |
+| `ctx.querySourceRecord(pk, sk?)` | Query the **source primary DDB table** (`config.source.dynamodb.tableName`). Returns `null` if not found. |
+| `ctx.queryTargetRecord(pk, sk?)` | Query the **target primary DDB table** (`config.target.dynamodb.tableName`). Returns `null` if not found. |
+
+**S3Processor slice** — available when pipeline includes `S3Processor`:
+
+| Member                     | Description                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| `ctx.copyFile(src, tgt)`   | Emit an S3 copy command (source bucket → target bucket).                                |
+| `ctx.getFile(key)`         | Read a file from the SOURCE bucket. Returns `Buffer`.                                   |
+
+**OsProcessor slice** — available when pipeline includes `OsProcessor`:
+
+| Member                     | Description                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| `ctx.putRecord(r)`         | Emit an EXTRA `PutRecord` beyond the auto-put.                                          |
+| `ctx.querySourceRecord(pk, sk?)` | Query the **source OS companion DDB table** (`config.source.opensearch.tableName`). Returns `null` if not found. |
+| `ctx.queryTargetRecord(pk, sk?)` | Query the **target OS companion DDB table** (`config.target.opensearch.tableName`). Returns `null` if not found. |
+
+Use `DdbCoreTransformContext.Interface` when a transformer only needs DDB slice methods (no S3). Use `DdbTransformContext.Interface` when it also needs `copyFile` / `getFile`. Use `OsTransformContext.Interface` for OS pipelines.
 
 ### Auto-put behavior (`onEnd`)
 

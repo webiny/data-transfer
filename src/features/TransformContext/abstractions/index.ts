@@ -1,2 +1,6 @@
 export { BaseTransformContext, BaseTransformContextFactory } from "./BaseTransformContext.ts";
-export type { DdbTransformContext, OsTransformContext } from "./contextAliases.ts";
+export type {
+    DdbCoreTransformContext,
+    DdbTransformContext,
+    OsTransformContext
+} from "./contextAliases.ts";

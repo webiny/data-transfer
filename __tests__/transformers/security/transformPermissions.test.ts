@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { transformPermissions } from "~/transformers/security/transformPermissions.ts";
-import { makeFakeBaseContext } from "../fakeContext.ts";
+import { makeFakeDdbCoreContext } from "../fakeContext.ts";
 
 describe("transformPermissions", () => {
     it("drops content.i18n, flattens cms.contentModel models, and resolves cms.contentModelGroup slugs", async () => {
@@ -24,13 +24,10 @@ describe("transformPermissions", () => {
                 ]
             }
         };
-        const ctx = makeFakeBaseContext(record);
+        const ctx = makeFakeDdbCoreContext(record);
 
         const queried: Array<{ pk: string; sk?: string }> = [];
-        (ctx as { querySourceRecord: unknown }).querySourceRecord = async (
-            pk: string,
-            sk?: string
-        ) => {
+        ctx.querySourceRecord = (async (pk: string, sk?: string) => {
             queried.push({ pk, sk });
             if (pk === "T#root#GROUP#group-1") {
                 return { slug: "content" };
@@ -39,7 +36,7 @@ describe("transformPermissions", () => {
                 return { slug: "marketing" };
             }
             return null;
-        };
+        }) as typeof ctx.querySourceRecord;
 
         await transformPermissions(ctx);
 
@@ -65,7 +62,7 @@ describe("transformPermissions", () => {
     });
 
     it("returns early when data envelope is missing", async () => {
-        const ctx = makeFakeBaseContext({
+        const ctx = makeFakeDdbCoreContext({
             PK: "T#root#L#en-US#ROLE#admin",
             SK: "A",
             TYPE: "security.role"

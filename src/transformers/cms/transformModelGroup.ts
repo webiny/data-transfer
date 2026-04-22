@@ -1,5 +1,5 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 const getLocale = (record: BaseRecord): string => {
@@ -15,7 +15,7 @@ const getLocale = (record: BaseRecord): string => {
  * NOTE: This transformer expects wrapInData to run FIRST, so group is in data.group.
  * - Replaces group object with group slug (resolves group ID to slug)
  */
-export const transformModelGroup = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
+export const transformModelGroup = createTransformer<DdbCoreTransformContext.Interface<BaseRecord>>(
     "transformModelGroup",
     async ctx => {
         const { record, original } = ctx;

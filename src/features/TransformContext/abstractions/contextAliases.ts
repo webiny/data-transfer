@@ -12,6 +12,14 @@ import type { BaseTransformContext } from "./BaseTransformContext.ts";
 
 interface DdbProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
+    querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
+    queryTargetRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
 }
 
 interface S3ProcessorSlice {
@@ -21,6 +29,30 @@ interface S3ProcessorSlice {
 
 interface OsProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
+    querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
+    queryTargetRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
+}
+
+// ============================================================================
+// DdbCoreTransformContext
+// ----------------------------------------------------------------------------
+// Minimal DDB-mode ctx — Base + DdbProcessorSlice only. Use for transformers
+// that need record-level DDB helpers (querySourceRecord, queryTargetRecord,
+// putRecord) but do not touch S3. Pipelines that register only DdbProcessor
+// (no S3Processor) produce this effective shape.
+// ============================================================================
+
+interface IDdbCoreTransformContext<TRecord = BaseRecord>
+    extends BaseTransformContext.Interface<TRecord>, DdbProcessorSlice {}
+
+export namespace DdbCoreTransformContext {
+    export type Interface<TRecord = BaseRecord> = IDdbCoreTransformContext<TRecord>;
 }
 
 // ============================================================================

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createDdbContainer, createOsContainer } from "../../containers/index.ts";
+import { createDdbContainer } from "../../containers/index.ts";
 import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 
@@ -16,7 +16,7 @@ describe("BaseTransformContextFactory", () => {
         expect(typeof factory.create).toBe("function");
     });
 
-    it("creates a context with record, original, modelProvider, cache, addCommand, replace, querySourceRecord, queryTargetRecord", () => {
+    it("creates a context with record, original, modelProvider, cache, addCommand, replace", () => {
         const container = createDdbContainer();
         const factory = container.resolve(BaseTransformContextFactory);
         const record: SampleRecord = { PK: "a", SK: "1", name: "alice" };
@@ -30,8 +30,6 @@ describe("BaseTransformContextFactory", () => {
         expect(ctx.cache).toBeDefined();
         expect(typeof ctx.addCommand).toBe("function");
         expect(typeof ctx.replace).toBe("function");
-        expect(typeof ctx.querySourceRecord).toBe("function");
-        expect(typeof ctx.queryTargetRecord).toBe("function");
         expect(commands.size()).toBe(0);
     });
 
@@ -71,34 +69,5 @@ describe("BaseTransformContextFactory", () => {
 
         expect(ctx.record.name).toBe("alice");
         expect(ctx.original.name).toBe("alice");
-    });
-
-    it("queryTargetRecord hits the target primary DDB table in DDB mode", async () => {
-        const targetRecord = { PK: "tgt", SK: "1", name: "landed" };
-        const container = createDdbContainer({
-            targetRecords: { "target-table": [targetRecord] }
-        });
-        const factory = container.resolve(BaseTransformContextFactory);
-        const { ctx } = factory.create<SampleRecord>({
-            record: { PK: "a", SK: "1", name: "alice" }
-        });
-
-        const hit = await ctx.queryTargetRecord("tgt", "1");
-        expect(hit).toEqual(targetRecord);
-
-        const miss = await ctx.queryTargetRecord("nope");
-        expect(miss).toBeNull();
-    });
-
-    it("queryTargetRecord throws in OS mode — no target primary DDB table exists", async () => {
-        const container = createOsContainer();
-        const factory = container.resolve(BaseTransformContextFactory);
-        const { ctx } = factory.create<SampleRecord>({
-            record: { PK: "a", SK: "1", name: "alice" }
-        });
-
-        await expect(ctx.queryTargetRecord("pk")).rejects.toThrow(
-            /only available in DDB transfers/
-        );
     });
 });

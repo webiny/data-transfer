@@ -65,6 +65,7 @@ export type { MigrationPreset, PresetConfigureContext } from "./domain/transform
 // Context types for user-written transformers.
 export type { BaseTransformContext } from "./features/TransformContext/abstractions/BaseTransformContext.ts";
 export type {
+    DdbCoreTransformContext,
     DdbTransformContext,
     OsTransformContext
 } from "./features/TransformContext/abstractions/contextAliases.ts";

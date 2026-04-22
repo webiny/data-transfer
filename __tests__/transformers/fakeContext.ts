@@ -1,5 +1,6 @@
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 export interface FakeContextOverrides {
@@ -31,7 +32,24 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
         },
         addCommand(cmd: unknown): void {
             commands.add(cmd as Parameters<Commands["add"]>[0]);
-        },
+        }
+    };
+    return ctx as unknown as BaseTransformContext.Interface<BaseRecord>;
+}
+
+/**
+ * Build a minimal DDB-mode ctx stub (Base + DdbProcessor slice) for unit
+ * tests of transformers that call putRecord / querySourceRecord /
+ * queryTargetRecord. Slice methods default to no-ops — override per test
+ * by assigning onto the returned object.
+ */
+export function makeFakeDdbCoreContext<T extends Record<string, unknown>>(
+    record: T,
+    overrides: FakeContextOverrides = {}
+): DdbCoreTransformContext.Interface<BaseRecord> {
+    const base = makeFakeBaseContext(record, overrides);
+    const ctx = Object.assign(base, {
+        putRecord(_record: Record<string, unknown>): void {},
         async querySourceRecord(
             _pk: string,
             _sk?: string
@@ -44,6 +62,6 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
         ): Promise<Record<string, unknown> | null> {
             return null;
         }
-    };
-    return ctx as unknown as BaseTransformContext.Interface<BaseRecord>;
+    });
+    return ctx as unknown as DdbCoreTransformContext.Interface<BaseRecord>;
 }
