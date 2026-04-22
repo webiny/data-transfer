@@ -10,7 +10,10 @@ class ModelPreloaderHookImpl implements AfterLoadPresetHook.Interface {
         private readonly modelProvider: ModelProvider.Interface
     ) {}
 
-    public async execute(_config: MigrationConfig.Interface, _preset: MigrationPreset): Promise<void> {
+    public async execute(
+        _config: MigrationConfig.Interface,
+        _preset: MigrationPreset
+    ): Promise<void> {
         await this.tenantLocales.preload();
         const map = this.tenantLocales.getMap();
         await this.modelProvider.preloadModels(map);
