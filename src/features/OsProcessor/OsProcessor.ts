@@ -3,6 +3,10 @@ import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration"
 import { isRetryableAwsError } from "~/base/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
+import {
+    SourceDynamoDbClient,
+    TargetDynamoDbClient
+} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
 import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
@@ -22,6 +26,14 @@ const DEFAULT_GZIP_CONCURRENCY = 16;
 
 interface OsProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
+    querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
+    queryTargetRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+        pk: string,
+        sk?: string
+    ): Promise<T | null>;
 }
 
 class OsProcessorImpl implements Processor.Interface<
@@ -37,17 +49,36 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly config: MigrationConfig.Interface,
         private readonly transferContext: TransferContext.Interface,
         private readonly dirTool: DirectoryTool.Interface,
-        private readonly fileTool: FileTool.Interface
+        private readonly fileTool: FileTool.Interface,
+        private readonly sourceDb: SourceDynamoDbClient.Interface,
+        private readonly targetDb: TargetDynamoDbClient.Interface
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): OsProcessorSlice {
         if (this.config.storage !== "os") {
             throw new Error("OsProcessor can only be used in os mode");
         }
+        const sourceTable = this.config.source.opensearch.tableName;
         const targetTable = this.config.target.opensearch.tableName;
+        const sourceDb = this.sourceDb;
+        const targetDb = this.targetDb;
         return {
             putRecord(record: Record<string, unknown>) {
                 base.addCommand(PutRecord.create({ table: targetTable, record }));
+            },
+            async querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+                pk: string,
+                sk?: string
+            ): Promise<T | null> {
+                const results = await sourceDb.query(sourceTable, pk, sk);
+                return results.length > 0 ? (results[0] as unknown as T) : null;
+            },
+            async queryTargetRecord<T extends Record<string, unknown> = Record<string, unknown>>(
+                pk: string,
+                sk?: string
+            ): Promise<T | null> {
+                const results = await targetDb.query(targetTable, pk, sk);
+                return results.length > 0 ? (results[0] as unknown as T) : null;
             }
         };
     }
@@ -225,6 +256,8 @@ export const OsProcessor = Processor.createImplementation({
         MigrationConfig,
         TransferContext,
         DirectoryTool,
-        FileTool
+        FileTool,
+        SourceDynamoDbClient,
+        TargetDynamoDbClient
     ]
 });
