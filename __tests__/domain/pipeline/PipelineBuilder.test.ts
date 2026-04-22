@@ -140,6 +140,33 @@ describe("PipelineBuilder.use()", () => {
         const builder = makeBuilder("chain");
         expect(builder.use(tagTransformer)).toBe(builder);
     });
+
+    it("accepts an array of transformers and appends them in order", () => {
+        const t1 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const t2 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const t3 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const stack = [t1, t2, t3] as const;
+
+        const pipeline = makeBuilder("array-stack").use(stack).build();
+
+        expect(pipeline.transformerFns).toEqual([t1, t2, t3]);
+    });
+
+    it("treats an empty array as a no-op", () => {
+        const pipeline = makeBuilder("empty-array").use([]).build();
+        expect(pipeline.transformerFns).toHaveLength(0);
+    });
+
+    it("supports mixing single and array calls, preserving insertion order", () => {
+        const t1 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const t2 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const t3 = (() => undefined) as Transformer.Interface<FakeContext>;
+        const t4 = (() => undefined) as Transformer.Interface<FakeContext>;
+
+        const pipeline = makeBuilder("mixed").use(t1).use([t2, t3]).use(t4).build();
+
+        expect(pipeline.transformerFns).toEqual([t1, t2, t3, t4]);
+    });
 });
 
 describe("PipelineBuilder — hook registration", () => {

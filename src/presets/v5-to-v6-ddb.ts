@@ -15,20 +15,16 @@ import {
 } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
-    fixBrokenStorageKeys,
-    fixCmePk,
+    cmsEntryTransformers,
     groupsToRoles,
     migrateFileManagerSettings,
     migrateMailerSettings,
     removeAttributes,
-    removeFolderRevision,
     removeLocale,
     renameFieldAttributes,
     transformModelGroup,
     transformPermissions,
-    transformRichText,
     updateFlpIds,
-    updateModelIds,
     wrapInData
 } from "~/transformers/index.ts";
 // ============================================================================
@@ -48,6 +44,7 @@ import {
  *
  * Uses pre-configured pipelines for consistent, well-tested transformations.
  */
+
 export default createTransferPreset({
     name: "v5-to-v6-ddb",
     description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
@@ -89,19 +86,9 @@ export default createTransferPreset({
                 scanner: DdbScanner,
                 processors: [DdbProcessor, S3Processor]
             })
-            // Configure filter
             .filter(createFilter(isFmFile))
-            // Configure transformers (wrapInData MUST be first)
-            .use(wrapInData)
-            .use(addGsiTenant)
-            .use(removeLocale)
-            .use(fixCmePk)
-            .use(fixBrokenStorageKeys)
-            .use(transformRichText)
-            .use(updateModelIds)
-            .use(removeFolderRevision)
-            .use(removeAttributes)
-            // File Manager-specific transformers
+            .use(cmsEntryTransformers)
+            // File Manager-specific transformers (append pipeline-specific tail here)
             // .use(createMetadata)
             // .use(extractImageMetadata)
             // TODO we dont want to copy files from S3, so discard all commands produced in this pipeline.
@@ -208,19 +195,8 @@ export default createTransferPreset({
                 scanner: DdbScanner,
                 processors: [DdbProcessor]
             })
-            // Configure filter
             .filter(createFilter(isCmsEntry))
-
-            // Configure transformers (wrapInData MUST be first)
-            .use(wrapInData)
-            .use(addGsiTenant)
-            .use(removeLocale)
-            .use(fixCmePk)
-            .use(fixBrokenStorageKeys)
-            .use(transformRichText)
-            .use(updateModelIds)
-            .use(removeFolderRevision)
-            .use(removeAttributes)
+            .use(cmsEntryTransformers)
             .build();
 
         // ========================================================================

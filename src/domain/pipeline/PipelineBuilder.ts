@@ -58,12 +58,29 @@ export class PipelineBuilder<
     }
 
     /**
-     * Register a transformer. Transformers see the effective context —
-     * BaseTransformContext merged with every processor slice from the
-     * pipeline's processor list.
+     * Register one or more transformers. Transformers see the effective
+     * context — BaseTransformContext merged with every processor slice
+     * from the pipeline's processor list.
+     *
+     * Accepts a single transformer OR an array, so shared stacks can be
+     * declared once and applied across pipelines:
+     *
+     *   const contentStack = [wrapInData, addGsiTenant, removeAttributes];
+     *   factory.create({...}).filter(...).use(contentStack).build();
+     *
+     * Arrays are appended element-by-element in order; mixing array and
+     * single calls is fine — the internal list just accumulates.
      */
-    public use(transformer: Transformer.Interface<TContext>): this {
-        this.transformers.push(transformer);
+    public use(
+        transformer: Transformer.Interface<TContext> | readonly Transformer.Interface<TContext>[]
+    ): this {
+        if (Array.isArray(transformer)) {
+            for (const item of transformer) {
+                this.transformers.push(item);
+            }
+        } else {
+            this.transformers.push(transformer as Transformer.Interface<TContext>);
+        }
         return this;
     }
 
