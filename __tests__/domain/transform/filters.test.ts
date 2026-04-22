@@ -9,6 +9,19 @@ import {
     isBuiltInSecurityRole,
     isSecurityTeam
 } from "../../../src/domain/transform/filters.ts";
+import type { BaseRecord } from "../../../src/domain/transform/types/records.ts";
+
+function makeRecord(overrides: Partial<BaseRecord> & Record<string, unknown>): BaseRecord {
+    return {
+        PK: "T#root#ITEM#1",
+        SK: "A",
+        _et: "TestEntity",
+        _ct: "2024-01-01T00:00:00.000Z",
+        _md: "2024-01-01T00:00:00.000Z",
+        TYPE: "",
+        ...overrides
+    };
+}
 
 describe("filters", () => {
     describe("byType", () => {
@@ -22,14 +35,14 @@ describe("filters", () => {
     describe("byTypePrefix", () => {
         it("should match records where TYPE starts with prefix", () => {
             const isCms = byTypePrefix("cms.");
-            expect(isCms({ TYPE: "cms.entry" })).toBe(true);
-            expect(isCms({ TYPE: "cms.model" })).toBe(true);
-            expect(isCms({ TYPE: "security.team" })).toBe(false);
+            expect(isCms(makeRecord({ TYPE: "cms.entry" }))).toBe(true);
+            expect(isCms(makeRecord({ TYPE: "cms.model" }))).toBe(true);
+            expect(isCms(makeRecord({ TYPE: "security.team" }))).toBe(false);
         });
 
         it("should handle missing TYPE gracefully", () => {
             const isCms = byTypePrefix("cms.");
-            expect(isCms({})).toBe(false);
+            expect(isCms(makeRecord({ TYPE: "" }))).toBe(false);
         });
     });
 
@@ -42,24 +55,24 @@ describe("filters", () => {
 
     describe("isCmsEntry", () => {
         it("should match any cms.entry.* record", () => {
-            expect(isCmsEntry({ TYPE: "cms.entry" })).toBe(true);
-            expect(isCmsEntry({ TYPE: "cms.entry.latest" })).toBe(true);
-            expect(isCmsEntry({ TYPE: "cms.model" })).toBe(false);
+            expect(isCmsEntry(makeRecord({ TYPE: "cms.entry" }))).toBe(true);
+            expect(isCmsEntry(makeRecord({ TYPE: "cms.entry.latest" }))).toBe(true);
+            expect(isCmsEntry(makeRecord({ TYPE: "cms.model" }))).toBe(false);
         });
     });
 
     describe("isFmFile", () => {
         it("should match by top-level modelId", () => {
-            expect(isFmFile({ modelId: "fmFile" })).toBe(true);
-            expect(isFmFile({ modelId: "wbyFmFile" })).toBe(true);
+            expect(isFmFile(makeRecord({ modelId: "fmFile" }))).toBe(true);
+            expect(isFmFile(makeRecord({ modelId: "wbyFmFile" }))).toBe(true);
         });
 
         it("should match by nested data.modelId", () => {
-            expect(isFmFile({ data: { modelId: "fmFile" } })).toBe(true);
+            expect(isFmFile(makeRecord({ data: { modelId: "fmFile" } }))).toBe(true);
         });
 
         it("should reject non-FM records", () => {
-            expect(isFmFile({ modelId: "other" })).toBe(false);
+            expect(isFmFile(makeRecord({ modelId: "other" }))).toBe(false);
         });
     });
 
