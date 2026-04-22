@@ -96,8 +96,6 @@ async function transformRichTextField(params: ITransformRichTextFieldParams): Pr
 
         // Replace the field value
         values[storageId] = await compressionHandler.compress(newFormat);
-
-        console.log(`[transformRichText] Transformed field: ${storageId}`);
     } catch (error) {
         console.warn(
             `[transformRichText] Failed to transform ${storageId}:`,
