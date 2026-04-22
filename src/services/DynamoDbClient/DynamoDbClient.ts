@@ -84,7 +84,8 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         sk?: string,
         options?: SourceDynamoDbClient.Query
     ): Promise<T[]> {
-        let keyConditionExpression = "PK = :pk";
+        const pkAttr = options?.pkAttribute ?? "PK";
+        let keyConditionExpression = `${pkAttr} = :pk`;
         const expressionAttributeValues: Record<string, unknown> = {
             ":pk": pk
         };

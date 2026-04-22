@@ -6,6 +6,7 @@ import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 function makeRecord(pk: string, sk: string): BaseRecord {
     return {
@@ -48,6 +49,7 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         original: Object.freeze(record) as Readonly<TRecord>,
         modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
         cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+        compressionHandler: {} as CompressionHandler.Interface,
         replace(newRecord: TRecord): void {
             base.record = newRecord;
         },

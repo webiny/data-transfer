@@ -1,6 +1,11 @@
-import { GzipCompressionImpl } from "../../src/tools/GzipCompression/GzipCompression.ts";
+import { Container } from "@webiny/di";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
-const gzip = new GzipCompressionImpl();
+const container = new Container();
+CompressionFeature.register(container);
+
+const compressionHandler = container.resolve(CompressionHandler);
 
 // ============================================================================
 // Types
@@ -192,7 +197,7 @@ export async function generateOsRecords(
 
         for (const sk of ["L", "P"] as const) {
             const inner = makeCmsEntryInner({ entryId, modelId, tenant, locale, sk, version: 1 });
-            const compressed = await gzip.compress(inner);
+            const compressed = await compressionHandler.compress(inner);
 
             records.push({
                 PK: pk,
@@ -215,7 +220,7 @@ export async function generateOsRecords(
         const fileName = `file-${i + 1}.jpeg`;
 
         const inner = makeFmFileInner({ entryId, tenant, locale, fileName });
-        const compressed = await gzip.compress(inner);
+        const compressed = await compressionHandler.compress(inner);
 
         records.push({
             PK: pk,

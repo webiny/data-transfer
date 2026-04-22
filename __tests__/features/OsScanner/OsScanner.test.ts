@@ -4,7 +4,8 @@ import { Scanner } from "~/domain/pipeline/index.ts";
 import { OsScanner } from "~/features/OsScanner/index.ts";
 import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
-import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 
 interface RawOsRow {
     PK: string;
@@ -14,7 +15,7 @@ interface RawOsRow {
     _md: string;
     TYPE: string;
     index: string;
-    data: GzipCompression.Compressed;
+    data: Awaited<CompressionHandler.CompressResponse>;
     [key: string]: unknown;
 }
 
@@ -23,7 +24,7 @@ async function makeRawOsRow(
     pk: string,
     inner: Record<string, unknown>
 ): Promise<RawOsRow> {
-    const gzip = container.resolve(GzipCompression);
+    const gzip = container.resolve(CompressionHandler);
     const compressed = await gzip.compress(inner);
     return {
         PK: pk,
@@ -145,7 +146,6 @@ describe("OsScanner", () => {
         const { MigrationConfigFeature } = await import("~/features/MigrationConfig/index.ts");
         const { LoggerFeature } = await import("~/tools/Logger/index.ts");
         const { CacheFeature } = await import("~/tools/Cache/index.ts");
-        const { GzipCompressionFeature } = await import("~/tools/GzipCompression/index.ts");
         const { DirectoryToolFeature } = await import("~/tools/DirectoryTool/index.ts");
         const { FileToolFeature } = await import("~/tools/FileTool/index.ts");
         const { SourceDynamoDbClient: SourceDdb, TargetDynamoDbClient: TargetDdb } =
@@ -181,7 +181,7 @@ describe("OsScanner", () => {
         MigrationConfigFeature.register(container, { config: ddbConfig });
         LoggerFeature.register(container, { logLevel: "error", json: false });
         CacheFeature.register(container);
-        GzipCompressionFeature.register(container);
+        CompressionFeature.register(container);
         DirectoryToolFeature.register(container);
         FileToolFeature.register(container);
         container.registerInstance(SourceDdb, new MockDynamoDbClient());

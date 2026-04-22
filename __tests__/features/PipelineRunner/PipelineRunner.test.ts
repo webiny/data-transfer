@@ -27,6 +27,7 @@ import {
     FakeScanner
 } from "../../domain/pipeline/fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "../../domain/pipeline/fixtures/types.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 interface CapturedLog {
     level: string;
@@ -76,6 +77,7 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
             original: Object.freeze(params.record as TRecord) as Readonly<TRecord>,
             modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
             cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+            compressionHandler: {} as CompressionHandler.Interface,
             replace(newRecord: TRecord): void {
                 ctx.record = newRecord;
             },
@@ -384,7 +386,7 @@ describe("PipelineRunner.run()", () => {
         await runner.run();
 
         const dropMessages = logger.entries.filter(
-            e => e.message === "record dropped: no matching pipeline in merge group"
+            e => e.message.startsWith("record dropped: no matching pipeline in merge group")
         );
         expect(dropMessages.length).toBeGreaterThan(0);
     });

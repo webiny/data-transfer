@@ -4,7 +4,6 @@ import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "../../src/tools/Logger/index.ts";
 import { CacheFeature } from "../../src/tools/Cache/index.ts";
-import { GzipCompressionFeature } from "../../src/tools/GzipCompression/index.ts";
 import { DirectoryToolFeature } from "../../src/tools/DirectoryTool/index.ts";
 import { FileToolFeature } from "../../src/tools/FileTool/index.ts";
 import {
@@ -22,6 +21,7 @@ import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts"
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts";
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
+import { PresetLifecycleFeature } from "../../src/features/PresetLifecycle/index.ts";
 import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
@@ -32,6 +32,7 @@ import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
 import { S3ProcessorFeature } from "../../src/features/S3Processor/index.ts";
 import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 
@@ -46,6 +47,7 @@ export interface DdbIntegrationContainerOptions {
     targetTable: string;
     segments?: number;
     runId?: string;
+    modelsDir?: string;
     /**
      * Wires the real S3ClientFeature (with dummy region + creds). Pair with
      * `mockClient(S3Client)` from `aws-sdk-client-mock` in the test to
@@ -85,7 +87,8 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
         },
         pipeline: {
             preset: "integration",
-            segments: options.segments ?? 1
+            segments: options.segments ?? 1,
+            modelsDir: options.modelsDir
         },
         debug: options.snapshot !== undefined ? { snapshot: options.snapshot } : undefined
     };
@@ -97,7 +100,7 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
     MigrationConfigFeature.register(container, { config });
     LoggerFeature.register(container, { logLevel: "error", json: false });
     CacheFeature.register(container);
-    GzipCompressionFeature.register(container);
+    CompressionFeature.register(container);
     DirectoryToolFeature.register(container);
     FileToolFeature.register(container);
 
@@ -131,6 +134,7 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
+    PresetLifecycleFeature.register(container);
     TransformContextFeature.register(container);
     PipelineBuilderFactoryFeature.register(container);
     SnapshotWriterFeature.register(container);

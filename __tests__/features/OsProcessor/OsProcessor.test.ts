@@ -9,7 +9,8 @@ import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/index.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
-import { GzipCompression } from "~/tools/GzipCompression/abstractions/GzipCompression.ts";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 import type { OsScanner } from "~/features/OsScanner/index.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { MockOpenSearchClient } from "../../services/OpenSearchClient/MockOpenSearchClient.ts";
@@ -55,6 +56,7 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         original: Object.freeze(record) as Readonly<TRecord>,
         modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
         cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+        compressionHandler: {} as CompressionHandler.Interface,
         replace(newRecord: TRecord): void {
             base.record = newRecord;
         },
@@ -120,7 +122,7 @@ describe("OsProcessor", () => {
             const container = createOsContainer();
             const processor = container.resolve(Processor) as OsProcessorInstance;
             const ddbExecutor = container.resolve(DdbExecutor);
-            const gzip = container.resolve(GzipCompression);
+            const compressionHandler = container.resolve(CompressionHandler);
             const captured: PutRecord[][] = [];
             ddbExecutor.execute = async (puts: PutRecord[]): Promise<void> => {
                 captured.push(puts);
@@ -139,7 +141,7 @@ describe("OsProcessor", () => {
             expect(captured).toHaveLength(1);
             expect(captured[0]).toHaveLength(1);
             const gzipped = (captured[0]![0]!.record as { data: unknown }).data;
-            const expected = await gzip.compress("hello-world");
+            const expected = await compressionHandler.compress("hello-world");
             expect(gzipped).toEqual(expected);
         });
 

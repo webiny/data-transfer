@@ -22,6 +22,7 @@ export interface ScanOptions {
 
 export interface QueryOptions {
     indexName?: string;
+    pkAttribute?: string;
     limit?: number;
     sortKeyCondition?: {
         operator: "beginsWith" | "equals";

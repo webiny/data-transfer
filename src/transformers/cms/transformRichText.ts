@@ -1,12 +1,11 @@
 import { createTransformer } from "~/transformers/createTransformer.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import { GzipCompressionImpl as GzipCompression } from "~/tools/GzipCompression/GzipCompression.ts";
 import { LexicalRenderer } from "./lexicalRenderer.ts";
 import { visitFields } from "./fieldVisitor.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 // Singleton instances for performance
-const gzipCompression = new GzipCompression();
 const lexicalRenderer = new LexicalRenderer();
 
 /**
@@ -23,10 +22,6 @@ const lexicalRenderer = new LexicalRenderer();
 export const transformRichText = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "transformRichText",
     async ctx => {
-        if (!ctx.modelProvider) {
-            return; // Model provider required
-        }
-
         // Extract modelId from data envelope
         const data = ctx.record.data as Record<string, unknown> | undefined;
         if (!data) {
@@ -53,37 +48,39 @@ export const transformRichText = createTransformer<BaseTransformContext.Interfac
             values as Record<string, unknown>,
             model.fields,
             async (values, field, value) => {
-                if (field.type === "rich-text") {
-                    await transformRichTextField(values, field.storageId, value);
+                if (field.type !== "rich-text") {
+                    return;
                 }
+                await transformRichTextField({
+                    compressionHandler: ctx.compressionHandler,
+                    values,
+                    storageId: field.storageId,
+                    value
+                });
             }
         );
     }
 );
 
+interface ITransformRichTextFieldParams {
+    compressionHandler: CompressionHandler.Interface;
+    values: Record<string, unknown>;
+    storageId: string;
+    value: unknown;
+}
 /**
  * Transforms a single rich-text field value
  */
-async function transformRichTextField(
-    values: Record<string, unknown>,
-    storageId: string,
-    value: unknown
-): Promise<void> {
+async function transformRichTextField(params: ITransformRichTextFieldParams): Promise<void> {
+    const { compressionHandler, values, storageId, value } = params;
     // Check if value has compression format
     if (!value || typeof value !== "object" || !("compression" in value) || !("value" in value)) {
         return; // Not in expected compressed format
     }
 
-    const compressedValue = value as { compression: string; value: string };
-
-    // Check if it's gzip compressed
-    if (!gzipCompression.canDecompress(compressedValue)) {
-        return; // Not gzip compressed
-    }
-
     try {
         // Decompress the value
-        const decompressed = await gzipCompression.decompress(compressedValue);
+        const decompressed = await compressionHandler.decompress(value);
 
         // Check if it has a 'root' key (Lexical format)
         if (!decompressed || typeof decompressed !== "object" || !("root" in decompressed)) {
@@ -97,13 +94,8 @@ async function transformRichTextField(
             html: lexicalRenderer.render(lexicalState)
         };
 
-        // Compress the new format
-        const compressed = await gzipCompression.compress(newFormat);
-
         // Replace the field value
-        values[storageId] = compressed;
-
-        console.log(`[transformRichText] Transformed field: ${storageId}`);
+        values[storageId] = await compressionHandler.compress(newFormat);
     } catch (error) {
         console.warn(
             `[transformRichText] Failed to transform ${storageId}:`,

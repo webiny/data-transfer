@@ -7,6 +7,7 @@ import { S3Processor } from "~/features/S3Processor/abstractions/S3Processor.ts"
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 interface BaseStub<TRecord> {
     base: BaseTransformContext.Interface<TRecord>;
@@ -20,6 +21,7 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         original: Object.freeze(record) as Readonly<TRecord>,
         modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
         cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+        compressionHandler: {} as CompressionHandler.Interface,
         replace(newRecord: TRecord): void {
             base.record = newRecord;
         },

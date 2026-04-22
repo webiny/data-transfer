@@ -7,7 +7,10 @@ import { FileTool, FileToolFeature } from "~/tools/FileTool/index.ts";
 
 export async function handler(folderName: string): Promise<void> {
     const container = new Container();
-    LoggerFeature.register(container, { logLevel: "info", json: false });
+    LoggerFeature.register(container, {
+        logLevel: "debug",
+        json: false
+    });
     DirectoryToolFeature.register(container);
     FileToolFeature.register(container);
 

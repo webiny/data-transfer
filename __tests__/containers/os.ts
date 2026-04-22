@@ -4,7 +4,7 @@ import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "../../src/tools/Logger/index.ts";
 import { CacheFeature } from "../../src/tools/Cache/index.ts";
-import { GzipCompressionFeature } from "../../src/tools/GzipCompression/index.ts";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 import { DirectoryToolFeature } from "../../src/tools/DirectoryTool/index.ts";
 import { FileToolFeature } from "../../src/tools/FileTool/index.ts";
 import {
@@ -82,7 +82,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     MigrationConfigFeature.register(container, { config });
     LoggerFeature.register(container, { logLevel: options.logLevel || "error", json: false });
     CacheFeature.register(container);
-    GzipCompressionFeature.register(container);
+    CompressionFeature.register(container);
     DirectoryToolFeature.register(container);
     FileToolFeature.register(container);
 

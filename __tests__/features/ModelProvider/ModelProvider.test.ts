@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { ModelProvider } from "../../../src/features/ModelProvider/index.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 
@@ -195,6 +196,18 @@ describe("ModelProvider", () => {
             expect(provider.getModelIds()).toHaveLength(0);
 
             rmSync(tmpDir, { recursive: true, force: true });
+        });
+
+        it("loads webiny-partner.json from __tests__/data", async () => {
+            const dataDir = fileURLToPath(new URL("../../data", import.meta.url));
+            const container = createDdbContainer({ modelsDir: dataDir });
+            const provider = container.resolve(ModelProvider);
+            await provider.preloadModels(new Map());
+
+            const model = provider.getModel("partner");
+            expect(model).toBeDefined();
+            expect(model!.name).toBe("Partner");
+            expect(model!.fields.length).toBeGreaterThan(0);
         });
 
         it("should skip non-JSON files", async () => {

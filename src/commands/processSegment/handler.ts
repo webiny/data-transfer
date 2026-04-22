@@ -5,6 +5,7 @@ import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
+import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 
 export interface ProcessSegmentArgs {
@@ -12,11 +13,18 @@ export interface ProcessSegmentArgs {
     segment: number;
     total: number;
     config: string;
+    logLevel?: string;
 }
 
 export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const config = await loadConfig(argv.config);
-    const container = bootstrap({ config, runId: argv.runId });
+    const resolvedLogLevel = (argv.logLevel ?? config.debug?.logLevel) as
+        | "debug"
+        | "info"
+        | "warn"
+        | "error"
+        | undefined;
+    const container = bootstrap({ config, runId: argv.runId, logLevel: resolvedLogLevel });
     container.registerInstance(TransferContext, { runId: argv.runId });
 
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);
@@ -25,12 +33,18 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
 
     await loadUserSetup(argv.config, container, logger);
 
+    const beforeLoadPreset = container.resolve(BeforeLoadPresetHook);
+    await beforeLoadPreset.execute(config);
+
     const preset = await presetLoader.load(config.pipeline.preset);
     await preset.configure({
         runner,
         pipelineBuilderFactory: container.resolve(PipelineBuilderFactory),
         container
     });
+
+    const afterLoadPreset = container.resolve(AfterLoadPresetHook);
+    await afterLoadPreset.execute(config, preset);
 
     logger.info(`Processing shard ${argv.segment + 1}/${argv.total}...`);
 

@@ -4,7 +4,6 @@ import { ContainerToken } from "~/base/index.ts";
 import { MigrationConfig, MigrationConfigFeature } from "~/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "~/tools/Logger/index.ts";
 import { CacheFeature } from "~/tools/Cache/index.ts";
-import { GzipCompressionFeature } from "~/tools/GzipCompression/index.ts";
 import { DirectoryToolFeature } from "~/tools/DirectoryTool/index.ts";
 import { FileToolFeature } from "~/tools/FileTool/index.ts";
 import { DynamoDbClientConfig, DynamoDbClientFeature } from "~/services/DynamoDbClient/index.ts";
@@ -18,6 +17,7 @@ import { TenantLocalesFeature } from "~/features/TenantLocales/index.ts";
 import { PresetLoaderFeature } from "~/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "~/features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "~/features/TransferLifecycle/index.ts";
+import { PresetLifecycleFeature } from "~/features/PresetLifecycle/index.ts";
 import { TransformContextFeature } from "~/features/TransformContext/index.ts";
 import { PipelineBuilderFactoryFeature } from "~/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
@@ -30,6 +30,7 @@ import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/ind
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
 import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.ts";
+import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -55,12 +56,12 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     // Tools
     LoggerFeature.register(container, {
-        logLevel: options.logLevel || "info",
+        logLevel: options.logLevel || config.debug?.logLevel || "info",
         json: options.json || false,
         logFile: resolveLogFile(config, options.runId)
     });
     CacheFeature.register(container);
-    GzipCompressionFeature.register(container);
+    CompressionFeature.register(container);
     DirectoryToolFeature.register(container);
     FileToolFeature.register(container);
 
@@ -106,6 +107,7 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     // Features
     TransferLifecycleFeature.register(container);
+    PresetLifecycleFeature.register(container);
     PresetLoaderFeature.register(container);
     WorkerSpawnerFeature.register(container);
     ModelProviderFeature.register(container);

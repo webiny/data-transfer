@@ -22,10 +22,15 @@ export function registerProcessSegmentCommand(yargs: Argv): Argv {
                     type: "string",
                     demandOption: true,
                     description: "Config file path"
+                })
+                .option("log-level", {
+                    type: "string",
+                    choices: ["debug", "info", "warn", "error"] as const,
+                    description: "Log level"
                 });
         },
         async argv => {
-            await handler(argv);
+            await handler({ ...argv, logLevel: argv["log-level"] as string | undefined });
         }
     );
 }

@@ -13,6 +13,8 @@ import { S3Client, GetObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
+import { AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { startDynalite, type DynaliteInstance } from "./dynalite.ts";
 import { createDdbIntegrationContainer } from "./integrationContainer.ts";
@@ -20,6 +22,7 @@ import { createDdbIntegrationContainer } from "./integrationContainer.ts";
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 const SOURCE_PATH = fileURLToPath(new URL("../data/small-one.json", import.meta.url));
 const EXPECTED_PATH = fileURLToPath(new URL("../data/small-one.expected.json", import.meta.url));
+const MODELS_DIR = fileURLToPath(new URL("../data", import.meta.url));
 
 // Frozen clock so createMetadata's `new Date().toISOString()` produces a
 // stable timestamp across runs — otherwise the golden file would churn
@@ -135,15 +138,22 @@ describe("preset — v5-to-v6-ddb golden-file correctness", () => {
             sourceTable,
             targetTable,
             segments: 1,
-            useRealS3Client: true
+            useRealS3Client: true,
+            modelsDir: MODELS_DIR
         });
 
-        const preset = await container.resolve(PresetLoader).load("v5-to-v6-ddb");
+        const config = container.resolve(MigrationConfig);
+        const presetLoader = container.resolve(PresetLoader);
+        const preset = await presetLoader.load("v5-to-v6-ddb");
         await preset.configure({
             runner: container.resolve(PipelineRunner),
             pipelineBuilderFactory: container.resolve(PipelineBuilderFactory),
             container
         });
+
+        const afterLoadPreset = container.resolve(AfterLoadPresetHook);
+        await afterLoadPreset.execute(config, preset);
+
         await container.resolve(PipelineRunner).run({ segment: 0, totalSegments: 1 });
 
         const transferred = await scanAll(doc, targetTable);

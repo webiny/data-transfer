@@ -7,7 +7,6 @@ import {
 } from "../src/services/DynamoDbClient/index.ts";
 import { Logger } from "../src/tools/Logger/index.ts";
 import { Cache } from "../src/tools/Cache/index.ts";
-import { GzipCompression } from "../src/tools/GzipCompression/index.ts";
 import { ModelProvider } from "../src/features/ModelProvider/index.ts";
 import { TenantLocales } from "../src/features/TenantLocales/index.ts";
 import { SourceS3Client, TargetS3Client } from "../src/services/S3Client/index.ts";
@@ -62,7 +61,6 @@ describe("bootstrap", () => {
             expect(container.resolve(MigrationConfig)).toBeDefined();
             expect(container.resolve(Logger)).toBeDefined();
             expect(container.resolve(Cache)).toBeDefined();
-            expect(container.resolve(GzipCompression)).toBeDefined();
             expect(container.resolve(DirectoryTool)).toBeDefined();
             expect(container.resolve(FileTool)).toBeDefined();
             expect(container.resolve(SourceDynamoDbClient)).toBeDefined();
@@ -103,7 +101,6 @@ describe("bootstrap", () => {
             expect(container.resolve(MigrationConfig)).toBeDefined();
             expect(container.resolve(Logger)).toBeDefined();
             expect(container.resolve(Cache)).toBeDefined();
-            expect(container.resolve(GzipCompression)).toBeDefined();
             expect(container.resolve(SourceDynamoDbClient)).toBeDefined();
             expect(container.resolve(TargetDynamoDbClient)).toBeDefined();
             expect(container.resolve(ModelProvider)).toBeDefined();

@@ -79,7 +79,8 @@ export const debugSettingsSchema = z
          * String → explicit path; user is on their own for gitignore /
          * cleanup.
          */
-        logFile: z.union([z.boolean(), trimmedString()]).optional()
+        logFile: z.union([z.boolean(), trimmedString()]).optional(),
+        logLevel: z.enum(["debug", "info", "warn", "error"]).optional()
     })
     .optional();
 

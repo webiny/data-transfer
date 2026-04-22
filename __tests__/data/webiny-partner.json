@@ -1,0 +1,329 @@
+{
+    "modelId": "partner",
+    "name": "Partner",
+    "group": "667d5a1625857f00083eaf2e",
+    "icon": "far/building",
+    "singularApiName": "Partner",
+    "pluralApiName": "Partners",
+    "fields": [
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "text-input",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Title",
+            "type": "text",
+            "tags": [],
+            "placeholderText": null,
+            "id": "lluxixnh",
+            "validation": [
+                {
+                    "name": "required",
+                    "message": "Title is a required field.",
+                    "settings": {}
+                }
+            ],
+            "storageId": "text@lluxixnh",
+            "fieldId": "title"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "long-text-text-area",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Short description",
+            "type": "long-text",
+            "tags": [],
+            "placeholderText": null,
+            "id": "ig1olt8e",
+            "validation": [],
+            "storageId": "long-text@ig1olt8e",
+            "fieldId": "description"
+        },
+        {
+            "multipleValues": true,
+            "listValidation": [],
+            "settings": {
+                "models": [
+                    {
+                        "modelId": "location"
+                    }
+                ]
+            },
+            "renderer": {
+                "name": "ref-simple-multiple",
+                "settings": {
+                    "newItemPosition": "last"
+                }
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Locations",
+            "type": "ref",
+            "tags": [],
+            "placeholderText": null,
+            "id": "4hghm8li",
+            "validation": [],
+            "storageId": "ref@4hghm8li",
+            "fieldId": "locations"
+        },
+        {
+            "multipleValues": true,
+            "listValidation": [],
+            "settings": {
+                "models": [
+                    {
+                        "modelId": "industry"
+                    }
+                ]
+            },
+            "renderer": {
+                "name": "ref-simple-multiple",
+                "settings": {
+                    "newItemPosition": "last"
+                }
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Industries",
+            "type": "ref",
+            "tags": [],
+            "placeholderText": null,
+            "id": "43cwj2mu",
+            "validation": [],
+            "storageId": "ref@43cwj2mu",
+            "fieldId": "industries"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "text-input",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Website",
+            "type": "text",
+            "tags": [],
+            "placeholderText": null,
+            "id": "0kdrw9j9",
+            "validation": [],
+            "storageId": "text@0kdrw9j9",
+            "fieldId": "website"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "text-input",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Contact email",
+            "type": "text",
+            "tags": [],
+            "placeholderText": null,
+            "id": "o08zpr0q",
+            "validation": [],
+            "storageId": "text@o08zpr0q",
+            "fieldId": "contactEmail"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "select-box",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": true,
+                "values": [
+                    {
+                        "value": "solution",
+                        "selected": true,
+                        "label": "Solutions partner"
+                    },
+                    {
+                        "value": "tech",
+                        "selected": false,
+                        "label": "Technology partner"
+                    }
+                ]
+            },
+            "label": "Category",
+            "type": "text",
+            "tags": [],
+            "placeholderText": null,
+            "id": "t9x0pohs",
+            "validation": [],
+            "storageId": "text@t9x0pohs",
+            "fieldId": "category"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {
+                "imagesOnly": true
+            },
+            "renderer": {
+                "name": "file-input",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Logo",
+            "type": "file",
+            "tags": [],
+            "placeholderText": null,
+            "id": "ch38fm1v",
+            "validation": [],
+            "storageId": "file@ch38fm1v",
+            "fieldId": "logo"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "text-input",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Slug",
+            "type": "text",
+            "tags": [],
+            "placeholderText": null,
+            "id": "sluit062",
+            "validation": [
+                {
+                    "name": "unique",
+                    "message": "Value must be unique.",
+                    "settings": {}
+                },
+                {
+                    "name": "required",
+                    "message": "Value is required.",
+                    "settings": {}
+                }
+            ],
+            "storageId": "text@sluit062",
+            "fieldId": "slug"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "lexical-text-input",
+                "settings": {}
+            },
+            "helpText": null,
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Partner page content",
+            "type": "rich-text",
+            "tags": [],
+            "placeholderText": null,
+            "id": "wu61sxyl",
+            "validation": [],
+            "storageId": "rich-text@wu61sxyl",
+            "fieldId": "pageContent"
+        },
+        {
+            "multipleValues": false,
+            "listValidation": [],
+            "settings": {},
+            "renderer": {
+                "name": "number-input",
+                "settings": {}
+            },
+            "helpText": "The higher the number, the closer to the top the partner profile will be shown",
+            "predefinedValues": {
+                "enabled": false,
+                "values": []
+            },
+            "label": "Sort order",
+            "type": "number",
+            "tags": [],
+            "placeholderText": null,
+            "id": "2n7uimcm",
+            "validation": [],
+            "storageId": "number@2n7uimcm",
+            "fieldId": "sortOrder"
+        }
+    ],
+    "layout": [
+        [
+            "lluxixnh"
+        ],
+        [
+            "sluit062",
+            "2n7uimcm"
+        ],
+        [
+            "0kdrw9j9",
+            "o08zpr0q",
+            "t9x0pohs"
+        ],
+        [
+            "ig1olt8e",
+            "ch38fm1v"
+        ],
+        [
+            "wu61sxyl"
+        ],
+        [
+            "4hghm8li",
+            "43cwj2mu"
+        ]
+    ],
+    "titleFieldId": "title",
+    "descriptionFieldId": "description",
+    "imageFieldId": "logo",
+    "tags": [
+        "type:model"
+    ]
+}
