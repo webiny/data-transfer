@@ -260,9 +260,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 break;
             }
             if (!matched) {
+                const { PK, SK } = record as any;
                 droppedCount++;
                 this.logger.debug(
-                    "record dropped: no matching pipeline in merge group",
+                    `record dropped: no matching pipeline in merge group (${PK} ${SK})`,
                     mergeGroupId
                 );
                 await this.snapshotWriter.write(

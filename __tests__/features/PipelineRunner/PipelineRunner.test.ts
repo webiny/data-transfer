@@ -386,7 +386,7 @@ describe("PipelineRunner.run()", () => {
         await runner.run();
 
         const dropMessages = logger.entries.filter(
-            e => e.message === "record dropped: no matching pipeline in merge group"
+            e => e.message.startsWith("record dropped: no matching pipeline in merge group")
         );
         expect(dropMessages.length).toBeGreaterThan(0);
     });
