@@ -23,7 +23,7 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
     const commands = new Commands();
     const ctx = {
         record,
-        original: { ...record } as Readonly<T>,
+        original: Object.freeze(structuredClone(record)) as Readonly<T>,
         commands,
         modelProvider: overrides.modelProvider as BaseTransformContext.Interface["modelProvider"],
         cache: overrides.cache as BaseTransformContext.Interface["cache"],

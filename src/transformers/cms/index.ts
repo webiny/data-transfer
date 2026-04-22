@@ -5,3 +5,4 @@ export { transformModelGroup } from "./transformModelGroup.ts";
 export { fixBrokenStorageKeys } from "./fixBrokenStorageKeys.ts";
 export { transformRichText } from "./transformRichText.ts";
 export { updateModelIds } from "./updateModelIds.ts";
+export { updateOsIndex } from "./updateOsIndex.ts";
