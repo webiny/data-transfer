@@ -140,37 +140,36 @@ The logger is configured with:
 
 ## Gotchas
 
-### `pino.multistream` silently drops sub-info messages when stream entries have no `level`
+### `pino.multistream` — always set `level` explicitly on every stream entry
 
-**Symptom:** setting `debug.logLevel: "debug"` (or `--log-level debug`) produces no debug output,
-even though the pino logger reports `level = "debug"` and the level reaches the worker correctly.
-
-**Root cause:** `pino.multistream` assigns `DEFAULT_INFO_LEVEL` (30 = info) to any stream entry
-that omits a `level` property. Multistream then filters each stream independently — so messages
-below info (e.g. debug = 20) are dropped at the stream level, regardless of the logger's own level.
-
-This only manifests when `debug.logFile` is set (truthy) in the config, because that is the only
-code path that uses `pino.multistream`. The single-stream path (`pino(opts, consoleStream)`) is
-unaffected — pino handles level filtering itself there.
-
-**Fix applied in `PinoLogger.ts`:** pass `level: params.logLevel` explicitly on each stream entry:
+When using `pino.multistream`, each stream entry is filtered **independently** by its own `level`.
+If you omit `level` on an entry, pino assigns `DEFAULT_INFO_LEVEL` (30 = info) to that stream.
+This means sub-info messages (debug = 20, trace = 10) are silently dropped for that stream, even
+if the pino logger itself was created with a lower level.
 
 ```ts
-// WRONG — multistream silently defaults both streams to DEFAULT_INFO_LEVEL
-const streams: StreamEntry[] = [
+// BUG — debug messages never reach either stream because both default to info
+const logger = pino({ level: 'debug' }, pino.multistream([
     { stream: consoleStream },
-    { stream: createFileDestination(this.logFile) }
-];
-
-// CORRECT — level propagated to every stream entry
-const streams: StreamEntry[] = [
-    { stream: consoleStream, level: params.logLevel as pino.Level },
-    { stream: createFileDestination(this.logFile), level: params.logLevel as pino.Level }
-];
+    { stream: fileStream }
+]));
+logger.debug('this is lost');  // silently dropped
 ```
 
-**Rule of thumb:** whenever you add a stream to `pino.multistream`, always set `level` explicitly.
-The omitted-level default is almost never what you want.
+```ts
+// CORRECT — level is propagated explicitly to every stream entry
+const logger = pino({ level: 'debug' }, pino.multistream([
+    { stream: consoleStream, level: 'debug' },
+    { stream: fileStream, level: 'debug' }
+]));
+logger.debug('this appears');  // works
+```
+
+This does not affect the single-stream path (`pino(opts, stream)`) — there, pino handles all
+level filtering itself and the stream receives whatever pino decides to emit.
+
+**Rule of thumb:** whenever you add an entry to `pino.multistream`, always set `level` explicitly.
+The omitted-level default of `info` is almost never what you want.
 
 ## Future Enhancements
 
