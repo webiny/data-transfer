@@ -92,21 +92,17 @@ export class PinoLogger implements Logger.Interface {
         // wrapper — preserves the synchronous stdout.write semantics the
         // existing JSON-transport tests rely on.
         if (!this.logFile) {
-            const _orig = (consoleStream as any).write.bind(consoleStream);
-            (consoleStream as any).write = function (chunk: unknown, enc: unknown, cb: unknown) {
-                process.stderr.write(`[STREAM WRITE] ${String(chunk).substring(0, 60)}\n`);
-                return _orig(chunk, enc, cb);
-            };
             this.logger = pino({ level: params.logLevel }, consoleStream);
-            process.stderr.write(`[PINOlogger] created with level=${params.logLevel} actual=${this.logger.level}\n`);
             return;
         }
 
         // Fan-out: console + raw pino JSONL to file. File content is
         // machine-readable; post-hoc `pino-pretty < file.log` for humans.
+        // Explicit level on each stream — multistream defaults to DEFAULT_INFO_LEVEL
+        // (30) when level is omitted, which silently drops sub-info messages.
         const streams: StreamEntry[] = [
-            { stream: consoleStream },
-            { stream: createFileDestination(this.logFile) }
+            { stream: consoleStream, level: params.logLevel as pino.Level },
+            { stream: createFileDestination(this.logFile), level: params.logLevel as pino.Level }
         ];
         this.logger = pino({ level: params.logLevel }, multistream(streams));
     }
