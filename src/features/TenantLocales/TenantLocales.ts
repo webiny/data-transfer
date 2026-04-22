@@ -66,7 +66,8 @@ class TenantLocalesImpl implements TenantLocalesAbstraction.Interface {
     private async fetchTenants(): Promise<Array<{ id: string }>> {
         try {
             const records = await this.database.query(this.tableName, "TENANTS", undefined, {
-                indexName: "GSI1"
+                indexName: "GSI1",
+                pkAttribute: "GSI1_PK"
             });
 
             return records
