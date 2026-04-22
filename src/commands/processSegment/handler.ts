@@ -29,6 +29,7 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
 
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);
     logger.info(`argv.logLevel=${argv.logLevel} config.debug?.logLevel=${config.debug?.logLevel} resolvedLogLevel=${resolvedLogLevel}`);
+    logger.debug("debug level test — if you see this, debug logging works");
     const runner = container.resolve(PipelineRunner);
     const presetLoader = container.resolve(PresetLoader);
 
