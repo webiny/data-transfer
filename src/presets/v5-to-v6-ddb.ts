@@ -15,20 +15,16 @@ import {
 } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
-    fixBrokenStorageKeys,
-    fixCmePk,
+    cmsEntryTransformers,
     groupsToRoles,
     migrateFileManagerSettings,
     migrateMailerSettings,
     removeAttributes,
-    removeFolderRevision,
     removeLocale,
     renameFieldAttributes,
     transformModelGroup,
     transformPermissions,
-    transformRichText,
     updateFlpIds,
-    updateModelIds,
     wrapInData
 } from "~/transformers/index.ts";
 // ============================================================================
@@ -48,21 +44,6 @@ import {
  *
  * Uses pre-configured pipelines for consistent, well-tested transformations.
  */
-// Shared transformer stack for CMS-shaped records (cmsEntries + fmFiles).
-// wrapInData MUST stay first — everything downstream assumes the record body
-// is already moved under `data`. Changes to this list affect both pipelines;
-// if one needs to diverge, pull it out of the shared array.
-const cmsContentTransformers = [
-    wrapInData,
-    addGsiTenant,
-    removeLocale,
-    fixCmePk,
-    fixBrokenStorageKeys,
-    transformRichText,
-    updateModelIds,
-    removeFolderRevision,
-    removeAttributes
-];
 
 export default createTransferPreset({
     name: "v5-to-v6-ddb",
@@ -106,7 +87,7 @@ export default createTransferPreset({
                 processors: [DdbProcessor, S3Processor]
             })
             .filter(createFilter(isFmFile))
-            .use(cmsContentTransformers)
+            .use(cmsEntryTransformers)
             // File Manager-specific transformers (append pipeline-specific tail here)
             // .use(createMetadata)
             // .use(extractImageMetadata)
@@ -215,7 +196,7 @@ export default createTransferPreset({
                 processors: [DdbProcessor]
             })
             .filter(createFilter(isCmsEntry))
-            .use(cmsContentTransformers)
+            .use(cmsEntryTransformers)
             .build();
 
         // ========================================================================
