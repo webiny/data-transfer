@@ -1,3 +1,5 @@
+import type { BaseRecord } from "~/domain/transform/types/records.js";
+
 export const byType =
     (type: string) =>
     (record: Record<string, unknown>): boolean => {
@@ -6,16 +8,23 @@ export const byType =
 
 export const byTypePrefix =
     (prefix: string) =>
-    (record: Record<string, unknown>): boolean => {
+    (record: BaseRecord): boolean => {
         const type = record.TYPE as string;
         return Boolean(type && type.startsWith(prefix));
     };
+
+export const isCmsGroup = (record: BaseRecord): boolean => {
+    if (record.TYPE === "cms.group") {
+        return true;
+    }
+    return record.PK.includes("#CMS#CMG");
+};
 
 export const isCmsModel = byType("cms.model");
 
 export const isCmsEntry = byTypePrefix("cms.entry");
 
-export const isBackgroundTask = (item: Record<string, unknown>) => {
+export const isBackgroundTask = (item: BaseRecord) => {
     if (item.modelId === "webinyTask" || item.modelId === "webinyTaskLog") {
         return true;
     } else if (typeof item.GSI1_PK !== "string") {
@@ -24,7 +33,7 @@ export const isBackgroundTask = (item: Record<string, unknown>) => {
     return item.GSI1_PK.includes("webinyTask") || item.GSI1_PK.includes("webinyTaskLog");
 };
 
-export const isFmFile = (record: Record<string, unknown>): boolean => {
+export const isFmFile = (record: BaseRecord): boolean => {
     const modelId =
         (record.modelId as string) ||
         ((record.data as Record<string, unknown> | undefined)?.modelId as string);

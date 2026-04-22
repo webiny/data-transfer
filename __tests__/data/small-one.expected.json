@@ -37703,5 +37703,53 @@
       }
     },
     "GSI_TENANT": "root"
+  },
+  {
+    "_et": "CmsGroups",
+    "_ct": "2026-04-21T07:53:52.512Z",
+    "TYPE": "cms.group",
+    "_md": "2026-04-21T07:53:52.512Z",
+    "SK": "65777a3bf0132c00080d336b",
+    "PK": "T#root#CMS#CMG",
+    "data": {
+      "icon": "fas/home-lg",
+      "savedOn": "2026-04-21T07:53:52.491Z",
+      "slug": "asco-hub",
+      "createdBy": {
+        "type": "admin",
+        "displayName": "Bruno Zorić",
+        "id": "69e72c8b2a49780002fc55ad"
+      },
+      "name": "ASCO Hub",
+      "tenant": "root",
+      "createdOn": "2026-04-21T07:53:52.491Z",
+      "description": "All content models related to ASCO.org.",
+      "id": "65777a3bf0132c00080d336b"
+    },
+    "GSI_TENANT": "root"
+  },
+  {
+    "_et": "CmsGroups",
+    "_ct": "2026-04-21T07:51:50.730Z",
+    "TYPE": "cms.group",
+    "_md": "2026-04-21T07:51:50.730Z",
+    "SK": "69e72c962a49780002fc55ae",
+    "PK": "T#root#CMS#CMG",
+    "data": {
+      "icon": "fas/star",
+      "savedOn": "2026-04-21T07:51:50.628Z",
+      "slug": "ungrouped",
+      "createdBy": {
+        "type": "admin",
+        "displayName": "Bruno Zorić",
+        "id": "69e72c8b2a49780002fc55ad"
+      },
+      "name": "Ungrouped",
+      "tenant": "root",
+      "createdOn": "2026-04-21T07:51:50.628Z",
+      "description": "A generic content model group",
+      "id": "69e72c962a49780002fc55ae"
+    },
+    "GSI_TENANT": "root"
   }
 ]

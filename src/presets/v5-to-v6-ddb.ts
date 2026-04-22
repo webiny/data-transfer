@@ -8,6 +8,7 @@ import {
     isBackgroundTask,
     isBuiltInSecurityRole,
     isCmsEntry,
+    isCmsGroup,
     isCmsModel,
     isFlpRecord,
     isFmFile,
@@ -49,6 +50,21 @@ export default createTransferPreset({
     name: "v5-to-v6-ddb",
     description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
     configure({ runner, pipelineBuilderFactory: factory }): void {
+        // ========================================================================
+        // Content Model Groups
+        // ========================================================================
+        const contentModelGroups = factory
+            .create({
+                name: "ContentModelGroups",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isCmsGroup))
+            .use(wrapInData)
+            .use(addGsiTenant)
+            .use(removeLocale)
+            .use(removeAttributes)
+            .build();
         // ========================================================================
         // Background Tasks
         // ========================================================================
@@ -204,6 +220,7 @@ export default createTransferPreset({
         // IMPORTANT: Order matters due to first-match-wins behavior
         // ========================================================================
         runner
+            .register(contentModelGroups)
             .register(backgroundTasks)
             .register(fmSettings)
             .register(fmFiles) // Before cmsEntries
