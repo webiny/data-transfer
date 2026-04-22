@@ -21,6 +21,7 @@ import { WorkerSpawnerFeature } from "../../src/features/WorkerSpawner/index.ts"
 import { ModelProviderFeature } from "../../src/features/ModelProvider/index.ts";
 import { TenantLocalesFeature } from "../../src/features/TenantLocales/index.ts";
 import { TransferLifecycleFeature } from "../../src/features/TransferLifecycle/index.ts";
+import { PresetLifecycleFeature } from "../../src/features/PresetLifecycle/index.ts";
 import { TransferContext } from "../../src/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { TransformContextFeature } from "../../src/features/TransformContext/index.ts";
 import { PipelineBuilderFactoryFeature } from "../../src/features/PipelineBuilderFactory/index.ts";
@@ -133,6 +134,7 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
     ModelProviderFeature.register(container);
     TenantLocalesFeature.register(container);
     TransferLifecycleFeature.register(container);
+    PresetLifecycleFeature.register(container);
     TransformContextFeature.register(container);
     PipelineBuilderFactoryFeature.register(container);
     SnapshotWriterFeature.register(container);
