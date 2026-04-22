@@ -312,6 +312,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         // still point at the pre-replace record. Mutating ctx keeps one
         // shared object across transformers, onEnd, and replace().
         // Slice-key collisions are a compile-time error via DisjointKeys.
+        // TODO this stinks. couldnt we cache processor contexts or something like that for each pipeline?
+        // TODO this runs so much times, and i wonder if its necessary
         for (const processor of processors) {
             if (!processor.extendContext) {
                 continue;
