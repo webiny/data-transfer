@@ -28,6 +28,7 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     container.registerInstance(TransferContext, { runId: argv.runId });
 
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);
+    logger.info(`argv.logLevel=${argv.logLevel} config.debug?.logLevel=${config.debug?.logLevel} resolvedLogLevel=${resolvedLogLevel}`);
     const runner = container.resolve(PipelineRunner);
     const presetLoader = container.resolve(PresetLoader);
 
