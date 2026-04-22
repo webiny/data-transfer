@@ -7,7 +7,9 @@ import {
     isFmFile,
     isFlpRecord,
     isBuiltInSecurityRole,
-    isSecurityTeam
+    isSecurityTeam,
+    isOsBackgroundTask,
+    isOsMailerSettings
 } from "../../../src/domain/transform/filters.ts";
 import type { BaseRecord } from "../../../src/domain/transform/types/records.ts";
 
@@ -99,6 +101,37 @@ describe("filters", () => {
         it("should match security.team records", () => {
             expect(isSecurityTeam({ TYPE: "security.team" })).toBe(true);
             expect(isSecurityTeam({ TYPE: "security.group" })).toBe(false);
+        });
+    });
+
+    describe("isOsBackgroundTask", () => {
+        it("matches webinyTask and webinyTaskLog by data.modelId", () => {
+            expect(isOsBackgroundTask(makeRecord({ data: { modelId: "webinyTask" } }))).toBe(true);
+            expect(isOsBackgroundTask(makeRecord({ data: { modelId: "webinyTaskLog" } }))).toBe(true);
+        });
+
+        it("rejects other modelIds", () => {
+            expect(isOsBackgroundTask(makeRecord({ data: { modelId: "blogPost" } }))).toBe(false);
+        });
+
+        it("returns false when data is absent", () => {
+            expect(isOsBackgroundTask(makeRecord({}))).toBe(false);
+        });
+    });
+
+    describe("isOsMailerSettings", () => {
+        it("matches mailerSettings by data.modelId", () => {
+            expect(
+                isOsMailerSettings(makeRecord({ data: { modelId: "mailerSettings" } }))
+            ).toBe(true);
+        });
+
+        it("rejects other modelIds", () => {
+            expect(isOsMailerSettings(makeRecord({ data: { modelId: "blogPost" } }))).toBe(false);
+        });
+
+        it("returns false when data is absent", () => {
+            expect(isOsMailerSettings(makeRecord({}))).toBe(false);
         });
     });
 });

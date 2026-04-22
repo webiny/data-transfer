@@ -50,3 +50,14 @@ export const isBuiltInSecurityRole = (record: Record<string, unknown>): boolean 
 };
 
 export const isSecurityTeam = byType("security.team");
+
+export const isOsBackgroundTask = (record: Record<string, unknown>): boolean => {
+    const data = record.data as Record<string, unknown> | undefined;
+    const modelId = data?.modelId as string | undefined;
+    return modelId === "webinyTask" || modelId === "webinyTaskLog";
+};
+
+export const isOsMailerSettings = (record: Record<string, unknown>): boolean => {
+    const data = record.data as Record<string, unknown> | undefined;
+    return (data?.modelId as string | undefined) === "mailerSettings";
+};
