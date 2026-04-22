@@ -2113,6 +2113,113 @@
     "GSI_TENANT": "root"
   },
   {
+    "PK": "T#root#CMS#CME#6718f1750ec8e900082f2dfa",
+    "SK": "L",
+    "GSI1_PK": "T#root#CMS#CME#M#partner#L",
+    "GSI1_SK": "6718f1750ec8e900082f2dfa#0003",
+    "TYPE": "cms.entry.l",
+    "_ct": "2024-10-23T12:56:52.748Z",
+    "_et": "CmsEntries",
+    "_md": "2024-10-23T12:56:52.748Z",
+    "data": {
+      "createdBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "createdOn": "2024-10-23T12:52:05.095Z",
+      "entryId": "6718f1750ec8e900082f2dfa",
+      "firstPublishedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "firstPublishedOn": "2024-10-23T12:52:08.060Z",
+      "id": "6718f1750ec8e900082f2dfa#0003",
+      "lastPublishedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "lastPublishedOn": "2024-10-23T12:56:52.740Z",
+      "location": {
+        "folderId": "root"
+      },
+      "locked": true,
+      "modelId": "partner",
+      "modifiedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "modifiedOn": "2024-10-23T12:56:52.740Z",
+      "revisionCreatedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "revisionCreatedOn": "2024-10-23T12:56:50.831Z",
+      "revisionFirstPublishedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "revisionFirstPublishedOn": "2024-10-23T12:56:52.740Z",
+      "revisionLastPublishedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "revisionLastPublishedOn": "2024-10-23T12:56:52.740Z",
+      "revisionModifiedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "revisionModifiedOn": "2024-10-23T12:56:52.740Z",
+      "revisionSavedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "revisionSavedOn": "2024-10-23T12:56:52.740Z",
+      "savedBy": {
+        "displayName": "U",
+        "id": "iden123",
+        "type": "admin"
+      },
+      "savedOn": "2024-10-23T12:56:52.740Z",
+      "status": "published",
+      "tenant": "root",
+      "values": {
+        "file@ch38fm1v": "https://d1mjtaoiepp9z3.cloudfront.net/files/6718f1700ec8e900082f2df8/cloudinary_logo.png",
+        "long-text@ig1olt8e": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAAwXB0Q3DIAwFwP9M8QZAWaKTuOGVWjIG2SRKOn3vXjbOqi7x4EubiXeI10QXl8aCFeL5GdELxlza9ccC8YpK04sBepOm3nBpnmLgPRlKP5iQhTzEuG/bH9zY/B9oAAAA"
+        },
+        "number@2n7uimcm": 97,
+        "ref@4hghm8li": [
+          {
+            "entryId": "667d5d875bc4170008714515",
+            "id": "667d5d875bc4170008714515#0001",
+            "modelId": "location"
+          }
+        ],
+        "rich-text@wu61sxyl": {
+          "compression": "gzip",
+          "value": "H4sIAAAAAAAAE+1TQW7bQAz8CrFnJXEuPbiOgaJAgb6ghyoHWktLRFdcgaTsGIGBfqPf60uKXStpmh7bY44ccodD7vAxmKNTWIfHNmjO3ob1Yxu6gVNUkjasv/4dRnLk1Ib1qmnDPuuIvgRjjtSGdRukoKkNTRvMT+kC1tDpwWv0MeU5sqCefn7/YTCyGWcBNvAMNE75SApdHicUpgpGSnwghQPbjAnoYSJlkq5kB3RgsYmVACVCl0Woc9idYJZEaANLDz4Q7OeUYMpO4owJ8r6grDBSZLyGL+wDvFvBjlMqetCM3GCWSAojCvY0knhtMmal0lrgdtWsVivoZvM8klpN+zHDuNDMVtBj1hSPHKmB3+PXkQcCljib6wnMUSJqhH1WiHSglCdSa6BTQs8L+4j6jbywppy/1enyIrABVxQrX9PU2qfN8Yg9XZ4fOFI2yJJY6Bo+GCAo2Zy8gUQYC+FOUaIBKoERFcS4F95zh+Kwm42FzOCAaS7yoQD9i8kaYOnSXLn2aE4KziNdhBb1DQzcD6R1PWDobHvsvO5dYnmthEYRSPqXi++yHEiLX+z64qrTdPHYxV5NG5Z8G9a35/umDZGVKnMtS6616tm9iztZIsmTm59JJ1TsFafhilIV8brD4utPL2+h+t6Wk6nB5/gn2+0r6acpV/zUhvP9P4u+XPOrTZxDEwYfU1iHzQSR9W6h3W5sQoGq864Nx4GdrmzCjtYwKV0dFaf3bdi+Xe3b1f6Pq93cFL9tNzfTNpx/ASBpVByGBgAA"
+        },
+        "text@0kdrw9j9": "https://cloudinary.com/",
+        "text@lluxixnh": "Cloudinary",
+        "text@o08zpr0q": "partners@webiny.com",
+        "text@sluit062": "cloudinary",
+        "text@t9x0pohs": "tech"
+      },
+      "version": 3
+    },
+    "GSI_TENANT": "root"
+  },
+  {
     "TYPE": "cms.entry.l",
     "_md": "2026-04-21T08:09:45.780Z",
     "GSI1_SK": "69e730c92fcd930002f9f34e#0001",
