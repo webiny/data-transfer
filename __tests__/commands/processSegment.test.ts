@@ -27,6 +27,7 @@ import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
+import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
 
 describe("processSegment handler", () => {
     beforeEach(() => {
@@ -50,6 +51,8 @@ describe("processSegment handler", () => {
         resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
         resolveMap.set(FileTool, { exists: existsSync });
+        resolveMap.set(BeforeLoadPresetHook, { execute: vi.fn() });
+        resolveMap.set(AfterLoadPresetHook, { execute: vi.fn() });
     });
 
     it("loads preset, configures runner, calls run({segment, totalSegments})", async () => {

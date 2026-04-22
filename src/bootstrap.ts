@@ -17,6 +17,7 @@ import { TenantLocalesFeature } from "~/features/TenantLocales/index.ts";
 import { PresetLoaderFeature } from "~/features/PresetLoader/index.ts";
 import { WorkerSpawnerFeature } from "~/features/WorkerSpawner/index.ts";
 import { TransferLifecycleFeature } from "~/features/TransferLifecycle/index.ts";
+import { PresetLifecycleFeature } from "~/features/PresetLifecycle/index.ts";
 import { TransformContextFeature } from "~/features/TransformContext/index.ts";
 import { PipelineBuilderFactoryFeature } from "~/features/PipelineBuilderFactory/index.ts";
 import { PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
@@ -106,6 +107,7 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     // Features
     TransferLifecycleFeature.register(container);
+    PresetLifecycleFeature.register(container);
     PresetLoaderFeature.register(container);
     WorkerSpawnerFeature.register(container);
     ModelProviderFeature.register(container);
