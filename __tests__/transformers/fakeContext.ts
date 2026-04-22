@@ -37,6 +37,12 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
             _sk?: string
         ): Promise<Record<string, unknown> | null> {
             return null;
+        },
+        async queryTargetRecord(
+            _pk: string,
+            _sk?: string
+        ): Promise<Record<string, unknown> | null> {
+            return null;
         }
     };
     return ctx as unknown as BaseTransformContext.Interface<BaseRecord>;

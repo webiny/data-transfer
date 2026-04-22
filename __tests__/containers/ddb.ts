@@ -40,6 +40,12 @@ export interface DdbContainerPipelineOverride {
 
 export interface DdbContainerOptions {
     sourceRecords?: Record<string, SourceDynamoDbClient.Record[]>;
+    /**
+     * Pre-seed the target mock DDB. Keyed by table name, same shape as
+     * `sourceRecords`. Use in tests that exercise `ctx.queryTargetRecord`
+     * or anything else that reads back from the target side.
+     */
+    targetRecords?: Record<string, SourceDynamoDbClient.Record[]>;
     modelsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: DdbContainerPipelineOverride;
@@ -47,7 +53,7 @@ export interface DdbContainerOptions {
 
 export function createDdbContainer(options: DdbContainerOptions = {}): Container {
     const sourceDb = new MockDynamoDbClient(options.sourceRecords || {});
-    const targetDb = new MockDynamoDbClient();
+    const targetDb = new MockDynamoDbClient(options.targetRecords || {});
 
     const config: MigrationConfig.Interface = {
         storage: "ddb",

@@ -84,6 +84,9 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
             },
             async querySourceRecord(): Promise<null> {
                 return null;
+            },
+            async queryTargetRecord(): Promise<null> {
+                return null;
             }
         };
         return { ctx, commands };
