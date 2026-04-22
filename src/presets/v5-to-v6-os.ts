@@ -16,8 +16,8 @@ export default createTransferPreset({
     configure({ runner, pipelineBuilderFactory: factory }): void {
         // ========================================================================
         // Background Tasks — blackhole
-        // IMPORTANT: Must be registered BEFORE CmsEntries (background tasks
-        // satisfy isCmsEntry via TYPE prefix)
+        // IMPORTANT: Must be registered BEFORE CmsEntries — background tasks are
+        // CMS entries in the OS table and would be written by the catch-all pipeline.
         // ========================================================================
         const backgroundTasks = factory
             .create({
