@@ -22,21 +22,6 @@ interface IBaseTransformContext<TRecord = unknown> {
      * no slice helper provides.
      */
     addCommand(cmd: Command): void;
-    querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(
-        pk: string,
-        sk?: string
-    ): Promise<T | null>;
-    /**
-     * Lookup on the TARGET primary DDB table. Only available in DDB
-     * transfers — OS transfers have no target primary DDB table, so
-     * this throws at call time rather than returning a confusing null.
-     * Useful for idempotency checks (skip writes that already landed) or
-     * for reading back a record you just put earlier in the same run.
-     */
-    queryTargetRecord<T extends Record<string, unknown> = Record<string, unknown>>(
-        pk: string,
-        sk?: string
-    ): Promise<T | null>;
 }
 
 // ============================================================================
