@@ -8,7 +8,7 @@ export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
     const tenant = record.data.tenant as string | undefined;
 
     if (!modelId || !tenant) {
-        console.warn(
+        ctx.logger.warn(
             `[updateOsIndex] Skipping index update — missing modelId or tenant. PK=${record.PK} SK=${record.SK}`
         );
         return;
