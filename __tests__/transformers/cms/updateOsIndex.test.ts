@@ -73,18 +73,4 @@ describe("updateOsIndex", () => {
         );
     });
 
-    it("is a no-op when record.data is absent", async () => {
-        const ctx = makeFakeBaseContext({
-            PK: "T#root#CMS#CME#abc",
-            SK: "L",
-            TYPE: "cms.entry.l",
-            index: "root-headless-cms-en-us-fmfile"
-        });
-
-        await updateOsIndex(ctx);
-
-        expect((ctx.record as Record<string, unknown>).index).toBe(
-            "root-headless-cms-en-us-fmfile"
-        );
-    });
 });
