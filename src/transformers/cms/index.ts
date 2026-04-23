@@ -1,3 +1,4 @@
+export { addLiveField } from "./addLiveField.ts";
 export { fixCmePk } from "./fixCmePk.ts";
 export { removeFolderRevision } from "./removeFolderRevision.ts";
 export { renameFieldAttributes } from "./renameFieldAttributes.ts";
