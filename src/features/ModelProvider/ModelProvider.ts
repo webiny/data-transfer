@@ -6,6 +6,15 @@ import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { ModelProvider as ModelProviderAbstraction } from "./abstractions/ModelProvider.ts";
 
+function isModel(value: unknown): value is ModelProviderAbstraction.ModelType {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        typeof (value as Record<string, unknown>).modelId === "string" &&
+        Array.isArray((value as Record<string, unknown>).fields)
+    );
+}
+
 class ModelProviderImpl implements ModelProviderAbstraction.Interface {
     private models: Map<string, ModelProviderAbstraction.ModelType> = new Map();
     private readonly tableName: string;
@@ -59,14 +68,18 @@ class ModelProviderImpl implements ModelProviderAbstraction.Interface {
                             this.logger.warn(`Failed to read model file ${file}`);
                             continue;
                         }
-                        const model = JSON.parse(content) as ModelProviderAbstraction.ModelType;
+                        const parsed = JSON.parse(content) as unknown;
+                        const extracted = this.extractModels(parsed);
 
-                        if (model.modelId) {
+                        if (extracted.length === 0) {
+                            this.logger.warn(`Model file ${file} contains no recognisable models`);
+                            continue;
+                        }
+
+                        for (const model of extracted) {
                             // JSON models override DB models (user-provided takes precedence)
                             this.models.set(model.modelId, model);
                             jsonCount++;
-                        } else {
-                            this.logger.warn(`Model file ${file} missing modelId property`);
                         }
                     } catch (error) {
                         this.logger.warn(`Failed to load model from ${file}: ${error}`);
@@ -78,6 +91,31 @@ class ModelProviderImpl implements ModelProviderAbstraction.Interface {
         this.logger.info(
             `Preloaded ${this.models.size} models (${dbCount} from DB, ${jsonCount} from JSON)`
         );
+    }
+
+    private extractModels(parsed: unknown): ModelProviderAbstraction.ModelType[] {
+        // Shape 1: array of models at root — [{modelId, ...}, ...]
+        if (Array.isArray(parsed)) {
+            return parsed.filter(isModel);
+        }
+
+        if (!parsed || typeof parsed !== "object") {
+            return [];
+        }
+
+        const obj = parsed as Record<string, unknown>;
+
+        // Shape 2: Webiny export — {groups: [...], models: [...]}
+        if (Array.isArray(obj.models)) {
+            return obj.models.filter(isModel);
+        }
+
+        // Shape 3: single model — {modelId, fields, ...}
+        if (isModel(obj)) {
+            return [obj];
+        }
+
+        return [];
     }
 
     public getModel(modelId: string): ModelProviderAbstraction.ModelType | undefined {

@@ -210,6 +210,81 @@ describe("ModelProvider", () => {
             expect(model!.fields.length).toBeGreaterThan(0);
         });
 
+        it("loads all models from a root-level array", async () => {
+            writeFileSync(
+                join(tmpDir, "models.json"),
+                JSON.stringify([
+                    { modelId: "article", name: "Article", fields: [] },
+                    { modelId: "author", name: "Author", fields: [] }
+                ])
+            );
+
+            const container = createDdbContainer({ modelsDir: tmpDir });
+            const provider = container.resolve(ModelProvider);
+            await provider.preloadModels(new Map());
+
+            expect(provider.getModel("article")).toBeDefined();
+            expect(provider.getModel("author")).toBeDefined();
+            expect(provider.getModelIds()).toHaveLength(2);
+
+            rmSync(tmpDir, { recursive: true, force: true });
+        });
+
+        it("loads models from a Webiny export {groups, models} file", async () => {
+            writeFileSync(
+                join(tmpDir, "export.json"),
+                JSON.stringify({
+                    groups: [{ id: "g1", name: "Blog", slug: "blog", icon: "fas/blog" }],
+                    models: [
+                        { modelId: "post", name: "Post", fields: [] },
+                        { modelId: "tag", name: "Tag", fields: [] }
+                    ]
+                })
+            );
+
+            const container = createDdbContainer({ modelsDir: tmpDir });
+            const provider = container.resolve(ModelProvider);
+            await provider.preloadModels(new Map());
+
+            expect(provider.getModel("post")).toBeDefined();
+            expect(provider.getModel("tag")).toBeDefined();
+            expect(provider.getModelIds()).toHaveLength(2);
+
+            rmSync(tmpDir, { recursive: true, force: true });
+        });
+
+        it("loads models from webiny-v5-website.json (real export format)", async () => {
+            const dataDir = fileURLToPath(new URL("../../data", import.meta.url));
+            const container = createDdbContainer({ modelsDir: dataDir });
+            const provider = container.resolve(ModelProvider);
+            await provider.preloadModels(new Map());
+
+            expect(provider.getModel("author")).toBeDefined();
+            expect(provider.getModel("blog")).toBeDefined();
+            expect(provider.getModel("partner")).toBeDefined();
+            expect(provider.getModelIds().length).toBeGreaterThanOrEqual(7);
+        });
+
+        it("skips non-model entries in a root-level array", async () => {
+            writeFileSync(
+                join(tmpDir, "mixed.json"),
+                JSON.stringify([
+                    { modelId: "article", name: "Article", fields: [] },
+                    { name: "Not a model" },
+                    null
+                ])
+            );
+
+            const container = createDdbContainer({ modelsDir: tmpDir });
+            const provider = container.resolve(ModelProvider);
+            await provider.preloadModels(new Map());
+
+            expect(provider.getModelIds()).toHaveLength(1);
+            expect(provider.getModel("article")).toBeDefined();
+
+            rmSync(tmpDir, { recursive: true, force: true });
+        });
+
         it("should skip non-JSON files", async () => {
             writeFileSync(join(tmpDir, "readme.txt"), "not a model");
 
