@@ -150,6 +150,7 @@ export const stampMigratedAt = createDdbTransformer(
 | `ctx.addCommand(cmd)`      | Low-level — push any command into the shared bag. Prefer `putRecord` / `copyFile`.      |
 | `ctx.modelProvider`        | Loaded CMS models from `config.pipeline.modelsDir` if set.                              |
 | `ctx.cache`                | `Map`-like cache, persists across records in the same worker.                           |
+| `ctx.logger`               | Worker-bound logger. Use instead of `console.*` — respects log level config.            |
 
 **DdbProcessor slice** — available when pipeline includes `DdbProcessor`:
 

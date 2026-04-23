@@ -195,7 +195,7 @@ src/features/FeatureName/
 - `record: TRecord` — mutable, transformers change this.
 - `original: Readonly<TRecord>` — **frozen snapshot of the pre-transform record, always present**. Users may consume it for gate-checks, audits, etc. — do NOT remove even if no built-in code uses it.
 - `addCommand(cmd: Command)` — push a command to the (internal) bag. Canonical primitive; slice helpers are sugar over it.
-- `modelProvider`, `cache` — shared singletons.
+- `modelProvider`, `cache`, `logger` — shared singletons. Use `ctx.logger` instead of `console.*` inside transformers — it's bound to the current worker and respects the configured log level.
 - `replace(newRecord)` — replaces `ctx.record`.
 - `queryRecord<T>(pk, sk?)` — source-table lookup, generic return type, Promise-returning.
 

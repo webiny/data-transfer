@@ -216,6 +216,7 @@ Both DDB and OS transform contexts expose:
 | `ctx.commands`             | The command buffer. Transformers rarely need this directly — use the helpers below.                   |
 | `ctx.modelProvider`        | Loaded CMS models (from DB + `config.pipeline.modelsDir` JSON files, if set).                         |
 | `ctx.cache`                | Shared `Map`-like cache, persists across records within a run.                                        |
+| `ctx.logger`               | Logger bound to the current worker. Use instead of `console.*` inside transformers.                   |
 | `ctx.replace(newRecord)`   | Replace `ctx.record` wholesale.                                                                       |
 | `ctx.putRecord(record)`    | Emit an extra PutRecord to the target (beyond the auto-put at chain end).                             |
 | `ctx.queryRecord(pk, sk?)` | Query the source primary table. Returns `null` if not found.                                          |
