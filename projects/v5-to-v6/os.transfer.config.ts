@@ -7,6 +7,7 @@ const DEFAULT_PROFILE = "default";
 
 export default createOsTransfer({
     debug: {
+        logLevel: "debug",
         logFile: true
     },
     source: {

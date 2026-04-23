@@ -13,6 +13,7 @@ const DEFAULT_PROFILE = "default";
 
 export default createDdbTransfer({
     debug: {
+        logLevel: "debug",
         logFile: true
     },
     source: {
