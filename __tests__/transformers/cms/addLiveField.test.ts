@@ -32,6 +32,34 @@ describe("addLiveField", () => {
         expect((ctx.record.data as Record<string, unknown>).live).toBeUndefined();
     });
 
+    it("on a published L record uses data.version directly without querying", async () => {
+        const ctx = makeFakeDdbCoreContext({
+            ...BASE,
+            SK: "L",
+            TYPE: "cms.entry.l",
+            data: { ...BASE.data, version: 3, status: "published" }
+        });
+        ctx.querySourceRecord = vi.fn();
+
+        await addLiveField(ctx);
+
+        expect((ctx.record.data as Record<string, unknown>).live).toEqual({ version: 3 });
+        expect(ctx.querySourceRecord).not.toHaveBeenCalled();
+    });
+
+    it("on a draft L record queries source for P", async () => {
+        const ctx = makeFakeDdbCoreContext({
+            ...BASE,
+            data: { ...BASE.data, version: 3, status: "draft" }
+        });
+        ctx.querySourceRecord = vi.fn().mockResolvedValue({ version: 2 });
+
+        await addLiveField(ctx);
+
+        expect((ctx.record.data as Record<string, unknown>).live).toEqual({ version: 2 });
+        expect(ctx.querySourceRecord).toHaveBeenCalledWith(BASE.PK, "P");
+    });
+
     it("on a P record uses data.version directly without querying", async () => {
         const ctx = makeFakeDdbCoreContext({
             ...BASE,

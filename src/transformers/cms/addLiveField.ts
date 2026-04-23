@@ -34,8 +34,16 @@ async function resolvePublishedVersion(
     }
 
     // This record IS the published revision — no query needed.
-    if (ctx.record.SK === "P") {
-        const version = (ctx.record.data as Record<string, unknown>).version as number;
+    // P record: always the published revision by definition.
+    // L record with status "published": L and P point to the same revision.
+    const data = ctx.record.data as Record<string, unknown>;
+    const originalSK = ctx.original.SK as string | undefined;
+    const isPublishedRevision =
+        originalSK === "P" ||
+        (originalSK === "L" && data.status === "published");
+
+    if (isPublishedRevision) {
+        const version = data.version as number;
         ctx.cache.set(cacheKey, version);
         return version;
     }

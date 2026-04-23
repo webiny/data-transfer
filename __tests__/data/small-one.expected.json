@@ -2215,7 +2215,10 @@
         "text@sluit062": "cloudinary",
         "text@t9x0pohs": "tech"
       },
-      "version": 3
+      "version": 3,
+      "live": {
+        "version": 3
+      }
     },
     "GSI_TENANT": "root"
   },
