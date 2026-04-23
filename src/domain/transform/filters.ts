@@ -22,16 +22,15 @@ export const isCmsGroup = (record: BaseRecord): boolean => {
 
 export const isCmsModel = byType("cms.model");
 
-export const isCmsEntry = byTypePrefix("cms.entry");
-
-export const byModelId =
-    (input: string) =>
-    (record: BaseRecord): boolean => {
-        const modelId =
-            (record.modelId as string | undefined) ||
-            ((record.data as Record<string, unknown> | undefined)?.modelId as string | undefined);
-        return modelId === input;
-    };
+export const isCmsEntry = (input: BaseRecord) => {
+    const isType = byTypePrefix("cms.entry")(input);
+    if (isType) {
+        return true;
+    } else if (!input.TYPE) {
+        return input.PK.includes("#CMS#CME#");
+    }
+    return false;
+};
 
 export const byIncludesModelId =
     (input: string) =>
