@@ -5,7 +5,7 @@ import { S3Processor } from "~/features/S3Processor/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
     byType,
-    isAcoSearchRecordPage,
+    isAcoSearchRecord,
     isBackgroundTask,
     isBuiltInSecurityRole,
     isCmsEntry,
@@ -60,7 +60,7 @@ export default createTransferPreset({
                 scanner: DdbScanner,
                 processors: [DdbProcessor]
             })
-            .filter(createFilter(isAcoSearchRecordPage))
+            .filter(createFilter(isAcoSearchRecord))
             .blackhole()
             .build();
         // ========================================================================

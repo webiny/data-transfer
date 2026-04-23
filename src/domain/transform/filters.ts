@@ -32,7 +32,18 @@ export const byModelId =
         return modelId === input;
     };
 
-export const isAcoSearchRecordPage = byModelId("acoSearchRecord-pbpage");
+export const byIncludesModelId =
+    (input: string) =>
+    (record: BaseRecord): boolean => {
+        // @ts-expect-error
+        const modelId = record.modelId || record.data!.modelId;
+        if (typeof modelId !== "string") {
+            return false;
+        }
+        return modelId.includes(input);
+    };
+
+export const isAcoSearchRecord = byIncludesModelId("acoSearchRecord");
 
 export const isBackgroundTask = (item: BaseRecord) => {
     if (item.modelId === "webinyTask" || item.modelId === "webinyTaskLog") {

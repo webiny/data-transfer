@@ -3,7 +3,7 @@ import { OsScanner } from "~/features/OsScanner/index.ts";
 import { OsProcessor } from "~/features/OsProcessor/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
-    isAcoSearchRecordPage,
+    isAcoSearchRecord,
     isCmsEntry,
     isFmFile,
     isOsBackgroundTask,
@@ -22,7 +22,7 @@ export default createTransferPreset({
                 scanner: DdbScanner,
                 processors: [DdbProcessor]
             })
-            .filter(createFilter(isAcoSearchRecordPage))
+            .filter(createFilter(isAcoSearchRecord))
             .blackhole()
             .build();
         // ========================================================================
