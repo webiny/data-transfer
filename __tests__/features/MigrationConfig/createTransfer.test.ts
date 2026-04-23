@@ -174,7 +174,8 @@ describe("createOsTransfer", () => {
                     opensearch: {
                         endpoint: "https://es.example.com",
                         tableName: "tgt-es",
-                        service: "opensearch"
+                        service: "opensearch",
+                        indexPrefix: ""
                     }
                 },
                 pipeline: { preset: "v5-to-v6-os" }
@@ -196,7 +197,8 @@ describe("createOsTransfer", () => {
                     credentials: creds,
                     opensearch: {
                         endpoint: "https://es.example.com",
-                        tableName: "tgt-es"
+                        tableName: "tgt-es",
+                        indexPrefix: ""
                     } as any
                 },
                 pipeline: { preset: "v5-to-v6-os" }
@@ -219,7 +221,8 @@ describe("createOsTransfer", () => {
                     opensearch: {
                         endpoint: "not-a-url",
                         tableName: "tgt-es",
-                        service: "opensearch"
+                        service: "opensearch",
+                        indexPrefix: ""
                     }
                 },
                 pipeline: { preset: "v5-to-v6-os" }
