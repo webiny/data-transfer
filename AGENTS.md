@@ -125,7 +125,9 @@ src/
 │   │       CMS transformers; addLiveField uses ctx.cache + querySourceRecord;
 │   │       updateOsIndex uses configurations.es from @webiny/api-headless-cms-ddb-es)
 │   ├── cmsEntryTransformers.ts  # Shared stacks: cmsEntryTransformers (DDB) +
-│   │                            # osCmsEntryTransformers (OS — no wrapInData, adds updateOsIndex)
+│   │                            # osCmsEntryTransformers (OS — no wrapInData, adds updateOsIndex).
+│   │                            # addLiveField is NOT in either stack — applied explicitly only
+│   │                            # on the CmsEntries pipeline (files cannot be published).
 │   └── index.ts              # Top-level barrel
 ├── presets/                  # Built-in presets — auto-discovered by PresetLoader
 │                             # (filename = preset name).

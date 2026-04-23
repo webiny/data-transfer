@@ -214,8 +214,10 @@ Use them for index preparation, schema migration, cache warm-up, etc.
 
 Two pre-built transformer arrays are exported from `@webiny/data-transfer` (via `src/transformers/index.ts`):
 
-- **`cmsEntryTransformers`** — DDB-mode stack: `wrapInData, addGsiTenant, removeLocale, fixCmePk, fixBrokenStorageKeys, transformRichText, updateModelIds, removeFolderRevision, removeAttributes, addLiveField`. Use with `.use(cmsEntryTransformers)` in DDB pipelines.
+- **`cmsEntryTransformers`** — DDB-mode stack: `wrapInData, addGsiTenant, removeLocale, fixCmePk, fixBrokenStorageKeys, transformRichText, updateModelIds, removeFolderRevision, removeAttributes`. Use with `.use(cmsEntryTransformers)` in DDB pipelines.
 - **`osCmsEntryTransformers`** — OS-mode stack: same as above but **omits `wrapInData`** (OS records already have `data` populated) and adds `updateOsIndex` after `updateModelIds`. Use in OS pipelines.
+
+`addLiveField` is **not** in either shared stack — apply it explicitly on pipelines that cover publishable CMS entries only. File manager files cannot be published and must not receive it.
 
 ## Built-in presets
 
