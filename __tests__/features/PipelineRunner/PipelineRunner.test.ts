@@ -5,6 +5,8 @@ import { ContainerToken, createAbstraction } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
+import { DroppedRecordLog } from "~/features/DroppedRecordLog/abstractions/DroppedRecordLog.ts";
+import { MockDroppedRecordLog } from "../DroppedRecordLog/MockDroppedRecordLog.ts";
 import {
     PipelineBuilderFactory,
     PipelineBuilderFactoryFeature
@@ -114,6 +116,7 @@ function makeContainer(options: { runId?: string } = {}): {
         async write(): Promise<void> {},
         async close(): Promise<void> {}
     });
+    container.registerInstance(DroppedRecordLog, new MockDroppedRecordLog());
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();

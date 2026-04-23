@@ -10,6 +10,8 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
 import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { SnapshotWriter } from "~/features/SnapshotWriter/abstractions/SnapshotWriter.ts";
+import { DroppedRecordLog } from "~/features/DroppedRecordLog/index.ts";
+import { RecordDisposition } from "~/domain/pipeline/index.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
     type RunOptions
@@ -41,7 +43,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         private readonly logger: Logger.Interface,
         private readonly transferContext: TransferContext.Interface,
         private readonly baseContextFactory: BaseTransformContextFactory.Interface,
-        private readonly snapshotWriter: SnapshotWriter.Interface
+        private readonly snapshotWriter: SnapshotWriter.Interface,
+        private readonly droppedLog: DroppedRecordLog.Interface
     ) {}
 
     public register(...pipelines: AnyPipeline[]): this {
@@ -253,7 +256,16 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                     `${pipeline.name}/segment-${shardCtx.segment}.source.jsonl`,
                     record
                 );
-                await this.runRecord(pipeline, processors, record, shardCommands, shardCtx);
+                const result = await this.runRecord(
+                    pipeline,
+                    processors,
+                    record,
+                    shardCommands,
+                    shardCtx
+                );
+                if (result instanceof RecordDisposition.Blackholed) {
+                    this.droppedLog.add(record, result);
+                }
                 // First-match-wins: subsequent pipelines in this group are
                 // skipped for this record. Pipeline registration order
                 // determines priority.
@@ -270,6 +282,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                     `dropped/segment-${shardCtx.segment}.jsonl`,
                     record
                 );
+                this.droppedLog.add(record, new RecordDisposition.Unmatched());
             }
         }
 
@@ -293,6 +306,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         }
 
         this.warnUnclaimedKeys(shardCommands);
+        this.droppedLog.flush(shardCtx.segment);
     }
 
     private async runRecord(
@@ -301,7 +315,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         record: unknown,
         shardCommands: Commands,
         shardCtx: Processor.AfterShardContext
-    ): Promise<void> {
+    ): Promise<RecordDisposition.Processed | RecordDisposition.Blackholed> {
         // Build the base ctx + its per-record commands bag via the shared
         // factory. Slice helpers close over this bag via ctx.addCommand.
         const { ctx, commands } = this.baseContextFactory.create<unknown>({ record });
@@ -356,7 +370,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         // path is suppressed. Snapshot above still recorded the commands,
         // so users can diff "what would have been written".
         if (pipeline.isBlackhole) {
-            return;
+            return new RecordDisposition.Blackholed(pipeline.name);
         }
 
         // Fold this record's commands into the single shared shard buffer.
@@ -366,6 +380,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         for (const cmd of commands.all()) {
             shardCommands.add(cmd);
         }
+        return new RecordDisposition.Processed();
     }
 
     private collectProcessorOrder(
@@ -445,6 +460,7 @@ export const PipelineRunner = PipelineRunnerAbstraction.createImplementation({
         Logger,
         TransferContext,
         BaseTransformContextFactory,
-        SnapshotWriter
+        SnapshotWriter,
+        DroppedRecordLog
     ]
 });

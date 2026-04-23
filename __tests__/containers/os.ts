@@ -1,5 +1,7 @@
 import { Container } from "@webiny/di";
 import { ContainerToken } from "../../src/base/index.ts";
+import { DroppedRecordLog } from "../../src/features/DroppedRecordLog/abstractions/DroppedRecordLog.ts";
+import { MockDroppedRecordLog } from "../features/DroppedRecordLog/MockDroppedRecordLog.ts";
 import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "../../src/tools/Logger/index.ts";
@@ -104,6 +106,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     TransformContextFeature.register(container);
     PipelineBuilderFactoryFeature.register(container);
     SnapshotWriterFeature.register(container);
+    container.registerInstance(DroppedRecordLog, new MockDroppedRecordLog());
     PipelineRunnerFeature.register(container);
     TouchedIndexesFeature.register(container);
     DdbExecutorFeature.register(container);
