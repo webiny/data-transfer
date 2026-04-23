@@ -7,7 +7,13 @@ import {
     updateModelIds,
     updateOsIndex
 } from "./cms/index.ts";
-import { wrapInData, addGsiTenant, removeLocale, removeAttributes } from "./global/index.ts";
+import {
+    wrapInData,
+    addGsiTenant,
+    removeLocale,
+    removeAttributes,
+    addTransferTimestamp
+} from "./global/index.ts";
 
 // Shared transformer stack for CMS-shaped records (cmsEntries + fmFiles).
 // wrapInData MUST stay first — everything downstream assumes the record body
@@ -37,5 +43,6 @@ export const osCmsEntryTransformers = [
     updateModelIds,
     updateOsIndex,
     removeFolderRevision,
-    removeAttributes
+    removeAttributes,
+    addTransferTimestamp
 ];
