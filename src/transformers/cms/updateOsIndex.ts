@@ -1,19 +1,20 @@
+import { configurations } from "@webiny/api-headless-cms-ddb-es/configurations.js";
 import { createOsTransformer } from "~/transformers/createOsTransformer.ts";
 
 export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
-    const { record, original } = ctx;
+    const { record } = ctx;
 
-    const oldModelId = original.data.modelId as string | undefined;
-    const newModelId = record.data.modelId as string | undefined;
+    const modelId = record.data.modelId as string | undefined;
+    const tenant = record.data.tenant as string | undefined;
 
-    if (!oldModelId || !newModelId || oldModelId === newModelId) {
+    if (!modelId || !tenant) {
+        console.warn(
+            `[updateOsIndex] Skipping index update — missing modelId or tenant. PK=${record.PK} SK=${record.SK}`
+        );
         return;
     }
 
-    const oldSuffix = `-${oldModelId.toLowerCase()}`;
-    const newSuffix = `-${newModelId.toLowerCase()}`;
+    const { index } = configurations.es({ model: { modelId, tenant } });
 
-    if (record.index.endsWith(oldSuffix)) {
-        record.index = record.index.slice(0, -oldSuffix.length) + newSuffix;
-    }
+    record.index = index;
 });

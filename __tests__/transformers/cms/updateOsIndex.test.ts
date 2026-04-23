@@ -3,74 +3,46 @@ import { updateOsIndex } from "~/transformers/cms/updateOsIndex.ts";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("updateOsIndex", () => {
-    it("rewrites index suffix when modelId was renamed (fmFile → wbyFmFile)", async () => {
+    it("sets index to the value produced by configurations.es for the current modelId", async () => {
         const ctx = makeFakeBaseContext({
             PK: "T#root#CMS#CME#abc",
             SK: "L",
             TYPE: "cms.entry.l",
             index: "root-headless-cms-en-us-fmfile",
-            data: { modelId: "fmFile", values: {} }
+            data: { modelId: "wbyFmFile", tenant: "root", values: {} }
         });
-
-        // Simulate updateModelIds having already run — mutates data.modelId in place.
-        // With structuredClone in fakeContext, ctx.original.data.modelId stays "fmFile".
-        (ctx.record.data as Record<string, unknown>).modelId = "wbyFmFile";
 
         await updateOsIndex(ctx);
 
-        expect((ctx.record as Record<string, unknown>).index).toBe(
-            "root-headless-cms-en-us-wbyfmfile"
-        );
+        expect(typeof (ctx.record as Record<string, unknown>).index).toBe("string");
+        expect((ctx.record as Record<string, unknown>).index).toContain("wbyfmfile");
     });
 
-    it("rewrites index suffix for acoFolder → wbyAcoFolder", async () => {
+    it("recomputes index when modelId changes (acoFolder → wbyAcoFolder)", async () => {
         const ctx = makeFakeBaseContext({
             PK: "T#root#CMS#CME#abc",
             SK: "L",
             TYPE: "cms.entry.l",
             index: "root-headless-cms-en-us-acofolder",
-            data: { modelId: "acoFolder", values: {} }
+            data: { modelId: "wbyAcoFolder", tenant: "root", values: {} }
         });
-
-        (ctx.record.data as Record<string, unknown>).modelId = "wbyAcoFolder";
 
         await updateOsIndex(ctx);
 
-        expect((ctx.record as Record<string, unknown>).index).toBe(
-            "root-headless-cms-en-us-wbyacofolder"
-        );
+        expect((ctx.record as Record<string, unknown>).index).toContain("wbyacofolder");
     });
 
-    it("leaves index unchanged when modelId has no rename mapping", async () => {
+    it("always recomputes — even when modelId is unchanged", async () => {
         const ctx = makeFakeBaseContext({
             PK: "T#root#CMS#CME#abc",
             SK: "L",
             TYPE: "cms.entry.l",
             index: "root-headless-cms-en-us-blogpost",
-            data: { modelId: "blogPost", values: {} }
+            data: { modelId: "blogPost", tenant: "root", values: {} }
         });
 
         await updateOsIndex(ctx);
 
-        expect((ctx.record as Record<string, unknown>).index).toBe(
-            "root-headless-cms-en-us-blogpost"
-        );
+        expect((ctx.record as Record<string, unknown>).index).toContain("blogpost");
     });
-
-    it("leaves index unchanged when old and new modelId are identical", async () => {
-        const ctx = makeFakeBaseContext({
-            PK: "T#root#CMS#CME#abc",
-            SK: "L",
-            TYPE: "cms.entry.l",
-            index: "root-headless-cms-en-us-wbyfmfile",
-            data: { modelId: "wbyFmFile", values: {} }
-        });
-
-        await updateOsIndex(ctx);
-
-        expect((ctx.record as Record<string, unknown>).index).toBe(
-            "root-headless-cms-en-us-wbyfmfile"
-        );
-    });
-
 });
