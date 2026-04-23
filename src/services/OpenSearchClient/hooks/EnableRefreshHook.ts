@@ -39,9 +39,6 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
             }
         }
 
-        // Clean up transfer directory
-        // await this.cleanup();
-
         this.logger.info(`Indexing restored on ${touchedIndexes.size} indexes.`);
     }
 
@@ -84,19 +81,6 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
         }
 
         return merged;
-    }
-
-    private async cleanup(): Promise<void> {
-        const transferDir = join(process.cwd(), ".transfer", this.transferContext.runId);
-        const files = this.dirTool.readDir(transferDir);
-        if (!files) {
-            return;
-        }
-        // Remove only the index state files — preserve logs/ so users can
-        // inspect them after the run.
-        for (const file of files.filter(f => f.endsWith("-indexes.json"))) {
-            this.fileTool.remove(join(transferDir, file));
-        }
     }
 }
 

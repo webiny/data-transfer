@@ -1,15 +1,16 @@
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import type { OsRecord, OsShard } from "./abstractions/OsScanner.ts";
+import { Logger } from "~/tools/Logger/index.js";
 
 class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
     public constructor(
         private readonly source: SourceDynamoDbClient.Interface,
         private readonly decompressor: OsRecordDecompressor.Interface,
-        private readonly config: MigrationConfig.Interface
+        private readonly config: MigrationConfig.Interface,
+        private readonly logger: Logger.Interface
     ) {}
 
     public async listShards(): Promise<OsShard[]> {
@@ -36,12 +37,16 @@ class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
             }
             const decompressed = await this.decompressor.decompress(raw);
             if (!decompressed) {
-                return raw;
+                this.logger.debug(
+                    "Nothing to decompress for record with PK %s and SK %s",
+                    raw.PK,
+                    raw.SK
+                );
             }
             yield {
                 ...raw,
                 index,
-                data: decompressed
+                data: decompressed || {}
             };
         }
     }
@@ -49,7 +54,7 @@ class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
 
 export const OsScanner = Scanner.createImplementation({
     implementation: OsScannerImpl,
-    dependencies: [SourceDynamoDbClient, OsRecordDecompressor, MigrationConfig]
+    dependencies: [SourceDynamoDbClient, OsRecordDecompressor, MigrationConfig, Logger]
 });
 
 export namespace OsScanner {
