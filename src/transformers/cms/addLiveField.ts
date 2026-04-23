@@ -4,7 +4,7 @@ import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
 const NO_PUBLISHED_REVISION = -1;
 
-const INTERNAL_MODELS = new Set(["fmFile", "wbyFmFile"]);
+const INTERNAL_MODELS = new Set(["fmfile", "wbyfmfile"]);
 
 export const addLiveField = createTransformer<DdbCoreTransformContext.Interface<BaseRecord>>(
     "addLiveField",
@@ -15,7 +15,7 @@ export const addLiveField = createTransformer<DdbCoreTransformContext.Interface<
         }
 
         const modelId = data.modelId as string | undefined;
-        if (!modelId || INTERNAL_MODELS.has(modelId)) {
+        if (!modelId || INTERNAL_MODELS.has(modelId.toLowerCase())) {
             return;
         }
 

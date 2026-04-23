@@ -6,7 +6,7 @@ import { getCorrectStorageId } from "./fieldUtils.ts";
 import { visitFields } from "./fieldVisitor.ts";
 import type { ModelField } from "~/transformers/cms/modelTypes.js";
 
-const INTERNAL_MODELS = new Set(["fmFile", "wbyFmFile"]);
+const INTERNAL_MODELS = new Set(["fmfile", "wbyfmfile"]);
 
 export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "fixBrokenStorageKeys",
@@ -19,7 +19,7 @@ export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Inter
         const modelId = data.modelId as string | undefined;
         if (!modelId) {
             return;
-        } else if (INTERNAL_MODELS.has(modelId)) {
+        } else if (INTERNAL_MODELS.has(modelId.toLowerCase())) {
             // These models are not affected by the broken keys issue, so we can skip them entirely.
             return;
         }
