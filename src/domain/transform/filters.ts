@@ -24,6 +24,16 @@ export const isCmsModel = byType("cms.model");
 
 export const isCmsEntry = byTypePrefix("cms.entry");
 
+export const byModelId =
+    (input: string) =>
+    (record: BaseRecord): boolean => {
+        // @ts-expect-error
+        const modelId = record.modelId || record.data!.modelId;
+        return modelId === input;
+    };
+
+export const isAcoSearchRecordPage = byModelId("acoSearchRecord-pbpage");
+
 export const isBackgroundTask = (item: BaseRecord) => {
     if (item.modelId === "webinyTask" || item.modelId === "webinyTaskLog") {
         return true;

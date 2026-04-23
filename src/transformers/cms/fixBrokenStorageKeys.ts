@@ -4,42 +4,44 @@ import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { getCorrectStorageId } from "./fieldUtils.ts";
 import { visitFields } from "./fieldVisitor.ts";
+import type { ModelField } from "~/transformers/cms/modelTypes.js";
+
+const INTERNAL_MODELS = new Set(["fmFile", "wbyFmFile"]);
 
 export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "fixBrokenStorageKeys",
     async ctx => {
-        if (!ctx.modelProvider) {
-            throw new Error("ModelProvider is required for fixBrokenStorageKeys");
-        }
-
         const data = ctx.record.data as Record<string, unknown> | undefined;
         if (!data) {
             return;
         }
 
-        const modelId = data.modelId;
+        const modelId = data.modelId as string | undefined;
         if (!modelId) {
+            return;
+        } else if (INTERNAL_MODELS.has(modelId)) {
+            // These models are not affected by the broken keys issue, so we can skip them entirely.
             return;
         }
 
-        const model = ctx.modelProvider.getModel(modelId as string);
+        const model = ctx.modelProvider.getModel(modelId);
         if (!model) {
             ctx.logger.warn(`[fixBrokenStorageKeys] Model ${modelId} not found, skipping`);
             return;
         }
 
-        const values = data.values;
+        const values = data.values as Record<string, unknown> | undefined;
         if (!values || typeof values !== "object") {
             return;
         }
 
-        await fixAllKeys(values as Record<string, unknown>, model.fields, ctx.logger);
+        await fixAllKeys(values, model.fields, ctx.logger);
     }
 );
 
 async function fixAllKeys(
     values: Record<string, unknown>,
-    modelFields: any[],
+    modelFields: ModelField[],
     logger: Logger.Interface
 ): Promise<void> {
     await visitFields(values, modelFields, (values, field, value) => {

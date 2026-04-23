@@ -3,17 +3,28 @@ import { OsScanner } from "~/features/OsScanner/index.ts";
 import { OsProcessor } from "~/features/OsProcessor/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
+    isAcoSearchRecordPage,
     isCmsEntry,
     isFmFile,
     isOsBackgroundTask,
     isOsMailerSettings
 } from "~/domain/transform/filters.ts";
 import { addLiveField, osCmsEntryTransformers } from "~/transformers/index.ts";
+import { DdbProcessor, DdbScanner } from "@/src/index.js";
 
 export default createTransferPreset({
     name: "v5-to-v6-os",
     description: "Webiny v5 to v6 migration — OpenSearch DDB table.",
     configure({ runner, pipelineBuilderFactory: factory }): void {
+        const acoSearchRecordsPage = factory
+            .create({
+                name: "AcoSearchRecordsPage",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isAcoSearchRecordPage))
+            .blackhole()
+            .build();
         // ========================================================================
         // Background Tasks — blackhole
         // IMPORTANT: Must be registered BEFORE CmsEntries — background tasks are
@@ -78,6 +89,7 @@ export default createTransferPreset({
         // Register — order is load-bearing (first-match-wins)
         // ========================================================================
         runner
+            .register(acoSearchRecordsPage)
             .register(backgroundTasks)
             .register(mailerSettings)
             .register(fileManagerFiles)
