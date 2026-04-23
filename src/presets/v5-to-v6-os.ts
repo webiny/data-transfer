@@ -8,7 +8,7 @@ import {
     isOsBackgroundTask,
     isOsMailerSettings
 } from "~/domain/transform/filters.ts";
-import { osCmsEntryTransformers } from "~/transformers/index.ts";
+import { addLiveField, osCmsEntryTransformers } from "~/transformers/index.ts";
 
 export default createTransferPreset({
     name: "v5-to-v6-os",
@@ -71,6 +71,7 @@ export default createTransferPreset({
             })
             .filter(createFilter(isCmsEntry))
             .use(osCmsEntryTransformers)
+            .use(addLiveField)
             .build();
 
         // ========================================================================

@@ -22,8 +22,7 @@ export const cmsEntryTransformers = [
     transformRichText,
     updateModelIds,
     removeFolderRevision,
-    removeAttributes,
-    addLiveField
+    removeAttributes
 ];
 
 // OS-mode transformer stack. `data` is already populated (decompressed by
@@ -38,6 +37,5 @@ export const osCmsEntryTransformers = [
     updateModelIds,
     updateOsIndex,
     removeFolderRevision,
-    removeAttributes,
-    addLiveField
+    removeAttributes
 ];

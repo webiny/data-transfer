@@ -16,6 +16,7 @@ import {
 } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
+    addLiveField,
     cmsEntryTransformers,
     groupsToRoles,
     migrateFileManagerSettings,
@@ -213,6 +214,7 @@ export default createTransferPreset({
             })
             .filter(createFilter(isCmsEntry))
             .use(cmsEntryTransformers)
+            .use(addLiveField)
             .build();
 
         // ========================================================================
