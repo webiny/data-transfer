@@ -20,10 +20,11 @@ export const addLiveField = createTransformer<DdbCoreTransformContext.Interface<
         }
 
         const publishedVersion = await resolvePublishedVersion(ctx);
-        if (publishedVersion === null) {
+
+        if (!publishedVersion) {
+            data.live = null;
             return;
         }
-
         data.live = {
             version: publishedVersion
         };
@@ -54,6 +55,7 @@ async function resolvePublishedVersion(
         return version;
     }
 
+    ctx.logger.debug(`Querying for published revision of ${ctx.original.PK}...`);
     const published = await ctx.querySourceRecord(ctx.original.PK, "P");
     const version = published ? (published.version as number) : NO_PUBLISHED_REVISION;
 
