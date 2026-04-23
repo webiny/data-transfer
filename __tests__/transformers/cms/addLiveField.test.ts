@@ -29,7 +29,7 @@ describe("addLiveField", () => {
 
         await addLiveField(ctx);
 
-        expect((ctx.record.data as Record<string, unknown>).live).toBeUndefined();
+        expect((ctx.record.data as Record<string, unknown>).live).toBeNull();
     });
 
     it("on a published L record uses data.version directly without querying", async () => {
@@ -109,7 +109,7 @@ describe("addLiveField", () => {
 
         await addLiveField(ctxRev);
 
-        expect((ctxRev.record.data as Record<string, unknown>).live).toBeUndefined();
+        expect((ctxRev.record.data as Record<string, unknown>).live).toBeNull();
         expect(ctxRev.querySourceRecord).not.toHaveBeenCalled();
     });
 });

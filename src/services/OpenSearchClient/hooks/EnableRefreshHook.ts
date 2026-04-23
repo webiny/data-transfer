@@ -88,8 +88,15 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
 
     private async cleanup(): Promise<void> {
         const transferDir = join(process.cwd(), ".transfer", this.transferContext.runId);
-        // Best effort cleanup. dirTool.remove is force+recursive internally.
-        this.dirTool.remove(transferDir);
+        const files = this.dirTool.readDir(transferDir);
+        if (!files) {
+            return;
+        }
+        // Remove only the index state files — preserve logs/ so users can
+        // inspect them after the run.
+        for (const file of files.filter(f => f.endsWith("-indexes.json"))) {
+            this.fileTool.remove(join(transferDir, file));
+        }
     }
 }
 
