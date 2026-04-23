@@ -25,7 +25,7 @@ import type { OsMigrationConfiguration } from "./validation.ts";
  *       endpoint: "https://search-xxx.us-east-1.es.amazonaws.com",
  *       tableName: "webiny-v6-es-table",
  *       service: "opensearch",
- *       indexPrefix: ""
+ *       indexPrefix: ""    // optional; prefix applied to every target OS index name
  *     }
  *   },
  *   pipeline: { preset: "v5-to-v6-os", segments: 4 }
