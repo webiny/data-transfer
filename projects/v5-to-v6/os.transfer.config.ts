@@ -21,7 +21,8 @@ export default createOsTransfer({
         opensearch: {
             endpoint: fromEnv("TARGET_OS_ENDPOINT"),
             tableName: fromEnv("TARGET_OS_TABLE"),
-            service: "opensearch"
+            service: "opensearch",
+            indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
         }
     },
     pipeline: {
