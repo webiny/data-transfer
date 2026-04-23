@@ -21,7 +21,8 @@ const osTargetAccountConfigSchema = z.object({
         // Zod's `.url()` doesn't trim — wrap through trimmedString first.
         endpoint: trimmedString().url(),
         tableName: trimmedString(),
-        service: z.enum(["opensearch", "opensearch-serverless"])
+        service: z.enum(["opensearch", "opensearch-serverless"]),
+        indexPrefix: z.string().trim()
     })
 });
 

@@ -123,7 +123,8 @@ describe("createOsTransfer", () => {
                 opensearch: {
                     endpoint: "https://search-xxx.es.amazonaws.com",
                     tableName: "tgt-es",
-                    service: "opensearch"
+                    service: "opensearch",
+                    indexPrefix: ""
                 }
             },
             pipeline: { preset: "v5-to-v6-os" }
@@ -149,7 +150,8 @@ describe("createOsTransfer", () => {
                 opensearch: {
                     endpoint: "https://xxx.aoss.amazonaws.com",
                     tableName: "tgt-es",
-                    service: "opensearch-serverless"
+                    service: "opensearch-serverless",
+                    indexPrefix: ""
                 }
             },
             pipeline: { preset: "v5-to-v6-os" }
@@ -223,6 +225,75 @@ describe("createOsTransfer", () => {
                 pipeline: { preset: "v5-to-v6-os" }
             })
         ).toThrow();
+    });
+
+    it("throws when target indexPrefix is missing", () => {
+        expect(() =>
+            createOsTransfer({
+                source: {
+                    region: "us-east-1",
+                    credentials: creds,
+                    dynamodb: { tableName: "src-primary" },
+                    opensearch: { tableName: "src-es" }
+                },
+                target: {
+                    region: "eu-central-1",
+                    credentials: creds,
+                    opensearch: {
+                        endpoint: "https://search-xxx.es.amazonaws.com",
+                        tableName: "tgt-es",
+                        service: "opensearch"
+                    } as any
+                },
+                pipeline: { preset: "v5-to-v6-os" }
+            })
+        ).toThrow();
+    });
+
+    it("accepts empty string indexPrefix (no prefix)", () => {
+        const config = createOsTransfer({
+            source: {
+                region: "us-east-1",
+                credentials: creds,
+                dynamodb: { tableName: "src-primary" },
+                opensearch: { tableName: "src-es" }
+            },
+            target: {
+                region: "eu-central-1",
+                credentials: creds,
+                opensearch: {
+                    endpoint: "https://search-xxx.es.amazonaws.com",
+                    tableName: "tgt-es",
+                    service: "opensearch",
+                    indexPrefix: ""
+                }
+            },
+            pipeline: { preset: "v5-to-v6-os" }
+        });
+        expect(config.target.opensearch.indexPrefix).toBe("");
+    });
+
+    it("accepts and trims a non-empty indexPrefix", () => {
+        const config = createOsTransfer({
+            source: {
+                region: "us-east-1",
+                credentials: creds,
+                dynamodb: { tableName: "src-primary" },
+                opensearch: { tableName: "src-es" }
+            },
+            target: {
+                region: "eu-central-1",
+                credentials: creds,
+                opensearch: {
+                    endpoint: "https://search-xxx.es.amazonaws.com",
+                    tableName: "tgt-es",
+                    service: "opensearch",
+                    indexPrefix: "  my-prefix-  "
+                }
+            },
+            pipeline: { preset: "v5-to-v6-os" }
+        });
+        expect(config.target.opensearch.indexPrefix).toBe("my-prefix-");
     });
 });
 
@@ -360,7 +431,8 @@ describe("createOsTransfer — source/target collision guard", () => {
         opensearch: {
             endpoint: "https://search-xxx.example.com",
             tableName: "tgt-es-table",
-            service: "opensearch" as const
+            service: "opensearch" as const,
+            indexPrefix: ""
         }
     };
 

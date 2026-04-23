@@ -41,6 +41,7 @@ export interface OsContainerOptions {
     modelsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: OsContainerPipelineOverride;
+    indexPrefix?: string;
 }
 
 export function createOsContainer(options: OsContainerOptions = {}): Container {
@@ -62,7 +63,8 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
             opensearch: {
                 endpoint: "https://es.example.com",
                 tableName: "target-os",
-                service: "opensearch" as const
+                service: "opensearch" as const,
+                indexPrefix: options.indexPrefix ?? ""
             }
         },
         pipeline: {
