@@ -78,6 +78,17 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
             modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
             cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
             compressionHandler: {} as CompressionHandler.Interface,
+            logger: {
+                debug: () => {},
+                info: () => {},
+                warn: () => {},
+                error: () => {},
+                fatal: () => {},
+                done: () => {},
+                child: function () {
+                    return this;
+                }
+            } as unknown as Logger.Interface,
             replace(newRecord: TRecord): void {
                 ctx.record = newRecord;
             },

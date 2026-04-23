@@ -5,6 +5,7 @@ import type {
     OsTransformContext
 } from "~/features/TransformContext/abstractions/contextAliases.ts";
 import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { OsScanner } from "~/features/OsScanner/index.ts";
 
@@ -24,9 +25,23 @@ function makeCache(): Cache.Interface {
     };
 }
 
+function makeLogger(): Logger.Interface {
+    const noop = () => {};
+    return {
+        debug: noop,
+        info: noop,
+        warn: noop,
+        error: noop,
+        fatal: noop,
+        done: noop,
+        child: () => makeLogger()
+    };
+}
+
 export interface FakeContextOverrides {
     modelProvider?: unknown;
     cache?: Cache.Interface;
+    logger?: Logger.Interface;
 }
 
 /**
@@ -40,7 +55,10 @@ export interface FakeContextOverrides {
 export function makeFakeBaseContext<T extends Record<string, unknown>>(
     record: T,
     overrides: FakeContextOverrides = {}
-): BaseTransformContext.Interface<BaseRecord> & { cache: Cache.Interface } {
+): BaseTransformContext.Interface<BaseRecord> & {
+    cache: Cache.Interface;
+    logger: Logger.Interface;
+} {
     const commands = new Commands();
     const ctx = {
         record: structuredClone(record),
@@ -48,6 +66,7 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
         commands,
         modelProvider: overrides.modelProvider as BaseTransformContext.Interface["modelProvider"],
         cache: overrides.cache ?? makeCache(),
+        logger: overrides.logger ?? makeLogger(),
         replace(newRecord: unknown): void {
             (ctx as { record: unknown }).record = newRecord;
         },
@@ -57,6 +76,7 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
     };
     return ctx as unknown as BaseTransformContext.Interface<BaseRecord> & {
         cache: Cache.Interface;
+        logger: Logger.Interface;
     };
 }
 
@@ -69,7 +89,10 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
 export function makeFakeDdbCoreContext<T extends Record<string, unknown>>(
     record: T,
     overrides: FakeContextOverrides = {}
-): DdbCoreTransformContext.Interface<BaseRecord> & { cache: Cache.Interface } {
+): DdbCoreTransformContext.Interface<BaseRecord> & {
+    cache: Cache.Interface;
+    logger: Logger.Interface;
+} {
     const base = makeFakeBaseContext(record, overrides);
     const ctx = Object.assign(base, {
         putRecord(_record: Record<string, unknown>): void {},
@@ -88,6 +111,7 @@ export function makeFakeDdbCoreContext<T extends Record<string, unknown>>(
     });
     return ctx as unknown as DdbCoreTransformContext.Interface<BaseRecord> & {
         cache: Cache.Interface;
+        logger: Logger.Interface;
     };
 }
 
