@@ -1,4 +1,5 @@
 import {
+    addLiveField,
     fixBrokenStorageKeys,
     fixCmePk,
     removeFolderRevision,
@@ -21,7 +22,8 @@ export const cmsEntryTransformers = [
     transformRichText,
     updateModelIds,
     removeFolderRevision,
-    removeAttributes
+    removeAttributes,
+    addLiveField
 ];
 
 // OS-mode transformer stack. `data` is already populated (decompressed by
@@ -36,5 +38,6 @@ export const osCmsEntryTransformers = [
     updateModelIds,
     updateOsIndex,
     removeFolderRevision,
-    removeAttributes
+    removeAttributes,
+    addLiveField
 ];

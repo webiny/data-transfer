@@ -17,7 +17,9 @@ export const addLiveField = createTransformer<DdbCoreTransformContext.Interface<
             return;
         }
 
-        data.live = { version: publishedVersion };
+        data.live = {
+            version: publishedVersion
+        };
     }
 );
 
@@ -26,8 +28,8 @@ async function resolvePublishedVersion(
 ): Promise<number | null> {
     const cacheKey = `live:${ctx.original.PK}`;
 
-    if (ctx.cache.has(cacheKey)) {
-        const cached = ctx.cache.get<number>(cacheKey)!;
+    const cached = ctx.cache.get<number>(cacheKey);
+    if (cached) {
         return cached === NO_PUBLISHED_REVISION ? null : cached;
     }
 
@@ -38,7 +40,7 @@ async function resolvePublishedVersion(
         return version;
     }
 
-    const published = await ctx.querySourceRecord(ctx.original.PK as string, "P");
+    const published = await ctx.querySourceRecord(ctx.original.PK, "P");
     const version = published ? (published.version as number) : NO_PUBLISHED_REVISION;
 
     ctx.cache.set(cacheKey, version);
