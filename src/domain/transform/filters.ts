@@ -27,16 +27,18 @@ export const isCmsEntry = byTypePrefix("cms.entry");
 export const byModelId =
     (input: string) =>
     (record: BaseRecord): boolean => {
-        // @ts-expect-error
-        const modelId = record.modelId || record.data!.modelId;
+        const modelId =
+            (record.modelId as string | undefined) ||
+            ((record.data as Record<string, unknown> | undefined)?.modelId as string | undefined);
         return modelId === input;
     };
 
 export const byIncludesModelId =
     (input: string) =>
     (record: BaseRecord): boolean => {
-        // @ts-expect-error
-        const modelId = record.modelId || record.data!.modelId;
+        const modelId =
+            (record.modelId as string | undefined) ||
+            ((record.data as Record<string, unknown> | undefined)?.modelId as string | undefined);
         if (typeof modelId !== "string") {
             return false;
         }

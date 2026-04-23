@@ -9,7 +9,7 @@ import {
     CreateTableCommand as CreateDdbTableCommand
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument, BatchWriteCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { S3Client, GetObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, CopyObjectCommand } from "@webiny/aws-sdk/client-s3";
 import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
