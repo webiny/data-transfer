@@ -44,9 +44,7 @@ class DroppedRecordLogImpl implements DroppedRecordLogAbstraction.Interface {
         const type = (r.TYPE ?? "?") as string;
         const tag =
             disposition instanceof RecordDisposition.Blackholed ? "BLACKHOLED" : "UNMATCHED";
-        const body = modelId
-            ? `[${modelId}] ${pk} : ${sk} : ${type}`
-            : `[${type}] ${pk} : ${sk}`;
+        const body = modelId ? `[${modelId}] ${pk} : ${sk} : ${type}` : `[${type}] ${pk} : ${sk}`;
         return `[${tag}] ${body}`;
     }
 }

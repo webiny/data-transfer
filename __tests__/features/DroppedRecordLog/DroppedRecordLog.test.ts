@@ -89,10 +89,7 @@ describe("DroppedRecordLog", () => {
     it("writes multiple lines in add order", async () => {
         const log = createContainer().resolve(DroppedRecordLog);
         log.add({ PK: "PK1", SK: "SK1", TYPE: "t1" }, new RecordDisposition.Unmatched());
-        log.add(
-            { PK: "PK2", SK: "SK2", TYPE: "t2" },
-            new RecordDisposition.Blackholed("pipe")
-        );
+        log.add({ PK: "PK2", SK: "SK2", TYPE: "t2" }, new RecordDisposition.Blackholed("pipe"));
         log.flush(1);
 
         const content = await readFile(
@@ -109,10 +106,7 @@ describe("DroppedRecordLog", () => {
         log.flush(0);
 
         await expect(
-            readFile(
-                join(workDir, ".transfer", "test-run-id", "segment-0-dropped.log"),
-                "utf-8"
-            )
+            readFile(join(workDir, ".transfer", "test-run-id", "segment-0-dropped.log"), "utf-8")
         ).rejects.toThrow(/ENOENT/);
     });
 
@@ -123,10 +117,7 @@ describe("DroppedRecordLog", () => {
         log.flush(1);
 
         await expect(
-            readFile(
-                join(workDir, ".transfer", "test-run-id", "segment-1-dropped.log"),
-                "utf-8"
-            )
+            readFile(join(workDir, ".transfer", "test-run-id", "segment-1-dropped.log"), "utf-8")
         ).rejects.toThrow(/ENOENT/);
     });
 });
