@@ -27,7 +27,7 @@ This document is read by AI agents when working on this codebase. It describes t
 
 ## 2. Public API surface
 
-Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers or pipelines are re-exported. The package ships one built-in preset today (`v5-to-v6-ddb`). `PresetLoader` scans `src/presets/` (resolved relative to its own `import.meta.url`, works from source or `node_modules/`) — convention is **filename = preset name**, drop a `.ts` file in there and it ships, no other code change. The authoring reference lives in `templates/presets/example.ts` (scaffolded into user projects by `init`).
+Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers or pipelines are re-exported. The package ships two built-in presets: **`v5-to-v6-ddb`** (full DDB + S3 migration) and **`v5-to-v6-os`** (OpenSearch companion table migration). `PresetLoader` scans `src/presets/` (resolved relative to its own `import.meta.url`, works from source or `node_modules/`) — convention is **filename = preset name**, drop a `.ts` file in there and it ships, no other code change. The authoring reference lives in `templates/presets/example.ts` (scaffolded into user projects by `init`).
 
 - **Config builders:** `createDdbTransfer`, `createOsTransfer`
 - **Env helpers:** `loadEnv` (dotenv loader), `fromEnv(name, default?)` (required string env, throws on missing), `numberFromEnv(name, default?)` (typed numeric, throws on parse failure). Empty string counts as missing in both — `.env`'s `KEY=` is almost always a forgotten value, not an intentional empty override.
@@ -82,7 +82,10 @@ src/
 │   └── transform/            # Primitives still used by runner + features
 │       ├── types/            # BaseRecord (PK/SK/_et/_ct/_md/TYPE + index sig)
 │       ├── commands/         # Commands (bag w/ claim tracking + unclaimedKeys) + PutRecord + S3Copy
-│       ├── filters.ts        # byType, isCmsEntry, isFmFile, ... (filter predicates)
+│       ├── filters.ts        # byType, isCmsEntry, isFmFile, isOsBackgroundTask,
+│       │                     # isOsMailerSettings, ... (filter predicates).
+│       │                     # OS-specific filters check data.modelId (inside decompressed
+│       │                     # payload) rather than the top-level modelId used by DDB filters.
 │       └── Preset.ts         # MigrationPreset: { name, description, configure({runner, pipelineBuilderFactory, container}) }
 ├── tools/                    # Generic utilities
 │   ├── Cache/ GzipCompression/ DirectoryTool/ FileTool/ Logger/
@@ -104,18 +107,31 @@ src/
 │   ├── PipelineBuilderFactory/      # Stateless DI singleton; .create({name, scanner, processors}) → PipelineBuilder
 │   ├── TransformContext/     # Single BaseTransformContextFactory; factory returns { ctx, commands }
 │   ├── MigrationConfig/      # createDdbTransfer / createOsTransfer (Zod-validated)
-│   ├── ModelProvider/ TenantLocales/ PresetLoader/ WorkerSpawner/
+│   ├── ModelProvider/        # Loads CMS model definitions from DB + modelsDir JSON files.
+│   │                         # Accepted JSON shapes (auto-detected, mixed OK in same dir):
+│   │                         #   single model:  { modelId, fields: [...], ... }
+│   │                         #   array of models: [{ modelId, fields, ... }, ...]
+│   │                         #   Webiny export:  { groups: [...], models: [...] }
+│   │                         # Disambiguation guard: object must have fields[] to be treated
+│   │                         # as a model definition (CMS entry records also have modelId but
+│   │                         # no fields[] — this prevents entries from being loaded as models).
+│   ├── TenantLocales/ PresetLoader/ WorkerSpawner/
 │   └── TransferLifecycle/    # BeforeTransferHook / AfterTransferHook composites
-├── transformers/             # 19 built-in transformers (user-land examples)
+├── transformers/             # 21 built-in transformers (user-land examples)
 │   ├── createTransformer.ts createDdbTransformer.ts createOsTransformer.ts
 │   ├── global/ cms/ file-manager/ folders/ mailer/ security/
 │   │   └── (cms/ also has fieldUtils.ts, fieldVisitor.ts, lexicalRenderer.ts,
-│   │       modelTypes.ts — helpers local to CMS transformers)
+│   │       modelTypes.ts, addLiveField.ts, updateOsIndex.ts — helpers local to
+│   │       CMS transformers; addLiveField uses ctx.cache + querySourceRecord;
+│   │       updateOsIndex uses configurations.es from @webiny/api-headless-cms-ddb-es)
+│   ├── cmsEntryTransformers.ts  # Shared stacks: cmsEntryTransformers (DDB) +
+│   │                            # osCmsEntryTransformers (OS — no wrapInData, adds updateOsIndex)
 │   └── index.ts              # Top-level barrel
 ├── presets/                  # Built-in presets — auto-discovered by PresetLoader
-│                             # (filename = preset name). Empty today aside from
-│                             # example.ts (canonical reference; excluded from
-│                             # discovery by exact filename match).
+│                             # (filename = preset name).
+│                             # v5-to-v6-ddb: full DDB + S3 Webiny migration.
+│                             # v5-to-v6-os: OpenSearch companion table migration.
+│                             # example.ts excluded from discovery by exact filename match.
 └── utils/
     ├── load-env.ts           # loadEnv(import.meta.url) — dotenv loader, public API
     └── fromEnv.ts            # fromEnv + numberFromEnv — public API, used in user configs
@@ -279,6 +295,11 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 - **`preset.configure` takes an object arg bag** — signature is `configure({ runner, pipelineBuilderFactory, container }): void | Promise<void>`. Async returns allowed. `container` exposed so users can resolve custom services they registered in `setup.ts`. Object shape is forward-compat — add fields without breaking existing presets.
 - **User-side custom DI via `setup.ts`** — CLI looks for `setup.ts` sibling of the config file; loads `await fn({ container })` BEFORE `preset.configure({...})`. Use the `initDataTransfer` typed helper. Optional — pure-config users skip it. Canonical location for registering user-authored processors, transformers, or overriding defaults. Don't reintroduce auto-registration-via-inspection magic.
 - **Built-in presets are auto-discovered** — `PresetLoader` scans `src/presets/` (relative to its own `import.meta.url`, so dev / installed layouts both work). Convention: **filename === preset name**. `example.ts` is excluded by exact filename match. Adding a built-in is a file drop, not a code change. Don't reintroduce a hardcoded `BUILT_IN_PRESETS` map or a "register your preset here" registry.
+- **`v5-to-v6-os` pipeline ordering is load-bearing** — `BackgroundTasks` and `MailerSettings` are blackholed and registered BEFORE `CmsEntries` because both are CMS entries in the OS table (same `TYPE` prefix `cms.entry.*`) and would otherwise be claimed by the catch-all. `FileManagerFiles` must also precede `CmsEntries` for the same reason. Mailer settings are blackholed because v6 stores them in the KV store — the DDB preset handles that migration; the OS record has no v6 target.
+- **DDB parallel scan guarantees same-PK records land in the same segment** — the scan divides by hash range, so all revisions of the same CMS entry (L, P, REV#...) always go to the same worker. This means an in-process `ctx.cache` keyed by PK is sufficient for per-entry deduplication — no cross-worker shared cache is needed. Queries for sibling records within the same entry are deduplicated by the cache; the first record encountered does the query, subsequent siblings hit the cache.
+- **`addLiveField` cache+sentinel pattern** — the transformer uses `ctx.cache` keyed by `ctx.original.PK`. Sentinel value `-1` means "queried, no published revision found" — avoids re-querying. P records skip the query entirely (they ARE the published revision) and populate the cache for siblings. The sentinel must be non-zero (versions start at 1) and truthy (so `if (cached)` correctly identifies a prior miss). Don't use `null` or `undefined` as the sentinel — those are cache misses.
+- **`isModel` guard requires `fields[]`** — `ModelProvider.extractModels` distinguishes model definitions from CMS entry records by requiring `Array.isArray(value.fields)`. Both have a `modelId` field, but only model definitions carry `fields[]`. Without this guard, CMS entry records (which have `modelId` as a reference field) would be loaded as models and crash downstream transformers (`visitFields` would receive `undefined` instead of an array).
+- **OS transformer context typing** — `createOsTransformer` binds `OsTransformContext.Interface<OsScanner.Record>`. `OsScanner.Record` has non-optional `index: string` and `data: Record<string, unknown>` — both are always present (OsScanner skips records where decompression fails). Don't add absent-data guards in OS transformers; trust the scanner contract. Test stubs for OS transformers use `makeFakeOsContext` from `__tests__/transformers/fakeContext.ts`.
 - **Processors persist their own state via `afterShard`** (2026-04-21) — the previous `getShardState()` + handler-side collection/serialization was the worker handler pulling state OUT of processors, then writing it. `afterShard({ segment, totalSegments })` inverts the direction: the processor owns its state AND its persistence end-to-end, injecting `TransferContext` / `FileTool` / `DirectoryTool` directly. The `processOsSegment` handler is now identical to `processSegment` (bootstrap → configure → run). Runner fires `afterShard` sequentially in array order after `execute()`, before `warnUnclaimedKeys`. Optional hook — DdbProcessor / S3Processor skip it (no cross-boundary state). When `touchedIndexes` is empty, OsProcessor writes nothing — `EnableRefreshHook` tolerates a missing `.transfer/<runId>/` dir. Don't reintroduce a handler-side state-collection loop.
 
 ---
@@ -288,6 +309,10 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 ### Branch `bruno/feat/di-features` (unmerged)
 
 The slice-merging-processors refactor landed here in April 2026 plus follow-ups (afterShard hook, ctx-by-reference runner fix, unified process-segment command, dynalite-backed integration suite, v5-to-v6-ddb golden-file preset test). Tests green, ts-check clean, oxfmt clean. Ready to merge but NOT yet on `main`.
+
+### Branch `bruno/feat/os-transfer` (unmerged)
+
+Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`OsScanner` + `OsProcessor`, 4 pipelines with correct first-match-wins ordering), `addLiveField` transformer (DDB source query + `ctx.cache` + `-1` sentinel), `updateOsIndex` transformer (uses `configurations.es` from `@webiny/api-headless-cms-ddb-es`), `osCmsEntryTransformers` stack, OS-specific filters (`isOsBackgroundTask`, `isOsMailerSettings`), `ModelProvider` multi-format JSON support (Webiny export / array / single model), `fakeContext` fixes (record now cloned on create; default real `Map`-backed cache; `makeFakeOsContext`). Tests green, ts-check clean, oxfmt clean. NOT yet on `main`.
 
 ### Broader open work
 
@@ -308,10 +333,11 @@ The slice-merging-processors refactor landed here in April 2026 plus follow-ups 
 - **Dry-run the preset against real AWS (dev use, from this repo):**
   ```bash
   cp projects/v5-to-v6/.env.example projects/v5-to-v6/.env
-  # edit .env — set region, DDB/S3 tables, optional profiles
-  yarn dev --config=./projects/v5-to-v6/ddb.transfer.config.ts
+  # edit .env — set region, DDB/S3/OS tables, optional profiles
+  yarn dev --config=./projects/v5-to-v6/ddb.transfer.config.ts  # DDB + S3 first
+  yarn dev --config=./projects/v5-to-v6/os.transfer.config.ts   # OS table second
   ```
-  `projects/v5-to-v6/ddb.transfer.config.ts` drives the built-in `v5-to-v6-ddb` preset via env vars (`fromEnv`/`numberFromEnv`) with credentials from `~/.aws/credentials` via `fromAwsProfile`. `.env*` is gitignored — credentials never commit.
+  Run DDB transfer first, then OS — they don't share state. `projects/v5-to-v6/ddb.transfer.config.ts` drives `v5-to-v6-ddb`; `os.transfer.config.ts` drives `v5-to-v6-os`. Both use env vars from `.env` (shared file). `.env*` is gitignored. The OS config additionally needs `SOURCE_OS_TABLE`, `TARGET_OS_TABLE`, `TARGET_OS_ENDPOINT`, and optionally `MODELS_DIR` (defaults to `./models`).
 - **Re-drive specific shards after a partial failure:** `yarn dev --config=... --segments=1,3` runs only the listed indices. The workers still receive `--total=<pipeline.segments>`, so each shard scans the same slice as in a full run. Parsing + validation live in `src/commands/run/segmentsFilter.ts`.
 
 ---

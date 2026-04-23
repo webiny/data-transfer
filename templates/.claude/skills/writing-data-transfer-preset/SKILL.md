@@ -210,6 +210,53 @@ Hooks run:
 
 Use them for index preparation, schema migration, cache warm-up, etc.
 
+## Built-in transformer stacks
+
+Two pre-built transformer arrays are exported from `@webiny/data-transfer` (via `src/transformers/index.ts`):
+
+- **`cmsEntryTransformers`** — DDB-mode stack: `wrapInData, addGsiTenant, removeLocale, fixCmePk, fixBrokenStorageKeys, transformRichText, updateModelIds, removeFolderRevision, removeAttributes, addLiveField`. Use with `.use(cmsEntryTransformers)` in DDB pipelines.
+- **`osCmsEntryTransformers`** — OS-mode stack: same as above but **omits `wrapInData`** (OS records already have `data` populated) and adds `updateOsIndex` after `updateModelIds`. Use in OS pipelines.
+
+## Built-in presets
+
+Two built-in presets ship with the package (pass by name in `config.pipeline.preset`):
+
+- **`v5-to-v6-ddb`** — full Webiny v5→v6 DDB + S3 migration. Pipelines: ContentModelGroups, BackgroundTasks (blackhole), FileManagerSettings, FileManagerFiles (blackhole for S3), MailerSettings, SecurityGroups, SecurityTeams, CmsModels, FolderPermissions, CmsEntries.
+- **`v5-to-v6-os`** — OpenSearch companion table migration. Pipelines: BackgroundTasks (blackhole), MailerSettings (blackhole), FileManagerFiles, CmsEntries. Uses `OsScanner` + `OsProcessor`. Registration order is load-bearing: blackhole pipelines BEFORE CmsEntries because background tasks and mailer settings ARE CMS entries in the OS table.
+
+## `addLiveField` — querying siblings via cache
+
+`addLiveField` is a built-in transformer that sets `data.live = { version: N }` on CMS entries that have a published revision. Pattern for any transformer that needs to look up a sibling record once per entry:
+
+```ts
+import { createTransformer } from "@webiny/data-transfer";
+import type { DdbCoreTransformContext } from "@webiny/data-transfer";
+import type { BaseRecord } from "@webiny/data-transfer";
+
+const SENTINEL = -1; // "queried, none found" — must be non-zero and truthy
+
+export const myTransformer = createTransformer<DdbCoreTransformContext.Interface<BaseRecord>>(
+    "myTransformer",
+    async ctx => {
+        const cacheKey = `my-key:${ctx.original.PK}`;
+        const cached = ctx.cache.get<number>(cacheKey);
+        if (cached) {
+            // cache hit: SENTINEL means not found; any other value is the result
+            if (cached !== SENTINEL) { /* use cached */ }
+            return;
+        }
+        // cache miss — query source once, cache the result
+        const sibling = await ctx.querySourceRecord(ctx.original.PK as string, "P");
+        ctx.cache.set(cacheKey, sibling ? (sibling.version as number) : SENTINEL);
+    }
+);
+```
+
+**Key points:**
+- Use `ctx.original.PK` (not `ctx.record.PK`) as the cache key — `original` is stable even after transformers mutate the record.
+- DDB parallel scan guarantees all records with the same PK (same entry) go to the same segment/worker, so `ctx.cache` (an in-process singleton) is sufficient for deduplication across siblings.
+- Use a non-zero truthy sentinel for "queried but not found" so a plain `if (cached)` correctly identifies cache hits (version 0 is impossible in Webiny — versions start at 1).
+
 ## Anti-patterns
 
 - **Double write** — calling `ctx.putRecord(ctx.record)` manually AND relying on `DdbProcessor.onEnd` auto-put. The auto-put already emits it.

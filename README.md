@@ -58,7 +58,7 @@ export default createDdbTransfer({
   pipeline: {
     preset: "./presets/my-preset.ts", // path relative to this config file
     segments: numberFromEnv("SEGMENTS", 4),
-    modelsDir: "./path/to/models"
+    modelsDir: "./path/to/models" // optional — required by OS preset and rich-text/field transformers
   }
 });
 ```
@@ -143,6 +143,17 @@ export default createOsTransfer({
 
 **Index management** (OS mode): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected — safe for shared clusters.
 
+**`modelsDir`** (required by the OS preset and rich-text/field-key transformers): point at a directory of exported CMS model definitions. Three JSON shapes are accepted and can be mixed in the same directory:
+
+```
+models/
+  single-model.json         # { "modelId": "...", "fields": [...], ... }
+  array-of-models.json      # [{ "modelId": "...", "fields": [...] }, ...]
+  webiny-export.json        # { "groups": [...], "models": [...] }   ← Webiny admin export
+```
+
+The Webiny admin panel's **Export** feature produces the `{groups, models}` shape. JSON files are picked up from `modelsDir` automatically — no registration step. JSON models override DB-loaded models when both exist (user-provided definition takes precedence).
+
 ## Tuning (optional)
 
 Operational knobs live under `config.tuning`:
@@ -203,7 +214,7 @@ Both DDB and OS transform contexts expose:
 | `ctx.record`               | Mutable record. Transformers change this.                                                             |
 | `ctx.original`             | Frozen, deep-cloned pre-transform snapshot. Use for gate-checks or audit comparisons. Always present. |
 | `ctx.commands`             | The command buffer. Transformers rarely need this directly — use the helpers below.                   |
-| `ctx.modelProvider`        | Loaded CMS models.                                                                                    |
+| `ctx.modelProvider`        | Loaded CMS models (from DB + `config.pipeline.modelsDir` JSON files, if set).                        |
 | `ctx.cache`                | Shared `Map`-like cache, persists across records within a run.                                        |
 | `ctx.replace(newRecord)`   | Replace `ctx.record` wholesale.                                                                       |
 | `ctx.putRecord(record)`    | Emit an extra PutRecord to the target (beyond the auto-put at chain end).                             |
@@ -292,7 +303,12 @@ export default createTransferPreset({
 
 ## Built-in presets
 
-The package ships one: `v5-to-v6-ddb` — the full Webiny v5 → v6 DDB migration. Pass it by name via `config.pipeline.preset: "v5-to-v6-ddb"`. The `PresetLoader` scans `node_modules/@webiny/data-transfer/src/presets/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. Custom presets are still path-resolved from your config file (`"./presets/my-preset.ts"`).
+The package ships two:
+
+- **`v5-to-v6-ddb`** — full Webiny v5 → v6 migration of the primary DynamoDB table (CMS entries, file manager, security, mailer, folder permissions, etc.).
+- **`v5-to-v6-os`** — migration of the OpenSearch companion DynamoDB table (CMS entries only, gzip round-trip). Run this **after** `v5-to-v6-ddb` — the two don't share state.
+
+Pass by name via `config.pipeline.preset: "v5-to-v6-ddb"` (or `"v5-to-v6-os"`). The `PresetLoader` scans `node_modules/@webiny/data-transfer/src/presets/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. Custom presets are still path-resolved from your config file (`"./presets/my-preset.ts"`).
 
 ## Pipeline runtime semantics
 
