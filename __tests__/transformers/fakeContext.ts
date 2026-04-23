@@ -1,7 +1,11 @@
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
+import type {
+    DdbCoreTransformContext,
+    OsTransformContext
+} from "~/features/TransformContext/abstractions/contextAliases.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { OsScanner } from "~/features/OsScanner/index.ts";
 
 export interface FakeContextOverrides {
     modelProvider?: unknown;
@@ -64,4 +68,32 @@ export function makeFakeDdbCoreContext<T extends Record<string, unknown>>(
         }
     });
     return ctx as unknown as DdbCoreTransformContext.Interface<BaseRecord>;
+}
+
+/**
+ * Build a minimal OS-mode ctx stub (Base + OsProcessor slice) for unit
+ * tests of transformers typed for OsTransformContext. Slice methods default
+ * to no-ops — override per test by assigning onto the returned object.
+ */
+export function makeFakeOsContext<T extends OsScanner.Record>(
+    record: T,
+    overrides: FakeContextOverrides = {}
+): OsTransformContext.Interface<OsScanner.Record> {
+    const base = makeFakeBaseContext(record, overrides);
+    const ctx = Object.assign(base, {
+        putRecord(_record: Record<string, unknown>): void {},
+        async querySourceRecord(
+            _pk: string,
+            _sk?: string
+        ): Promise<Record<string, unknown> | null> {
+            return null;
+        },
+        async queryTargetRecord(
+            _pk: string,
+            _sk?: string
+        ): Promise<Record<string, unknown> | null> {
+            return null;
+        }
+    });
+    return ctx as unknown as OsTransformContext.Interface<OsScanner.Record>;
 }
