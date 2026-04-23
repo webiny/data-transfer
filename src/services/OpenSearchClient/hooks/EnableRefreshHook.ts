@@ -40,7 +40,7 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
         }
 
         // Clean up transfer directory
-        await this.cleanup();
+        // await this.cleanup();
 
         this.logger.info(`Indexing restored on ${touchedIndexes.size} indexes.`);
     }

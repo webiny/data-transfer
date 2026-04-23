@@ -36,7 +36,7 @@ class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
             }
             const decompressed = await this.decompressor.decompress(raw);
             if (!decompressed) {
-                continue;
+                return raw;
             }
             yield {
                 ...raw,
