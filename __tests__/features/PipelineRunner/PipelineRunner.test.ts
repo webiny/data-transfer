@@ -385,8 +385,8 @@ describe("PipelineRunner.run()", () => {
         runner.register(buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
         await runner.run();
 
-        const dropMessages = logger.entries.filter(
-            e => e.message.startsWith("record dropped: no matching pipeline in merge group")
+        const dropMessages = logger.entries.filter(e =>
+            e.message.startsWith("record dropped: no matching pipeline in merge group")
         );
         expect(dropMessages.length).toBeGreaterThan(0);
     });

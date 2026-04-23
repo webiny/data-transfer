@@ -107,7 +107,9 @@ describe("filters", () => {
     describe("isOsBackgroundTask", () => {
         it("matches webinyTask and webinyTaskLog by data.modelId", () => {
             expect(isOsBackgroundTask(makeRecord({ data: { modelId: "webinyTask" } }))).toBe(true);
-            expect(isOsBackgroundTask(makeRecord({ data: { modelId: "webinyTaskLog" } }))).toBe(true);
+            expect(isOsBackgroundTask(makeRecord({ data: { modelId: "webinyTaskLog" } }))).toBe(
+                true
+            );
         });
 
         it("rejects other modelIds", () => {
@@ -121,9 +123,9 @@ describe("filters", () => {
 
     describe("isOsMailerSettings", () => {
         it("matches mailerSettings by data.modelId", () => {
-            expect(
-                isOsMailerSettings(makeRecord({ data: { modelId: "mailerSettings" } }))
-            ).toBe(true);
+            expect(isOsMailerSettings(makeRecord({ data: { modelId: "mailerSettings" } }))).toBe(
+                true
+            );
         });
 
         it("rejects other modelIds", () => {

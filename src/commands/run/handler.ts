@@ -27,7 +27,12 @@ export async function handler(
         container = bootstrap({
             config,
             runId,
-            logLevel: (logLevel ?? config.debug?.logLevel) as "debug" | "info" | "warn" | "error" | undefined
+            logLevel: (logLevel ?? config.debug?.logLevel) as
+                | "debug"
+                | "info"
+                | "warn"
+                | "error"
+                | undefined
         });
         logger = container.resolve(Logger);
     } catch (error) {
@@ -49,7 +54,14 @@ export async function handler(
 
     container.registerInstance(TransferContext, { runId });
 
-    logConfig({ logger, config, runId, segments, segmentsToRun, logLevel: logLevel ?? config.debug?.logLevel });
+    logConfig({
+        logger,
+        config,
+        runId,
+        segments,
+        segmentsToRun,
+        logLevel: logLevel ?? config.debug?.logLevel
+    });
 
     const startTime = Date.now();
 
@@ -111,7 +123,14 @@ interface LogConfigParams {
     logLevel?: string;
 }
 
-function logConfig({ logger, config, runId, segments, segmentsToRun, logLevel }: LogConfigParams): void {
+function logConfig({
+    logger,
+    config,
+    runId,
+    segments,
+    segmentsToRun,
+    logLevel
+}: LogConfigParams): void {
     logger.info("Starting transfer with configuration:");
     logger.info(`  Run ID: ${runId}`);
     logger.info(`  Storage: ${config.storage}`);
