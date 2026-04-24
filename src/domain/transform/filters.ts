@@ -1,5 +1,20 @@
 import type { BaseRecord } from "~/domain/transform/types/records.js";
 
+const getPropertyFromRecord = <T>(
+    record: Record<string, unknown>,
+    propertyName: string
+): T | undefined => {
+    const value = record[propertyName] as T | undefined;
+    if (value !== undefined) {
+        return value;
+    }
+    const data = record.data as Record<string, unknown> | undefined;
+    if (data) {
+        return data[propertyName] as T | undefined;
+    }
+    return undefined;
+};
+
 export const byType =
     (type: string) =>
     (record: Record<string, unknown>): boolean => {
@@ -33,15 +48,20 @@ export const isCmsEntry = (input: BaseRecord) => {
 };
 
 export const byIncludesModelId =
-    (input: string) =>
+    (target: string) =>
     (record: BaseRecord): boolean => {
-        const modelId =
-            (record.modelId as string | undefined) ||
-            ((record.data as Record<string, unknown> | undefined)?.modelId as string | undefined);
-        if (typeof modelId !== "string") {
-            return false;
+        const input = target.toLowerCase();
+        /**
+         * This is for OS records. Also, we are positive that no record has index, except the OS Record one
+         */
+        const index = getPropertyFromRecord<string>(record, "index");
+        if (typeof index === "string" && index.toLowerCase().includes(input)) {
+            return true;
         }
-        return modelId.includes(input);
+
+        const modelId = getPropertyFromRecord<string>(record, "modelId");
+
+        return typeof modelId === "string" && modelId.toLowerCase().includes(input);
     };
 
 export const isAcoSearchRecord = byIncludesModelId("acoSearchRecord");

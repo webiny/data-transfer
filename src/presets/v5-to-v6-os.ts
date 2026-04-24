@@ -16,9 +16,9 @@ export default createTransferPreset({
     name: "v5-to-v6-os",
     description: "Webiny v5 to v6 migration — OpenSearch DDB table.",
     configure({ runner, pipelineBuilderFactory: factory }): void {
-        const acoSearchRecordsPage = factory
+        const acoSearchRecords = factory
             .create({
-                name: "AcoSearchRecordsPage",
+                name: "AcoSearchRecords",
                 scanner: DdbScanner,
                 processors: [DdbProcessor]
             })
@@ -89,7 +89,7 @@ export default createTransferPreset({
         // Register — order is load-bearing (first-match-wins)
         // ========================================================================
         runner
-            .register(acoSearchRecordsPage)
+            .register(acoSearchRecords)
             .register(backgroundTasks)
             .register(mailerSettings)
             .register(fileManagerFiles)
