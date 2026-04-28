@@ -27,6 +27,7 @@ logs.txt
 !.yarn/versions
 .pnp.*
 projects/**/.env
+projects/v5-to-v6/models/
 
 
 CLAUDE.*.md

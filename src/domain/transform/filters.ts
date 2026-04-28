@@ -41,10 +41,8 @@ export const isCmsEntry = (input: BaseRecord) => {
     const isType = byTypePrefix("cms.entry")(input);
     if (isType) {
         return true;
-    } else if (!input.TYPE) {
-        return input.PK.includes("#CMS#CME#");
     }
-    return false;
+    return input.PK.includes("#CMS#CME#");
 };
 
 export const byIncludesModelId =
