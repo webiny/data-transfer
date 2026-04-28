@@ -100,6 +100,7 @@ class OsProcessorImpl implements Processor.Interface<
             await this.ensureIndex(indexName);
         }
 
+        this.logger.info(`Writing ${gzippedPuts.length} records to database`);
         await this.ddbExecutor.execute(gzippedPuts);
     }
 
