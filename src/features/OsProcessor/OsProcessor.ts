@@ -157,7 +157,10 @@ class OsProcessorImpl implements Processor.Interface<
 
     private async disableRefreshOnExisting(indexName: string): Promise<void> {
         const current = await this.osClient.getIndexSettings(indexName);
-        const originalRefresh = current.refreshInterval ?? DEFAULT_REFRESH_INTERVAL;
+        const originalRefresh =
+            current.refreshInterval && current.refreshInterval !== DISABLED_REFRESH_INTERVAL
+                ? current.refreshInterval
+                : DEFAULT_REFRESH_INTERVAL;
 
         try {
             await this.osClient.putIndexSettings(indexName, {
