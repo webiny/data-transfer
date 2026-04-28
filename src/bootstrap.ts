@@ -31,6 +31,7 @@ import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
 import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.ts";
 import { DroppedRecordLogFeature } from "~/features/DroppedRecordLog/index.ts";
+import { TransferredRecordLogFeature } from "~/features/TransferredRecordLog/index.ts";
 import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 
 export interface BootstrapOptions {
@@ -117,6 +118,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     PipelineBuilderFactoryFeature.register(container);
     SnapshotWriterFeature.register(container);
     DroppedRecordLogFeature.register(container);
+    TransferredRecordLogFeature.register(container);
     PipelineRunnerFeature.register(container);
 
     if (config.storage === "ddb") {

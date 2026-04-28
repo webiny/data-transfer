@@ -7,6 +7,8 @@ import { TransferContext } from "~/features/TransferLifecycle/abstractions/Trans
 import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
 import { DroppedRecordLog } from "~/features/DroppedRecordLog/abstractions/DroppedRecordLog.ts";
 import { MockDroppedRecordLog } from "../DroppedRecordLog/MockDroppedRecordLog.ts";
+import { TransferredRecordLog } from "~/features/TransferredRecordLog/abstractions/TransferredRecordLog.ts";
+import { MockTransferredRecordLog } from "../TransferredRecordLog/MockTransferredRecordLog.ts";
 import {
     PipelineBuilderFactory,
     PipelineBuilderFactoryFeature
@@ -117,6 +119,7 @@ function makeContainer(options: { runId?: string } = {}): {
         async close(): Promise<void> {}
     });
     container.registerInstance(DroppedRecordLog, new MockDroppedRecordLog());
+    container.registerInstance(TransferredRecordLog, new MockTransferredRecordLog());
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();

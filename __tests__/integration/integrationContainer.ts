@@ -32,6 +32,7 @@ import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
 import { S3ProcessorFeature } from "../../src/features/S3Processor/index.ts";
 import { DroppedRecordLogFeature } from "../../src/features/DroppedRecordLog/index.ts";
+import { TransferredRecordLogFeature } from "../../src/features/TransferredRecordLog/index.ts";
 import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
 import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 
@@ -140,6 +141,7 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
     PipelineBuilderFactoryFeature.register(container);
     SnapshotWriterFeature.register(container);
     DroppedRecordLogFeature.register(container);
+    TransferredRecordLogFeature.register(container);
     PipelineRunnerFeature.register(container);
     DdbExecutorFeature.register(container);
     S3ProcessorFeature.register(container);

@@ -11,6 +11,7 @@ import { BaseTransformContextFactory } from "~/features/TransformContext/abstrac
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { SnapshotWriter } from "~/features/SnapshotWriter/abstractions/SnapshotWriter.ts";
 import { DroppedRecordLog } from "~/features/DroppedRecordLog/index.ts";
+import { TransferredRecordLog } from "~/features/TransferredRecordLog/index.ts";
 import { RecordDisposition } from "~/domain/pipeline/index.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
@@ -44,7 +45,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         private readonly transferContext: TransferContext.Interface,
         private readonly baseContextFactory: BaseTransformContextFactory.Interface,
         private readonly snapshotWriter: SnapshotWriter.Interface,
-        private readonly droppedLog: DroppedRecordLog.Interface
+        private readonly droppedLog: DroppedRecordLog.Interface,
+        private readonly transferredLog: TransferredRecordLog.Interface
     ) {}
 
     public register(...pipelines: AnyPipeline[]): this {
@@ -266,10 +268,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                         pipeline.name,
                         (perPipelineCounts.get(pipeline.name) ?? 0) + 1
                     );
-                    await this.snapshotWriter.write(
-                        `transferred/segment-${shardCtx.segment}.jsonl`,
-                        record
-                    );
+                    this.transferredLog.add(record, pipeline.name);
                 }
                 // First-match-wins: subsequent pipelines in this group are
                 // skipped for this record. Pipeline registration order
@@ -312,6 +311,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
         this.warnUnclaimedKeys(shardCommands);
         this.droppedLog.flush(shardCtx.segment);
+        this.transferredLog.flush(shardCtx.segment);
     }
 
     private async runRecord(
@@ -466,6 +466,7 @@ export const PipelineRunner = PipelineRunnerAbstraction.createImplementation({
         TransferContext,
         BaseTransformContextFactory,
         SnapshotWriter,
-        DroppedRecordLog
+        DroppedRecordLog,
+        TransferredRecordLog
     ]
 });
