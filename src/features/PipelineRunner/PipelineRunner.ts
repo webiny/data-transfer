@@ -248,10 +248,6 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 }
                 matched = true;
                 const processors = pipelineProcessors.get(pipeline)!;
-                perPipelineCounts.set(
-                    pipeline.name,
-                    (perPipelineCounts.get(pipeline.name) ?? 0) + 1
-                );
                 await this.snapshotWriter.write(
                     `${pipeline.name}/segment-${shardCtx.segment}.source.jsonl`,
                     record
@@ -265,6 +261,15 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 );
                 if (result instanceof RecordDisposition.Blackholed) {
                     this.droppedLog.add(record, result);
+                } else {
+                    perPipelineCounts.set(
+                        pipeline.name,
+                        (perPipelineCounts.get(pipeline.name) ?? 0) + 1
+                    );
+                    await this.snapshotWriter.write(
+                        `transferred/segment-${shardCtx.segment}.jsonl`,
+                        record
+                    );
                 }
                 // First-match-wins: subsequent pipelines in this group are
                 // skipped for this record. Pipeline registration order
