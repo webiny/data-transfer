@@ -29,6 +29,9 @@ class AuditLogProcessorImpl implements Processor.Interface<
                 if (!tableName) {
                     return;
                 }
+                if (record.TYPE !== "auditLog.log") {
+                    return;
+                }
                 base.addCommand(AuditLogPutRecord.create({ table: tableName, record }));
             }
         };
