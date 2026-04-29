@@ -71,7 +71,8 @@ function buildContainer(options: BuildOptions = {}): {
             region: "eu-central-1",
             credentials: { accessKeyId: "x", secretAccessKey: "y" },
             dynamodb: { tableName: "t-t" },
-            s3: { bucket: "t-b" }
+            s3: { bucket: "t-b" },
+            auditLog: null
         },
         pipeline: { preset: "noop" },
         debug: options.snapshot !== undefined ? { snapshot: options.snapshot } : undefined

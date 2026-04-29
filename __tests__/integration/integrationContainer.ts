@@ -85,7 +85,8 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
             region: "eu-central-1",
             credentials: FAKE_CREDS,
             dynamodb: { tableName: options.targetTable },
-            s3: { bucket: "target-bucket" }
+            s3: { bucket: "target-bucket" },
+            auditLog: null
         },
         pipeline: {
             preset: "integration",

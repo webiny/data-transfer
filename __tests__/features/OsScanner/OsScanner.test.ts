@@ -173,7 +173,8 @@ describe("OsScanner", () => {
                 region: "us-east-1",
                 credentials: { accessKeyId: "x", secretAccessKey: "y" },
                 dynamodb: { tableName: "ddb-target" },
-                s3: { bucket: "ddb-target-bucket" }
+                s3: { bucket: "ddb-target-bucket" },
+                auditLog: null
             },
             pipeline: { preset: "v5-to-v6" }
         };

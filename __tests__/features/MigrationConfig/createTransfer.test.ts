@@ -17,7 +17,8 @@ describe("createDdbTransfer", () => {
                 region: "eu-central-1",
                 credentials: creds,
                 dynamodb: { tableName: "tgt" },
-                s3: { bucket: "tgt-bucket" }
+                s3: { bucket: "tgt-bucket" },
+                auditLog: null
             },
             pipeline: { preset: "v5-to-v6" }
         });
@@ -40,7 +41,8 @@ describe("createDdbTransfer", () => {
                 region: "us-east-1",
                 credentials: creds,
                 dynamodb: { tableName: "tgt" },
-                s3: { bucket: "tgt-bucket" }
+                s3: { bucket: "tgt-bucket" },
+                auditLog: null
             },
             pipeline: { preset: "v5-to-v6", segments: 8, modelsDir: "./models" }
         });
@@ -61,7 +63,8 @@ describe("createDdbTransfer", () => {
                     region: "us-east-1",
                     credentials: creds,
                     dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "b" }
+                    s3: { bucket: "b" },
+                    auditLog: null
                 },
                 pipeline: { preset: "v5-to-v6" }
             })
@@ -80,7 +83,8 @@ describe("createDdbTransfer", () => {
                     region: "us-east-1",
                     credentials: creds,
                     dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "b" }
+                    s3: { bucket: "b" },
+                    auditLog: null
                 },
                 pipeline: { preset: "v5-to-v6" }
             })
@@ -100,7 +104,8 @@ describe("createDdbTransfer", () => {
                     region: "us-east-1",
                     credentials: creds,
                     dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "b" }
+                    s3: { bucket: "b" },
+                    auditLog: null
                 },
                 pipeline: {} as any
             })
@@ -311,7 +316,8 @@ describe("createDdbTransfer — source/target collision guard", () => {
         region: "eu-central-1",
         credentials: creds,
         dynamodb: { tableName: "tgt-table" },
-        s3: { bucket: "tgt-bucket" }
+        s3: { bucket: "tgt-bucket" },
+        auditLog: null
     };
 
     it("rejects same S3 bucket for source and target", () => {
@@ -366,7 +372,8 @@ describe("createDdbTransfer — string trimming", () => {
                 region: " eu-central-1 ",
                 credentials: creds,
                 dynamodb: { tableName: "tgt-table " },
-                s3: { bucket: " tgt-bucket " }
+                s3: { bucket: " tgt-bucket " },
+                auditLog: null
             },
             pipeline: { preset: "  v5-to-v6-ddb " }
         });
@@ -393,7 +400,8 @@ describe("createDdbTransfer — string trimming", () => {
                     region: "eu-central-1",
                     credentials: creds,
                     dynamodb: { tableName: "tgt-table" },
-                    s3: { bucket: "tgt-bucket" }
+                    s3: { bucket: "tgt-bucket" },
+                    auditLog: null
                 },
                 pipeline: { preset: "v5-to-v6-ddb" }
             })
@@ -413,7 +421,8 @@ describe("createDdbTransfer — string trimming", () => {
                     region: "us-east-1",
                     credentials: creds,
                     dynamodb: { tableName: "same-table " },
-                    s3: { bucket: "tgt-bucket" }
+                    s3: { bucket: "tgt-bucket" },
+                    auditLog: null
                 },
                 pipeline: { preset: "v5-to-v6-ddb" }
             })

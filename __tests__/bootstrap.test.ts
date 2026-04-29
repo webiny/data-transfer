@@ -29,7 +29,8 @@ describe("bootstrap", () => {
             region: "eu-central-1",
             credentials: { accessKeyId: "test", secretAccessKey: "test" },
             dynamodb: { tableName: "target-table" },
-            s3: { bucket: "target-bucket" }
+            s3: { bucket: "target-bucket" },
+            auditLog: null
         },
         pipeline: { preset: "v5-to-v6" }
     };

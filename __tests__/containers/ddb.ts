@@ -71,7 +71,8 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
             region: "eu-central-1",
             credentials: DEFAULT_CREDS,
             dynamodb: { tableName: "target-table" },
-            s3: { bucket: "target-bucket" }
+            s3: { bucket: "target-bucket" },
+            auditLog: null
         },
         pipeline: {
             preset: "v5-to-v6",
