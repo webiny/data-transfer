@@ -101,3 +101,7 @@ export const isOsMailerSettings = (record: Record<string, unknown>): boolean => 
     const data = record.data as Record<string, unknown> | undefined;
     return (data?.modelId as string | undefined) === "mailerSettings";
 };
+
+export const isAuditLogEntry = (record: BaseRecord): boolean => {
+    return record.modelId === "acoSearchRecord-auditlogs" && record.SK === "L";
+};

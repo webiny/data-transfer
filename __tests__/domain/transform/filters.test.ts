@@ -9,7 +9,8 @@ import {
     isBuiltInSecurityRole,
     isSecurityTeam,
     isOsBackgroundTask,
-    isOsMailerSettings
+    isOsMailerSettings,
+    isAuditLogEntry
 } from "../../../src/domain/transform/filters.ts";
 import type { BaseRecord } from "../../../src/domain/transform/types/records.ts";
 
@@ -134,6 +135,45 @@ describe("filters", () => {
 
         it("returns false when data is absent", () => {
             expect(isOsMailerSettings(makeRecord({}))).toBe(false);
+        });
+    });
+
+    describe("isAuditLogEntry", () => {
+        it("matches audit log records with SK === 'L'", () => {
+            expect(
+                isAuditLogEntry(
+                    makeRecord({
+                        SK: "L",
+                        modelId: "acoSearchRecord-auditlogs"
+                    })
+                )
+            ).toBe(true);
+        });
+
+        it("rejects when SK is not L", () => {
+            expect(
+                isAuditLogEntry(
+                    makeRecord({
+                        SK: "REV#0001",
+                        modelId: "acoSearchRecord-auditlogs"
+                    })
+                )
+            ).toBe(false);
+        });
+
+        it("rejects when modelId is a different acoSearchRecord variant", () => {
+            expect(
+                isAuditLogEntry(
+                    makeRecord({
+                        SK: "L",
+                        modelId: "acoSearchRecord-page"
+                    })
+                )
+            ).toBe(false);
+        });
+
+        it("rejects when modelId is missing", () => {
+            expect(isAuditLogEntry(makeRecord({ SK: "L" }))).toBe(false);
         });
     });
 });
