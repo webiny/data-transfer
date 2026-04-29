@@ -103,5 +103,9 @@ export const isOsMailerSettings = (record: Record<string, unknown>): boolean => 
 };
 
 export const isAuditLogEntry = (record: BaseRecord): boolean => {
-    return record.modelId === "acoSearchRecord-auditlogs" && record.SK === "L";
+    const modelId = getPropertyFromRecord<string>(record, "modelId");
+    if (!modelId) {
+        return false;
+    }
+    return modelId.toLowerCase() === "acosearchrecord-auditlogs" && record.SK === "L";
 };
