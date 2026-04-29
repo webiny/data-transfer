@@ -66,20 +66,18 @@ export default createTransferPreset({
         // records are consumed but not written.
         // ========================================================================
         const config = container.resolve(MigrationConfig);
-        const auditLogBuilder = factory
+        const auditLogs = factory
             .create({
                 name: "AuditLogs",
                 scanner: DdbScanner,
                 processors: [AuditLogProcessor]
             })
             .filter(createFilter(isAuditLogEntry))
-            .use(auditLogTransformers);
-
-        if (config.storage !== "ddb" || !config.target.auditLog?.dynamodb?.tableName) {
-            auditLogBuilder.blackhole();
-        }
-
-        const auditLogs = auditLogBuilder.build();
+            .use(auditLogTransformers)
+            .blackhole(
+                () => config.storage !== "ddb" || !config.target.auditLog?.dynamodb?.tableName
+            )
+            .build();
 
         const acoSearchRecordsPage = factory
             .create({
