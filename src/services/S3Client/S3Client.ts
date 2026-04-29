@@ -73,6 +73,13 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                     try {
                         await this.copy(op);
                     } catch (error) {
+                        if (this.isNoSuchKeyError(error)) {
+                            this.logger.warn(
+                                `S3 copy skipped — source key not found: ` +
+                                    `${op.sourceBucket}/${op.sourceKey}`
+                            );
+                            return;
+                        }
                         this.logger.error(
                             `S3 copy failed after ${this.maxRetries + 1} attempts — ` +
                                 `${op.sourceBucket}/${op.sourceKey} → ` +
@@ -83,6 +90,14 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                 })
             );
         }
+    }
+
+    private isNoSuchKeyError(error: unknown): boolean {
+        if (!error || typeof error !== "object") {
+            return false;
+        }
+        const err = error as { name?: string; Code?: string };
+        return err.name === "NoSuchKey" || err.Code === "NoSuchKey";
     }
 
     private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
