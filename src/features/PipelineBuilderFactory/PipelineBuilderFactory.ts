@@ -1,12 +1,13 @@
 import { type Abstraction, type Constructor, Metadata } from "@webiny/di";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
-import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { PipelineBuilderFactory as PipelineBuilderFactoryAbstraction } from "./abstractions/PipelineBuilderFactory.ts";
 
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
 type ProcessorInstance = Processor.Interface<any, any>;
+type ScannerInstance = Scanner.Interface<unknown, unknown>;
 
 // Widened input shape used internally — the public generic signature lives on
 // the abstraction and is enforced at call sites via IPipelineBuilderFactory.
@@ -17,12 +18,18 @@ interface CreateImplInput {
 }
 
 class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.Interface {
-    public constructor(private readonly processors: Processor.Interface[]) {}
+    public constructor(
+        private readonly processors: Processor.Interface[],
+        private readonly scanners: ScannerInstance[]
+    ) {}
 
     public create(input: CreateImplInput): PipelineBuilder<any, any, any> {
-        const scannerAbstraction = new Metadata(input.scanner).getAbstraction() as Abstraction<
-            Scanner.Interface<unknown, unknown>
-        >;
+        const scannerInstance = this.scanners.find(s => s.constructor === input.scanner);
+        if (!scannerInstance) {
+            throw new Error(
+                `PipelineBuilderFactory: scanner "${input.scanner.name}" is not registered in the container`
+            );
+        }
 
         const processorInstances = input.processors.map(implClass => {
             const instance = this.processors.find(p => p.constructor === implClass);
@@ -36,7 +43,7 @@ class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.In
 
         return new PipelineBuilder({
             name: input.name,
-            scanner: scannerAbstraction,
+            scanner: scannerInstance,
             processors: processorInstances
         });
     }
@@ -44,5 +51,8 @@ class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.In
 
 export const PipelineBuilderFactory = PipelineBuilderFactoryAbstraction.createImplementation({
     implementation: PipelineBuilderFactoryImpl,
-    dependencies: [[Processor, { multiple: true }]]
+    dependencies: [
+        [Processor, { multiple: true }],
+        [Scanner, { multiple: true }]
+    ]
 });

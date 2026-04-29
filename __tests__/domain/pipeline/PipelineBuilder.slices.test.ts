@@ -99,12 +99,14 @@ describe("PipelineBuilderFactory.create() slice inference", () => {
         // placeholder: when processor impls tighten TBase to Base<BaseRecord>
         // / Base<OsRecord>, the commented assertion should start failing (and
         // the @ts-expect-error re-enabled).
+        // At runtime the factory throws because OsScanner is not in the DDB container.
         const factory = createDdbContainer().resolve(PipelineBuilderFactory);
-        const _builder = factory.create({
-            name: "os-scanner-ddb-processor",
-            scanner: OsScanner,
-            processors: [DdbProcessor]
-        });
-        void _builder;
+        expect(() =>
+            factory.create({
+                name: "os-scanner-ddb-processor",
+                scanner: OsScanner,
+                processors: [DdbProcessor]
+            })
+        ).toThrow();
     });
 });

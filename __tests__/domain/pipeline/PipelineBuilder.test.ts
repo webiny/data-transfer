@@ -1,18 +1,17 @@
 import { describe, it, expect } from "vitest";
-import type { Abstraction } from "@webiny/di";
 import {
     PipelineBuilder,
     Pipeline,
-    Scanner,
     Processor,
     Hook,
     createFilter,
     type Transformer
 } from "~/domain/pipeline/index.ts";
-import { FakeProcessor, tagTransformer } from "./fixtures/fakes.ts";
+import { FakeProcessor, FakeScanner, tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
 
 const fakeProcessor = new FakeProcessor();
+const fakeScanner = new FakeScanner();
 
 function makeBuilder(
     name: string,
@@ -20,7 +19,7 @@ function makeBuilder(
 ): PipelineBuilder<FakeRecord, FakeContext, FakeShard> {
     return new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
         name,
-        scanner: Scanner as Abstraction<Scanner.Interface<FakeRecord, FakeShard>>,
+        scanner: fakeScanner,
         processors
     });
 }
@@ -33,7 +32,7 @@ describe("PipelineBuilder — construction and build()", () => {
 
         expect(pipeline).toBeInstanceOf(Pipeline);
         expect(pipeline.name).toBe("basic");
-        expect(pipeline.scannerToken).toBe(Scanner);
+        expect(pipeline.scanner).toBe(fakeScanner);
         expect(pipeline.processors).toEqual([fakeProcessor]);
         expect(pipeline.beforeHookTokens).toEqual([]);
         expect(pipeline.afterHookTokens).toEqual([]);

@@ -13,7 +13,7 @@ export interface PipelineBuilderConfig<
     TShard
 > {
     name: string;
-    scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
+    scanner: Scanner.Interface<TRecord, TShard>;
     processors: readonly Processor.Interface<BaseTransformContext.Interface<TRecord>, any>[];
 }
 
@@ -24,7 +24,7 @@ export class PipelineBuilder<
     TShard = unknown
 > {
     private readonly name: string;
-    private readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
+    private readonly scanner: Scanner.Interface<TRecord, TShard>;
     private readonly processors: readonly Processor.Interface<
         BaseTransformContext.Interface<TRecord>,
         any

@@ -622,8 +622,8 @@ describe("PipelineRunner — hook lifecycle", () => {
         expect(captured).toHaveLength(2);
         expect(captured[0]?.runId).toBe("custom-run-42");
         expect(captured[1]?.runId).toBe("custom-run-42");
-        expect(captured[0]?.mergeGroupId).toBe("Core-Scanner");
-        expect(captured[1]?.mergeGroupId).toBe("Core-Scanner");
+        expect(captured[0]?.mergeGroupId).toBe("FakeScanner");
+        expect(captured[1]?.mergeGroupId).toBe("FakeScanner");
     });
 });
 

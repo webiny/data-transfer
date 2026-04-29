@@ -32,8 +32,7 @@ interface RunShardParams {
 }
 
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
-    private mergeGroups: Map<Abstraction<Scanner.Interface<unknown, unknown>>, AnyPipeline[]> =
-        new Map();
+    private mergeGroups: Map<Scanner.Interface<unknown, unknown>, AnyPipeline[]> = new Map();
 
     private readonly registeredNames: Set<string> = new Set();
 
@@ -59,9 +58,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
             this.registeredNames.add(pipeline.name);
 
-            const groupKey = pipeline.scannerToken as Abstraction<
-                Scanner.Interface<unknown, unknown>
-            >;
+            const groupKey = pipeline.scanner as Scanner.Interface<unknown, unknown>;
             const group = this.mergeGroups.get(groupKey);
             if (group) {
                 group.push(pipeline);
@@ -101,8 +98,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
     private async runInternal(opts?: RunOptions): Promise<void> {
         if (!opts) {
-            for (const [scannerToken, pipelines] of this.mergeGroups) {
-                await this.runMergeGroup(scannerToken, pipelines);
+            for (const [scanner, pipelines] of this.mergeGroups) {
+                await this.runMergeGroup(scanner, pipelines);
             }
             return;
         }
@@ -118,27 +115,26 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         if (entry.done) {
             return;
         }
-        const [scannerToken, pipelines] = entry.value;
-        await this.runSingleShard(scannerToken, pipelines, opts);
+        const [scanner, pipelines] = entry.value;
+        await this.runSingleShard(scanner, pipelines, opts);
     }
 
     private async runSingleShard(
-        scannerToken: Abstraction<Scanner.Interface<unknown, unknown>>,
+        scanner: Scanner.Interface<unknown, unknown>,
         pipelines: AnyPipeline[],
         opts: RunOptions
     ): Promise<void> {
-        const scanner = this.container.resolve(scannerToken);
         const shards = await scanner.listShards();
 
         if (shards.length !== opts.totalSegments) {
             throw new Error(
-                `PipelineRunner.run({segment, totalSegments}): scanner "${scannerToken.toString()}" ` +
+                `PipelineRunner.run({segment, totalSegments}): scanner "${this.deriveMergeGroupId(scanner)}" ` +
                     `reported ${shards.length} shards but caller declared ` +
                     `totalSegments=${opts.totalSegments}.`
             );
         }
 
-        const mergeGroupId = this.deriveMergeGroupId(scannerToken);
+        const mergeGroupId = this.deriveMergeGroupId(scanner);
         const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
         const shard = shards[opts.segment];
         await this.runShard({
@@ -152,11 +148,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     }
 
     private async runMergeGroup(
-        scannerToken: Abstraction<Scanner.Interface<unknown, unknown>>,
+        scanner: Scanner.Interface<unknown, unknown>,
         pipelines: AnyPipeline[]
     ): Promise<void> {
-        const scanner = this.container.resolve(scannerToken);
-        const mergeGroupId = this.deriveMergeGroupId(scannerToken);
+        const mergeGroupId = this.deriveMergeGroupId(scanner);
         const hookParams: Hook.RunParams = {
             runId: this.transferContext.runId,
             mergeGroupId
@@ -448,8 +443,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         }
     }
 
-    private deriveMergeGroupId(scannerToken: Abstraction<unknown>): string {
-        return scannerToken.toString().replace(/\//g, "-");
+    private deriveMergeGroupId(scanner: Scanner.Interface<unknown, unknown>): string {
+        return scanner.constructor.name.replace("Impl", "");
     }
 }
 
