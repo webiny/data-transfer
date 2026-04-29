@@ -2,10 +2,13 @@ import { createTransferPreset } from "~/utils/createTransferPreset.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 import { S3Processor } from "~/features/S3Processor/index.ts";
+import { AuditLogProcessor } from "~/features/AuditLogProcessor/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
     byType,
     isAcoSearchRecord,
+    isAuditLogEntry,
     isBackgroundTask,
     isBuiltInSecurityRole,
     isCmsEntry,
@@ -18,6 +21,7 @@ import {
 import {
     addGsiTenant,
     addLiveField,
+    auditLogTransformers,
     cmsEntryTransformers,
     createMetadata,
     extractImageMetadata,
@@ -53,7 +57,33 @@ import {
 export default createTransferPreset({
     name: "v5-to-v6-ddb",
     description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
-    configure({ runner, pipelineBuilderFactory: factory }): void {
+    configure({ runner, pipelineBuilderFactory: factory, container }): void {
+        // ========================================================================
+        // Audit Logs
+        // IMPORTANT: Must be registered before AcoSearchRecordsPage and CmsEntries
+        // because audit log records share the acoSearchRecord modelId prefix.
+        // When auditLog.dynamodb.tableName is null the pipeline is blackholed —
+        // records are consumed but not written.
+        // ========================================================================
+        const config = container.resolve(MigrationConfig);
+        const auditLogBuilder = factory
+            .create({
+                name: "AuditLogs",
+                scanner: DdbScanner,
+                processors: [AuditLogProcessor]
+            })
+            .filter(createFilter(isAuditLogEntry))
+            .use(auditLogTransformers);
+
+        if (
+            config.storage !== "ddb" ||
+            !config.target.auditLog?.dynamodb?.tableName
+        ) {
+            auditLogBuilder.blackhole();
+        }
+
+        const auditLogs = auditLogBuilder.build();
+
         const acoSearchRecordsPage = factory
             .create({
                 name: "AcoSearchRecordsPage",
@@ -234,6 +264,7 @@ export default createTransferPreset({
         // IMPORTANT: Order matters due to first-match-wins behavior
         // ========================================================================
         runner
+            .register(auditLogs)
             .register(acoSearchRecordsPage)
             .register(contentModelGroups)
             .register(backgroundTasks)
