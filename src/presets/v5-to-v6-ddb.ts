@@ -74,9 +74,9 @@ export default createTransferPreset({
             })
             .filter(createFilter(isAuditLogEntry))
             .use(auditLogTransformers)
-            .blackhole(
-                () => config.storage !== "ddb" || !config.target.auditLog?.dynamodb?.tableName
-            )
+            .blackhole(() => {
+                return config.storage !== "ddb" || !config.target.auditLog?.dynamodb?.tableName;
+            })
             .build();
 
         const acoSearchRecordsPage = factory
