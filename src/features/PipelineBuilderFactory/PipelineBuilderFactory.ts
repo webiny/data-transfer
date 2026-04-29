@@ -18,7 +18,7 @@ interface CreateImplInput {
 }
 
 class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.Interface {
-    public constructor(private readonly container: Container) {}
+    public constructor(private readonly processors: Processor.Interface[]) {}
 
     public create(input: CreateImplInput): PipelineBuilder<any, any, any> {
         const scannerAbstraction = new Metadata(input.scanner).getAbstraction() as Abstraction<
@@ -46,5 +46,5 @@ class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.In
 
 export const PipelineBuilderFactory = PipelineBuilderFactoryAbstraction.createImplementation({
     implementation: PipelineBuilderFactoryImpl,
-    dependencies: [ContainerToken]
+    dependencies: [[Processor, { multiple: true }]]
 });

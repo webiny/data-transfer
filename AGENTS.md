@@ -37,7 +37,7 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
 - **Filter factory:** `createFilter` + `Filter` type
 - **Scanner tokens:** `DdbScanner`, `OsScanner`
-- **Processor tokens:** `DdbProcessor`, `OsProcessor`, `S3Processor` (slice-merging; see below)
+- **Processor implementations:** `DdbProcessor`, `OsProcessor`, `S3Processor`, `AuditLogProcessor` (slice-merging; see below). All share `Symbol("Core/Processor")` — no per-processor abstraction tokens.
 - **Processor abstraction:** `Processor` — users implementing custom processors use this.
 - **Pipeline construction:** `PipelineBuilderFactory` — injected into `preset.configure({...})` as `pipelineBuilderFactory`.
 - **MigrationPreset type** + `PresetConfigureContext` (the `{runner, pipelineBuilderFactory, container}` arg bag).
@@ -96,15 +96,18 @@ src/
 ├── features/                 # Domain logic combining tools + services
 │   ├── DdbScanner/                  # AsyncIterable<BaseRecord> from DDB primary
 │   ├── OsScanner/ OsRecordDecompressor/   # OS companion table + decompression
-│   ├── DdbProcessor/                # slice: { putRecord }; onEnd auto-puts; execute via DdbExecutor
-│   ├── OsProcessor/                 # slice: { putRecord }; onEnd auto-puts; execute = gzip +
+│   ├── DdbProcessor/                # slice: { putRecord, querySourceRecord, queryTargetRecord }; onEnd auto-puts; execute via DdbExecutor
+│   ├── OsProcessor/                 # slice: { putRecord, querySourceRecord, queryTargetRecord }; onEnd auto-puts; execute = gzip +
 │   │                                # ensureIndex + delegate to DdbExecutor
 │   ├── S3Processor/                 # slice: { copyFile, getFile }; NO onEnd (no default); execute drains S3Copy
+│   │                                # No abstractions/ subdir — uses shared Processor token like all processors
+│   ├── AuditLogProcessor/           # slice: { putAuditLog }; onEnd auto-puts to audit log table; no-op when target.auditLog is null
 │   ├── DdbExecutor/                 # Shared primitive: PutRecord[] → TargetDynamoDbClient.batchPut.
 │   │                                # DdbProcessor + OsProcessor both compose this.
 │   ├── TouchedIndexes/              # per-worker singleton: index → original refresh_interval
 │   ├── PipelineRunner/              # register(...) + run() + getProcessors(); per-record slice merge + onEnd; shard-end execute
-│   ├── PipelineBuilderFactory/      # Stateless DI singleton; .create({name, scanner, processors}) → PipelineBuilder
+│   ├── PipelineBuilderFactory/      # Injects Container; .create({name, scanner, processors}) resolves instances via
+│   │                                # resolveAll(Processor).find(p => p.constructor === implClass) → PipelineBuilder
 │   ├── TransformContext/     # Single BaseTransformContextFactory; factory returns { ctx, commands }
 │   ├── MigrationConfig/      # createDdbTransfer / createOsTransfer (Zod-validated)
 │   ├── ModelProvider/        # Loads CMS model definitions from DB + modelsDir JSON files.
