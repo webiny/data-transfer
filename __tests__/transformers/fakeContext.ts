@@ -1,11 +1,47 @@
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
+import type {
+    DdbCoreTransformContext,
+    OsTransformContext
+} from "~/features/TransformContext/abstractions/contextAliases.ts";
+import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { OsScanner } from "~/features/OsScanner/index.ts";
+
+function makeCache(): Cache.Interface {
+    const store = new Map<string, unknown>();
+    return {
+        get: <T>(key: string) => store.get(key) as T | undefined,
+        set: <T>(key: string, value: T) => {
+            store.set(key, value);
+        },
+        has: (key: string) => store.has(key),
+        delete: (key: string) => store.delete(key),
+        clear: () => {
+            store.clear();
+        },
+        size: () => store.size
+    };
+}
+
+function makeLogger(): Logger.Interface {
+    const noop = () => {};
+    return {
+        debug: noop,
+        info: noop,
+        warn: noop,
+        error: noop,
+        fatal: noop,
+        done: noop,
+        child: () => makeLogger()
+    };
+}
 
 export interface FakeContextOverrides {
     modelProvider?: unknown;
-    cache?: unknown;
+    cache?: Cache.Interface;
+    logger?: Logger.Interface;
 }
 
 /**
@@ -19,14 +55,18 @@ export interface FakeContextOverrides {
 export function makeFakeBaseContext<T extends Record<string, unknown>>(
     record: T,
     overrides: FakeContextOverrides = {}
-): BaseTransformContext.Interface<BaseRecord> {
+): BaseTransformContext.Interface<BaseRecord> & {
+    cache: Cache.Interface;
+    logger: Logger.Interface;
+} {
     const commands = new Commands();
     const ctx = {
-        record,
-        original: { ...record } as Readonly<T>,
+        record: structuredClone(record),
+        original: Object.freeze(structuredClone(record)) as Readonly<T>,
         commands,
         modelProvider: overrides.modelProvider as BaseTransformContext.Interface["modelProvider"],
-        cache: overrides.cache as BaseTransformContext.Interface["cache"],
+        cache: overrides.cache ?? makeCache(),
+        logger: overrides.logger ?? makeLogger(),
         replace(newRecord: unknown): void {
             (ctx as { record: unknown }).record = newRecord;
         },
@@ -34,7 +74,10 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
             commands.add(cmd as Parameters<Commands["add"]>[0]);
         }
     };
-    return ctx as unknown as BaseTransformContext.Interface<BaseRecord>;
+    return ctx as unknown as BaseTransformContext.Interface<BaseRecord> & {
+        cache: Cache.Interface;
+        logger: Logger.Interface;
+    };
 }
 
 /**
@@ -46,7 +89,10 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
 export function makeFakeDdbCoreContext<T extends Record<string, unknown>>(
     record: T,
     overrides: FakeContextOverrides = {}
-): DdbCoreTransformContext.Interface<BaseRecord> {
+): DdbCoreTransformContext.Interface<BaseRecord> & {
+    cache: Cache.Interface;
+    logger: Logger.Interface;
+} {
     const base = makeFakeBaseContext(record, overrides);
     const ctx = Object.assign(base, {
         putRecord(_record: Record<string, unknown>): void {},
@@ -63,5 +109,36 @@ export function makeFakeDdbCoreContext<T extends Record<string, unknown>>(
             return null;
         }
     });
-    return ctx as unknown as DdbCoreTransformContext.Interface<BaseRecord>;
+    return ctx as unknown as DdbCoreTransformContext.Interface<BaseRecord> & {
+        cache: Cache.Interface;
+        logger: Logger.Interface;
+    };
+}
+
+/**
+ * Build a minimal OS-mode ctx stub (Base + OsProcessor slice) for unit
+ * tests of transformers typed for OsTransformContext. Slice methods default
+ * to no-ops — override per test by assigning onto the returned object.
+ */
+export function makeFakeOsContext<T extends OsScanner.Record>(
+    record: T,
+    overrides: FakeContextOverrides = {}
+): OsTransformContext.Interface<OsScanner.Record> {
+    const base = makeFakeBaseContext(record, overrides);
+    const ctx = Object.assign(base, {
+        putRecord(_record: Record<string, unknown>): void {},
+        async querySourceRecord(
+            _pk: string,
+            _sk?: string
+        ): Promise<Record<string, unknown> | null> {
+            return null;
+        },
+        async queryTargetRecord(
+            _pk: string,
+            _sk?: string
+        ): Promise<Record<string, unknown> | null> {
+            return null;
+        }
+    });
+    return ctx as unknown as OsTransformContext.Interface<OsScanner.Record>;
 }

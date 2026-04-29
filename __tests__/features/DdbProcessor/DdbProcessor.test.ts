@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
@@ -50,6 +51,17 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
         cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
         compressionHandler: {} as CompressionHandler.Interface,
+        logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            done: () => {},
+            child: function () {
+                return this;
+            }
+        } as unknown as Logger.Interface,
         replace(newRecord: TRecord): void {
             base.record = newRecord;
         },

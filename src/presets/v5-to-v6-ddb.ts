@@ -5,6 +5,7 @@ import { S3Processor } from "~/features/S3Processor/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
     byType,
+    isAcoSearchRecord,
     isBackgroundTask,
     isBuiltInSecurityRole,
     isCmsEntry,
@@ -16,7 +17,10 @@ import {
 } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
+    addLiveField,
     cmsEntryTransformers,
+    createMetadata,
+    extractImageMetadata,
     groupsToRoles,
     migrateFileManagerSettings,
     migrateMailerSettings,
@@ -50,6 +54,15 @@ export default createTransferPreset({
     name: "v5-to-v6-ddb",
     description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
     configure({ runner, pipelineBuilderFactory: factory }): void {
+        const acoSearchRecordsPage = factory
+            .create({
+                name: "AcoSearchRecordsPage",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isAcoSearchRecord))
+            .blackhole()
+            .build();
         // ========================================================================
         // Content Model Groups
         // ========================================================================
@@ -105,10 +118,10 @@ export default createTransferPreset({
             .filter(createFilter(isFmFile))
             .use(cmsEntryTransformers)
             // File Manager-specific transformers (append pipeline-specific tail here)
-            // .use(createMetadata)
-            // .use(extractImageMetadata)
+            .use(createMetadata)
+            .use(extractImageMetadata)
             // TODO we dont want to copy files from S3, so discard all commands produced in this pipeline.
-            .blackhole()
+            // .blackhole()
             .build();
 
         // ========================================================================
@@ -213,6 +226,7 @@ export default createTransferPreset({
             })
             .filter(createFilter(isCmsEntry))
             .use(cmsEntryTransformers)
+            .use(addLiveField)
             .build();
 
         // ========================================================================
@@ -220,6 +234,7 @@ export default createTransferPreset({
         // IMPORTANT: Order matters due to first-match-wins behavior
         // ========================================================================
         runner
+            .register(acoSearchRecordsPage)
             .register(contentModelGroups)
             .register(backgroundTasks)
             .register(fmSettings)

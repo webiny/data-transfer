@@ -5,6 +5,10 @@ import { ContainerToken, createAbstraction } from "~/base/index.ts";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
+import { DroppedRecordLog } from "~/features/DroppedRecordLog/abstractions/DroppedRecordLog.ts";
+import { MockDroppedRecordLog } from "../DroppedRecordLog/MockDroppedRecordLog.ts";
+import { TransferredRecordLog } from "~/features/TransferredRecordLog/abstractions/TransferredRecordLog.ts";
+import { MockTransferredRecordLog } from "../TransferredRecordLog/MockTransferredRecordLog.ts";
 import {
     PipelineBuilderFactory,
     PipelineBuilderFactoryFeature
@@ -78,6 +82,17 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
             modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
             cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
             compressionHandler: {} as CompressionHandler.Interface,
+            logger: {
+                debug: () => {},
+                info: () => {},
+                warn: () => {},
+                error: () => {},
+                fatal: () => {},
+                done: () => {},
+                child: function () {
+                    return this;
+                }
+            } as unknown as Logger.Interface,
             replace(newRecord: TRecord): void {
                 ctx.record = newRecord;
             },
@@ -103,6 +118,8 @@ function makeContainer(options: { runId?: string } = {}): {
         async write(): Promise<void> {},
         async close(): Promise<void> {}
     });
+    container.registerInstance(DroppedRecordLog, new MockDroppedRecordLog());
+    container.registerInstance(TransferredRecordLog, new MockTransferredRecordLog());
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();
@@ -385,8 +402,8 @@ describe("PipelineRunner.run()", () => {
         runner.register(buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
         await runner.run();
 
-        const dropMessages = logger.entries.filter(
-            e => e.message.startsWith("record dropped: no matching pipeline in merge group")
+        const dropMessages = logger.entries.filter(e =>
+            e.message.startsWith("record dropped: no matching pipeline in merge group")
         );
         expect(dropMessages.length).toBeGreaterThan(0);
     });

@@ -84,7 +84,7 @@ export const extractImageMetadata = createDdbTransformer("extractImageMetadata",
         }
         values["object@metadata"] = extracted;
     } catch (err) {
-        console.error(`[extractImageMetadata] key="${s3Key}":`, (err as Error).message);
+        ctx.logger.error(`[extractImageMetadata] key="${s3Key}": ${(err as Error).message}`);
         values["object@metadata"] = {};
     }
 });

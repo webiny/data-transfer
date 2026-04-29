@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
@@ -22,6 +23,17 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
         cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
         compressionHandler: {} as CompressionHandler.Interface,
+        logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            done: () => {},
+            child: function () {
+                return this;
+            }
+        } as unknown as Logger.Interface,
         replace(newRecord: TRecord): void {
             base.record = newRecord;
         },

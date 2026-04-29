@@ -1,5 +1,20 @@
 import type { BaseRecord } from "~/domain/transform/types/records.js";
 
+const getPropertyFromRecord = <T>(
+    record: Record<string, unknown>,
+    propertyName: string
+): T | undefined => {
+    const value = record[propertyName] as T | undefined;
+    if (value !== undefined) {
+        return value;
+    }
+    const data = record.data as Record<string, unknown> | undefined;
+    if (data) {
+        return data[propertyName] as T | undefined;
+    }
+    return undefined;
+};
+
 export const byType =
     (type: string) =>
     (record: Record<string, unknown>): boolean => {
@@ -22,7 +37,32 @@ export const isCmsGroup = (record: BaseRecord): boolean => {
 
 export const isCmsModel = byType("cms.model");
 
-export const isCmsEntry = byTypePrefix("cms.entry");
+export const isCmsEntry = (input: BaseRecord) => {
+    const isType = byTypePrefix("cms.entry")(input);
+    if (isType) {
+        return true;
+    }
+    return input.PK.includes("#CMS#CME#");
+};
+
+export const byIncludesModelId =
+    (target: string) =>
+    (record: BaseRecord): boolean => {
+        const input = target.toLowerCase();
+        /**
+         * This is for OS records. Also, we are positive that no record has index, except the OS Record one
+         */
+        const index = getPropertyFromRecord<string>(record, "index");
+        if (typeof index === "string" && index.toLowerCase().includes(input)) {
+            return true;
+        }
+
+        const modelId = getPropertyFromRecord<string>(record, "modelId");
+
+        return typeof modelId === "string" && modelId.toLowerCase().includes(input);
+    };
+
+export const isAcoSearchRecord = byIncludesModelId("acoSearchRecord");
 
 export const isBackgroundTask = (item: BaseRecord) => {
     if (item.modelId === "webinyTask" || item.modelId === "webinyTaskLog") {
@@ -50,3 +90,14 @@ export const isBuiltInSecurityRole = (record: Record<string, unknown>): boolean 
 };
 
 export const isSecurityTeam = byType("security.team");
+
+export const isOsBackgroundTask = (record: Record<string, unknown>): boolean => {
+    const data = record.data as Record<string, unknown> | undefined;
+    const modelId = data?.modelId as string | undefined;
+    return modelId === "webinyTask" || modelId === "webinyTaskLog";
+};
+
+export const isOsMailerSettings = (record: Record<string, unknown>): boolean => {
+    const data = record.data as Record<string, unknown> | undefined;
+    return (data?.modelId as string | undefined) === "mailerSettings";
+};

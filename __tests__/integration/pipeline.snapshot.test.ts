@@ -173,7 +173,17 @@ describe("snapshot — end-to-end against dynalite", () => {
 
         await runner.run({ segment: 0, totalSegments: 1 });
 
-        const contents = await readdir(workDir);
-        expect(contents).toEqual([]);
+        // Snapshot is disabled — the snapshot subdir must not exist.
+        // TransferredRecordLog + DroppedRecordLog write to .transfer/<runId>/
+        // unconditionally, so .transfer/ may exist. Only assert the snapshot
+        // dir itself is absent.
+        let snapshotExists = false;
+        try {
+            await readdir(join(workDir, ".transfer", "integration-run", "snapshot"));
+            snapshotExists = true;
+        } catch {
+            snapshotExists = false;
+        }
+        expect(snapshotExists).toBe(false);
     }, 30_000);
 });

@@ -1,6 +1,7 @@
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
 import { Cache } from "~/tools/Cache/abstractions/Cache.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import {
     BaseTransformContext as BaseTransformContextAbstraction,
     BaseTransformContextFactory as BaseTransformContextFactoryAbstraction
@@ -11,6 +12,7 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
     public constructor(
         private readonly modelProvider: ModelProvider.Interface,
         private readonly cache: Cache.Interface,
+        private readonly logger: Logger.Interface,
         private readonly compressionHandler: CompressionHandler.Interface
     ) {}
 
@@ -20,6 +22,7 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
         const commands = new Commands();
         const modelProvider = this.modelProvider;
         const cache = this.cache;
+        const logger = this.logger;
         const compressionHandler = this.compressionHandler;
 
         const ctx: BaseTransformContextAbstraction.Interface<TRecord> = {
@@ -27,6 +30,7 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
             original: Object.freeze(structuredClone(params.record)) as Readonly<TRecord>,
             modelProvider,
             cache,
+            logger,
             compressionHandler,
             replace(newRecord: TRecord): void {
                 ctx.record = newRecord;
@@ -43,5 +47,5 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
 export const BaseTransformContextFactory =
     BaseTransformContextFactoryAbstraction.createImplementation({
         implementation: BaseTransformContextFactoryImpl,
-        dependencies: [ModelProvider, Cache, CompressionHandler]
+        dependencies: [ModelProvider, Cache, Logger, CompressionHandler]
     });

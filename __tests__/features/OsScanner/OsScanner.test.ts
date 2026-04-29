@@ -99,7 +99,7 @@ describe("OsScanner", () => {
         expect(r.data.title).toBe("Hello");
     });
 
-    it("silently skips records that the decompressor rejects (returns null)", async () => {
+    it("yields record with empty data when decompressor returns null", async () => {
         const container = createOsContainer({
             sourceRecords: {
                 "source-os": [
@@ -127,7 +127,10 @@ describe("OsScanner", () => {
             collected.push(record);
         }
 
-        expect(collected).toEqual([]);
+        expect(collected).toHaveLength(1);
+        expect(collected[0]?.PK).toBe("x");
+        expect(collected[0]?.index).toBe("some-index");
+        expect(collected[0]?.data).toEqual({});
         expect(spy).toHaveBeenCalledTimes(1);
         spy.mockRestore();
     });

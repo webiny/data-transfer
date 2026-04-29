@@ -121,8 +121,29 @@ Enforced by Zod at build time:
 ## Pointing at a preset
 
 `pipeline.preset` takes one of:
-- **A built-in name**: `"v5-to-v6-ddb"` (filename in `src/presets/` without extension). The runner auto-discovers built-ins.
+- **A built-in name**: `"v5-to-v6-ddb"` or `"v5-to-v6-os"` (filename in `src/presets/` without extension). The runner auto-discovers built-ins.
 - **A file path**: `"./presets/my-preset.ts"` or `"../shared/presets/foo.ts"`. Resolved relative to the CONFIG file's directory.
+
+## `pipeline.modelsDir` — CMS model definitions
+
+Required by the OS preset (`v5-to-v6-os`) and by built-in transformers that inspect field types (`fixBrokenStorageKeys`, `transformRichText`, `addLiveField`). Point at a directory of exported model definitions.
+
+```ts
+pipeline: {
+    preset: "v5-to-v6-os",
+    modelsDir: fromEnv("MODELS_DIR", "./models")
+}
+```
+
+Three JSON shapes are accepted and can be mixed freely in the same directory:
+
+| Shape | Example |
+|-------|---------|
+| Single model | `{ "modelId": "blog", "fields": [...], ... }` |
+| Array of models | `[{ "modelId": "blog", "fields": [...] }, ...]` |
+| Webiny admin export | `{ "groups": [...], "models": [...] }` |
+
+The Webiny admin panel's **Export** button produces the `{groups, models}` shape. JSON models override DB-loaded models (user-provided definition takes precedence over what was scanned from the source DDB table).
 
 ## Snapshot / debug (optional)
 
@@ -190,7 +211,7 @@ TARGET_PROFILE=staging-writer
 
 ## Common patterns
 
-- **DDB first, then OS** — run them as separate transfers with separate config files. They don't share state.
+- **DDB first, then OS** — run them as separate transfers with separate config files. They don't share state. DDB uses `v5-to-v6-ddb`; OS uses `v5-to-v6-os`. Both can share the same `.env`.
 - **Multiple target environments** — duplicate the project folder under `projects/` with different `.env`. Configs stay identical.
 - **Custom preset** — if the built-in doesn't match your needs, write one (see `writing-data-transfer-preset` skill) and point `pipeline.preset` at its file path.
 

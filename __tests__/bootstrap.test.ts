@@ -48,7 +48,8 @@ describe("bootstrap", () => {
             opensearch: {
                 endpoint: "https://es.example.com",
                 tableName: "target-os",
-                service: "opensearch" as const
+                service: "opensearch" as const,
+                indexPrefix: ""
             }
         },
         pipeline: { preset: "v5-to-v6-os" }

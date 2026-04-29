@@ -1,3 +1,4 @@
+export { addLiveField } from "./addLiveField.ts";
 export { fixCmePk } from "./fixCmePk.ts";
 export { removeFolderRevision } from "./removeFolderRevision.ts";
 export { renameFieldAttributes } from "./renameFieldAttributes.ts";
@@ -5,3 +6,4 @@ export { transformModelGroup } from "./transformModelGroup.ts";
 export { fixBrokenStorageKeys } from "./fixBrokenStorageKeys.ts";
 export { transformRichText } from "./transformRichText.ts";
 export { updateModelIds } from "./updateModelIds.ts";
+export { updateOsIndex } from "./updateOsIndex.ts";

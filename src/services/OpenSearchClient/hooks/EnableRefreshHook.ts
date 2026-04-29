@@ -39,9 +39,6 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
             }
         }
 
-        // Clean up transfer directory
-        await this.cleanup();
-
         this.logger.info(`Indexing restored on ${touchedIndexes.size} indexes.`);
     }
 
@@ -84,12 +81,6 @@ class EnableRefreshHookImpl implements AfterTransferHook.Interface {
         }
 
         return merged;
-    }
-
-    private async cleanup(): Promise<void> {
-        const transferDir = join(process.cwd(), ".transfer", this.transferContext.runId);
-        // Best effort cleanup. dirTool.remove is force+recursive internally.
-        this.dirTool.remove(transferDir);
     }
 }
 

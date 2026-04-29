@@ -54,7 +54,7 @@ export const transformModelGroup = createTransformer<DdbCoreTransformContext.Int
             data.group = groupRecord.slug;
         } else {
             // Fallback: use lowercase name if group not found
-            console.warn(
+            ctx.logger.warn(
                 `[transformModelGroup] Group ${group.id} not found, using name as fallback`
             );
             data.group = group.name

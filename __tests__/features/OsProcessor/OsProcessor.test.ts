@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -57,6 +58,17 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
         cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
         compressionHandler: {} as CompressionHandler.Interface,
+        logger: {
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            fatal: () => {},
+            done: () => {},
+            child: function () {
+                return this;
+            }
+        } as unknown as Logger.Interface,
         replace(newRecord: TRecord): void {
             base.record = newRecord;
         },

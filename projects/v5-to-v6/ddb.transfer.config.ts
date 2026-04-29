@@ -13,6 +13,7 @@ const DEFAULT_PROFILE = "default";
 
 export default createDdbTransfer({
     debug: {
+        logLevel: "debug",
         logFile: true
     },
     source: {
@@ -29,6 +30,7 @@ export default createDdbTransfer({
     },
     pipeline: {
         preset: "v5-to-v6-ddb",
-        segments: numberFromEnv("SEGMENTS", 4)
+        segments: numberFromEnv("SEGMENTS", 4),
+        modelsDir: fromEnv("MODELS_DIR", "./models")
     }
 });

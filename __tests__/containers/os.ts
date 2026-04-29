@@ -1,5 +1,9 @@
 import { Container } from "@webiny/di";
 import { ContainerToken } from "../../src/base/index.ts";
+import { DroppedRecordLog } from "../../src/features/DroppedRecordLog/abstractions/DroppedRecordLog.ts";
+import { MockDroppedRecordLog } from "../features/DroppedRecordLog/MockDroppedRecordLog.ts";
+import { TransferredRecordLog } from "../../src/features/TransferredRecordLog/abstractions/TransferredRecordLog.ts";
+import { MockTransferredRecordLog } from "../features/TransferredRecordLog/MockTransferredRecordLog.ts";
 import { MigrationConfig } from "../../src/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { MigrationConfigFeature } from "../../src/features/MigrationConfig/index.ts";
 import { LoggerFeature } from "../../src/tools/Logger/index.ts";
@@ -41,6 +45,7 @@ export interface OsContainerOptions {
     modelsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: OsContainerPipelineOverride;
+    indexPrefix?: string;
 }
 
 export function createOsContainer(options: OsContainerOptions = {}): Container {
@@ -62,7 +67,8 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
             opensearch: {
                 endpoint: "https://es.example.com",
                 tableName: "target-os",
-                service: "opensearch" as const
+                service: "opensearch" as const,
+                indexPrefix: options.indexPrefix ?? ""
             }
         },
         pipeline: {
@@ -102,6 +108,8 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     TransformContextFeature.register(container);
     PipelineBuilderFactoryFeature.register(container);
     SnapshotWriterFeature.register(container);
+    container.registerInstance(DroppedRecordLog, new MockDroppedRecordLog());
+    container.registerInstance(TransferredRecordLog, new MockTransferredRecordLog());
     PipelineRunnerFeature.register(container);
     TouchedIndexesFeature.register(container);
     DdbExecutorFeature.register(container);

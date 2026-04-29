@@ -38,13 +38,14 @@ export default createOsTransfer({
         opensearch: {
             endpoint: fromEnv("TARGET_OS_ENDPOINT"),
             tableName: fromEnv("TARGET_OS_TABLE"),
-            service: "opensearch"
+            service: "opensearch",
+            indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
         }
     },
     pipeline: {
-        preset: "../../presets/example.ts",
-        segments: numberFromEnv("SEGMENTS", 4)
-        // modelsDir: "./models"
+        preset: "v5-to-v6-os",
+        segments: numberFromEnv("SEGMENTS", 4),
+        modelsDir: fromEnv("MODELS_DIR", "./models")
     }
     //
     // Optional debug helpers — see ddb.transfer.config.ts for full
