@@ -9,16 +9,18 @@ type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
 type ProcessorInstance = Processor.Interface<any, any>;
 
-type CreateMethod = PipelineBuilderFactoryAbstraction.Interface["create"];
+// Widened input shape used internally — the public generic signature lives on
+// the abstraction and is enforced at call sites via IPipelineBuilderFactory.
+interface CreateImplInput {
+    name: string;
+    scanner: AnyImpl;
+    processors: readonly AnyImpl[];
+}
 
 class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.Interface {
     public constructor(private readonly container: Container) {}
 
-    public create: CreateMethod = ((input: {
-        name: string;
-        scanner: AnyImpl;
-        processors: readonly AnyImpl[];
-    }) => {
+    public create(input: CreateImplInput): PipelineBuilder<any, any, any> {
         const scannerAbstraction = new Metadata(input.scanner).getAbstraction() as Abstraction<
             Scanner.Interface<unknown, unknown>
         >;
@@ -34,14 +36,12 @@ class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.In
             return instance as ProcessorInstance;
         });
 
-        // The public interface narrows this via IPipelineBuilderFactory.create;
-        // the implementation is intentionally widened.
         return new PipelineBuilder({
             name: input.name,
             scanner: scannerAbstraction,
             processors: processorInstances
         });
-    }) as unknown as CreateMethod;
+    }
 }
 
 export const PipelineBuilderFactory = PipelineBuilderFactoryAbstraction.createImplementation({
