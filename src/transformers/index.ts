@@ -11,3 +11,4 @@ export * from "./folders/index.ts";
 export * from "./mailer/index.ts";
 export * from "./security/index.ts";
 export * from "./cmsEntryTransformers.js";
+export * from "./auditLogs/index.ts";
