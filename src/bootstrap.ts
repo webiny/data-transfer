@@ -26,6 +26,7 @@ import { DdbScannerFeature } from "~/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "~/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "~/features/DdbExecutor/index.ts";
 import { S3ProcessorFeature } from "~/features/S3Processor/index.ts";
+import { AuditLogProcessorFeature } from "~/features/AuditLogProcessor/index.ts";
 import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
@@ -126,6 +127,7 @@ export function bootstrap(options: BootstrapOptions): Container {
         S3ProcessorFeature.register(container);
         DdbScannerFeature.register(container);
         DdbProcessorFeature.register(container);
+        AuditLogProcessorFeature.register(container);
     } else {
         TouchedIndexesFeature.register(container);
         DdbExecutorFeature.register(container);
