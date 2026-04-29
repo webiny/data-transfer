@@ -78,8 +78,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         const processors: ProcessorInstance[] = [];
         for (const pipelines of this.mergeGroups.values()) {
             for (const pipeline of pipelines) {
-                for (const token of pipeline.processorTokens) {
-                    const processor = this.container.resolve(token) as ProcessorInstance;
+                for (const processor of pipeline.processors) {
                     if (!seen.has(processor)) {
                         seen.add(processor);
                         processors.push(processor);
@@ -196,11 +195,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     ): Map<AnyPipeline, ProcessorInstance[]> {
         const result: Map<AnyPipeline, ProcessorInstance[]> = new Map();
         for (const pipeline of pipelines) {
-            const instances: ProcessorInstance[] = [];
-            for (const token of pipeline.processorTokens) {
-                instances.push(this.container.resolve(token) as ProcessorInstance);
-            }
-            result.set(pipeline, instances);
+            result.set(pipeline, [...pipeline.processors] as ProcessorInstance[]);
         }
         return result;
     }

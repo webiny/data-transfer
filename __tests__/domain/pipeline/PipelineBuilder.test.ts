@@ -9,17 +9,14 @@ import {
     createFilter,
     type Transformer
 } from "~/domain/pipeline/index.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { tagTransformer } from "./fixtures/fakes.ts";
+import { FakeProcessor, tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
 
-type ProcessorToken = Abstraction<
-    Processor.Interface<BaseTransformContext.Interface<FakeRecord>, any>
->;
+const fakeProcessor = new FakeProcessor();
 
 function makeBuilder(
     name: string,
-    processors: readonly ProcessorToken[] = [Processor as ProcessorToken]
+    processors: readonly Processor.Interface<any, any>[] = [fakeProcessor]
 ): PipelineBuilder<FakeRecord, FakeContext, FakeShard> {
     return new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
         name,
@@ -37,7 +34,7 @@ describe("PipelineBuilder — construction and build()", () => {
         expect(pipeline).toBeInstanceOf(Pipeline);
         expect(pipeline.name).toBe("basic");
         expect(pipeline.scannerToken).toBe(Scanner);
-        expect(pipeline.processorTokens).toEqual([Processor]);
+        expect(pipeline.processors).toEqual([fakeProcessor]);
         expect(pipeline.beforeHookTokens).toEqual([]);
         expect(pipeline.afterHookTokens).toEqual([]);
         expect(pipeline.hasFilter).toBe(true);

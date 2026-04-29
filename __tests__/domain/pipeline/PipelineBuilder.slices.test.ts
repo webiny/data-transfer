@@ -1,4 +1,4 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
@@ -69,13 +69,16 @@ describe("PipelineBuilderFactory.create() slice inference", () => {
 
     it("two processors with overlapping slice keys → fails to compile", () => {
         const factory = createDdbContainer().resolve(PipelineBuilderFactory);
-        factory.create({
-            name: "ddb+os",
-            scanner: DdbScanner,
-            // @ts-expect-error — DdbProcessor + OsProcessor both contribute `putRecord`;
-            // DisjointKeys<...> narrows processors to `never`.
-            processors: [DdbProcessor, OsProcessor]
-        });
+        expect(() =>
+            factory.create({
+                name: "ddb+os",
+                scanner: DdbScanner,
+                // @ts-expect-error — DdbProcessor + OsProcessor both contribute `putRecord`;
+                // DisjointKeys<...> narrows processors to `never` at compile time.
+                // At runtime the factory also throws because OsProcessor is not registered.
+                processors: [DdbProcessor, OsProcessor]
+            })
+        ).toThrow();
     });
 
     it("empty processors array → fails to compile (NonEmptyArray rejects)", () => {

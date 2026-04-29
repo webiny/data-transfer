@@ -13,8 +13,9 @@ export interface PipelineConfig<
 > {
     readonly name: string;
     readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
-    readonly processors: readonly Abstraction<
-        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
+    readonly processors: readonly Processor.Interface<
+        BaseTransformContext.Interface<TRecord>,
+        any
     >[];
     readonly filters: readonly Filter<TRecord>[];
     readonly transformers: readonly Transformer.Interface<TContext>[];
@@ -49,8 +50,9 @@ export class Pipeline<
         return this.config.scanner;
     }
 
-    public get processorTokens(): readonly Abstraction<
-        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
+    public get processors(): readonly Processor.Interface<
+        BaseTransformContext.Interface<TRecord>,
+        any
     >[] {
         return this.config.processors;
     }

@@ -32,6 +32,7 @@ import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
 import { S3ProcessorFeature } from "../../src/features/S3Processor/index.ts";
+import { AuditLogProcessorFeature } from "../../src/features/AuditLogProcessor/index.ts";
 import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
 import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
@@ -119,6 +120,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     S3ProcessorFeature.register(container);
     DdbScannerFeature.register(container);
     DdbProcessorFeature.register(container);
+    AuditLogProcessorFeature.register(container);
 
     return container;
 }
