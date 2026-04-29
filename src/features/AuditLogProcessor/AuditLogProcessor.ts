@@ -10,9 +10,10 @@ interface AuditLogProcessorSlice {
     putAuditLog(record: Record<string, unknown>): void;
 }
 
-class AuditLogProcessorImpl
-    implements Processor.Interface<BaseTransformContext.Interface<unknown>, AuditLogProcessorSlice>
-{
+class AuditLogProcessorImpl implements Processor.Interface<
+    BaseTransformContext.Interface<unknown>,
+    AuditLogProcessorSlice
+> {
     public constructor(
         private readonly executor: DdbExecutor.Interface,
         private readonly config: MigrationConfig.Interface

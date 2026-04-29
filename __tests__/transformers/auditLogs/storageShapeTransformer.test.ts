@@ -145,8 +145,6 @@ describe("storageShapeTransformer", () => {
         const ctx = makeFakeBaseContext({ ...INTERMEDIATE_RECORD });
         storageShapeTransformer(ctx);
         const r = ctx.record as Record<string, unknown>;
-        expect(r.expiresAt).toBe(
-            Math.floor(new Date("2025-09-08T07:52:39.413Z").getTime() / 1000)
-        );
+        expect(r.expiresAt).toBe(Math.floor(new Date("2025-09-08T07:52:39.413Z").getTime() / 1000));
     });
 });

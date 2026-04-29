@@ -75,10 +75,7 @@ export default createTransferPreset({
             .filter(createFilter(isAuditLogEntry))
             .use(auditLogTransformers);
 
-        if (
-            config.storage !== "ddb" ||
-            !config.target.auditLog?.dynamodb?.tableName
-        ) {
+        if (config.storage !== "ddb" || !config.target.auditLog?.dynamodb?.tableName) {
             auditLogBuilder.blackhole();
         }
 
