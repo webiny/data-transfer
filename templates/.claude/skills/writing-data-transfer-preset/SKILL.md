@@ -71,7 +71,7 @@ All pipelines sharing the same scanner form a **merge group** — they run toget
 
 ### Processor implementations
 
-All processors are Implementation classes that share `Symbol("Core/Processor")`. Pass them directly to `pipelineBuilderFactory.create({ processors: [...] })` — the factory resolves the correct singleton instance at build time via constructor identity.
+All processors are Implementation classes that share `Symbol("Core/Processor")`. Pass them directly to `pipelineBuilderFactory.create({ processors: [...] })` — the factory has all processor instances injected via `[Processor, { multiple: true }]` and finds the right one by constructor identity.
 
 - **`DdbProcessor`** — slice: `{ putRecord(record), querySourceRecord(pk, sk?), queryTargetRecord(pk, sk?) }`. `onEnd` auto-puts `ctx.record`. `execute` drains `PutRecord` commands to the target DDB table.
 - **`S3Processor`** — slice: `{ copyFile(src, tgt), getFile(key) }`. No `onEnd` — transformers call `copyFile` explicitly. `execute` drains `S3Copy` commands.

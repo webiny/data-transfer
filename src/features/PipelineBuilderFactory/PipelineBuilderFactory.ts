@@ -1,8 +1,7 @@
-import { Metadata, type Abstraction, type Constructor, type Container } from "@webiny/di";
+import { type Abstraction, type Constructor, Metadata } from "@webiny/di";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
 import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { ContainerToken } from "~/base/index.ts";
 import { PipelineBuilderFactory as PipelineBuilderFactoryAbstraction } from "./abstractions/PipelineBuilderFactory.ts";
 
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
@@ -25,9 +24,8 @@ class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.In
             Scanner.Interface<unknown, unknown>
         >;
 
-        const allProcessors = this.container.resolveAll(Processor);
         const processorInstances = input.processors.map(implClass => {
-            const instance = allProcessors.find(p => p.constructor === implClass);
+            const instance = this.processors.find(p => p.constructor === implClass);
             if (!instance) {
                 throw new Error(
                     `PipelineBuilderFactory: processor "${implClass.name}" is not registered in the container`
