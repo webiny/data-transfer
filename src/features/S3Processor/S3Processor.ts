@@ -4,11 +4,15 @@ import { MigrationConfig } from "~/features/MigrationConfig/abstractions/Migrati
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { S3Processor as S3ProcessorAbstraction } from "./abstractions/S3Processor.ts";
+
+interface S3ProcessorSlice {
+    copyFile(sourceKey: string, targetKey: string): void;
+    getFile(key: string): Promise<Buffer | null>;
+}
 
 class S3ProcessorImpl implements Processor.Interface<
     BaseTransformContext.Interface<unknown>,
-    S3ProcessorAbstraction.Slice
+    S3ProcessorSlice
 > {
     public constructor(
         private readonly sourceS3: SourceS3Client.Interface,
@@ -16,9 +20,7 @@ class S3ProcessorImpl implements Processor.Interface<
         private readonly config: MigrationConfig.Interface
     ) {}
 
-    public extendContext(
-        base: BaseTransformContext.Interface<unknown>
-    ): S3ProcessorAbstraction.Slice {
+    public extendContext(base: BaseTransformContext.Interface<unknown>): S3ProcessorSlice {
         if (this.config.storage !== "ddb") {
             throw new Error("S3Processor can only be used in ddb mode");
         }
@@ -56,7 +58,7 @@ class S3ProcessorImpl implements Processor.Interface<
     }
 }
 
-export const S3Processor = S3ProcessorAbstraction.createImplementation({
+export const S3Processor = Processor.createImplementation({
     implementation: S3ProcessorImpl,
     dependencies: [SourceS3Client, TargetS3Client, MigrationConfig]
 });
