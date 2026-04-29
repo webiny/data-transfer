@@ -58,7 +58,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
             this.registeredNames.add(pipeline.name);
 
-            const groupKey = pipeline.scanner as Scanner.Interface<unknown, unknown>;
+            const groupKey = pipeline.scanner;
             const group = this.mergeGroups.get(groupKey);
             if (group) {
                 group.push(pipeline);
@@ -190,7 +190,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     ): Map<AnyPipeline, ProcessorInstance[]> {
         const result: Map<AnyPipeline, ProcessorInstance[]> = new Map();
         for (const pipeline of pipelines) {
-            result.set(pipeline, [...pipeline.processors] as ProcessorInstance[]);
+            result.set(pipeline, [...pipeline.processors]);
         }
         return result;
     }

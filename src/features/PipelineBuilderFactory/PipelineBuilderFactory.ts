@@ -38,7 +38,7 @@ class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.In
                     `PipelineBuilderFactory: processor "${implClass.name}" is not registered in the container`
                 );
             }
-            return instance as ProcessorInstance;
+            return instance;
         });
 
         return new PipelineBuilder({
