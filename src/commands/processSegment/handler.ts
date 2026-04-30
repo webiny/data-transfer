@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import { bootstrap } from "~/bootstrap.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
@@ -49,6 +51,17 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     logger.info(`Processing shard ${argv.segment + 1}/${argv.total}...`);
 
     await runner.run({ segment: argv.segment, totalSegments: argv.total });
+
+    const stats = runner.getShardStats();
+    if (stats) {
+        const statsDir = join(process.cwd(), ".transfer", argv.runId, "stats");
+        await mkdir(statsDir, { recursive: true });
+        await writeFile(
+            join(statsDir, `segment-${argv.segment}.json`),
+            JSON.stringify(stats),
+            "utf8"
+        );
+    }
 
     logger.info("Shard complete.");
 }

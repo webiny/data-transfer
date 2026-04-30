@@ -15,6 +15,18 @@ export interface RunOptions {
 }
 
 // ============================================================================
+// Shard stats — written per-worker, aggregated by the orchestrator.
+// Uses plain Records (not Maps) so they serialise to JSON without conversion.
+// ============================================================================
+
+export interface RunStats {
+    mergeGroupId: string;
+    transferred: Record<string, number>;
+    blackholed: Record<string, number>;
+    unmatched: number;
+}
+
+// ============================================================================
 // PipelineRunner abstraction
 // ============================================================================
 
@@ -30,6 +42,9 @@ interface IPipelineRunner {
     run(opts?: RunOptions): Promise<void>;
 
     getProcessors(): Processor.Interface<BaseTransformContext.Interface<unknown>, any>[];
+
+    /** Returns stats from the most recent run(opts) call, or null if not yet run. */
+    getShardStats(): RunStats | null;
 }
 
 export const PipelineRunner = createAbstraction<IPipelineRunner>("Core/PipelineRunner");

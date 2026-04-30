@@ -15,7 +15,8 @@ import { TransferredRecordLog } from "~/features/TransferredRecordLog/index.ts";
 import { RecordDisposition } from "~/domain/pipeline/index.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
-    type RunOptions
+    type RunOptions,
+    type RunStats
 } from "./abstractions/PipelineRunner.ts";
 
 type ProcessorInstance = Processor.Interface<BaseTransformContext.Interface<unknown>, any>;
@@ -43,6 +44,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     private readonly registeredNames: Set<string> = new Set();
 
     private readonly unclaimedWarned: Set<string> = new Set();
+
+    private lastShardStats: RunStats | null = null;
 
     public constructor(
         private readonly container: Container,
@@ -74,6 +77,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         }
 
         return this;
+    }
+
+    public getShardStats(): RunStats | null {
+        return this.lastShardStats;
     }
 
     public getProcessors(): ProcessorInstance[] {
@@ -143,7 +150,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         const mergeGroupId = this.deriveMergeGroupId(scanner);
         const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
         const shard = shards[opts.segment];
-        await this.runShard({
+        const stats = await this.runShard({
             mergeGroupId,
             pipelines,
             scanner,
@@ -151,6 +158,12 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             pipelineProcessors,
             shardCtx: { segment: opts.segment, totalSegments: opts.totalSegments }
         });
+        this.lastShardStats = {
+            mergeGroupId,
+            transferred: Object.fromEntries(stats.transferred),
+            blackholed: Object.fromEntries(stats.blackholed),
+            unmatched: stats.unmatched
+        };
     }
 
     private async runMergeGroup(

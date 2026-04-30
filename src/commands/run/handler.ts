@@ -1,7 +1,10 @@
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
 import { execa } from "execa";
 import { bootstrap } from "~/bootstrap.ts";
 import { formatError } from "~/base/index.ts";
+import type { RunStats } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
@@ -89,6 +92,8 @@ export async function handler(
             `${segmentsToRun.length - failures.length} of ${segmentsToRun.length} shards succeeded` +
                 (failures.length > 0 ? ` (failed: ${failures.join(", ")})` : "")
         );
+
+        await logRunTotal(join(process.cwd(), ".transfer", runId, "stats"), logger);
 
         try {
             const afterHook = container.resolve(AfterTransferHook);
@@ -189,4 +194,59 @@ async function spawnWorker(
     if (exitCode !== 0) {
         throw new Error(`Worker process for segment ${segment} failed with code ${exitCode}`);
     }
+}
+
+async function logRunTotal(statsDir: string, logger: Logger.Interface): Promise<void> {
+    let files: string[];
+    try {
+        files = (await readdir(statsDir)).filter(f => f.endsWith(".json"));
+    } catch {
+        return;
+    }
+
+    const transferred: Record<string, number> = {};
+    const blackholed: Record<string, number> = {};
+    let unmatched = 0;
+    let mergeGroupId = "";
+
+    for (const file of files) {
+        let stats: RunStats;
+        try {
+            stats = JSON.parse(await readFile(join(statsDir, file), "utf8")) as RunStats;
+        } catch {
+            continue;
+        }
+        mergeGroupId = stats.mergeGroupId;
+        for (const [name, count] of Object.entries(stats.transferred)) {
+            transferred[name] = (transferred[name] ?? 0) + count;
+        }
+        for (const [name, count] of Object.entries(stats.blackholed)) {
+            blackholed[name] = (blackholed[name] ?? 0) + count;
+        }
+        unmatched += stats.unmatched;
+    }
+
+    if (!mergeGroupId) {
+        return;
+    }
+
+    const sumRecord = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0);
+    const formatDetail = (r: Record<string, number>) => {
+        const entries = Object.entries(r);
+        if (entries.length === 0) {
+            return "";
+        }
+        return ` (${entries.map(([k, v]) => `${k}=${v}`).join(", ")})`;
+    };
+
+    const transferredTotal = sumRecord(transferred);
+    const blackholedTotal = sumRecord(blackholed);
+    const scannedTotal = transferredTotal + blackholedTotal + unmatched;
+
+    logger.info(
+        `[${mergeGroupId}] TOTAL: scanned ${scannedTotal}, ` +
+            `transferred ${transferredTotal}${formatDetail(transferred)}, ` +
+            `blackholed ${blackholedTotal}${formatDetail(blackholed)}, ` +
+            `unmatched ${unmatched}`
+    );
 }

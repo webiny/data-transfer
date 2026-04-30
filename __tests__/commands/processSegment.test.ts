@@ -47,7 +47,11 @@ describe("processSegment handler", () => {
             debug: vi.fn(),
             child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })
         });
-        resolveMap.set(PipelineRunner, { run: runSpy, getProcessors: getProcessorsSpy });
+        resolveMap.set(PipelineRunner, {
+            run: runSpy,
+            getProcessors: getProcessorsSpy,
+            getShardStats: vi.fn(() => null)
+        });
         resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
         resolveMap.set(FileTool, { exists: existsSync });
