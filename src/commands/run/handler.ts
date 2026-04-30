@@ -206,7 +206,7 @@ async function logRunTotal(statsDir: string, logger: Logger.Interface): Promise<
 
     const transferred: Record<string, number> = {};
     const blackholed: Record<string, number> = {};
-    let unmatched = 0;
+    const unmatched: Record<string, number> = {};
     let mergeGroupId = "";
 
     for (const file of files) {
@@ -223,7 +223,9 @@ async function logRunTotal(statsDir: string, logger: Logger.Interface): Promise<
         for (const [name, count] of Object.entries(stats.blackholed)) {
             blackholed[name] = (blackholed[name] ?? 0) + count;
         }
-        unmatched += stats.unmatched;
+        for (const [type, count] of Object.entries(stats.unmatched)) {
+            unmatched[type] = (unmatched[type] ?? 0) + count;
+        }
     }
 
     if (!mergeGroupId) {
@@ -241,12 +243,13 @@ async function logRunTotal(statsDir: string, logger: Logger.Interface): Promise<
 
     const transferredTotal = sumRecord(transferred);
     const blackholedTotal = sumRecord(blackholed);
-    const scannedTotal = transferredTotal + blackholedTotal + unmatched;
+    const unmatchedTotal = sumRecord(unmatched);
+    const scannedTotal = transferredTotal + blackholedTotal + unmatchedTotal;
 
     logger.info(
         `[${mergeGroupId}] TOTAL: scanned ${scannedTotal}, ` +
             `transferred ${transferredTotal}${formatDetail(transferred)}, ` +
             `blackholed ${blackholedTotal}${formatDetail(blackholed)}, ` +
-            `unmatched ${unmatched}`
+            `unmatched ${unmatchedTotal}${formatDetail(unmatched)}`
     );
 }

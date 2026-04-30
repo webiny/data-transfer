@@ -23,7 +23,7 @@ export interface RunStats {
     mergeGroupId: string;
     transferred: Record<string, number>;
     blackholed: Record<string, number>;
-    unmatched: number;
+    unmatched: Record<string, number>;
 }
 
 // ============================================================================

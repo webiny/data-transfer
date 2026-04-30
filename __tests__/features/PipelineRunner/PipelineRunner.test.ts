@@ -393,7 +393,7 @@ describe("PipelineRunner.run()", () => {
         expect(acceptCalls).toEqual(["a:r1"]);
     });
 
-    it("emits a debug log when a record matches no pipeline in a group", async () => {
+    it("emits a warn log when a record matches no pipeline in a group", async () => {
         const { container, logger } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         scanner.records = [{ id: "r1", type: "miss" }];
@@ -403,7 +403,7 @@ describe("PipelineRunner.run()", () => {
         await runner.run();
 
         const dropMessages = logger.entries.filter(e =>
-            e.message.startsWith("record dropped: no matching pipeline in merge group")
+            e.message.startsWith("unmatched record —")
         );
         expect(dropMessages.length).toBeGreaterThan(0);
     });

@@ -35,7 +35,7 @@ interface RunShardParams {
 interface ShardStats {
     transferred: Map<string, number>;
     blackholed: Map<string, number>;
-    unmatched: number;
+    unmatched: Map<string, number>;
 }
 
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
@@ -162,7 +162,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             mergeGroupId,
             transferred: Object.fromEntries(stats.transferred),
             blackholed: Object.fromEntries(stats.blackholed),
-            unmatched: stats.unmatched
+            unmatched: Object.fromEntries(stats.unmatched)
         };
     }
 
@@ -252,9 +252,9 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         // of per-record so a real prod run surfaces silent drops (records
         // matching no pipeline filter) in the default `info` log instead
         // of being invisible at `debug`.
-        let unmatchedCount = 0;
         const perPipelineTransferred: Map<string, number> = new Map();
         const perPipelineBlackholed: Map<string, number> = new Map();
+        const unmatchedByType: Map<string, number> = new Map();
 
         for await (const record of scanner.scan(shard)) {
             let matched = false;
@@ -294,11 +294,11 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 break;
             }
             if (!matched) {
-                const { PK, SK } = record as any;
-                unmatchedCount++;
-                this.logger.debug(
-                    `record dropped: no matching pipeline in merge group (${PK} ${SK})`,
-                    mergeGroupId
+                const { PK, SK, TYPE } = record as any;
+                const typeKey: string = TYPE ?? "unknown";
+                unmatchedByType.set(typeKey, (unmatchedByType.get(typeKey) ?? 0) + 1);
+                this.logger.warn(
+                    `unmatched record — TYPE=${typeKey} PK=${PK} SK=${SK}`
                 );
                 await this.snapshotWriter.write(
                     `dropped/segment-${shardCtx.segment}.jsonl`,
@@ -313,7 +313,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             shardCtx,
             perPipelineTransferred,
             perPipelineBlackholed,
-            unmatchedCount
+            unmatchedByType
         );
 
         // Shard end: each unique processor (across pipelines in this group)
@@ -340,7 +340,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return {
             transferred: perPipelineTransferred,
             blackholed: perPipelineBlackholed,
-            unmatched: unmatchedCount
+            unmatched: unmatchedByType
         };
     }
 
@@ -444,16 +444,17 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         shardCtx: Processor.AfterShardContext,
         transferred: Map<string, number>,
         blackholed: Map<string, number>,
-        unmatched: number
+        unmatched: Map<string, number>
     ): void {
         const transferredTotal = sumMap(transferred);
         const blackholedTotal = sumMap(blackholed);
-        const scannedTotal = transferredTotal + blackholedTotal + unmatched;
+        const unmatchedTotal = sumMap(unmatched);
+        const scannedTotal = transferredTotal + blackholedTotal + unmatchedTotal;
         const parts: string[] = [
             `scanned ${scannedTotal}`,
             `transferred ${transferredTotal}${formatDetail(transferred)}`,
             `blackholed ${blackholedTotal}${formatDetail(blackholed)}`,
-            `unmatched ${unmatched}`
+            `unmatched ${unmatchedTotal}${formatDetail(unmatched)}`
         ];
         this.logger.info(
             `[${mergeGroupId} shard ${shardCtx.segment + 1}/${shardCtx.totalSegments}] ` +
@@ -464,7 +465,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     private logRunSummary(mergeGroupId: string, stats: ShardStats[]): void {
         const transferred: Map<string, number> = new Map();
         const blackholed: Map<string, number> = new Map();
-        let unmatched = 0;
+        const unmatched: Map<string, number> = new Map();
 
         for (const s of stats) {
             for (const [name, count] of s.transferred) {
@@ -473,17 +474,20 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             for (const [name, count] of s.blackholed) {
                 blackholed.set(name, (blackholed.get(name) ?? 0) + count);
             }
-            unmatched += s.unmatched;
+            for (const [type, count] of s.unmatched) {
+                unmatched.set(type, (unmatched.get(type) ?? 0) + count);
+            }
         }
 
         const transferredTotal = sumMap(transferred);
         const blackholedTotal = sumMap(blackholed);
-        const scannedTotal = transferredTotal + blackholedTotal + unmatched;
+        const unmatchedTotal = sumMap(unmatched);
+        const scannedTotal = transferredTotal + blackholedTotal + unmatchedTotal;
         const parts: string[] = [
             `scanned ${scannedTotal}`,
             `transferred ${transferredTotal}${formatDetail(transferred)}`,
             `blackholed ${blackholedTotal}${formatDetail(blackholed)}`,
-            `unmatched ${unmatched}`
+            `unmatched ${unmatchedTotal}${formatDetail(unmatched)}`
         ];
         this.logger.info(`[${mergeGroupId}] TOTAL: ${parts.join(", ")}`);
     }
