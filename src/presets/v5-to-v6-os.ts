@@ -10,7 +10,6 @@ import {
     isOsMailerSettings
 } from "~/domain/transform/filters.ts";
 import { addLiveField, osCmsEntryTransformers } from "~/transformers/index.ts";
-import { DdbProcessor, DdbScanner } from "@/src/index.js";
 
 export default createTransferPreset({
     name: "v5-to-v6-os",
@@ -19,8 +18,8 @@ export default createTransferPreset({
         const acoSearchRecords = factory
             .create({
                 name: "AcoSearchRecords",
-                scanner: DdbScanner,
-                processors: [DdbProcessor]
+                scanner: OsScanner,
+                processors: [OsProcessor]
             })
             .filter(createFilter(isAcoSearchRecord))
             .blackhole()
