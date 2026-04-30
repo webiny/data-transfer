@@ -23,11 +23,9 @@ class DdbExecutorImpl implements DdbExecutorAbstraction.Interface {
             bucket.push(put.record as DatabaseRecord);
         }
 
-        await Promise.all(
-            Array.from(byTable.entries()).map(([table, records]) =>
-                this.targetDb.batchPut(table, records)
-            )
-        );
+        for (const [table, records] of byTable) {
+            await this.targetDb.batchPut(table, records);
+        }
     }
 }
 

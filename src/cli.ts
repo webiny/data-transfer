@@ -11,6 +11,15 @@ import {
     registerProcessSegmentCommand
 } from "./commands/index.ts";
 
+// Last-resort safety net: any promise rejection that escapes all try-catch
+// blocks (e.g. from SDK internals during a backoff sleep) is caught here so
+// the process always exits with code 1 rather than crashing silently.
+process.on("unhandledRejection", (reason: unknown) => {
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    process.stderr.write(`Fatal: unhandled rejection — ${msg}\n`);
+    process.exit(1);
+});
+
 let cli = yargs(hideBin(process.argv));
 cli = registerInitCommand(cli);
 cli = registerRunCommand(cli);
