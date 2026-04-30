@@ -713,7 +713,8 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
         expect(line).toMatch(/scanned 5/);
         expect(line).toMatch(/transferred 3/);
         expect(line).toMatch(/only-foo=3/);
-        expect(line).toMatch(/dropped 2/);
+        expect(line).toMatch(/blackholed 0/);
+        expect(line).toMatch(/unmatched 2/);
     });
 
     it("warns once when a transformer emits a command key no processor drains", async () => {
