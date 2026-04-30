@@ -29,7 +29,7 @@ export default createDdbTransfer({
         s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
         auditLog: {
             dynamodb: {
-                tableName: null
+                tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE")
             }
         }
     },

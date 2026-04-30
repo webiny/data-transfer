@@ -17,10 +17,10 @@ const ddbSourceAccountConfigSchema = z.object({
 });
 
 const ddbTargetAccountConfigSchema = ddbSourceAccountConfigSchema.extend({
-    // Set to null to skip audit log transfer — those records will be
-    // intercepted and discarded (blackholed) instead of falling through
-    // to the CMS pipeline. Set tableName to null to intercept and discard
-    // without writing (useful when you have no audit log table yet).
+    // Audit log table config. Set tableName to null to skip audit log
+    // transfer — records will be intercepted (blackholed) and NOT written
+    // to any target. NOTE: if you want audit logs transferred, you must
+    // provide a valid tableName here.
     auditLog: z
         .object({
             dynamodb: z.object({ tableName: trimmedString().nullable() })

@@ -60,13 +60,6 @@ export default createTransferPreset({
     description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
     configure({ runner, pipelineBuilderFactory: factory, container }): void {
         // ========================================================================
-        // Audit Logs
-        // IMPORTANT: Must be registered before AcoSearchRecordsPage and CmsEntries
-        // because audit log records share the acoSearchRecord modelId prefix.
-        // When auditLog.dynamodb.tableName is null the pipeline is blackholed —
-        // records are consumed but not written.
-        // ========================================================================
-        // ========================================================================
         // Migration records — blackhole all PKs starting with "MIGRATION"
         // ========================================================================
         const migrationRecords = factory
@@ -79,6 +72,13 @@ export default createTransferPreset({
             .blackhole()
             .build();
 
+        // ========================================================================
+        // Audit Logs
+        // IMPORTANT: Must be registered before AcoSearchRecordsPage and CmsEntries
+        // because audit log records share the acoSearchRecord modelId prefix.
+        // NOTE: set target.auditLog.dynamodb.tableName to null (or omit auditLog
+        // entirely) to skip audit log transfer — records will be blackholed.
+        // ========================================================================
         const config = container.resolve(MigrationConfig);
         const auditLogs = factory
             .create({
