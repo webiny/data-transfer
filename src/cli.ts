@@ -15,8 +15,21 @@ import {
 // blocks (e.g. from SDK internals during a backoff sleep) is caught here so
 // the process always exits with code 1 rather than crashing silently.
 process.on("unhandledRejection", (reason: unknown) => {
-    const msg = reason instanceof Error ? reason.message : String(reason);
-    process.stderr.write(`Fatal: unhandled rejection — ${msg}\n`);
+    const lines: string[] = ["Fatal: unhandled rejection"];
+    if (reason instanceof Error) {
+        lines.push(`  name:    ${reason.name}`);
+        lines.push(`  message: ${reason.message}`);
+        if (reason.stack) {
+            lines.push(`  stack:\n${reason.stack}`);
+        }
+        const extra = { ...reason } as Record<string, unknown>;
+        if (Object.keys(extra).length > 0) {
+            lines.push(`  extra:   ${JSON.stringify(extra, null, 2)}`);
+        }
+    } else {
+        lines.push(`  reason: ${JSON.stringify(reason, null, 2)}`);
+    }
+    process.stderr.write(lines.join("\n") + "\n");
     process.exit(1);
 });
 
