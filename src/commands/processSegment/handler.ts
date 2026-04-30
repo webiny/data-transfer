@@ -9,6 +9,7 @@ import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
+import { formatError } from "~/base/index.ts";
 
 export interface ProcessSegmentArgs {
     runId: string;
@@ -50,7 +51,12 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
 
     logger.info(`Processing shard ${argv.segment + 1}/${argv.total}...`);
 
-    await runner.run({ segment: argv.segment, totalSegments: argv.total });
+    try {
+        await runner.run({ segment: argv.segment, totalSegments: argv.total });
+    } catch (error) {
+        logger.error(`Shard ${argv.segment} failed: ${formatError(error)}`);
+        process.exit(1);
+    }
 
     const stats = runner.getShardStats();
     if (stats) {
