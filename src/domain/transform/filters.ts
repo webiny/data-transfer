@@ -109,3 +109,10 @@ export const isAuditLogEntry = (record: BaseRecord): boolean => {
     }
     return modelId.toLowerCase() === "acosearchrecord-auditlogs" && record.SK === "L";
 };
+
+export const isMigrationRecord = (record: BaseRecord): boolean => {
+    if (!record.PK) {
+        return false;
+    }
+    return record.PK.startsWith("MIGRATION");
+};

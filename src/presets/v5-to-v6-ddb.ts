@@ -16,6 +16,7 @@ import {
     isCmsModel,
     isFlpRecord,
     isFmFile,
+    isMigrationRecord,
     isSecurityTeam
 } from "~/domain/transform/filters.ts";
 import {
@@ -74,7 +75,7 @@ export default createTransferPreset({
                 scanner: DdbScanner,
                 processors: [DdbProcessor]
             })
-            .filter(createFilter(record => record.PK.startsWith("MIGRATION")))
+            .filter(createFilter(isMigrationRecord))
             .blackhole()
             .build();
 
