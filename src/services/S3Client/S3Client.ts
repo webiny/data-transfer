@@ -6,7 +6,7 @@ import {
 } from "@webiny/aws-sdk/client-s3";
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
-import { isRetryableAwsError, retryBackoffMs } from "~/base/index.ts";
+import { isRetryableAwsError, isTokenBucketExhausted, retryBackoffMs } from "~/base/index.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 // See DynamoDbClient for the rationale on 6 retries + the jittered
@@ -113,7 +113,8 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                     throw error;
                 }
 
-                const backoff = retryBackoffMs(attempt, this.initialBackoff);
+                const base = retryBackoffMs(attempt, this.initialBackoff);
+                const backoff = isTokenBucketExhausted(error) ? Math.max(base, 10000) : base;
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }

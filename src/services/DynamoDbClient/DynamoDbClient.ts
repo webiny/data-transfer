@@ -12,7 +12,7 @@ import {
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
-import { isRetryableAwsError, retryBackoffMs } from "~/base/index.ts";
+import { isRetryableAwsError, isTokenBucketExhausted, retryBackoffMs } from "~/base/index.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
@@ -183,7 +183,9 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
                     throw error;
                 }
 
-                const backoff = retryBackoffMs(attempt, this.initialBackoff);
+                const base = retryBackoffMs(attempt, this.initialBackoff);
+                // Token bucket needs time to refill — enforce a minimum 10s wait.
+                const backoff = isTokenBucketExhausted(error) ? Math.max(base, 10000) : base;
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }
