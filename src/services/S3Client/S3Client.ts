@@ -46,9 +46,19 @@ export class S3ClientImpl implements SourceS3Client.Interface {
             Key: options.targetKey
         });
 
-        await this.executeWithRetry(async () => {
-            await this.client.send(command);
-        });
+        try {
+            await this.executeWithRetry(async () => {
+                await this.client.send(command);
+            });
+        } catch (error) {
+            if (this.isNoSuchKeyError(error)) {
+                this.logger.warn(
+                    `S3 copy skipped — source key not found: ${options.sourceBucket}/${options.sourceKey}`
+                );
+                return;
+            }
+            throw error;
+        }
     }
 
     public async getObject(bucket: string, key: string): Promise<Buffer> {
@@ -73,13 +83,6 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                     try {
                         await this.copy(op);
                     } catch (error) {
-                        if (this.isNoSuchKeyError(error)) {
-                            this.logger.warn(
-                                `S3 copy skipped — source key not found: ` +
-                                    `${op.sourceBucket}/${op.sourceKey}`
-                            );
-                            return;
-                        }
                         this.logger.error(
                             `S3 copy failed after ${this.maxRetries + 1} attempts — ` +
                                 `${op.sourceBucket}/${op.sourceKey} → ` +
