@@ -36,7 +36,7 @@ describe("DroppedRecordLog", () => {
         process.chdir(originalCwd);
     });
 
-    it("writes [UNMATCHED] line with modelId when record has top-level modelId", async () => {
+    it("writes unmatched line with modelId to segment-N-unmatched.log", async () => {
         const log = createContainer().resolve(DroppedRecordLog);
         log.add(
             { PK: "T#root", SK: "L", TYPE: "cms.entry.l", modelId: "blogPost" },
@@ -45,13 +45,13 @@ describe("DroppedRecordLog", () => {
         log.flush(0);
 
         const content = await readFile(
-            join(workDir, ".transfer", "test-run-id", "segment-0-dropped.log"),
+            join(workDir, ".transfer", "test-run-id", "segment-0-unmatched.log"),
             "utf-8"
         );
-        expect(content.trim()).toBe("[UNMATCHED] [blogPost] T#root : L : cms.entry.l");
+        expect(content.trim()).toBe("[blogPost] T#root : L : cms.entry.l");
     });
 
-    it("writes [UNMATCHED] line with [TYPE] tag when record has no modelId", async () => {
+    it("writes unmatched line with [TYPE] tag when record has no modelId", async () => {
         const log = createContainer().resolve(DroppedRecordLog);
         log.add(
             { PK: "T#root#FLP#1", SK: "A", TYPE: "flp.record" },
@@ -60,13 +60,13 @@ describe("DroppedRecordLog", () => {
         log.flush(0);
 
         const content = await readFile(
-            join(workDir, ".transfer", "test-run-id", "segment-0-dropped.log"),
+            join(workDir, ".transfer", "test-run-id", "segment-0-unmatched.log"),
             "utf-8"
         );
-        expect(content.trim()).toBe("[UNMATCHED] [flp.record] T#root#FLP#1 : A");
+        expect(content.trim()).toBe("[flp.record] T#root#FLP#1 : A");
     });
 
-    it("writes [BLACKHOLED] line using data.modelId as fallback", async () => {
+    it("writes blackholed line using data.modelId as fallback to segment-N-blackholed.log", async () => {
         const log = createContainer().resolve(DroppedRecordLog);
         log.add(
             {
@@ -80,25 +80,29 @@ describe("DroppedRecordLog", () => {
         log.flush(0);
 
         const content = await readFile(
-            join(workDir, ".transfer", "test-run-id", "segment-0-dropped.log"),
+            join(workDir, ".transfer", "test-run-id", "segment-0-blackholed.log"),
             "utf-8"
         );
-        expect(content.trim()).toBe("[BLACKHOLED] [webinyTask] T#root#TASK#1 : L : webinyTask");
+        expect(content.trim()).toBe("[webinyTask] T#root#TASK#1 : L : webinyTask");
     });
 
-    it("writes multiple lines in add order", async () => {
+    it("writes blackholed and unmatched to separate files", async () => {
         const log = createContainer().resolve(DroppedRecordLog);
         log.add({ PK: "PK1", SK: "SK1", TYPE: "t1" }, new RecordDisposition.Unmatched());
         log.add({ PK: "PK2", SK: "SK2", TYPE: "t2" }, new RecordDisposition.Blackholed("pipe"));
         log.flush(1);
 
-        const content = await readFile(
-            join(workDir, ".transfer", "test-run-id", "segment-1-dropped.log"),
+        const unmatched = await readFile(
+            join(workDir, ".transfer", "test-run-id", "segment-1-unmatched.log"),
             "utf-8"
         );
-        const lines = content.trim().split("\n");
-        expect(lines[0]).toBe("[UNMATCHED] [t1] PK1 : SK1");
-        expect(lines[1]).toBe("[BLACKHOLED] [t2] PK2 : SK2");
+        expect(unmatched.trim()).toBe("[t1] PK1 : SK1");
+
+        const blackholed = await readFile(
+            join(workDir, ".transfer", "test-run-id", "segment-1-blackholed.log"),
+            "utf-8"
+        );
+        expect(blackholed.trim()).toBe("[t2] PK2 : SK2");
     });
 
     it("creates no file when buffer is empty", async () => {
@@ -106,7 +110,16 @@ describe("DroppedRecordLog", () => {
         log.flush(0);
 
         await expect(
-            readFile(join(workDir, ".transfer", "test-run-id", "segment-0-dropped.log"), "utf-8")
+            readFile(
+                join(workDir, ".transfer", "test-run-id", "segment-0-unmatched.log"),
+                "utf-8"
+            )
+        ).rejects.toThrow(/ENOENT/);
+        await expect(
+            readFile(
+                join(workDir, ".transfer", "test-run-id", "segment-0-blackholed.log"),
+                "utf-8"
+            )
         ).rejects.toThrow(/ENOENT/);
     });
 
@@ -117,7 +130,10 @@ describe("DroppedRecordLog", () => {
         log.flush(1);
 
         await expect(
-            readFile(join(workDir, ".transfer", "test-run-id", "segment-1-dropped.log"), "utf-8")
+            readFile(
+                join(workDir, ".transfer", "test-run-id", "segment-1-unmatched.log"),
+                "utf-8"
+            )
         ).rejects.toThrow(/ENOENT/);
     });
 });
