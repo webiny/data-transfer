@@ -33,6 +33,7 @@ const RETRYABLE_STATUS_CODES = new Set<number>([408, 425, 429, 500, 502, 503, 50
 interface AwsErrorLike {
     name?: string;
     code?: string;
+    message?: string;
     $metadata?: { httpStatusCode?: number };
     $retryable?: { throttling?: boolean };
 }
@@ -62,6 +63,11 @@ export function isRetryableAwsError(error: unknown): boolean {
 
     const status = candidate.$metadata?.httpStatusCode;
     if (typeof status === "number" && RETRYABLE_STATUS_CODES.has(status)) {
+        return true;
+    }
+
+    // SDK adaptive retry token bucket exhausted — back off and let it replenish.
+    if (typeof candidate.message === "string" && candidate.message.includes("retry token")) {
         return true;
     }
 
