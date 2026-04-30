@@ -73,7 +73,8 @@ export const storageShapeTransformer = createTransformer<
             content
         },
         // Root-level expiresAt as Unix seconds — DynamoDB TTL reads this field
-        // directly from the item root. The ISO copy inside data is for display only.
+        // directly from the item root. data.expiresAt is the ISO equivalent for
+        // application use, both derived from transfer time (Date.now() + 60 days).
         expiresAt: expiresAtTTL
     } as unknown as BaseRecord);
 });
