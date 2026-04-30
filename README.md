@@ -315,7 +315,7 @@ Pass by name via `config.pipeline.preset: "v5-to-v6-ddb"` (or `"v5-to-v6-os"`). 
 
 - **Merge groups**: pipelines sharing the same scanner run together, in registration order.
 - **First-match-wins**: within a merge group, the first pipeline whose filter(s) pass is the one that runs for that record. Register more-specific filters before catch-alls.
-- **Unmatched records are dropped by design**: if no pipeline in the merge group accepts a record, it's skipped. A preset picks which record types to transfer — types outside the preset's filter set are intentionally left behind. The runner emits an `info`-level summary at the end of each shard: `"[<mergeGroupId> shard 1/4] scanned 10000, transferred 9612 (cmsEntries=8421, fmFiles=1191), dropped 388"` — so a default-log-level run shows exactly how many records landed vs. were skipped. If you need every record to land on the target, add a catch-all pipeline last (`.filter(createFilter(() => true))`) or register a zero-transformer passthrough under the same scanner.
+- **Unmatched records are dropped by design**: if no pipeline in the merge group accepts a record, it's skipped. A preset picks which record types to transfer — types outside the preset's filter set are intentionally left behind. The runner emits a `warn`-level line per unmatched record (`unmatched record — TYPE=<type> PK=<pk> SK=<sk>`) and an `info`-level summary with a TYPE breakdown: `"[<mergeGroupId> shard 1/4] scanned 10000, transferred 9612 (...), blackholed 374 (...), unmatched 14 (page.page=10, cms.entry=4)"`. Each worker also writes `segment-N-unmatched.log` to `.transfer/<runId>/` for post-run inspection. If you need every record to land on the target, add a catch-all pipeline last (`.filter(createFilter(() => true))`) or register a zero-transformer passthrough under the same scanner.
 - **Hooks**: each pipeline may declare before-hooks + after-hooks. Before-hooks fire once per merge group before any shard runs; after-hooks fire once after all shards in the merge group succeed. After-hooks are skipped on shard failure.
 - **Parallelism**: the `pipeline.segments` config field controls the number of scanner segments (shards). Each shard runs in parallel via a child process.
 - **Re-running specific shards**: pass `--segments=1,3` on the CLI to run only those shard indices out of the configured total. Keeps the scanner's segment math intact (workers still receive the full `--total`), so each shard sees exactly the same slice of the source table as it would in a full run. Use after a partial failure to re-drive just the shards that didn't complete, without rescanning the rest.
@@ -343,13 +343,16 @@ export default createDdbTransfer({
 Layout (default `dir`: `.transfer/<runId>/snapshot`, gzipped):
 
 ```
-.transfer/<runId>/snapshot/
-├── <pipelineName>/
-│   ├── segment-0.source.jsonl.gz         ← post-filter, pre-transform
-│   ├── segment-0.post-transform.jsonl.gz ← after the whole transformer chain
-│   └── segment-0.commands.jsonl.gz       ← PutRecord + S3Copy + etc.
-└── dropped/
-    └── segment-0.jsonl.gz                ← records matching no pipeline filter
+.transfer/<runId>/
+├── snapshot/
+│   ├── <pipelineName>/
+│   │   ├── segment-0.source.jsonl.gz         ← post-filter, pre-transform
+│   │   ├── segment-0.post-transform.jsonl.gz ← after the whole transformer chain
+│   │   └── segment-0.commands.jsonl.gz       ← PutRecord + S3Copy + etc.
+│   └── dropped/
+│       └── segment-0.jsonl.gz                ← records matching no pipeline filter
+├── segment-0-blackholed.log              ← one line per blackholed record
+└── segment-0-unmatched.log              ← one line per unmatched record
 ```
 
 One file per shard per pipeline per category. Inspect with `zcat` + `jq`:
