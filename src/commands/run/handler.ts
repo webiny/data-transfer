@@ -1,7 +1,10 @@
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
 import { execa } from "execa";
 import { bootstrap } from "~/bootstrap.ts";
 import { formatError } from "~/base/index.ts";
+import type { RunStats } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
@@ -38,17 +41,20 @@ export async function handler(
     } catch (error) {
         // Config-load / Zod validation failures happen before we have a logger
         // — write directly to stderr so the user sees the friendly format.
-        process.stderr.write(`\n${formatError(error)}\n`);
+        const verbose = (logLevel ?? "info") === "debug";
+        process.stderr.write(`\n${formatError(error, verbose)}\n`);
         process.exit(1);
     }
 
+    const resolvedLogLevel = (logLevel ?? config.debug?.logLevel) as string | undefined;
+    const verbose = resolvedLogLevel === "debug";
     const segments = config.pipeline.segments || 1;
 
     let segmentsToRun: number[];
     try {
         segmentsToRun = resolveSegmentsToRun(segments, segmentsFilter);
     } catch (error) {
-        process.stderr.write(`\n${formatError(error)}\n`);
+        process.stderr.write(`\n${formatError(error, verbose)}\n`);
         process.exit(1);
     }
 
@@ -82,7 +88,7 @@ export async function handler(
             if (result.status === "rejected") {
                 const segment = segmentsToRun[index];
                 failures.push(segment);
-                logger.error(`Segment ${segment} failed: ${formatError(result.reason)}`);
+                logger.error(`Segment ${segment} failed: ${formatError(result.reason, verbose)}`);
             }
         });
         logger.info(
@@ -90,13 +96,15 @@ export async function handler(
                 (failures.length > 0 ? ` (failed: ${failures.join(", ")})` : "")
         );
 
+        await logRunTotal(join(process.cwd(), ".transfer", runId, "stats"), logger);
+
         try {
             const afterHook = container.resolve(AfterTransferHook);
             logger.info("Running after-transfer hooks...");
             await afterHook.execute();
         } catch (error) {
             logger.error(
-                `After-transfer hooks failed. Data transfer state may need manual intervention. ${formatError(error)}`
+                `After-transfer hooks failed. Data transfer state may need manual intervention. ${formatError(error, verbose)}`
             );
         }
 
@@ -109,7 +117,7 @@ export async function handler(
         }
         logger.info(`Transfer completed successfully in ${duration}s`);
     } catch (error) {
-        logger.error(`Transfer failed: ${formatError(error)}`);
+        logger.error(`Transfer failed: ${formatError(error, verbose)}`);
         process.exit(1);
     }
 }
@@ -189,4 +197,62 @@ async function spawnWorker(
     if (exitCode !== 0) {
         throw new Error(`Worker process for segment ${segment} failed with code ${exitCode}`);
     }
+}
+
+async function logRunTotal(statsDir: string, logger: Logger.Interface): Promise<void> {
+    let files: string[];
+    try {
+        files = (await readdir(statsDir)).filter(f => f.endsWith(".json"));
+    } catch {
+        return;
+    }
+
+    const transferred: Record<string, number> = {};
+    const blackholed: Record<string, number> = {};
+    const unmatched: Record<string, number> = {};
+    let mergeGroupId = "";
+
+    for (const file of files) {
+        let stats: RunStats;
+        try {
+            stats = JSON.parse(await readFile(join(statsDir, file), "utf8")) as RunStats;
+        } catch {
+            continue;
+        }
+        mergeGroupId = stats.mergeGroupId;
+        for (const [name, count] of Object.entries(stats.transferred)) {
+            transferred[name] = (transferred[name] ?? 0) + count;
+        }
+        for (const [name, count] of Object.entries(stats.blackholed)) {
+            blackholed[name] = (blackholed[name] ?? 0) + count;
+        }
+        for (const [type, count] of Object.entries(stats.unmatched)) {
+            unmatched[type] = (unmatched[type] ?? 0) + count;
+        }
+    }
+
+    if (!mergeGroupId) {
+        return;
+    }
+
+    const sumRecord = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0);
+    const formatDetail = (r: Record<string, number>) => {
+        const entries = Object.entries(r);
+        if (entries.length === 0) {
+            return "";
+        }
+        return ` (${entries.map(([k, v]) => `${k}=${v}`).join(", ")})`;
+    };
+
+    const transferredTotal = sumRecord(transferred);
+    const blackholedTotal = sumRecord(blackholed);
+    const unmatchedTotal = sumRecord(unmatched);
+    const scannedTotal = transferredTotal + blackholedTotal + unmatchedTotal;
+
+    logger.info(
+        `[${mergeGroupId}] TOTAL: scanned ${scannedTotal}, ` +
+            `transferred ${transferredTotal}${formatDetail(transferred)}, ` +
+            `blackholed ${blackholedTotal}${formatDetail(blackholed)}, ` +
+            `unmatched ${unmatchedTotal}${formatDetail(unmatched)}`
+    );
 }

@@ -2,10 +2,13 @@ import { createTransferPreset } from "~/utils/createTransferPreset.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
 import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 import { S3Processor } from "~/features/S3Processor/index.ts";
+import { AuditLogProcessor } from "~/features/AuditLogProcessor/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
     byType,
     isAcoSearchRecord,
+    isAuditLogEntry,
     isBackgroundTask,
     isBuiltInSecurityRole,
     isCmsEntry,
@@ -13,11 +16,13 @@ import {
     isCmsModel,
     isFlpRecord,
     isFmFile,
+    isMigrationRecord,
     isSecurityTeam
 } from "~/domain/transform/filters.ts";
 import {
     addGsiTenant,
     addLiveField,
+    auditLogTransformers,
     cmsEntryTransformers,
     createMetadata,
     extractImageMetadata,
@@ -53,7 +58,41 @@ import {
 export default createTransferPreset({
     name: "v5-to-v6-ddb",
     description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
-    configure({ runner, pipelineBuilderFactory: factory }): void {
+    configure({ runner, pipelineBuilderFactory: factory, container }): void {
+        // ========================================================================
+        // Migration records — blackhole all PKs starting with "MIGRATION"
+        // ========================================================================
+        const migrationRecords = factory
+            .create({
+                name: "MigrationRecords",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isMigrationRecord))
+            .blackhole()
+            .build();
+
+        // ========================================================================
+        // Audit Logs
+        // IMPORTANT: Must be registered before AcoSearchRecordsPage and CmsEntries
+        // because audit log records share the acoSearchRecord modelId prefix.
+        // NOTE: set target.auditLog.dynamodb.tableName to null (or omit auditLog
+        // entirely) to skip audit log transfer — records will be blackholed.
+        // ========================================================================
+        const config = container.resolve(MigrationConfig);
+        const auditLogs = factory
+            .create({
+                name: "AuditLogs",
+                scanner: DdbScanner,
+                processors: [AuditLogProcessor]
+            })
+            .filter(createFilter(isAuditLogEntry))
+            .use(auditLogTransformers)
+            .blackhole(() => {
+                return config.storage !== "ddb" || !config.target.auditLog?.dynamodb?.tableName;
+            })
+            .build();
+
         const acoSearchRecordsPage = factory
             .create({
                 name: "AcoSearchRecordsPage",
@@ -234,6 +273,8 @@ export default createTransferPreset({
         // IMPORTANT: Order matters due to first-match-wins behavior
         // ========================================================================
         runner
+            .register(migrationRecords)
+            .register(auditLogs)
             .register(acoSearchRecordsPage)
             .register(contentModelGroups)
             .register(backgroundTasks)

@@ -393,7 +393,7 @@ describe("PipelineRunner.run()", () => {
         expect(acceptCalls).toEqual(["a:r1"]);
     });
 
-    it("emits a debug log when a record matches no pipeline in a group", async () => {
+    it("emits a warn log when a record matches no pipeline in a group", async () => {
         const { container, logger } = makeContainer();
         const scanner = container.resolve(Scanner) as FakeScanner;
         scanner.records = [{ id: "r1", type: "miss" }];
@@ -402,9 +402,7 @@ describe("PipelineRunner.run()", () => {
         runner.register(buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
         await runner.run();
 
-        const dropMessages = logger.entries.filter(e =>
-            e.message.startsWith("record dropped: no matching pipeline in merge group")
-        );
+        const dropMessages = logger.entries.filter(e => e.message.startsWith("unmatched record —"));
         expect(dropMessages.length).toBeGreaterThan(0);
     });
 
@@ -622,8 +620,8 @@ describe("PipelineRunner — hook lifecycle", () => {
         expect(captured).toHaveLength(2);
         expect(captured[0]?.runId).toBe("custom-run-42");
         expect(captured[1]?.runId).toBe("custom-run-42");
-        expect(captured[0]?.mergeGroupId).toBe("Core-Scanner");
-        expect(captured[1]?.mergeGroupId).toBe("Core-Scanner");
+        expect(captured[0]?.mergeGroupId).toBe("FakeScanner");
+        expect(captured[1]?.mergeGroupId).toBe("FakeScanner");
     });
 });
 
@@ -713,7 +711,8 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
         expect(line).toMatch(/scanned 5/);
         expect(line).toMatch(/transferred 3/);
         expect(line).toMatch(/only-foo=3/);
-        expect(line).toMatch(/dropped 2/);
+        expect(line).toMatch(/blackholed 0/);
+        expect(line).toMatch(/unmatched 2/);
     });
 
     it("warns once when a transformer emits a command key no processor drains", async () => {

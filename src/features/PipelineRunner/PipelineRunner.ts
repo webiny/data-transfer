@@ -15,7 +15,8 @@ import { TransferredRecordLog } from "~/features/TransferredRecordLog/index.ts";
 import { RecordDisposition } from "~/domain/pipeline/index.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
-    type RunOptions
+    type RunOptions,
+    type RunStats
 } from "./abstractions/PipelineRunner.ts";
 
 type ProcessorInstance = Processor.Interface<BaseTransformContext.Interface<unknown>, any>;
@@ -31,13 +32,20 @@ interface RunShardParams {
     shardCtx: Processor.AfterShardContext;
 }
 
+interface ShardStats {
+    transferred: Map<string, number>;
+    blackholed: Map<string, number>;
+    unmatched: Map<string, number>;
+}
+
 class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
-    private mergeGroups: Map<Abstraction<Scanner.Interface<unknown, unknown>>, AnyPipeline[]> =
-        new Map();
+    private mergeGroups: Map<Scanner.Interface<unknown, unknown>, AnyPipeline[]> = new Map();
 
     private readonly registeredNames: Set<string> = new Set();
 
     private readonly unclaimedWarned: Set<string> = new Set();
+
+    private lastShardStats: RunStats | null = null;
 
     public constructor(
         private readonly container: Container,
@@ -59,9 +67,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
             this.registeredNames.add(pipeline.name);
 
-            const groupKey = pipeline.scannerToken as Abstraction<
-                Scanner.Interface<unknown, unknown>
-            >;
+            const groupKey = pipeline.scanner;
             const group = this.mergeGroups.get(groupKey);
             if (group) {
                 group.push(pipeline);
@@ -73,13 +79,16 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return this;
     }
 
+    public getShardStats(): RunStats | null {
+        return this.lastShardStats;
+    }
+
     public getProcessors(): ProcessorInstance[] {
         const seen: Set<ProcessorInstance> = new Set();
         const processors: ProcessorInstance[] = [];
         for (const pipelines of this.mergeGroups.values()) {
             for (const pipeline of pipelines) {
-                for (const token of pipeline.processorTokens) {
-                    const processor = this.container.resolve(token) as ProcessorInstance;
+                for (const processor of pipeline.processors) {
                     if (!seen.has(processor)) {
                         seen.add(processor);
                         processors.push(processor);
@@ -102,8 +111,8 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
     private async runInternal(opts?: RunOptions): Promise<void> {
         if (!opts) {
-            for (const [scannerToken, pipelines] of this.mergeGroups) {
-                await this.runMergeGroup(scannerToken, pipelines);
+            for (const [scanner, pipelines] of this.mergeGroups) {
+                await this.runMergeGroup(scanner, pipelines);
             }
             return;
         }
@@ -119,30 +128,29 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         if (entry.done) {
             return;
         }
-        const [scannerToken, pipelines] = entry.value;
-        await this.runSingleShard(scannerToken, pipelines, opts);
+        const [scanner, pipelines] = entry.value;
+        await this.runSingleShard(scanner, pipelines, opts);
     }
 
     private async runSingleShard(
-        scannerToken: Abstraction<Scanner.Interface<unknown, unknown>>,
+        scanner: Scanner.Interface<unknown, unknown>,
         pipelines: AnyPipeline[],
         opts: RunOptions
     ): Promise<void> {
-        const scanner = this.container.resolve(scannerToken);
         const shards = await scanner.listShards();
 
         if (shards.length !== opts.totalSegments) {
             throw new Error(
-                `PipelineRunner.run({segment, totalSegments}): scanner "${scannerToken.toString()}" ` +
+                `PipelineRunner.run({segment, totalSegments}): scanner "${this.deriveMergeGroupId(scanner)}" ` +
                     `reported ${shards.length} shards but caller declared ` +
                     `totalSegments=${opts.totalSegments}.`
             );
         }
 
-        const mergeGroupId = this.deriveMergeGroupId(scannerToken);
+        const mergeGroupId = this.deriveMergeGroupId(scanner);
         const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
         const shard = shards[opts.segment];
-        await this.runShard({
+        const stats = await this.runShard({
             mergeGroupId,
             pipelines,
             scanner,
@@ -150,14 +158,19 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             pipelineProcessors,
             shardCtx: { segment: opts.segment, totalSegments: opts.totalSegments }
         });
+        this.lastShardStats = {
+            mergeGroupId,
+            transferred: Object.fromEntries(stats.transferred),
+            blackholed: Object.fromEntries(stats.blackholed),
+            unmatched: Object.fromEntries(stats.unmatched)
+        };
     }
 
     private async runMergeGroup(
-        scannerToken: Abstraction<Scanner.Interface<unknown, unknown>>,
+        scanner: Scanner.Interface<unknown, unknown>,
         pipelines: AnyPipeline[]
     ): Promise<void> {
-        const scanner = this.container.resolve(scannerToken);
-        const mergeGroupId = this.deriveMergeGroupId(scannerToken);
+        const mergeGroupId = this.deriveMergeGroupId(scanner);
         const hookParams: Hook.RunParams = {
             runId: this.transferContext.runId,
             mergeGroupId
@@ -172,8 +185,9 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         const pipelineProcessors = this.resolvePipelineProcessors(pipelines);
 
         const shards = await scanner.listShards();
+        const allStats: ShardStats[] = [];
         for (let i = 0; i < shards.length; i++) {
-            await this.runShard({
+            const stats = await this.runShard({
                 mergeGroupId,
                 pipelines,
                 scanner,
@@ -181,7 +195,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 pipelineProcessors,
                 shardCtx: { segment: i, totalSegments: shards.length }
             });
+            allStats.push(stats);
         }
+
+        this.logRunSummary(mergeGroupId, allStats);
 
         const afterHookTokens = this.dedupHookTokens(pipelines, "after");
         for (let i = afterHookTokens.length - 1; i >= 0; i--) {
@@ -196,11 +213,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     ): Map<AnyPipeline, ProcessorInstance[]> {
         const result: Map<AnyPipeline, ProcessorInstance[]> = new Map();
         for (const pipeline of pipelines) {
-            const instances: ProcessorInstance[] = [];
-            for (const token of pipeline.processorTokens) {
-                instances.push(this.container.resolve(token) as ProcessorInstance);
-            }
-            result.set(pipeline, instances);
+            result.set(pipeline, [...pipeline.processors]);
         }
         return result;
     }
@@ -224,7 +237,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         return result;
     }
 
-    private async runShard(params: RunShardParams): Promise<void> {
+    private async runShard(params: RunShardParams): Promise<ShardStats> {
         const { mergeGroupId, pipelines, scanner, shard, pipelineProcessors, shardCtx } = params;
         // Single shared command buffer for the whole shard. Per-record
         // transformers + processor.onEnd hooks push into it via slice
@@ -239,8 +252,9 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         // of per-record so a real prod run surfaces silent drops (records
         // matching no pipeline filter) in the default `info` log instead
         // of being invisible at `debug`.
-        let droppedCount = 0;
-        const perPipelineCounts: Map<string, number> = new Map();
+        const perPipelineTransferred: Map<string, number> = new Map();
+        const perPipelineBlackholed: Map<string, number> = new Map();
+        const unmatchedByType: Map<string, number> = new Map();
 
         for await (const record of scanner.scan(shard)) {
             let matched = false;
@@ -263,10 +277,14 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 );
                 if (result instanceof RecordDisposition.Blackholed) {
                     this.droppedLog.add(record, result);
-                } else {
-                    perPipelineCounts.set(
+                    perPipelineBlackholed.set(
                         pipeline.name,
-                        (perPipelineCounts.get(pipeline.name) ?? 0) + 1
+                        (perPipelineBlackholed.get(pipeline.name) ?? 0) + 1
+                    );
+                } else {
+                    perPipelineTransferred.set(
+                        pipeline.name,
+                        (perPipelineTransferred.get(pipeline.name) ?? 0) + 1
                     );
                     this.transferredLog.add(record, pipeline.name);
                 }
@@ -276,12 +294,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                 break;
             }
             if (!matched) {
-                const { PK, SK } = record as any;
-                droppedCount++;
-                this.logger.debug(
-                    `record dropped: no matching pipeline in merge group (${PK} ${SK})`,
-                    mergeGroupId
-                );
+                const { PK, SK, TYPE } = record as any;
+                const typeKey: string = TYPE ?? "unknown";
+                unmatchedByType.set(typeKey, (unmatchedByType.get(typeKey) ?? 0) + 1);
+                this.logger.warn(`unmatched record — TYPE=${typeKey} PK=${PK} SK=${SK}`);
                 await this.snapshotWriter.write(
                     `dropped/segment-${shardCtx.segment}.jsonl`,
                     record
@@ -290,7 +306,13 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
         }
 
-        this.logShardSummary(mergeGroupId, shardCtx, perPipelineCounts, droppedCount);
+        this.logShardSummary(
+            mergeGroupId,
+            shardCtx,
+            perPipelineTransferred,
+            perPipelineBlackholed,
+            unmatchedByType
+        );
 
         // Shard end: each unique processor (across pipelines in this group)
         // drains the shared buffer in first-seen registration order.
@@ -312,6 +334,12 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         this.warnUnclaimedKeys(shardCommands);
         this.droppedLog.flush(shardCtx.segment);
         this.transferredLog.flush(shardCtx.segment);
+
+        return {
+            transferred: perPipelineTransferred,
+            blackholed: perPipelineBlackholed,
+            unmatched: unmatchedByType
+        };
     }
 
     private async runRecord(
@@ -412,22 +440,54 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
     private logShardSummary(
         mergeGroupId: string,
         shardCtx: Processor.AfterShardContext,
-        perPipelineCounts: Map<string, number>,
-        droppedCount: number
+        transferred: Map<string, number>,
+        blackholed: Map<string, number>,
+        unmatched: Map<string, number>
     ): void {
-        let transferredTotal = 0;
-        for (const count of perPipelineCounts.values()) {
-            transferredTotal += count;
-        }
-        const scannedTotal = transferredTotal + droppedCount;
-        const perPipeline = Array.from(perPipelineCounts.entries())
-            .map(([name, count]) => `${name}=${count}`)
-            .join(", ");
-        const detail = perPipeline.length > 0 ? ` (${perPipeline})` : "";
+        const transferredTotal = sumMap(transferred);
+        const blackholedTotal = sumMap(blackholed);
+        const unmatchedTotal = sumMap(unmatched);
+        const scannedTotal = transferredTotal + blackholedTotal + unmatchedTotal;
+        const parts: string[] = [
+            `scanned ${scannedTotal}`,
+            `transferred ${transferredTotal}${formatDetail(transferred)}`,
+            `blackholed ${blackholedTotal}${formatDetail(blackholed)}`,
+            `unmatched ${unmatchedTotal}${formatDetail(unmatched)}`
+        ];
         this.logger.info(
             `[${mergeGroupId} shard ${shardCtx.segment + 1}/${shardCtx.totalSegments}] ` +
-                `scanned ${scannedTotal}, transferred ${transferredTotal}${detail}, dropped ${droppedCount}`
+                parts.join(", ")
         );
+    }
+
+    private logRunSummary(mergeGroupId: string, stats: ShardStats[]): void {
+        const transferred: Map<string, number> = new Map();
+        const blackholed: Map<string, number> = new Map();
+        const unmatched: Map<string, number> = new Map();
+
+        for (const s of stats) {
+            for (const [name, count] of s.transferred) {
+                transferred.set(name, (transferred.get(name) ?? 0) + count);
+            }
+            for (const [name, count] of s.blackholed) {
+                blackholed.set(name, (blackholed.get(name) ?? 0) + count);
+            }
+            for (const [type, count] of s.unmatched) {
+                unmatched.set(type, (unmatched.get(type) ?? 0) + count);
+            }
+        }
+
+        const transferredTotal = sumMap(transferred);
+        const blackholedTotal = sumMap(blackholed);
+        const unmatchedTotal = sumMap(unmatched);
+        const scannedTotal = transferredTotal + blackholedTotal + unmatchedTotal;
+        const parts: string[] = [
+            `scanned ${scannedTotal}`,
+            `transferred ${transferredTotal}${formatDetail(transferred)}`,
+            `blackholed ${blackholedTotal}${formatDetail(blackholed)}`,
+            `unmatched ${unmatchedTotal}${formatDetail(unmatched)}`
+        ];
+        this.logger.info(`[${mergeGroupId}] TOTAL: ${parts.join(", ")}`);
     }
 
     /**
@@ -453,9 +513,27 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         }
     }
 
-    private deriveMergeGroupId(scannerToken: Abstraction<unknown>): string {
-        return scannerToken.toString().replace(/\//g, "-");
+    private deriveMergeGroupId(scanner: Scanner.Interface<unknown, unknown>): string {
+        return scanner.constructor.name.replace("Impl", "");
     }
+}
+
+function sumMap(map: Map<string, number>): number {
+    let total = 0;
+    for (const count of map.values()) {
+        total += count;
+    }
+    return total;
+}
+
+function formatDetail(map: Map<string, number>): string {
+    if (map.size === 0) {
+        return "";
+    }
+    const parts = Array.from(map.entries())
+        .map(([name, count]) => `${name}=${count}`)
+        .join(", ");
+    return ` (${parts})`;
 }
 
 export const PipelineRunner = PipelineRunnerAbstraction.createImplementation({

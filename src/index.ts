@@ -51,6 +51,7 @@ export { createFilter, type Filter } from "./domain/pipeline/Filter.ts";
 export { DdbScanner } from "./features/DdbScanner/index.ts";
 export { DdbProcessor } from "./features/DdbProcessor/index.ts";
 export { S3Processor } from "./features/S3Processor/index.ts";
+export { AuditLogProcessor } from "./features/AuditLogProcessor/index.ts";
 export { OsScanner } from "./features/OsScanner/index.ts";
 export { OsProcessor } from "./features/OsProcessor/index.ts";
 

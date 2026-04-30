@@ -13,10 +13,8 @@ export interface PipelineBuilderConfig<
     TShard
 > {
     name: string;
-    scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
-    processors: readonly Abstraction<
-        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
-    >[];
+    scanner: Scanner.Interface<TRecord, TShard>;
+    processors: readonly Processor.Interface<BaseTransformContext.Interface<TRecord>, any>[];
 }
 
 export class PipelineBuilder<
@@ -26,9 +24,10 @@ export class PipelineBuilder<
     TShard = unknown
 > {
     private readonly name: string;
-    private readonly scanner: Abstraction<Scanner.Interface<TRecord, TShard>>;
-    private readonly processors: readonly Abstraction<
-        Processor.Interface<BaseTransformContext.Interface<TRecord>, any>
+    private readonly scanner: Scanner.Interface<TRecord, TShard>;
+    private readonly processors: readonly Processor.Interface<
+        BaseTransformContext.Interface<TRecord>,
+        any
     >[];
 
     private filters: Filter<TRecord>[] = [];
@@ -101,9 +100,16 @@ export class PipelineBuilder<
      * lands on the target. Useful for dry-runs of a single pipeline
      * inside an otherwise real transfer, or for validation-only passes
      * that don't produce writes.
+     *
+     * Accepts an optional predicate — if provided, blackhole mode is only
+     * activated when the predicate returns true. Evaluated immediately at
+     * call time, so any variables closed over are resolved in the same
+     * synchronous configure() context.
      */
-    public blackhole(): this {
-        this.blackholeCommands = true;
+    public blackhole(condition?: () => boolean): this {
+        if (condition === undefined || condition()) {
+            this.blackholeCommands = true;
+        }
         return this;
     }
 

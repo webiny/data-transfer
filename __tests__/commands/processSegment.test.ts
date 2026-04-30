@@ -47,7 +47,11 @@ describe("processSegment handler", () => {
             debug: vi.fn(),
             child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() })
         });
-        resolveMap.set(PipelineRunner, { run: runSpy, getProcessors: getProcessorsSpy });
+        resolveMap.set(PipelineRunner, {
+            run: runSpy,
+            getProcessors: getProcessorsSpy,
+            getShardStats: vi.fn(() => null)
+        });
         resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
         resolveMap.set(FileTool, { exists: existsSync });
@@ -71,10 +75,11 @@ describe("processSegment handler", () => {
         );
     });
 
-    it("re-throws on runner failure", async () => {
+    it("calls process.exit(1) on runner failure", async () => {
+        const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
         runSpy.mockRejectedValueOnce(new Error("boom"));
-        await expect(
-            handler({ runId: "r1", segment: 0, total: 1, config: "./x.ts" })
-        ).rejects.toThrow("boom");
+        await handler({ runId: "r1", segment: 0, total: 1, config: "./x.ts" });
+        expect(exitSpy).toHaveBeenCalledWith(1);
+        exitSpy.mockRestore();
     });
 });

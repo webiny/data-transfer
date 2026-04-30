@@ -49,6 +49,10 @@ async function fixAllKeys(
         const declaredKey = field.storageId;
         const fieldIdKey = field.fieldId;
 
+        if (correctKey.startsWith("fragment-uuid")) {
+            return;
+        }
+
         const wrongKeys = new Set<string>();
         if (declaredKey !== correctKey) {
             wrongKeys.add(declaredKey);
@@ -70,10 +74,11 @@ async function fixAllKeys(
             }
         }
 
-        if (wrongKeyUsed) {
-            values[correctKey] = foundValue;
-            delete values[wrongKeyUsed];
-            logger.debug(`[fixBrokenStorageKeys] Fixed key: ${wrongKeyUsed} → ${correctKey}`);
+        if (!wrongKeyUsed) {
+            return;
         }
+        values[correctKey] = foundValue;
+        delete values[wrongKeyUsed];
+        logger.debug(`[fixBrokenStorageKeys] Fixed key: ${wrongKeyUsed} → ${correctKey}`);
     });
 }

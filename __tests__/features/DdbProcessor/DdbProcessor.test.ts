@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { DdbProcessor } from "~/features/DdbProcessor/DdbProcessor.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/index.ts";
@@ -76,7 +77,9 @@ describe("DdbProcessor", () => {
     describe("extendContext", () => {
         it("returns a slice with putRecord that pushes PutRecord commands via ctx.addCommand", () => {
             const container = createDdbContainer();
-            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as DdbProcessorInstance;
             const { base, captured } = makeBase(makeRecord("PK1", "SK1"));
 
             const slice = processor.extendContext(base);
@@ -92,7 +95,9 @@ describe("DdbProcessor", () => {
     describe("onEnd", () => {
         it("auto-puts ctx.record through the slice helper", async () => {
             const container = createDdbContainer();
-            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as DdbProcessorInstance;
             const record = makeRecord("PK1", "SK1");
             const { base, captured } = makeBase(record);
 
@@ -108,7 +113,9 @@ describe("DdbProcessor", () => {
     describe("execute", () => {
         it("drains PutRecord commands and delegates to DdbExecutor", async () => {
             const container = createDdbContainer();
-            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as DdbProcessorInstance;
             const executor = container.resolve(DdbExecutor);
             const executed: PutRecord[][] = [];
             const original = executor.execute.bind(executor);
@@ -130,7 +137,9 @@ describe("DdbProcessor", () => {
 
         it("calls the executor with an empty array when Commands is empty", async () => {
             const container = createDdbContainer();
-            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as DdbProcessorInstance;
             const executor = container.resolve(DdbExecutor);
             const executed: PutRecord[][] = [];
             const original = executor.execute.bind(executor);
@@ -149,7 +158,9 @@ describe("DdbProcessor", () => {
     describe("afterShard", () => {
         it("is not implemented (no cross-boundary state)", () => {
             const container = createDdbContainer();
-            const processor = container.resolve(Processor) as DdbProcessorInstance;
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as DdbProcessorInstance;
             expect(processor.afterShard).toBeUndefined();
         });
     });

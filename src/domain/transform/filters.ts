@@ -101,3 +101,18 @@ export const isOsMailerSettings = (record: Record<string, unknown>): boolean => 
     const data = record.data as Record<string, unknown> | undefined;
     return (data?.modelId as string | undefined) === "mailerSettings";
 };
+
+export const isAuditLogEntry = (record: BaseRecord): boolean => {
+    const modelId = getPropertyFromRecord<string>(record, "modelId");
+    if (!modelId) {
+        return false;
+    }
+    return modelId.toLowerCase() === "acosearchrecord-auditlogs" && record.SK === "L";
+};
+
+export const isMigrationRecord = (record: BaseRecord): boolean => {
+    if (!record.PK) {
+        return false;
+    }
+    return record.PK.startsWith("MIGRATION");
+};

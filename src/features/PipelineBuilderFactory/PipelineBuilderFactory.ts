@@ -1,41 +1,58 @@
-import { Metadata, type Abstraction, type Constructor } from "@webiny/di";
+import { type Abstraction, type Constructor, Metadata } from "@webiny/di";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
-import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { PipelineBuilderFactory as PipelineBuilderFactoryAbstraction } from "./abstractions/PipelineBuilderFactory.ts";
 
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
-type ProcessorToken = Abstraction<
-    Processor.Interface<BaseTransformContext.Interface<unknown>, any>
->;
+type ProcessorInstance = Processor.Interface<any, any>;
+type ScannerInstance = Scanner.Interface<unknown, unknown>;
 
-type CreateMethod = PipelineBuilderFactoryAbstraction.Interface["create"];
+// Widened input shape used internally — the public generic signature lives on
+// the abstraction and is enforced at call sites via IPipelineBuilderFactory.
+interface CreateImplInput {
+    name: string;
+    scanner: AnyImpl;
+    processors: readonly AnyImpl[];
+}
 
 class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.Interface {
-    public create: CreateMethod = ((input: {
-        name: string;
-        scanner: AnyImpl;
-        processors: readonly AnyImpl[];
-    }) => {
-        const scannerAbstraction = new Metadata(input.scanner).getAbstraction() as Abstraction<
-            Scanner.Interface<unknown, unknown>
-        >;
-        const processorAbstractions = input.processors.map(
-            p => new Metadata(p).getAbstraction() as ProcessorToken
-        );
-        // The public interface narrows this via IPipelineBuilderFactory.create;
-        // the implementation is intentionally widened.
+    public constructor(
+        private readonly processors: Processor.Interface[],
+        private readonly scanners: ScannerInstance[]
+    ) {}
+
+    public create(input: CreateImplInput): PipelineBuilder<any, any, any> {
+        const scannerInstance = this.scanners.find(s => s.constructor === input.scanner);
+        if (!scannerInstance) {
+            throw new Error(
+                `PipelineBuilderFactory: scanner "${input.scanner.name}" is not registered in the container`
+            );
+        }
+
+        const processorInstances = input.processors.map(implClass => {
+            const instance = this.processors.find(p => p.constructor === implClass);
+            if (!instance) {
+                throw new Error(
+                    `PipelineBuilderFactory: processor "${implClass.name}" is not registered in the container`
+                );
+            }
+            return instance;
+        });
+
         return new PipelineBuilder({
             name: input.name,
-            scanner: scannerAbstraction,
-            processors: processorAbstractions
+            scanner: scannerInstance,
+            processors: processorInstances
         });
-    }) as unknown as CreateMethod;
+    }
 }
 
 export const PipelineBuilderFactory = PipelineBuilderFactoryAbstraction.createImplementation({
     implementation: PipelineBuilderFactoryImpl,
-    dependencies: []
+    dependencies: [
+        [Processor, { multiple: true }],
+        [Scanner, { multiple: true }]
+    ]
 });

@@ -26,7 +26,12 @@ export default createDdbTransfer({
         region: fromEnv("TARGET_REGION", DEFAULT_REGION),
         credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", DEFAULT_PROFILE) }),
         dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
-        s3: { bucket: fromEnv("TARGET_S3_BUCKET") }
+        s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
+        auditLog: {
+            dynamodb: {
+                tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE")
+            }
+        }
     },
     pipeline: {
         preset: "v5-to-v6-ddb",

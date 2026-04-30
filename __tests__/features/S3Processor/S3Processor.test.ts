@@ -4,7 +4,8 @@ import { createDdbContainer } from "../../containers/index.ts";
 import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
-import { S3Processor } from "~/features/S3Processor/abstractions/S3Processor.ts";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { S3Processor } from "~/features/S3Processor/S3Processor.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
@@ -48,7 +49,12 @@ describe("S3Processor", () => {
     describe("extendContext", () => {
         it("returns copyFile that pushes S3Copy commands using configured source/target buckets", () => {
             const container = createDdbContainer();
-            const processor = container.resolve(S3Processor);
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
             const { base, captured } = makeBase({ id: "r1" } as const);
 
             // S3Processor always defines extendContext; the optional signature
@@ -70,7 +76,12 @@ describe("S3Processor", () => {
             const sourceS3 = container.resolve(SourceS3Client) as MockS3Client;
             sourceS3.putObject("source-bucket", "foo.txt", Buffer.from("hello"));
 
-            const processor = container.resolve(S3Processor);
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
             const { base } = makeBase({ id: "r1" } as const);
             // S3Processor always defines extendContext; the optional signature
             // is only for hypothetical execute-only processors.
@@ -84,7 +95,12 @@ describe("S3Processor", () => {
     describe("execute", () => {
         it("is a no-op when Commands contains no S3Copy entries", async () => {
             const container = createDdbContainer();
-            const processor = container.resolve(S3Processor);
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
             const targetS3 = container.resolve(TargetS3Client) as MockS3Client;
             expect(targetS3.copies).toHaveLength(0);
 
@@ -94,7 +110,12 @@ describe("S3Processor", () => {
 
         it("maps S3Copy commands into batchCopy operations on the TargetS3Client", async () => {
             const container = createDdbContainer();
-            const processor = container.resolve(S3Processor);
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
             const targetS3 = container.resolve(TargetS3Client) as MockS3Client;
 
             const commands = new Commands();
@@ -125,7 +146,12 @@ describe("S3Processor", () => {
     describe("afterShard", () => {
         it("is not implemented (no cross-boundary state)", () => {
             const container = createDdbContainer();
-            const processor = container.resolve(S3Processor);
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
             expect(processor.afterShard).toBeUndefined();
         });
     });

@@ -8,6 +8,7 @@ import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import type { OsScanner } from "~/features/OsScanner/index.ts";
+import type { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 function makeCache(): Cache.Interface {
     const store = new Map<string, unknown>();
@@ -42,6 +43,18 @@ export interface FakeContextOverrides {
     modelProvider?: unknown;
     cache?: Cache.Interface;
     logger?: Logger.Interface;
+    compressionHandler?: CompressionHandler.Interface;
+}
+
+function makeNoOpCompressionHandler(): CompressionHandler.Interface {
+    return {
+        compress: async () => {
+            throw new Error("compressionHandler.compress not stubbed in this test");
+        },
+        decompress: async () => {
+            throw new Error("compressionHandler.decompress not stubbed in this test");
+        }
+    };
 }
 
 /**
@@ -67,6 +80,7 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
         modelProvider: overrides.modelProvider as BaseTransformContext.Interface["modelProvider"],
         cache: overrides.cache ?? makeCache(),
         logger: overrides.logger ?? makeLogger(),
+        compressionHandler: overrides.compressionHandler ?? makeNoOpCompressionHandler(),
         replace(newRecord: unknown): void {
             (ctx as { record: unknown }).record = newRecord;
         },

@@ -5,6 +5,7 @@ import type { BaseRecord } from "~/domain/transform/types/records.ts";
 import { LexicalRenderer } from "./lexicalRenderer.ts";
 import { visitFields } from "./fieldVisitor.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
+import { generateInitialLexicalValue } from "@webiny/lexical-nodes/generateInitialLexicalValue.js";
 
 const lexicalRenderer = new LexicalRenderer();
 
@@ -39,6 +40,7 @@ export const transformRichText = createTransformer<BaseTransformContext.Interfac
                     return;
                 }
                 await transformRichTextField({
+                    original: ctx.original,
                     compressionHandler: ctx.compressionHandler,
                     logger: ctx.logger,
                     values,
@@ -51,6 +53,7 @@ export const transformRichText = createTransformer<BaseTransformContext.Interfac
 );
 
 interface ITransformRichTextFieldParams {
+    original: BaseRecord;
     compressionHandler: CompressionHandler.Interface;
     logger: Logger.Interface;
     values: Record<string, unknown>;
@@ -59,19 +62,25 @@ interface ITransformRichTextFieldParams {
 }
 
 async function transformRichTextField(params: ITransformRichTextFieldParams): Promise<void> {
-    const { compressionHandler, logger, values, storageId, value } = params;
+    const { original, compressionHandler, logger, values, storageId, value } = params;
     if (!value || typeof value !== "object" || !("compression" in value) || !("value" in value)) {
         return;
     }
 
+    const decompressed = await compressionHandler.decompress(value);
     try {
-        const decompressed = await compressionHandler.decompress(value);
-
         if (!decompressed || typeof decompressed !== "object" || !("root" in decompressed)) {
             return;
         }
 
-        const lexicalState = decompressed as Parameters<typeof lexicalRenderer.render>[0];
+        let lexicalState = decompressed as Parameters<typeof lexicalRenderer.render>[0];
+
+        if (!lexicalState.root.children?.length) {
+            lexicalState = JSON.parse(generateInitialLexicalValue()) as Parameters<
+                typeof lexicalRenderer.render
+            >[0];
+        }
+
         const newFormat = {
             state: JSON.stringify(lexicalState),
             html: lexicalRenderer.render(lexicalState)
@@ -80,7 +89,7 @@ async function transformRichTextField(params: ITransformRichTextFieldParams): Pr
         values[storageId] = await compressionHandler.compress(newFormat);
     } catch (error) {
         logger.warn(
-            `[transformRichText] Failed to transform ${storageId}: ${(error as Error).message}`
+            `[transformRichText][${original.PK} / ${original.SK}] Failed to transform ${storageId}: ${(error as Error).message}`
         );
     }
 }

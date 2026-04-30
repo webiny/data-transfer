@@ -6,7 +6,7 @@ import {
 } from "@webiny/aws-sdk/client-s3";
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
-import { isRetryableAwsError, retryBackoffMs } from "~/base/index.ts";
+import { isRetryableAwsError, isTokenBucketExhausted, retryBackoffMs } from "~/base/index.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 // See DynamoDbClient for the rationale on 6 retries + the jittered
@@ -46,9 +46,19 @@ export class S3ClientImpl implements SourceS3Client.Interface {
             Key: options.targetKey
         });
 
-        await this.executeWithRetry(async () => {
-            await this.client.send(command);
-        });
+        try {
+            await this.executeWithRetry(async () => {
+                await this.client.send(command);
+            });
+        } catch (error) {
+            if (this.isNoSuchKeyError(error)) {
+                this.logger.warn(
+                    `S3 copy skipped — source key not found: ${options.sourceBucket}/${options.sourceKey}`
+                );
+                return;
+            }
+            throw error;
+        }
     }
 
     public async getObject(bucket: string, key: string): Promise<Buffer> {
@@ -85,6 +95,14 @@ export class S3ClientImpl implements SourceS3Client.Interface {
         }
     }
 
+    private isNoSuchKeyError(error: unknown): boolean {
+        if (!error || typeof error !== "object") {
+            return false;
+        }
+        const err = error as { name?: string; Code?: string };
+        return err.name === "NoSuchKey" || err.Code === "NoSuchKey";
+    }
+
     private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         let lastError: Error | undefined;
 
@@ -98,7 +116,12 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                     throw error;
                 }
 
-                const backoff = retryBackoffMs(attempt, this.initialBackoff);
+                const base = retryBackoffMs(attempt, this.initialBackoff);
+                const backoff = isTokenBucketExhausted(error) ? Math.max(base, 10000) : base;
+                const err = error as { message?: string; name?: string };
+                this.logger.warn(
+                    `S3 retry ${attempt + 1}/${this.maxRetries}: ${err.name ?? "Error"} — ${err.message ?? String(error)} (backoff ${backoff}ms)`
+                );
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }

@@ -31,6 +31,7 @@ import { DdbScannerFeature } from "../../src/features/DdbScanner/index.ts";
 import { DdbProcessorFeature } from "../../src/features/DdbProcessor/index.ts";
 import { DdbExecutorFeature } from "../../src/features/DdbExecutor/index.ts";
 import { S3ProcessorFeature } from "../../src/features/S3Processor/index.ts";
+import { AuditLogProcessorFeature } from "../../src/features/AuditLogProcessor/index.ts";
 import { DroppedRecordLogFeature } from "../../src/features/DroppedRecordLog/index.ts";
 import { TransferredRecordLogFeature } from "../../src/features/TransferredRecordLog/index.ts";
 import { MockS3Client } from "../services/S3Client/MockS3Client.ts";
@@ -85,7 +86,8 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
             region: "eu-central-1",
             credentials: FAKE_CREDS,
             dynamodb: { tableName: options.targetTable },
-            s3: { bucket: "target-bucket" }
+            s3: { bucket: "target-bucket" },
+            auditLog: null
         },
         pipeline: {
             preset: "integration",
@@ -147,6 +149,7 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
     S3ProcessorFeature.register(container);
     DdbScannerFeature.register(container);
     DdbProcessorFeature.register(container);
+    AuditLogProcessorFeature.register(container);
 
     return container;
 }

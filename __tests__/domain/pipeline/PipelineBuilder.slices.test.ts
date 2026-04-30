@@ -1,4 +1,4 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
 import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
@@ -69,13 +69,16 @@ describe("PipelineBuilderFactory.create() slice inference", () => {
 
     it("two processors with overlapping slice keys → fails to compile", () => {
         const factory = createDdbContainer().resolve(PipelineBuilderFactory);
-        factory.create({
-            name: "ddb+os",
-            scanner: DdbScanner,
-            // @ts-expect-error — DdbProcessor + OsProcessor both contribute `putRecord`;
-            // DisjointKeys<...> narrows processors to `never`.
-            processors: [DdbProcessor, OsProcessor]
-        });
+        expect(() =>
+            factory.create({
+                name: "ddb+os",
+                scanner: DdbScanner,
+                // @ts-expect-error — DdbProcessor + OsProcessor both contribute `putRecord`;
+                // DisjointKeys<...> narrows processors to `never` at compile time.
+                // At runtime the factory also throws because OsProcessor is not registered.
+                processors: [DdbProcessor, OsProcessor]
+            })
+        ).toThrow();
     });
 
     it("empty processors array → fails to compile (NonEmptyArray rejects)", () => {
@@ -96,12 +99,14 @@ describe("PipelineBuilderFactory.create() slice inference", () => {
         // placeholder: when processor impls tighten TBase to Base<BaseRecord>
         // / Base<OsRecord>, the commented assertion should start failing (and
         // the @ts-expect-error re-enabled).
+        // At runtime the factory throws because OsScanner is not in the DDB container.
         const factory = createDdbContainer().resolve(PipelineBuilderFactory);
-        const _builder = factory.create({
-            name: "os-scanner-ddb-processor",
-            scanner: OsScanner,
-            processors: [DdbProcessor]
-        });
-        void _builder;
+        expect(() =>
+            factory.create({
+                name: "os-scanner-ddb-processor",
+                scanner: OsScanner,
+                processors: [DdbProcessor]
+            })
+        ).toThrow();
     });
 });

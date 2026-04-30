@@ -69,11 +69,14 @@ const pipeline = pipelineBuilderFactory
 
 All pipelines sharing the same scanner form a **merge group** — they run together, sharing a single scan.
 
-### Processor tokens
+### Processor implementations
 
-- **`DdbProcessor`** — slice: `{ putRecord(record) }`. `onEnd` auto-puts `ctx.record`. `execute` drains `PutRecord` commands to the target DDB table.
+All processors are Implementation classes that share `Symbol("Core/Processor")`. Pass them directly to `pipelineBuilderFactory.create({ processors: [...] })` — the factory has all processor instances injected via `[Processor, { multiple: true }]` and finds the right one by constructor identity.
+
+- **`DdbProcessor`** — slice: `{ putRecord(record), querySourceRecord(pk, sk?), queryTargetRecord(pk, sk?) }`. `onEnd` auto-puts `ctx.record`. `execute` drains `PutRecord` commands to the target DDB table.
 - **`S3Processor`** — slice: `{ copyFile(src, tgt), getFile(key) }`. No `onEnd` — transformers call `copyFile` explicitly. `execute` drains `S3Copy` commands.
-- **`OsProcessor`** — slice: `{ putRecord(record) }`. `onEnd` auto-puts. `execute` gzips, ensures the target index exists, and writes to the target OS DDB table.
+- **`OsProcessor`** — slice: `{ putRecord(record), querySourceRecord(pk, sk?), queryTargetRecord(pk, sk?) }`. `onEnd` auto-puts. `execute` gzips, ensures the target index exists, and writes to the target OS DDB table.
+- **`AuditLogProcessor`** — slice: `{ putAuditLog(record) }`. `onEnd` auto-puts to the audit log table. No-ops silently when `config.target.auditLog` is null or the table name is null.
 
 **Slice-key collision is a compile error.** `DdbProcessor + OsProcessor` in the same pipeline is rejected because both contribute `putRecord`. `DdbProcessor + S3Processor` is fine (disjoint slices).
 
@@ -224,7 +227,7 @@ Two pre-built transformer arrays are exported from `@webiny/data-transfer` (via 
 
 Two built-in presets ship with the package (pass by name in `config.pipeline.preset`):
 
-- **`v5-to-v6-ddb`** — full Webiny v5→v6 DDB + S3 migration. Pipelines: ContentModelGroups, BackgroundTasks (blackhole), FileManagerSettings, FileManagerFiles (blackhole for S3), MailerSettings, SecurityGroups, SecurityTeams, CmsModels, FolderPermissions, CmsEntries.
+- **`v5-to-v6-ddb`** — full Webiny v5→v6 DDB + S3 migration. Pipelines (registration order): AuditLogs (blackholed when no audit log table), AcoSearchRecordsPage (blackhole), ContentModelGroups, BackgroundTasks (blackhole), FileManagerSettings, FileManagerFiles, MailerSettings, SecurityGroups, SecurityTeams, CmsModels, FolderPermissions, CmsEntries. AuditLogs MUST be registered before AcoSearchRecordsPage and CmsEntries (audit log records share the acoSearchRecord modelId prefix).
 - **`v5-to-v6-os`** — OpenSearch companion table migration. Pipelines: BackgroundTasks (blackhole), MailerSettings (blackhole), FileManagerFiles, CmsEntries. Uses `OsScanner` + `OsProcessor`. Registration order is load-bearing: blackhole pipelines BEFORE CmsEntries because background tasks and mailer settings ARE CMS entries in the OS table.
 
 ## `addLiveField` — querying siblings via cache

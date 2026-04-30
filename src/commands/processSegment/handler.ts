@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import { bootstrap } from "~/bootstrap.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
@@ -7,6 +9,7 @@ import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
+import { formatError } from "~/base/index.ts";
 
 export interface ProcessSegmentArgs {
     runId: string;
@@ -48,7 +51,25 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
 
     logger.info(`Processing shard ${argv.segment + 1}/${argv.total}...`);
 
-    await runner.run({ segment: argv.segment, totalSegments: argv.total });
+    try {
+        await runner.run({ segment: argv.segment, totalSegments: argv.total });
+    } catch (error) {
+        logger.error(
+            `Shard ${argv.segment} failed: ${formatError(error, resolvedLogLevel === "debug")}`
+        );
+        process.exit(1);
+    }
+
+    const stats = runner.getShardStats();
+    if (stats) {
+        const statsDir = join(process.cwd(), ".transfer", argv.runId, "stats");
+        await mkdir(statsDir, { recursive: true });
+        await writeFile(
+            join(statsDir, `segment-${argv.segment}.json`),
+            JSON.stringify(stats),
+            "utf8"
+        );
+    }
 
     logger.info("Shard complete.");
 }

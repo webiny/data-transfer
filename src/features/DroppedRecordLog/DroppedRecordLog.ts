@@ -6,7 +6,8 @@ import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
 import { RecordDisposition } from "~/domain/pipeline/RecordDisposition.ts";
 
 class DroppedRecordLogImpl implements DroppedRecordLogAbstraction.Interface {
-    private readonly buffer: string[] = [];
+    private readonly blackholed: string[] = [];
+    private readonly unmatched: string[] = [];
 
     public constructor(
         private readonly transferContext: TransferContext.Interface,
@@ -18,34 +19,42 @@ class DroppedRecordLogImpl implements DroppedRecordLogAbstraction.Interface {
         record: unknown,
         disposition: RecordDisposition.Blackholed | RecordDisposition.Unmatched
     ): void {
-        this.buffer.push(this.formatLine(record, disposition));
+        const line = this.formatLine(record);
+        if (disposition instanceof RecordDisposition.Blackholed) {
+            this.blackholed.push(line);
+        } else {
+            this.unmatched.push(line);
+        }
     }
 
     public flush(segment: number): void {
-        if (this.buffer.length === 0) {
-            return;
-        }
         const dir = join(process.cwd(), ".transfer", this.transferContext.runId);
-        this.dirTool.create(dir);
-        const path = join(dir, `segment-${segment}-dropped.log`);
-        this.fileTool.writeFileOrThrow(path, this.buffer.join("\n") + "\n");
-        this.buffer.length = 0;
+        if (this.blackholed.length > 0) {
+            this.dirTool.create(dir);
+            this.fileTool.writeFileOrThrow(
+                join(dir, `segment-${segment}-blackholed.log`),
+                this.blackholed.join("\n") + "\n"
+            );
+            this.blackholed.length = 0;
+        }
+        if (this.unmatched.length > 0) {
+            this.dirTool.create(dir);
+            this.fileTool.writeFileOrThrow(
+                join(dir, `segment-${segment}-unmatched.log`),
+                this.unmatched.join("\n") + "\n"
+            );
+            this.unmatched.length = 0;
+        }
     }
 
-    private formatLine(
-        record: unknown,
-        disposition: RecordDisposition.Blackholed | RecordDisposition.Unmatched
-    ): string {
+    private formatLine(record: unknown): string {
         const r = record as Record<string, unknown>;
         const data = r.data as Record<string, unknown> | undefined;
         const modelId = (r.modelId ?? data?.modelId) as string | undefined;
         const pk = (r.PK ?? "") as string;
         const sk = (r.SK ?? "") as string;
         const type = (r.TYPE ?? "?") as string;
-        const tag =
-            disposition instanceof RecordDisposition.Blackholed ? "BLACKHOLED" : "UNMATCHED";
-        const body = modelId ? `[${modelId}] ${pk} : ${sk} : ${type}` : `[${type}] ${pk} : ${sk}`;
-        return `[${tag}] ${body}`;
+        return modelId ? `[${modelId}] ${pk} : ${sk} : ${type}` : `[${type}] ${pk} : ${sk}`;
     }
 }
 

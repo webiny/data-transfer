@@ -7,7 +7,7 @@ import {
     tuningSchema
 } from "./shared.schema.ts";
 
-const ddbAccountConfigSchema = z.object({
+const ddbSourceAccountConfigSchema = z.object({
     region: trimmedString(),
     // Required. Either a literal credentials object, or a provider
     // function (e.g. fromAwsProfile({profile: "dev"})).
@@ -16,10 +16,22 @@ const ddbAccountConfigSchema = z.object({
     s3: z.object({ bucket: trimmedString() })
 });
 
+const ddbTargetAccountConfigSchema = ddbSourceAccountConfigSchema.extend({
+    // Audit log table config. Set tableName to null to skip audit log
+    // transfer — records will be intercepted (blackholed) and NOT written
+    // to any target. NOTE: if you want audit logs transferred, you must
+    // provide a valid tableName here.
+    auditLog: z
+        .object({
+            dynamodb: z.object({ tableName: trimmedString().nullable() })
+        })
+        .nullable()
+});
+
 export const ddbTransferInputSchema = z
     .object({
-        source: ddbAccountConfigSchema,
-        target: ddbAccountConfigSchema,
+        source: ddbSourceAccountConfigSchema,
+        target: ddbTargetAccountConfigSchema,
         pipeline: pipelineSettingsSchema,
         tuning: tuningSchema,
         debug: debugSettingsSchema
@@ -47,6 +59,18 @@ export const ddbTransferInputSchema = z
                 code: "custom",
                 path: ["target", "dynamodb", "tableName"],
                 message: `Target DynamoDB table "${data.target.dynamodb.tableName}" in region "${data.target.region}" matches source. If these are different AWS accounts, rename one or change the target region to make the intent explicit.`
+            });
+        }
+        // Audit log table must differ from the main target table to avoid
+        // writing audit log records into the primary data table.
+        if (
+            data.target.auditLog?.dynamodb?.tableName != null &&
+            data.target.auditLog.dynamodb.tableName === data.target.dynamodb.tableName
+        ) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["target", "auditLog", "dynamodb", "tableName"],
+                message: `Audit log DynamoDB table "${data.target.auditLog.dynamodb.tableName}" must differ from the main target table.`
             });
         }
     });
