@@ -115,6 +115,10 @@ export class S3ClientImpl implements SourceS3Client.Interface {
 
                 const base = retryBackoffMs(attempt, this.initialBackoff);
                 const backoff = isTokenBucketExhausted(error) ? Math.max(base, 10000) : base;
+                const err = error as { message?: string; name?: string };
+                this.logger.warn(
+                    `S3 retry ${attempt + 1}/${this.maxRetries}: ${err.name ?? "Error"} — ${err.message ?? String(error)} (backoff ${backoff}ms)`
+                );
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }

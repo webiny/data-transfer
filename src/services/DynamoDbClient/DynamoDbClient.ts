@@ -186,6 +186,10 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
                 const base = retryBackoffMs(attempt, this.initialBackoff);
                 // Token bucket needs time to refill — enforce a minimum 10s wait.
                 const backoff = isTokenBucketExhausted(error) ? Math.max(base, 10000) : base;
+                const err = error as { message?: string; name?: string };
+                this.logger.warn(
+                    `DynamoDB retry ${attempt + 1}/${this.maxRetries}: ${err.name ?? "Error"} — ${err.message ?? String(error)} (backoff ${backoff}ms)`
+                );
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }
