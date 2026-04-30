@@ -13,6 +13,13 @@ export const storageShapeTransformer = createTransformer<
 >("auditLogs/storageShape", ctx => {
     const { record } = ctx;
 
+    if (!record.createdBy || !record.createdOn) {
+        ctx.logger.warn(
+            `auditLogs/storageShape: missing createdBy or createdOn — skipping record ${record.PK}/${record.SK}`
+        );
+        return;
+    }
+
     const tenant = record.tenant as string;
     const id = record.id as string;
     const createdBy = record.createdBy as CreatedBy;

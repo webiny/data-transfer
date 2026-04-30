@@ -148,3 +148,23 @@ describe("storageShapeTransformer", () => {
         expect(r.expiresAt).toBe(Math.floor(new Date("2025-09-08T07:52:39.413Z").getTime() / 1000));
     });
 });
+
+describe("storageShapeTransformer — guard", () => {
+    it("returns early without ctx.replace when createdBy is missing", () => {
+        const record = { ...INTERMEDIATE_RECORD, createdBy: undefined };
+        const ctx = makeFakeBaseContext(record);
+        const originalRecord = ctx.record;
+        storageShapeTransformer(ctx);
+        expect(ctx.record).toBe(originalRecord);
+        expect((ctx.record as Record<string, unknown>).TYPE).not.toBe("auditLog.log");
+    });
+
+    it("returns early without ctx.replace when createdOn is missing", () => {
+        const record = { ...INTERMEDIATE_RECORD, createdOn: undefined };
+        const ctx = makeFakeBaseContext(record);
+        const originalRecord = ctx.record;
+        storageShapeTransformer(ctx);
+        expect(ctx.record).toBe(originalRecord);
+        expect((ctx.record as Record<string, unknown>).TYPE).not.toBe("auditLog.log");
+    });
+});
