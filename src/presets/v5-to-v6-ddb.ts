@@ -65,6 +65,19 @@ export default createTransferPreset({
         // When auditLog.dynamodb.tableName is null the pipeline is blackholed —
         // records are consumed but not written.
         // ========================================================================
+        // ========================================================================
+        // Migration records — blackhole all PKs starting with "MIGRATION"
+        // ========================================================================
+        const migrationRecords = factory
+            .create({
+                name: "MigrationRecords",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(record => record.PK.startsWith("MIGRATION")))
+            .blackhole()
+            .build();
+
         const config = container.resolve(MigrationConfig);
         const auditLogs = factory
             .create({
@@ -259,6 +272,7 @@ export default createTransferPreset({
         // IMPORTANT: Order matters due to first-match-wins behavior
         // ========================================================================
         runner
+            .register(migrationRecords)
             .register(auditLogs)
             .register(acoSearchRecordsPage)
             .register(contentModelGroups)
