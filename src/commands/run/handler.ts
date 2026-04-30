@@ -41,17 +41,20 @@ export async function handler(
     } catch (error) {
         // Config-load / Zod validation failures happen before we have a logger
         // — write directly to stderr so the user sees the friendly format.
-        process.stderr.write(`\n${formatError(error)}\n`);
+        const verbose = (logLevel ?? "info") === "debug";
+        process.stderr.write(`\n${formatError(error, verbose)}\n`);
         process.exit(1);
     }
 
+    const resolvedLogLevel = (logLevel ?? config.debug?.logLevel) as string | undefined;
+    const verbose = resolvedLogLevel === "debug";
     const segments = config.pipeline.segments || 1;
 
     let segmentsToRun: number[];
     try {
         segmentsToRun = resolveSegmentsToRun(segments, segmentsFilter);
     } catch (error) {
-        process.stderr.write(`\n${formatError(error)}\n`);
+        process.stderr.write(`\n${formatError(error, verbose)}\n`);
         process.exit(1);
     }
 
@@ -85,7 +88,7 @@ export async function handler(
             if (result.status === "rejected") {
                 const segment = segmentsToRun[index];
                 failures.push(segment);
-                logger.error(`Segment ${segment} failed: ${formatError(result.reason)}`);
+                logger.error(`Segment ${segment} failed: ${formatError(result.reason, verbose)}`);
             }
         });
         logger.info(
@@ -101,7 +104,7 @@ export async function handler(
             await afterHook.execute();
         } catch (error) {
             logger.error(
-                `After-transfer hooks failed. Data transfer state may need manual intervention. ${formatError(error)}`
+                `After-transfer hooks failed. Data transfer state may need manual intervention. ${formatError(error, verbose)}`
             );
         }
 
@@ -114,7 +117,7 @@ export async function handler(
         }
         logger.info(`Transfer completed successfully in ${duration}s`);
     } catch (error) {
-        logger.error(`Transfer failed: ${formatError(error)}`);
+        logger.error(`Transfer failed: ${formatError(error, verbose)}`);
         process.exit(1);
     }
 }

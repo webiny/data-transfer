@@ -1,21 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { formatError } from "~/base/index.ts";
 
 describe("formatError", () => {
-    const originalDebug = process.env.DEBUG;
-
-    beforeEach(() => {
-        delete process.env.DEBUG;
-    });
-
-    afterEach(() => {
-        if (originalDebug === undefined) {
-            delete process.env.DEBUG;
-        } else {
-            process.env.DEBUG = originalDebug;
-        }
-    });
-
     it("formats ZodError-like values as a per-issue list", () => {
         const zodLike = {
             name: "ZodError",
@@ -30,7 +16,7 @@ describe("formatError", () => {
         expect(output).toContain("Config validation failed:");
         expect(output).toContain("source.region: Required");
         expect(output).toContain("pipeline.segments: Expected number, got string");
-        expect(output).toContain("DEBUG=1");
+        expect(output).toContain("logLevel");
     });
 
     it("uses <root> for empty path in ZodError", () => {
@@ -42,24 +28,32 @@ describe("formatError", () => {
         expect(formatError(zodLike)).toContain("<root>: Expected object, got null");
     });
 
-    it("formats a regular Error as message + DEBUG hint", () => {
+    it("formats a regular Error as message + hint", () => {
         const err = new Error("Something went wrong");
 
         const output = formatError(err);
 
         expect(output).toContain("Something went wrong");
-        expect(output).toContain("DEBUG=1");
+        expect(output).toContain("logLevel");
     });
 
-    it("includes stack trace when DEBUG is set", () => {
-        process.env.DEBUG = "1";
+    it("includes stack trace when verbose=true", () => {
         const err = new Error("boom");
 
-        const output = formatError(err);
+        const output = formatError(err, true);
 
         expect(output).toContain("boom");
         expect(output).toContain("formatError.test.ts");
-        expect(output).not.toContain("DEBUG=1 to see");
+        expect(output).not.toContain("logLevel");
+    });
+
+    it("omits stack trace when verbose=false (default)", () => {
+        const err = new Error("boom");
+
+        const output = formatError(err, false);
+
+        expect(output).not.toContain("formatError.test.ts");
+        expect(output).toContain("logLevel");
     });
 
     it("falls back to String() for non-Error values", () => {
