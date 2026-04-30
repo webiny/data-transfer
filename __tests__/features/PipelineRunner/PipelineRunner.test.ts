@@ -402,9 +402,7 @@ describe("PipelineRunner.run()", () => {
         runner.register(buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
         await runner.run();
 
-        const dropMessages = logger.entries.filter(e =>
-            e.message.startsWith("unmatched record —")
-        );
+        const dropMessages = logger.entries.filter(e => e.message.startsWith("unmatched record —"));
         expect(dropMessages.length).toBeGreaterThan(0);
     });
 

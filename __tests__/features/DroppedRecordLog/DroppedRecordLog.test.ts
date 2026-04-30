@@ -110,16 +110,10 @@ describe("DroppedRecordLog", () => {
         log.flush(0);
 
         await expect(
-            readFile(
-                join(workDir, ".transfer", "test-run-id", "segment-0-unmatched.log"),
-                "utf-8"
-            )
+            readFile(join(workDir, ".transfer", "test-run-id", "segment-0-unmatched.log"), "utf-8")
         ).rejects.toThrow(/ENOENT/);
         await expect(
-            readFile(
-                join(workDir, ".transfer", "test-run-id", "segment-0-blackholed.log"),
-                "utf-8"
-            )
+            readFile(join(workDir, ".transfer", "test-run-id", "segment-0-blackholed.log"), "utf-8")
         ).rejects.toThrow(/ENOENT/);
     });
 
@@ -130,10 +124,7 @@ describe("DroppedRecordLog", () => {
         log.flush(1);
 
         await expect(
-            readFile(
-                join(workDir, ".transfer", "test-run-id", "segment-1-unmatched.log"),
-                "utf-8"
-            )
+            readFile(join(workDir, ".transfer", "test-run-id", "segment-1-unmatched.log"), "utf-8")
         ).rejects.toThrow(/ENOENT/);
     });
 });
