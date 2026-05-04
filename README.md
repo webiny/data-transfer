@@ -244,14 +244,14 @@ Point `config.pipeline.preset` at the file path (relative to the config): `"./pr
 
 ### Builder methods
 
-| Method | Description |
-| --- | --- |
-| `.filter(f)` | Add a filter. Multiple calls AND-compose in evaluation order. Records that fail any filter are skipped. |
-| `.use(t)` | Add a transformer. Execution order matches registration order. |
-| `.blackhole()` | Observe-only mode — filters + transformers + `onEnd` still run but every emitted command is discarded. Nothing lands in the target. Pair with `debug.snapshot` to inspect what WOULD have been written. |
-| `.beforeExecuteCommands(hook)` | Run a hook once per merge group before any shard runs. |
-| `.afterExecuteCommands(hook)` | Run a hook once after all shards in the merge group succeed. Skipped on shard failure. |
-| `.build()` | Snapshot into an immutable `Pipeline`. Required before `runner.register()`. |
+| Method                         | Description                                                                                                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.filter(f)`                   | Add a filter. Multiple calls AND-compose in evaluation order. Records that fail any filter are skipped.                                                                                                 |
+| `.use(t)`                      | Add a transformer. Execution order matches registration order.                                                                                                                                          |
+| `.blackhole()`                 | Observe-only mode — filters + transformers + `onEnd` still run but every emitted command is discarded. Nothing lands in the target. Pair with `debug.snapshot` to inspect what WOULD have been written. |
+| `.beforeExecuteCommands(hook)` | Run a hook once per merge group before any shard runs.                                                                                                                                                  |
+| `.afterExecuteCommands(hook)`  | Run a hook once after all shards in the merge group succeed. Skipped on shard failure.                                                                                                                  |
+| `.build()`                     | Snapshot into an immutable `Pipeline`. Required before `runner.register()`.                                                                                                                             |
 
 `runner.register(p1, p2, ...)` is variadic and chainable.
 
@@ -350,27 +350,27 @@ Factory variants:
 
 Use the narrowest type that covers what your transformer needs:
 
-| Type | Processors in pipeline | When to use |
-| --- | --- | --- |
-| `BaseTransformContext.Interface` | any | Transformers that only touch `ctx.record`, `ctx.cache`, `ctx.logger`, etc. — no processor-specific helpers needed. |
-| `DdbCoreTransformContext.Interface` | `DdbProcessor` only | DDB transformers that need `querySourceRecord` / `queryTargetRecord` / `putRecord` but not S3 helpers. |
-| `DdbTransformContext.Interface` | `DdbProcessor` + `S3Processor` | Default for v5-to-v6 DDB transformers that may call `ctx.copyFile` / `ctx.getFile`. |
-| `OsTransformContext.Interface` | `OsProcessor` | OS transformers. `ctx.record.data` is the decompressed payload (always present). |
+| Type                                | Processors in pipeline         | When to use                                                                                                        |
+| ----------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `BaseTransformContext.Interface`    | any                            | Transformers that only touch `ctx.record`, `ctx.cache`, `ctx.logger`, etc. — no processor-specific helpers needed. |
+| `DdbCoreTransformContext.Interface` | `DdbProcessor` only            | DDB transformers that need `querySourceRecord` / `queryTargetRecord` / `putRecord` but not S3 helpers.             |
+| `DdbTransformContext.Interface`     | `DdbProcessor` + `S3Processor` | Default for v5-to-v6 DDB transformers that may call `ctx.copyFile` / `ctx.getFile`.                                |
+| `OsTransformContext.Interface`      | `OsProcessor`                  | OS transformers. `ctx.record.data` is the decompressed payload (always present).                                   |
 
 ### Base context API
 
 Available on every transformer context regardless of pipeline configuration:
 
-| Member | Description |
-| --- | --- |
-| `ctx.record` | Mutable record. Transformers mutate this. |
-| `ctx.original` | Frozen, deep-cloned pre-transform snapshot. Always present. Use for gate-checks or audit comparisons. Never modify. |
-| `ctx.replace(newRecord)` | Replace `ctx.record` wholesale. |
-| `ctx.addCommand(cmd)` | Push a raw command to the command bag. Rarely needed in transformers — processor slice helpers are sugar over this. |
-| `ctx.modelProvider` | Loaded CMS models (from DB + `modelsDir` JSON files if set). |
-| `ctx.cache` | Shared `Map`-like cache, persists across records within a shard. Useful for deduplication. |
-| `ctx.logger` | Logger bound to the current worker. Use instead of `console.*` — respects configured log level. |
-| `ctx.compressionHandler` | Gzip compression utility. Rarely needed directly. |
+| Member                   | Description                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `ctx.record`             | Mutable record. Transformers mutate this.                                                                           |
+| `ctx.original`           | Frozen, deep-cloned pre-transform snapshot. Always present. Use for gate-checks or audit comparisons. Never modify. |
+| `ctx.replace(newRecord)` | Replace `ctx.record` wholesale.                                                                                     |
+| `ctx.addCommand(cmd)`    | Push a raw command to the command bag. Rarely needed in transformers — processor slice helpers are sugar over this. |
+| `ctx.modelProvider`      | Loaded CMS models (from DB + `modelsDir` JSON files if set).                                                        |
+| `ctx.cache`              | Shared `Map`-like cache, persists across records within a shard. Useful for deduplication.                          |
+| `ctx.logger`             | Logger bound to the current worker. Use instead of `console.*` — respects configured log level.                     |
+| `ctx.compressionHandler` | Gzip compression utility. Rarely needed directly.                                                                   |
 
 ### Processor slices
 
@@ -378,24 +378,24 @@ Each processor in the pipeline contributes additional helpers onto the context:
 
 **`DdbProcessor` slice** (`DdbTransformContext`, `DdbCoreTransformContext`):
 
-| Member | Description |
-| --- | --- |
-| `ctx.putRecord(record)` | Emit an extra `PutRecord` to the DDB target (beyond the auto-put at chain end). |
-| `ctx.querySourceRecord<T>(pk, sk?)` | Query the source DDB primary table. Returns `null` if not found. |
-| `ctx.queryTargetRecord<T>(pk, sk?)` | Query the target DDB primary table. Returns `null` if not found. |
+| Member                              | Description                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------- |
+| `ctx.putRecord(record)`             | Emit an extra `PutRecord` to the DDB target (beyond the auto-put at chain end). |
+| `ctx.querySourceRecord<T>(pk, sk?)` | Query the source DDB primary table. Returns `null` if not found.                |
+| `ctx.queryTargetRecord<T>(pk, sk?)` | Query the target DDB primary table. Returns `null` if not found.                |
 
 **`S3Processor` slice** (`DdbTransformContext`):
 
-| Member | Description |
-| --- | --- |
-| `ctx.copyFile(sourceKey, targetKey)` | Emit an S3 copy command. |
-| `ctx.getFile(key)` | Read a file from the source bucket. Returns `Buffer \| null`. |
+| Member                               | Description                                                   |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `ctx.copyFile(sourceKey, targetKey)` | Emit an S3 copy command.                                      |
+| `ctx.getFile(key)`                   | Read a file from the source bucket. Returns `Buffer \| null`. |
 
 **`OsProcessor` slice** (`OsTransformContext`):
 
-| Member | Description |
-| --- | --- |
-| `ctx.putRecord(record)` | Emit a `PutRecord` to the OS DDB target. |
+| Member                              | Description                                                 |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `ctx.putRecord(record)`             | Emit a `PutRecord` to the OS DDB target.                    |
 | `ctx.querySourceRecord<T>(pk, sk?)` | Query the source OS DDB table. Returns `null` if not found. |
 | `ctx.queryTargetRecord<T>(pk, sk?)` | Query the target OS DDB table. Returns `null` if not found. |
 
@@ -403,12 +403,12 @@ Each processor in the pipeline contributes additional helpers onto the context:
 
 ### Built-in processors
 
-| Processor | Slice helpers | Notes |
-| --- | --- | --- |
-| `DdbProcessor` | `putRecord`, `querySourceRecord`, `queryTargetRecord` | Primary DDB table. Auto-puts `ctx.record`. |
-| `S3Processor` | `copyFile`, `getFile` | S3 bucket. No auto-put; emit S3Copy via `ctx.copyFile`. |
-| `OsProcessor` | `putRecord`, `querySourceRecord`, `queryTargetRecord` | OS DDB table. Auto-puts. Gzips on write, ensuresIndex. |
-| `AuditLogProcessor` | `putAuditLog` | Writes to the audit log table. No-op when `target.auditLog` is null. |
+| Processor           | Slice helpers                                         | Notes                                                                |
+| ------------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
+| `DdbProcessor`      | `putRecord`, `querySourceRecord`, `queryTargetRecord` | Primary DDB table. Auto-puts `ctx.record`.                           |
+| `S3Processor`       | `copyFile`, `getFile`                                 | S3 bucket. No auto-put; emit S3Copy via `ctx.copyFile`.              |
+| `OsProcessor`       | `putRecord`, `querySourceRecord`, `queryTargetRecord` | OS DDB table. Auto-puts. Gzips on write, ensuresIndex.               |
+| `AuditLogProcessor` | `putAuditLog`                                         | Writes to the audit log table. No-op when `target.auditLog` is null. |
 
 ---
 
