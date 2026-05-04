@@ -24,7 +24,12 @@ describe("PresetLoader Feature", () => {
             const loader = container.resolve(PresetLoader);
             // Filename (without extension) IS the preset name — drop a .ts file
             // in src/presets/ and it ships in the next release.
-            expect(loader.getBuiltInPresets()).toEqual(["v5-to-v6-ddb", "v5-to-v6-os"]);
+            expect(loader.getBuiltInPresets()).toEqual([
+                "copy-ddb",
+                "copy-os",
+                "v5-to-v6-ddb",
+                "v5-to-v6-os"
+            ]);
         });
     });
 
