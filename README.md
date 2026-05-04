@@ -8,7 +8,7 @@ A generic data-transfer tool for Webiny environments. Copies DynamoDB + S3 (or O
 - **Prod → dev seeding** — zero transformers, just copy.
 - **Custom transfers** — write your own transformers + pipelines + preset for bespoke data moves.
 
-The package ships one built-in preset (`v5-to-v6-ddb`) plus full authoring support for your own. See `templates/presets/example.ts` (scaffolded by `init`) for the authoring pattern.
+The package ships two built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`) plus full authoring support for your own.
 
 ## Quick start
 
@@ -29,7 +29,18 @@ The `init` command scaffolds a project with config templates, `.env` files, and 
 yarn add @webiny/data-transfer
 ```
 
-Create a config file:
+## Storage modes
+
+The config builder determines which AWS storage the transfer reads from and writes to:
+
+- **`createDdbTransfer(...)`** — DynamoDB primary table (+ S3 files). Handles all record types: CMS entries + models, security, file manager, folder permissions, mailer settings.
+- **`createOsTransfer(...)`** — OpenSearch companion DynamoDB table. Reads gzipped records, unzips, transforms, zips, writes to target OS DDB table.
+
+Run DDB transfer first, then OS transfer with a separate config file. They don't share state.
+
+## Config reference
+
+### DDB config
 
 ```typescript
 import {
@@ -56,56 +67,16 @@ export default createDdbTransfer({
     s3: { bucket: fromEnv("TARGET_S3_BUCKET") }
   },
   pipeline: {
-    preset: "./presets/my-preset.ts", // path relative to this config file
+    preset: "./presets/my-preset.ts",
     segments: numberFromEnv("SEGMENTS", 4),
-    modelsDir: "./path/to/models" // optional — required by OS preset and rich-text/field transformers
+    modelsDir: "./models" // optional
   }
 });
 ```
 
-Run it:
+`loadEnv(import.meta.url)` loads the `.env` file sitting next to this config file. Each project folder should have its own `.env` so credentials stay isolated between projects.
 
-```bash
-yarn webiny-data-transfer --config=./my-config.ts
-```
-
-**Credentials** — three shapes accepted, pick what matches your deploy:
-
-- **`fromAwsProfile({profile})`** — reads `~/.aws/credentials`. Explicit about which profile. Best for local dev with multiple accounts — no risk of a stray `AWS_ACCESS_KEY_ID` env var silently hijacking the wrong account.
-- **`fromAwsCredentialChain()`** — the AWS SDK default chain. Tries env vars → shared credentials file → SSO → EC2/ECS IAM role. Best for CI / cloud runs where creds come from the environment, and for one-config-fits-everywhere setups.
-- **Literal `{accessKeyId, secretAccessKey, sessionToken?}`** — explicit strings. Use for temporary STS credentials or CI environments that inject the values as env vars directly.
-
-```typescript
-import {
-  createDdbTransfer,
-  fromAwsProfile,         // explicit profile
-  fromAwsCredentialChain, // env → ini → SSO → IMDS
-  fromEnv
-} from "@webiny/data-transfer";
-
-// …
-credentials: fromAwsCredentialChain() // one line, works anywhere
-// or
-credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") })
-// or
-credentials: {
-  accessKeyId: fromEnv("AWS_ACCESS_KEY_ID"),
-  secretAccessKey: fromEnv("AWS_SECRET_ACCESS_KEY")
-}
-```
-
-`fromEnv(name)` throws if the variable is unset or empty; `fromEnv(name, default)` falls back. `numberFromEnv` is the typed numeric sibling — no more `Number(process.env.X!)` ritual, and a bad value like `SEGMENTS=four` fails fast with a named error.
-
-## Storage modes
-
-The config builder determines the mode:
-
-- `createDdbTransfer(...)` — DynamoDB primary table (+ S3 files). Handles all record types: CMS entries + models, security, file manager, folder permissions, mailer settings.
-- `createOsTransfer(...)` — OpenSearch companion DynamoDB table. Handles CMS entries (reads gzipped records, unzips, transforms, zips again, writes to target OS DDB table).
-
-Run DDB transfer first, then OS transfer with a separate config file. They don't share state.
-
-## OpenSearch config shape
+### OS config
 
 ```typescript
 import {
@@ -122,8 +93,8 @@ export default createOsTransfer({
   source: {
     region: fromEnv("SOURCE_REGION", "us-east-1"),
     credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
-    dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") }, // primary table (models, tenants)
-    opensearch: { tableName: fromEnv("SOURCE_OS_TABLE") } // OS companion DDB table
+    dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
+    opensearch: { tableName: fromEnv("SOURCE_OS_TABLE") }
   },
   target: {
     region: fromEnv("TARGET_REGION", "us-east-1"),
@@ -131,61 +102,237 @@ export default createOsTransfer({
     opensearch: {
       endpoint: fromEnv("TARGET_OS_ENDPOINT"),
       tableName: fromEnv("TARGET_OS_TABLE"),
-      service: "opensearch" // or "opensearch-serverless"
+      service: "opensearch", // or "opensearch-serverless"
+      indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
     }
   },
   pipeline: {
-    preset: "./presets/my-os-preset.ts",
-    segments: numberFromEnv("SEGMENTS", 4)
+    preset: "v5-to-v6-os",
+    segments: numberFromEnv("SEGMENTS", 4),
+    modelsDir: fromEnv("MODELS_DIR", "./models")
   }
 });
 ```
 
-**Index management** (OS mode): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected — safe for shared clusters.
+**Index management** (OS mode): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected.
 
-**`modelsDir`** (required by the OS preset and rich-text/field-key transformers): point at a directory of exported CMS model definitions. Three JSON shapes are accepted and can be mixed in the same directory:
+### Env helpers
+
+- **`fromEnv(name)`** — required string; throws if unset or empty (empty string counts as missing).
+- **`fromEnv(name, default)`** — falls back to `default` when unset.
+- **`numberFromEnv(name, default?)`** — typed numeric; throws on parse failure (`SEGMENTS=four` fails immediately with a named error).
+
+### Credentials
+
+Three shapes accepted on both `source.credentials` and `target.credentials`:
+
+- **`fromAwsProfile({ profile })`** — reads `~/.aws/credentials`. Explicit about which profile. Best for local dev with multiple accounts — no risk of a stray `AWS_ACCESS_KEY_ID` silently hijacking the wrong account.
+- **`fromAwsCredentialChain()`** — the AWS SDK default chain: env vars → shared credentials file → SSO → EC2/ECS IAM. Best for CI / cloud runs.
+- **Literal `{ accessKeyId, secretAccessKey, sessionToken? }`** — explicit strings for temporary STS credentials.
+
+```typescript
+import { fromAwsProfile, fromAwsCredentialChain } from "@webiny/data-transfer";
+
+credentials: fromAwsProfile({ profile: "prod-reader" })
+// or
+credentials: fromAwsCredentialChain()
+// or
+credentials: { accessKeyId: "...", secretAccessKey: "..." }
+```
+
+### `modelsDir`
+
+Required by the OS preset and by rich-text / field-key transformers. Point at a directory of exported CMS model definitions. Three JSON shapes are accepted and can be mixed in the same directory:
 
 ```
 models/
-  single-model.json         # { "modelId": "...", "fields": [...], ... }
-  array-of-models.json      # [{ "modelId": "...", "fields": [...] }, ...]
-  webiny-export.json        # { "groups": [...], "models": [...] }   ← Webiny admin export
+  single-model.json      # { "modelId": "...", "fields": [...], ... }
+  array-of-models.json   # [{ "modelId": "...", "fields": [...] }, ...]
+  webiny-export.json     # { "groups": [...], "models": [...] }  ← Webiny admin export
 ```
 
-The Webiny admin panel's **Export** feature produces the `{groups, models}` shape. JSON files are picked up from `modelsDir` automatically — no registration step. JSON models override DB-loaded models when both exist (user-provided definition takes precedence).
+JSON models override DB-loaded models when both exist.
 
-## Tuning (optional)
-
-Operational knobs live under `config.tuning`:
+### Tuning (optional)
 
 ```typescript
-export default createDdbTransfer({
-  source: {
-    /* ... */
-  },
-  target: {
-    /* ... */
-  },
-  pipeline: { preset: "./presets/my-preset.ts" },
-  tuning: {
-    ddb: { maxRetries: 3, initialBackoffMs: 100 },
-    s3: { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
-    os: {
-      maxRetries: 3,
-      retryScheduleMs: [5000, 10000, 20000, 30000, 30000],
-      gzipConcurrency: 16
-    }
+tuning: {
+  ddb: { maxRetries: 3, initialBackoffMs: 100 },
+  s3:  { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
+  os:  { maxRetries: 3, retryScheduleMs: [5000, 10000, 20000], gzipConcurrency: 16 }
+}
+```
+
+All fields are optional; absent = built-in defaults. `BATCH_SIZE` for DynamoDB is NOT tunable (AWS enforces 25 items per `BatchWriteItem`). DDB and S3 clients run in AWS SDK `adaptive` retry mode — `tuning.{ddb,s3}.maxRetries` caps the outer retry envelope on top of the SDK's own self-tuning backoff.
+
+### Debug options
+
+Add a `debug` block to your config to opt into diagnostics:
+
+```typescript
+debug: {
+  snapshot: true,    // or: { dir: "./my-snapshot", compress: false }
+  logFile: true      // or: "./my-transfer.log"
+}
+```
+
+**`debug.snapshot`** dumps every record the pipeline touches to local JSONL files:
+
+```
+.transfer/<runId>/
+├── snapshot/
+│   ├── <pipelineName>/
+│   │   ├── segment-0.source.jsonl.gz         ← post-filter, pre-transform
+│   │   ├── segment-0.post-transform.jsonl.gz ← after the whole transformer chain
+│   │   └── segment-0.commands.jsonl.gz       ← PutRecord + S3Copy + etc.
+│   └── dropped/
+│       └── segment-0.jsonl.gz                ← records matching no pipeline
+├── segment-0-blackholed.log
+└── segment-0-unmatched.log
+```
+
+Inspect with `zcat` + `jq`:
+
+```bash
+zcat .transfer/<runId>/snapshot/cmsEntries/segment-0.source.jsonl.gz | jq 'select(.PK=="T#tenant#CME#abc")'
+```
+
+Set `compress: false` to `grep` directly without `zcat`. Snapshot is best-effort — write errors log `warn` but never abort the transfer.
+
+**`debug.logFile`** captures the full runner log to disk. `true` → each process writes to `.transfer/<runId>/logs/<orchestrator|segment-N>.log` (one file per process, no interleaving under parallelism). String → all processes write to that path. Content is raw pino JSONL:
+
+```bash
+cat .transfer/<runId>/logs/*.log | pino-pretty
+```
+
+---
+
+## Writing a preset
+
+A preset is the bridge between your config file and the DI container. It tells the runner which pipelines to register, which scanners + processors to use, and which transformers + filters to apply.
+
+### Preset shape
+
+A preset is an object with `{ name, description, configure }` exported as `default`. Use `createTransferPreset` for typed inference:
+
+```typescript
+import {
+  createTransferPreset,
+  DdbScanner,
+  DdbProcessor,
+  S3Processor,
+  createFilter
+} from "@webiny/data-transfer";
+import { stampMigratedAt } from "./transformers/stampMigratedAt.ts";
+
+export default createTransferPreset({
+  name: "my-preset",
+  description: "One-line description shown in CLI output.",
+  configure({ runner, pipelineBuilderFactory }) {
+    const pipeline = pipelineBuilderFactory
+      .create({ name: "my-pipeline", scanner: DdbScanner, processors: [DdbProcessor, S3Processor] })
+      .filter(createFilter(r => r.TYPE === "cms.entry"))
+      .use(stampMigratedAt)
+      .build();
+
+    runner.register(pipeline);
   }
 });
 ```
 
-All fields are optional; absent = built-in defaults. `BATCH_SIZE` for DynamoDB is NOT tunable (AWS enforces 25 items per `BatchWriteItem`).
+Point `config.pipeline.preset` at the file path (relative to the config): `"./presets/my-preset.ts"`. Or use a built-in name like `"v5-to-v6-ddb"`.
 
-DynamoDB and S3 clients additionally run in AWS SDK `adaptive` retry mode, which self-tunes backoff based on response-side throttle signals — no per-second pacing knob is needed or exposed. The `tuning.{ddb,s3}.maxRetries` cap controls the outer envelope on top of that.
+### `pipelineBuilderFactory.create({ name, scanner, processors })`
 
-## Writing custom transformers
+- **`name`** — unique string; the runner throws on duplicate names.
+- **`scanner`** — `DdbScanner` or `OsScanner`. Determines which table is scanned and what `TRecord` shape flows through the chain.
+- **`processors`** — `NonEmptyArray` of processor classes. Each processor contributes a **slice** of helpers onto the transformer context (see [Processor slices](#processor-slices) below). TS rejects empty arrays and processors whose slice keys collide (e.g. `DdbProcessor` + `OsProcessor` both contribute `putRecord`).
 
-A transformer is a plain function `(ctx) => void | Promise<void>` that mutates `ctx.record`. Wrap it with a named factory for DI friendliness:
+### Builder methods
+
+| Method | Description |
+| --- | --- |
+| `.filter(f)` | Add a filter. Multiple calls AND-compose in evaluation order. Records that fail any filter are skipped. |
+| `.use(t)` | Add a transformer. Execution order matches registration order. |
+| `.blackhole()` | Observe-only mode — filters + transformers + `onEnd` still run but every emitted command is discarded. Nothing lands in the target. Pair with `debug.snapshot` to inspect what WOULD have been written. |
+| `.beforeExecuteCommands(hook)` | Run a hook once per merge group before any shard runs. |
+| `.afterExecuteCommands(hook)` | Run a hook once after all shards in the merge group succeed. Skipped on shard failure. |
+| `.build()` | Snapshot into an immutable `Pipeline`. Required before `runner.register()`. |
+
+`runner.register(p1, p2, ...)` is variadic and chainable.
+
+### Filters
+
+`createFilter` wraps a predicate into a typed `Filter`:
+
+```typescript
+import { createFilter } from "@webiny/data-transfer";
+
+// Accept only CMS entries
+const isCmsEntry = createFilter(r => r.TYPE === "cms.entry");
+
+// Accept only entries for a specific model
+const isArticle = createFilter(r => r.TYPE === "cms.entry" && r.modelId === "article");
+```
+
+Multiple `.filter()` calls on the same pipeline AND-compose — a record must pass all of them. Register more-specific filters before catch-alls.
+
+### Multiple pipelines and first-match-wins
+
+Pipelines sharing the same scanner run as a **merge group**. Within a group, the first pipeline whose filters all pass "wins" that record — subsequent pipelines skip it. Registration order is semantically significant.
+
+```typescript
+configure({ runner, pipelineBuilderFactory }) {
+  // High-value entries: custom transformer chain
+  const articles = pipelineBuilderFactory
+    .create({ name: "articles", scanner: DdbScanner, processors: [DdbProcessor] })
+    .filter(createFilter(r => r.TYPE === "cms.entry" && r.modelId === "article"))
+    .use(migrateArticle)
+    .build();
+
+  // Everything else: verbatim copy
+  const rest = pipelineBuilderFactory
+    .create({ name: "rest", scanner: DdbScanner, processors: [DdbProcessor] })
+    .build();
+
+  runner.register(articles, rest); // order matters: articles checked first
+}
+```
+
+Records that match no pipeline are dropped (see [Unmatched records](#pipeline-runtime-semantics)).
+
+### Zero-transformer preset (pure data copy)
+
+```typescript
+export default createTransferPreset({
+  name: "copy",
+  description: "Copy every record verbatim.",
+  configure({ runner, pipelineBuilderFactory }) {
+    const copyAll = pipelineBuilderFactory
+      .create({ name: "copy-all", scanner: DdbScanner, processors: [DdbProcessor] })
+      .build(); // no .filter → accepts all; no .use → no transformations
+
+    runner.register(copyAll);
+  }
+});
+```
+
+`DdbProcessor.onEnd` emits a `PutRecord` for `ctx.record` at the end of each record — pure-passthrough pipelines still produce writes.
+
+### Built-in presets
+
+Pass by name in `config.pipeline.preset`:
+
+- **`"v5-to-v6-ddb"`** — full Webiny v5 → v6 migration of the primary DynamoDB table (CMS entries, file manager, security, mailer, folder permissions, etc.).
+- **`"v5-to-v6-os"`** — migration of the OpenSearch companion DynamoDB table. Run **after** `v5-to-v6-ddb`.
+
+Custom presets are path-resolved from your config file's directory.
+
+---
+
+## Writing transformers
+
+A transformer is a function `(ctx) => void | Promise<void>` that mutates `ctx.record`. Wrap it with a factory for a named identity:
 
 ```typescript
 import { createDdbTransformer } from "@webiny/data-transfer";
@@ -201,187 +348,114 @@ export const stampMigratedAt = createDdbTransformer(
 
 Factory variants:
 
-- `createTransformer<TContext>(name, fn)` — generic over any context type.
-- `createDdbTransformer(name, fn)` — binds `DdbTransformContext.Interface`.
-- `createOsTransformer(name, fn)` — binds `OsTransformContext.Interface`.
+- **`createTransformer<TContext>(name, fn)`** — generic over any context type.
+- **`createDdbTransformer(name, fn)`** — binds `DdbTransformContext.Interface` (Base + DdbProcessor slice + S3Processor slice).
+- **`createOsTransformer(name, fn)`** — binds `OsTransformContext.Interface` (Base + OsProcessor slice).
 
-### Context API
+### Context type aliases
 
-Both DDB and OS transform contexts expose:
+Use the narrowest type that covers what your transformer needs:
 
-| Member                     | Description                                                                                           |
-| -------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `ctx.record`               | Mutable record. Transformers change this.                                                             |
-| `ctx.original`             | Frozen, deep-cloned pre-transform snapshot. Use for gate-checks or audit comparisons. Always present. |
-| `ctx.commands`             | The command buffer. Transformers rarely need this directly — use the helpers below.                   |
-| `ctx.modelProvider`        | Loaded CMS models (from DB + `config.pipeline.modelsDir` JSON files, if set).                         |
-| `ctx.cache`                | Shared `Map`-like cache, persists across records within a run.                                        |
-| `ctx.logger`               | Logger bound to the current worker. Use instead of `console.*` inside transformers.                   |
-| `ctx.replace(newRecord)`   | Replace `ctx.record` wholesale.                                                                       |
-| `ctx.putRecord(record)`    | Emit an extra PutRecord to the target (beyond the auto-put at chain end).                             |
-| `ctx.queryRecord(pk, sk?)` | Query the source primary table. Returns `null` if not found.                                          |
+| Type | Processors in pipeline | When to use |
+| --- | --- | --- |
+| `BaseTransformContext.Interface` | any | Transformers that only touch `ctx.record`, `ctx.cache`, `ctx.logger`, etc. — no processor-specific helpers needed. |
+| `DdbCoreTransformContext.Interface` | `DdbProcessor` only | DDB transformers that need `querySourceRecord` / `queryTargetRecord` / `putRecord` but not S3 helpers. |
+| `DdbTransformContext.Interface` | `DdbProcessor` + `S3Processor` | Default for v5-to-v6 DDB transformers that may call `ctx.copyFile` / `ctx.getFile`. |
+| `OsTransformContext.Interface` | `OsProcessor` | OS transformers. `ctx.record.data` is the decompressed payload (always present). |
 
-DDB context additionally provides:
+### Base context API
 
-- `ctx.copyFile(sourceKey, targetKey)` — emit an S3 copy command.
-- `ctx.getFile(key)` — read a file from the source bucket.
+Available on every transformer context regardless of pipeline configuration:
 
-**Auto-put**: `DdbProcessor` and `OsProcessor` include an `onEnd` hook that emits a `PutRecord` for `ctx.record` at the end of each transformer chain. Pure-passthrough pipelines (no `.filter` + no `.use`) still produce writes. `S3Processor` has no `onEnd` — transformers call `ctx.copyFile(...)` explicitly.
+| Member | Description |
+| --- | --- |
+| `ctx.record` | Mutable record. Transformers mutate this. |
+| `ctx.original` | Frozen, deep-cloned pre-transform snapshot. Always present. Use for gate-checks or audit comparisons. Never modify. |
+| `ctx.replace(newRecord)` | Replace `ctx.record` wholesale. |
+| `ctx.addCommand(cmd)` | Push a raw command to the command bag. Rarely needed in transformers — processor slice helpers are sugar over this. |
+| `ctx.modelProvider` | Loaded CMS models (from DB + `modelsDir` JSON files if set). |
+| `ctx.cache` | Shared `Map`-like cache, persists across records within a shard. Useful for deduplication. |
+| `ctx.logger` | Logger bound to the current worker. Use instead of `console.*` — respects configured log level. |
+| `ctx.compressionHandler` | Gzip compression utility. Rarely needed directly. |
 
-## Writing a preset
+### Processor slices
 
-A preset is an object exported as `default` from a `.ts` file. Wrap it in `createTransferPreset({...})` — a typed identity helper that gives you inference on `configure({...})` without needing to import and annotate `MigrationPreset`. Build pipelines via `pipelineBuilderFactory.create({...})`:
+Each processor in the pipeline contributes additional helpers onto the context:
+
+**`DdbProcessor` slice** (`DdbTransformContext`, `DdbCoreTransformContext`):
+
+| Member | Description |
+| --- | --- |
+| `ctx.putRecord(record)` | Emit an extra `PutRecord` to the DDB target (beyond the auto-put at chain end). |
+| `ctx.querySourceRecord<T>(pk, sk?)` | Query the source DDB primary table. Returns `null` if not found. |
+| `ctx.queryTargetRecord<T>(pk, sk?)` | Query the target DDB primary table. Returns `null` if not found. |
+
+**`S3Processor` slice** (`DdbTransformContext`):
+
+| Member | Description |
+| --- | --- |
+| `ctx.copyFile(sourceKey, targetKey)` | Emit an S3 copy command. |
+| `ctx.getFile(key)` | Read a file from the source bucket. Returns `Buffer \| null`. |
+
+**`OsProcessor` slice** (`OsTransformContext`):
+
+| Member | Description |
+| --- | --- |
+| `ctx.putRecord(record)` | Emit a `PutRecord` to the OS DDB target. |
+| `ctx.querySourceRecord<T>(pk, sk?)` | Query the source OS DDB table. Returns `null` if not found. |
+| `ctx.queryTargetRecord<T>(pk, sk?)` | Query the target OS DDB table. Returns `null` if not found. |
+
+**Auto-put**: `DdbProcessor` and `OsProcessor` include an `onEnd` hook that emits a `PutRecord` for `ctx.record` at chain end. `S3Processor` has no `onEnd` — call `ctx.copyFile(...)` explicitly in your transformers.
+
+### Built-in processors
+
+| Processor | Slice helpers | Notes |
+| --- | --- | --- |
+| `DdbProcessor` | `putRecord`, `querySourceRecord`, `queryTargetRecord` | Primary DDB table. Auto-puts `ctx.record`. |
+| `S3Processor` | `copyFile`, `getFile` | S3 bucket. No auto-put; emit S3Copy via `ctx.copyFile`. |
+| `OsProcessor` | `putRecord`, `querySourceRecord`, `queryTargetRecord` | OS DDB table. Auto-puts. Gzips on write, ensuresIndex. |
+| `AuditLogProcessor` | `putAuditLog` | Writes to the audit log table. No-op when `target.auditLog` is null. |
+
+---
+
+## Custom DI — `setup.ts`
+
+If your preset needs to resolve custom processors, features, or other DI bindings, drop a `setup.ts` next to your transfer config:
 
 ```typescript
-import {
-  createTransferPreset,
-  DdbScanner,
-  DdbProcessor,
-  createFilter
-} from "@webiny/data-transfer";
-import { stampMigratedAt } from "./transformers/stampMigratedAt.ts";
+// projects/my-project/setup.ts
+import { initDataTransfer } from "@webiny/data-transfer";
+import { MyCustomFeature } from "../../features/MyCustomFeature.ts";
 
-export default createTransferPreset({
-  name: "tagged-entries",
-  description: "Stamp every internal-tagged CMS entry with migratedAt.",
-  configure({ runner, pipelineBuilderFactory }) {
-    const taggedEntries = pipelineBuilderFactory
-      .create({ name: "TaggedEntries", scanner: DdbScanner, processors: [DdbProcessor] })
-      .filter(createFilter(r => r.TYPE === "cms.entry" && r.tags?.includes("internal")))
-      .use(stampMigratedAt)
-      .build();
-
-    runner.register(taggedEntries);
-  }
+export default initDataTransfer(async ({ container }) => {
+  container.register(MyCustomFeature);
 });
 ```
 
-Point `config.pipeline.preset` at the file path (relative to the config) — for example `"./presets/tagged-entries.ts"` or `"../shared/presets/foo.ts"`.
+The CLI picks it up automatically and runs it **before** loading your preset, so the preset can `container.resolve(...)` anything you registered. The file is optional — delete it if you don't need custom DI wiring.
 
-### `PresetConfigureContext`
+`container` is a `@webiny/di` container with all core data-transfer features already wired (scanners, processors, executors, etc.). `initDataTransfer` is a typed helper that validates the export shape.
 
-`configure` receives:
-
-- `runner` — call `.register(...pipelines)` after building.
-- `pipelineBuilderFactory` — call `.create({...})` to build pipelines.
-- `container` — DI container for resolving custom services you registered in `setup.ts` (see below).
-
-Return `void` or `Promise<void>` — async configure is supported.
-
-### `pipelineBuilderFactory.create({...})` — typed builder
-
-`create({ name, scanner, processors })` returns a `PipelineBuilder` with `TRecord` inferred from the scanner and `TContext` inferred from the processors' slices. `processors` is a `NonEmptyArray`; TS rejects empty arrays and rejects processors whose slice keys collide (e.g. `DdbProcessor` + `OsProcessor` both contribute `putRecord`).
-
-Builder methods:
-
-- `.filter(filter)` — one filter per call. Multiple `.filter()` calls AND-compose; order doesn't matter for execution.
-- `.use(transformer)` — one transformer per call. Insertion order IS preserved at execution time.
-- `.beforeExecuteCommands(hook)` / `.afterExecuteCommands(hook)` — optional per-merge-group hooks.
-- `.blackhole()` — observe-only mode. Filters + transformers + `onEnd` still run but every emitted command is discarded — nothing lands in the target for this pipeline. Useful for validation-only passes or dry-running a specific pipeline. Pair with `debug.snapshot` to record what WOULD have been written.
-- `.build()` — snapshots into an immutable `Pipeline`. Required before `runner.register()`.
-
-`runner.register(p1, p2, ...)` is variadic, chainable, and throws on duplicate pipeline name.
-
-### Zero-transformer preset (pure data copy)
-
-```typescript
-import { createTransferPreset, DdbScanner, DdbProcessor } from "@webiny/data-transfer";
-
-export default createTransferPreset({
-  name: "copy",
-  description: "Copy every record from source to target verbatim.",
-  configure({ runner, pipelineBuilderFactory }) {
-    const copyAll = pipelineBuilderFactory
-      .create({ name: "copy-all", scanner: DdbScanner, processors: [DdbProcessor] })
-      .build(); // no .filter, no .use → accepts every record, emits verbatim
-
-    runner.register(copyAll);
-  }
-});
-```
-
-`DdbProcessor.onEnd` emits a `PutRecord` for `ctx.record` at the end of each record. Pure-passthrough pipelines (no transformers, no filters) still produce writes.
-
-## Built-in presets
-
-The package ships two:
-
-- **`v5-to-v6-ddb`** — full Webiny v5 → v6 migration of the primary DynamoDB table (CMS entries, file manager, security, mailer, folder permissions, etc.).
-- **`v5-to-v6-os`** — migration of the OpenSearch companion DynamoDB table (CMS entries only, gzip round-trip). Run this **after** `v5-to-v6-ddb` — the two don't share state.
-
-Pass by name via `config.pipeline.preset: "v5-to-v6-ddb"` (or `"v5-to-v6-os"`). The `PresetLoader` scans `node_modules/@webiny/data-transfer/src/presets/` at runtime — drop a `.ts` file there (filename = preset name) and it ships in the next release. Custom presets are still path-resolved from your config file (`"./presets/my-preset.ts"`).
+---
 
 ## Pipeline runtime semantics
 
 - **Merge groups**: pipelines sharing the same scanner run together, in registration order.
-- **First-match-wins**: within a merge group, the first pipeline whose filter(s) pass is the one that runs for that record. Register more-specific filters before catch-alls.
-- **Unmatched records are dropped by design**: if no pipeline in the merge group accepts a record, it's skipped. A preset picks which record types to transfer — types outside the preset's filter set are intentionally left behind. The runner emits a `warn`-level line per unmatched record (`unmatched record — TYPE=<type> PK=<pk> SK=<sk>`) and an `info`-level summary with a TYPE breakdown: `"[<mergeGroupId> shard 1/4] scanned 10000, transferred 9612 (...), blackholed 374 (...), unmatched 14 (page.page=10, cms.entry=4)"`. Each worker also writes `segment-N-unmatched.log` to `.transfer/<runId>/` for post-run inspection. If you need every record to land on the target, add a catch-all pipeline last (`.filter(createFilter(() => true))`) or register a zero-transformer passthrough under the same scanner.
-- **Hooks**: each pipeline may declare before-hooks + after-hooks. Before-hooks fire once per merge group before any shard runs; after-hooks fire once after all shards in the merge group succeed. After-hooks are skipped on shard failure.
-- **Parallelism**: the `pipeline.segments` config field controls the number of scanner segments (shards). Each shard runs in parallel via a child process.
-- **Re-running specific shards**: pass `--segments=1,3` on the CLI to run only those shard indices out of the configured total. Keeps the scanner's segment math intact (workers still receive the full `--total`), so each shard sees exactly the same slice of the source table as it would in a full run. Use after a partial failure to re-drive just the shards that didn't complete, without rescanning the rest.
+- **First-match-wins**: within a merge group, the first pipeline whose filter(s) pass claims the record. Register more-specific filters before catch-alls.
+- **Unmatched records**: if no pipeline accepts a record, it's dropped. The runner emits a `warn` per unmatched record and an `info`-level shard summary: `"unmatched 14 (pb.page.l=4, pb.page=4, T#root#FM#f1:L#v1=2)"`. When TYPE is absent or empty, the key is `PK:SK` instead of a type name. Each worker also writes `segment-N-unmatched.log` to `.transfer/<runId>/`. To transfer every record, add a zero-filter catch-all pipeline last.
+- **Hooks**: before-hooks fire once per merge group before any shard; after-hooks fire once after all shards succeed. After-hooks are skipped on shard failure. Each hook receives `{ runId, mergeGroupId }`.
+- **Parallelism**: `pipeline.segments` controls the number of parallel scanner segments (shards). Each shard runs in a separate child process.
+- **Re-running specific shards**: pass `--segments=1,3` to re-drive only those indices. Workers still receive `--total` from `pipeline.segments`, so each shard scans the exact same slice as a full run. Use after a partial failure to avoid re-scanning the whole table.
 
-## Debugging: per-record snapshot
-
-Add `debug: { snapshot: true }` to your config to dump every record the pipeline touches to local JSONL files. Useful for seeing exactly what a transformer did to a specific record, without going back to AWS.
-
-```typescript
-export default createDdbTransfer({
-  source: {
-    /* ... */
-  },
-  target: {
-    /* ... */
-  },
-  pipeline: { preset: "./presets/my-preset.ts" },
-  debug: {
-    snapshot: true
-    // or: snapshot: { dir: "./my-snapshot", compress: false }
-  }
-});
-```
-
-Layout (default `dir`: `.transfer/<runId>/snapshot`, gzipped):
-
-```
-.transfer/<runId>/
-├── snapshot/
-│   ├── <pipelineName>/
-│   │   ├── segment-0.source.jsonl.gz         ← post-filter, pre-transform
-│   │   ├── segment-0.post-transform.jsonl.gz ← after the whole transformer chain
-│   │   └── segment-0.commands.jsonl.gz       ← PutRecord + S3Copy + etc.
-│   └── dropped/
-│       └── segment-0.jsonl.gz                ← records matching no pipeline filter
-├── segment-0-blackholed.log              ← one line per blackholed record
-└── segment-0-unmatched.log              ← one line per unmatched record
-```
-
-One file per shard per pipeline per category. Inspect with `zcat` + `jq`:
-
-```bash
-zcat .transfer/<runId>/snapshot/cmsEntries/segment-0.source.jsonl.gz | jq 'select(.PK=="T#tenant#CME#abc")'
-```
-
-Snapshot is best-effort — write errors log `warn` but never break the transfer. Set `compress: false` if you want to `grep` the files directly without `zcat`.
-
-### Persistent log file
-
-Pair snapshot with `debug.logFile` to capture the full runner log for later inspection — useful when a shard fails mid-transfer and you want to see what happened hours later.
-
-```typescript
-debug: {
-  logFile: true; // default: .transfer/<runId>/logs/<orchestrator|segment-N>.log
-  // or: logFile: "./my-transfer.log"
-}
-```
-
-`true` → each process (orchestrator + each worker) writes to its own file under `.transfer/<runId>/logs/`, so concurrent appends can't interleave. String → all processes write to the one path you give. Content is raw pino JSONL — `cat .transfer/<runId>/logs/*.log | pino-pretty` for a pretty post-hoc view.
+---
 
 ## Troubleshooting
 
-- **AWS throttling** — the SDK already self-tunes via `retryMode: "adaptive"`. If you still hit the outer retry cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; consider lowering `tuning.s3.concurrency` for S3-heavy transfers.
-- **OS indexes not creating** — the transfer now aborts if index prep exhausts retries (previously it silently continued and wrote to a missing/wrong-mapping index). Tune `tuning.os.maxRetries` and `tuning.os.retryScheduleMs`, or fix the underlying mapping error surfaced in the logs.
-- **Missing env vars** — config files typically use `loadEnv(import.meta.url)` to load a sibling `.env`. Each project folder should have its own `.env` isolated from others.
-- **Target records look wrong** — the runner auto-puts `ctx.record` at the end of each transformer chain. If you're manually calling `ctx.putRecord(ctx.record)`, that's a duplicate write. Remove it; only call `putRecord` for ADDITIONAL records.
+- **AWS throttling** — the SDK self-tunes via `retryMode: "adaptive"`. If you still hit the outer cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; lower `tuning.s3.concurrency` for S3-heavy transfers.
+- **OS indexes not creating** — the transfer aborts if index prep exhausts retries. Tune `tuning.os.maxRetries` and `tuning.os.retryScheduleMs`, or fix the underlying mapping error surfaced in the logs.
+- **Missing env vars** — config files use `loadEnv(import.meta.url)` to load a sibling `.env`. Each project folder should have its own `.env`.
+- **Target records look wrong** — `DdbProcessor` and `OsProcessor` auto-put `ctx.record` at chain end. If you call `ctx.putRecord(ctx.record)` manually on top of that, you get a duplicate write. Only call `putRecord` for ADDITIONAL records beyond the one being processed.
+- **Unmatched records with no TYPE** — records appear as `PK:SK=N` in the summary instead of a TYPE name. Check the per-record warn lines (`unmatched record — TYPE= PK=... SK=...`) and `segment-N-unmatched.log` to identify what these records are, then decide whether to add a pipeline that handles them or leave them dropped intentionally.
 
 ## License
 
