@@ -15,12 +15,17 @@ import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 const DEFAULT_MAX_RETRIES = 6;
 const DEFAULT_INITIAL_BACKOFF = 100;
 const DEFAULT_CONCURRENCY = 10;
+// S3 file copies can be large; 60 s is generous enough for typical FM assets
+// while still converting infinite hangs (stale TCP, silent gateway drop) into
+// a visible error.
+const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
 
 export class S3ClientImpl implements SourceS3Client.Interface {
     private client: S3Client;
     private readonly maxRetries: number;
     private readonly initialBackoff: number;
     private readonly concurrency: number;
+    private readonly requestTimeout: number;
     private readonly logger: Logger.Interface;
 
     public constructor(
@@ -37,6 +42,7 @@ export class S3ClientImpl implements SourceS3Client.Interface {
         this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
         this.concurrency = tuning?.concurrency ?? DEFAULT_CONCURRENCY;
+        this.requestTimeout = tuning?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     }
 
     public async copy(options: SourceS3Client.Copy): Promise<void> {
@@ -103,12 +109,22 @@ export class S3ClientImpl implements SourceS3Client.Interface {
         return err.name === "NoSuchKey" || err.Code === "NoSuchKey";
     }
 
+    private withTimeout<T>(fn: () => Promise<T>): Promise<T> {
+        const ms = this.requestTimeout;
+        return Promise.race([
+            fn(),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error(`S3 request timed out after ${ms}ms`)), ms)
+            )
+        ]);
+    }
+
     private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         let lastError: Error | undefined;
 
         for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
             try {
-                return await fn();
+                return await this.withTimeout(fn);
             } catch (error) {
                 lastError = error as Error;
 

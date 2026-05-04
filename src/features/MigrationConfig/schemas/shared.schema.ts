@@ -92,14 +92,16 @@ export const tuningSchema = z
         ddb: z
             .object({
                 maxRetries: z.number().int().nonnegative().optional(),
-                initialBackoffMs: z.number().int().nonnegative().optional()
+                initialBackoffMs: z.number().int().nonnegative().optional(),
+                requestTimeoutMs: z.number().int().positive().optional()
             })
             .optional(),
         s3: z
             .object({
                 concurrency: z.number().int().positive().optional(),
                 maxRetries: z.number().int().nonnegative().optional(),
-                initialBackoffMs: z.number().int().nonnegative().optional()
+                initialBackoffMs: z.number().int().nonnegative().optional(),
+                requestTimeoutMs: z.number().int().positive().optional()
             })
             .optional(),
         os: z

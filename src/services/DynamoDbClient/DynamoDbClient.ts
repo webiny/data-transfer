@@ -24,11 +24,17 @@ const BATCH_SIZE = 25; // AWS-enforced BatchWriteItem limit — not user-tunable
 // coverage.
 const DEFAULT_MAX_RETRIES = 6;
 const DEFAULT_INITIAL_BACKOFF = 100;
+// A batchPut of 25 records should complete in <5 s under any reasonable
+// load. 30 s is generous enough to survive severe throttling bursts while
+// still converting infinite hangs (stale TCP, silent gateway drop) into a
+// visible error.
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
     private client: DynamoDBDocument;
     private readonly maxRetries: number;
     private readonly initialBackoff: number;
+    private readonly requestTimeout: number;
     private readonly logger: Logger.Interface;
 
     public constructor(
@@ -48,6 +54,7 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         });
         this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
+        this.requestTimeout = tuning?.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     }
 
     public async *scan<T extends SourceDynamoDbClient.Record = BaseRecord>(
@@ -170,12 +177,22 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         }
     }
 
+    private withTimeout<T>(fn: () => Promise<T>): Promise<T> {
+        const ms = this.requestTimeout;
+        return Promise.race([
+            fn(),
+            new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error(`DynamoDB request timed out after ${ms}ms`)), ms)
+            )
+        ]);
+    }
+
     private async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         let lastError: Error | undefined;
 
         for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
             try {
-                return await fn();
+                return await this.withTimeout(fn);
             } catch (error) {
                 lastError = error as Error;
 

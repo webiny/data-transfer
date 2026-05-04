@@ -22,6 +22,7 @@ interface S3Tuning {
     concurrency?: number;
     maxRetries?: number;
     initialBackoffMs?: number;
+    requestTimeoutMs?: number;
 }
 
 interface IS3ClientConfig {

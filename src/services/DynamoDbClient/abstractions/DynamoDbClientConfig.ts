@@ -30,6 +30,7 @@ export interface DynamoDbConnectionConfig {
 export interface DynamoDbTuning {
     maxRetries?: number;
     initialBackoffMs?: number;
+    requestTimeoutMs?: number;
 }
 
 export interface IDynamoDbClientConfig {
