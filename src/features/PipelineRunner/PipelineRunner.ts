@@ -295,7 +295,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
             if (!matched) {
                 const { PK, SK, TYPE } = record as any;
-                const typeKey: string = TYPE || `${PK}:${SK}`;
+                // TYPE="unknown" is a real stored value in v5 but carries no
+                // useful identity — fall back to PK:SK so the summary entry
+                // identifies the actual record rather than grouping under "unknown".
+                const typeKey: string = TYPE && TYPE !== "unknown" ? TYPE : `${PK}:${SK}`;
                 unmatchedByType.set(typeKey, (unmatchedByType.get(typeKey) ?? 0) + 1);
                 this.logger.warn(`unmatched record — TYPE=${typeKey} PK=${PK} SK=${SK}`);
                 await this.snapshotWriter.write(
