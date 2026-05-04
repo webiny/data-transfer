@@ -13,21 +13,15 @@ The package ships two built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`) plus full
 ## Quick start
 
 ```bash
-npx @webiny/data-transfer init my-transfer
-cd my-transfer
+git clone git@github.com:webiny/v5-to-v6.git
+cd v5-to-v6
 yarn install
-cp projects/example/.env.example projects/example/.env
-# Edit projects/example/.env with your AWS credentials
-yarn transfer --config=./projects/example/ddb.transfer.config.ts
+cp projects/v5-to-v6/.env.example projects/v5-to-v6/.env
+# Edit projects/v5-to-v6/.env with your AWS credentials and table names
+yarn transfer --config=./projects/v5-to-v6/ddb.transfer.config.ts
 ```
 
-The `init` command scaffolds a project with config templates, `.env` files, and empty `transformers/` + `presets/` folders.
-
-## Manual install
-
-```bash
-yarn add @webiny/data-transfer
-```
+The `projects/v5-to-v6/` folder is your starting point. Add more project folders under `projects/` for each environment (staging, prod, etc.) — each with its own `.env` for credential isolation.
 
 ## Storage modes
 

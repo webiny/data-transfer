@@ -89,7 +89,7 @@ Opt-in via a top-level `debug: { ... }` block on your config. See the commented 
 - `debug.snapshot` — dump every source/post-transform/command record to local JSONL files under `.transfer/<runId>/snapshot/` (gzipped by default). Use `true` for defaults, or `{ dir, compress }` to override. Great for diffing exactly what a transformer did to a specific record without re-scanning AWS.
 - `debug.logFile` — write the runner's pino log to disk alongside stdout. `true` → `.transfer/<runId>/logs/<orchestrator|segment-N>.log` (one file per process, safe under worker parallelism). String → all processes append to the path you provide. Replay with `cat .transfer/<runId>/logs/*.log | pino-pretty`.
 
-Both outputs land under `.transfer/` by default, which the `init` template gitignores. If you set a custom path outside `.transfer/`, add it to your own `.gitignore` — these files typically contain production data and full log payloads.
+Both outputs land under `.transfer/` by default, which is gitignored in this repo. If you set a custom path outside `.transfer/`, add it to `.gitignore` — these files typically contain production data and full log payloads.
 
 ### Re-running Specific Shards
 
