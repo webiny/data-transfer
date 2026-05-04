@@ -13,6 +13,7 @@ import {
     AfterTransferHook,
     TransferContext
 } from "~/features/TransferLifecycle/index.ts";
+import { PresetLoader } from "~/features/PresetLoader/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
@@ -73,6 +74,9 @@ export async function handler(
 
     try {
         await loadUserSetup(configPath, container, logger);
+
+        const presetLoader = container.resolve(PresetLoader);
+        await presetLoader.load(config.pipeline.preset);
 
         const beforeHook = container.resolve(BeforeTransferHook);
         logger.info("Running before-transfer hooks...");
