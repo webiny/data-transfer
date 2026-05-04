@@ -106,9 +106,9 @@ runner
 
 If you reverse the order, `cmsEntryPipeline` would swallow fm.file records and `fmFilePipeline` never runs.
 
-### Unmatched records are DROPPED SILENTLY
+### Unmatched records are dropped
 
-If no pipeline in the merge group accepts a record, it's skipped. Logged at `debug` level only — invisible under the default `info` log level.
+If no pipeline in the merge group accepts a record, it's skipped. Each unmatched record emits a `warn`-level log line (`unmatched record — TYPE=<type> PK=<pk> SK=<sk>`). The shard summary includes a TYPE breakdown: `unmatched 14 (cms.entry=10, pb.page=4)`. When a record has no TYPE, its `PK:SK` is used as the key instead.
 
 A preset picks which record types to transfer. Types outside the preset's filter set are intentionally left behind. **If you want every record to land on the target**, add a catch-all passthrough:
 
@@ -216,7 +216,12 @@ Use them for index preparation, schema migration, cache warm-up, etc.
 
 ## Built-in transformer stacks
 
-Two pre-built transformer arrays are exported from `@webiny/data-transfer` (via `src/transformers/index.ts`):
+`src/transformers/index.ts` defines two pre-built transformer arrays used by the built-in presets. They are **not exported from the `@webiny/data-transfer` public API** — custom presets that need them must import via the source path:
+
+```ts
+import { cmsEntryTransformers } from "../../src/transformers/index.ts";
+import { osCmsEntryTransformers } from "../../src/transformers/index.ts";
+```
 
 - **`cmsEntryTransformers`** — DDB-mode stack: `wrapInData, addGsiTenant, removeLocale, fixCmePk, fixBrokenStorageKeys, transformRichText, updateModelIds, removeFolderRevision, removeAttributes`. Use with `.use(cmsEntryTransformers)` in DDB pipelines.
 - **`osCmsEntryTransformers`** — OS-mode stack: same as above but **omits `wrapInData`** (OS records already have `data` populated) and adds `updateOsIndex` after `updateModelIds`. Use in OS pipelines.
@@ -237,11 +242,10 @@ Two built-in presets ship with the package (pass by name in `config.pipeline.pre
 ```ts
 import { createTransformer } from "@webiny/data-transfer";
 import type { DdbCoreTransformContext } from "@webiny/data-transfer";
-import type { BaseRecord } from "@webiny/data-transfer";
 
 const SENTINEL = -1; // "queried, none found" — must be non-zero and truthy
 
-export const myTransformer = createTransformer<DdbCoreTransformContext.Interface<BaseRecord>>(
+export const myTransformer = createTransformer<DdbCoreTransformContext.Interface>(
     "myTransformer",
     async ctx => {
         const cacheKey = `my-key:${ctx.original.PK}`;
