@@ -295,7 +295,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             }
             if (!matched) {
                 const { PK, SK, TYPE } = record as any;
-                const typeKey: string = TYPE ?? "unknown";
+                const typeKey: string = TYPE || `${PK}:${SK}`;
                 unmatchedByType.set(typeKey, (unmatchedByType.get(typeKey) ?? 0) + 1);
                 this.logger.warn(`unmatched record — TYPE=${typeKey} PK=${PK} SK=${SK}`);
                 await this.snapshotWriter.write(
