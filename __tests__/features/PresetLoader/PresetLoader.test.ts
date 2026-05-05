@@ -63,9 +63,9 @@ describe("PresetLoader Feature", () => {
 
         it("error message lists user presets when presetsDir is set", async () => {
             const container = createDdbContainer({ presetsDir });
-            await expect(
-                container.resolve(PresetLoader).load("nonexistent")
-            ).rejects.toThrow("Available user presets");
+            await expect(container.resolve(PresetLoader).load("nonexistent")).rejects.toThrow(
+                "Available user presets"
+            );
         });
 
         it("built-in preset takes precedence over a same-named user preset", async () => {
