@@ -1,4 +1,4 @@
-import { ddbTransferInputSchema, type DdbTransferInput } from "./schemas/ddb.schema.ts";
+import { ddbTransferInputSchema, type DdbConfigInput } from "./schemas/ddb.schema.ts";
 import type { DdbMigrationConfiguration } from "./validation.ts";
 
 /**
@@ -28,7 +28,7 @@ import type { DdbMigrationConfiguration } from "./validation.ts";
  * });
  * ```
  */
-export function createDdbConfig(input: DdbTransferInput): DdbMigrationConfiguration {
+export function createDdbConfig(input: DdbConfigInput): DdbMigrationConfiguration {
     const parsed = ddbTransferInputSchema.parse(input);
     return {
         storage: "ddb",

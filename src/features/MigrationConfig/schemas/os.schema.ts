@@ -51,4 +51,4 @@ export const osTransferInputSchema = z
         }
     });
 
-export type OsTransferInput = z.infer<typeof osTransferInputSchema>;
+export type OsConfigInput = z.infer<typeof osTransferInputSchema>;

@@ -75,4 +75,4 @@ export const ddbTransferInputSchema = z
         }
     });
 
-export type DdbTransferInput = z.infer<typeof ddbTransferInputSchema>;
+export type DdbConfigInput = z.infer<typeof ddbTransferInputSchema>;

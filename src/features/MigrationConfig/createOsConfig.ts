@@ -1,4 +1,4 @@
-import { osTransferInputSchema, type OsTransferInput } from "./schemas/os.schema.ts";
+import { osTransferInputSchema, type OsConfigInput } from "./schemas/os.schema.ts";
 import type { OsMigrationConfiguration } from "./validation.ts";
 
 /**
@@ -32,7 +32,7 @@ import type { OsMigrationConfiguration } from "./validation.ts";
  * });
  * ```
  */
-export function createOsConfig(input: OsTransferInput): OsMigrationConfiguration {
+export function createOsConfig(input: OsConfigInput): OsMigrationConfiguration {
     const parsed = osTransferInputSchema.parse(input);
     return {
         storage: "os",
