@@ -50,6 +50,7 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`  ├── .env.example`);
     console.log(`  ├── models/`);
     console.log(`  └── presets/\n`);
+    console.log(`Note: projects/${projectName}/ is gitignored — credentials stay local.\n`);
     console.log(`Next steps:\n`);
     console.log(`  cp projects/${projectName}/.env.example projects/${projectName}/.env`);
     console.log(`  # Edit projects/${projectName}/.env with your AWS credentials`);

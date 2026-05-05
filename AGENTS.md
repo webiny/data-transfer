@@ -336,7 +336,7 @@ Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`
 - Type-check: `yarn ts-check`
 - Test: `yarn test` (or `yarn test:coverage`)
 - Scaffold a standalone user project: `npx @webiny/data-transfer init my-transfer-folder`
-- Add a project folder to this repo: `yarn dev init-project <name>` — creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `.env.example`, `models/`, and `presets/` (with `presetsDir` pre-wired in both configs). Template lives in `templates/internal-project/`.
+- Add a project folder to this repo: `yarn dev init-project <name>` — creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `.env.example`, `models/`, and `presets/` (with `presetsDir` pre-wired in both configs). Template lives in `templates/internal-project/`. New project folders are **gitignored** (`projects/*/` except `projects/v5-to-v6/`) — credentials stay local.
 - **Dry-run the preset against real AWS (dev use, from this repo):**
   ```bash
   cp projects/v5-to-v6/.env.example projects/v5-to-v6/.env
