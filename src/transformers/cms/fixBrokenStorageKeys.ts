@@ -44,7 +44,7 @@ async function fixAllKeys(
     modelFields: ModelField[],
     logger: Logger.Interface
 ): Promise<void> {
-    await visitFields(values, modelFields, (values, field, value) => {
+    await visitFields(values, modelFields, (values, field, _value) => {
         const correctKey = getCorrectStorageId(field);
         const declaredKey = field.storageId;
         const fieldIdKey = field.fieldId;

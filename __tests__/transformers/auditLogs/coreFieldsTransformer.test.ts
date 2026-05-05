@@ -44,7 +44,7 @@ function makeStringCompressionHandler(decompressedPayload: unknown): Compression
     };
 }
 
-function makeEnvelope(payload: unknown): string {
+function makeEnvelope(_payload: unknown): string {
     return JSON.stringify({ value: "ignored-by-mock", compression: "gzip" });
 }
 

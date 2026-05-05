@@ -19,12 +19,12 @@
 
 - [ ] **Step 1: Write three failing tests**
 
-Add at the end of the `describe("createOsTransfer")` block in `__tests__/features/MigrationConfig/createTransfer.test.ts`:
+Add at the end of the `describe("createOsConfig")` block in `__tests__/features/MigrationConfig/createTransfer.test.ts`:
 
 ```typescript
 it("throws when target indexPrefix is missing", () => {
     expect(() =>
-        createOsTransfer({
+        createOsConfig({
             source: {
                 region: "us-east-1",
                 credentials: creds,
@@ -46,7 +46,7 @@ it("throws when target indexPrefix is missing", () => {
 });
 
 it("accepts empty string indexPrefix (no prefix)", () => {
-    const config = createOsTransfer({
+    const config = createOsConfig({
         source: {
             region: "us-east-1",
             credentials: creds,
@@ -69,7 +69,7 @@ it("accepts empty string indexPrefix (no prefix)", () => {
 });
 
 it("accepts and trims a non-empty indexPrefix", () => {
-    const config = createOsTransfer({
+    const config = createOsConfig({
         source: {
             region: "us-east-1",
             credentials: creds,
@@ -120,11 +120,11 @@ const osTargetAccountConfigSchema = z.object({
 
 Note: use `z.string().trim()` — NOT `trimmedString()`. The `trimmedString()` helper requires `.min(1)` which would reject empty string. Empty string is valid here (means no prefix).
 
-- [ ] **Step 4: Fix all existing `createOsTransfer` calls in the test file**
+- [ ] **Step 4: Fix all existing `createOsConfig` calls in the test file**
 
 In `__tests__/features/MigrationConfig/createTransfer.test.ts`, update every `target.opensearch` object that doesn't already include `indexPrefix`. Add `indexPrefix: ""` to each:
 
-In `describe("createOsTransfer")` — update these four tests (the two error-throwing tests at the bottom of that block don't need it since they throw before reaching that field):
+In `describe("createOsConfig")` — update these four tests (the two error-throwing tests at the bottom of that block don't need it since they throw before reaching that field):
 
 ```typescript
 // "should return a valid os config with storage set"
@@ -144,7 +144,7 @@ opensearch: {
 }
 ```
 
-In `describe("createOsTransfer — source/target collision guard")`, update `baseOsTarget`:
+In `describe("createOsConfig — source/target collision guard")`, update `baseOsTarget`:
 
 ```typescript
 const baseOsTarget = {
@@ -353,7 +353,7 @@ git commit -m "feat(os): add OsIndexPrefixHook to set OPENSEARCH_INDEX_PREFIX be
 **Files:**
 - Modify: `templates/projects/example/os.transfer.config.ts`
 - Modify: `projects/v5-to-v6/os.transfer.config.ts`
-- Modify: `src/features/MigrationConfig/createOsTransfer.ts`
+- Modify: `src/features/MigrationConfig/createOsConfig.ts`
 
 - [ ] **Step 1: Update the example template**
 
@@ -381,16 +381,16 @@ opensearch: {
 }
 ```
 
-- [ ] **Step 3: Update the JSDoc example in `createOsTransfer.ts`**
+- [ ] **Step 3: Update the JSDoc example in `createOsConfig.ts`**
 
-In `src/features/MigrationConfig/createOsTransfer.ts`, update the `@example` block to include `indexPrefix`:
+In `src/features/MigrationConfig/createOsConfig.ts`, update the `@example` block to include `indexPrefix`:
 
 ```typescript
  * @example
  * ```typescript
- * import { createOsTransfer } from "@webiny/data-transfer";
+ * import { createOsConfig } from "@webiny/data-transfer";
  *
- * export default createOsTransfer({
+ * export default createOsConfig({
  *   source: {
  *     region: "us-east-1",
  *     credentials: { accessKeyId: "...", secretAccessKey: "..." },
@@ -425,6 +425,6 @@ Expected: all pass.
 ```bash
 git add templates/projects/example/os.transfer.config.ts \
         projects/v5-to-v6/os.transfer.config.ts \
-        src/features/MigrationConfig/createOsTransfer.ts
+        src/features/MigrationConfig/createOsConfig.ts
 git commit -m "docs(os): add indexPrefix to config templates and JSDoc example"
 ```

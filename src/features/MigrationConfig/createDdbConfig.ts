@@ -1,4 +1,4 @@
-import { ddbTransferInputSchema, type DdbTransferInput } from "./schemas/ddb.schema.ts";
+import { ddbTransferInputSchema, type DdbConfigInput } from "./schemas/ddb.schema.ts";
 import type { DdbMigrationConfiguration } from "./validation.ts";
 
 /**
@@ -9,9 +9,9 @@ import type { DdbMigrationConfiguration } from "./validation.ts";
  *
  * @example
  * ```typescript
- * import { createDdbTransfer } from "@webiny/data-transfer";
+ * import { createDdbConfig } from "@webiny/data-transfer";
  *
- * export default createDdbTransfer({
+ * export default createDdbConfig({
  *   source: {
  *     region: "us-east-1",
  *     credentials: { accessKeyId: "...", secretAccessKey: "..." },
@@ -28,7 +28,7 @@ import type { DdbMigrationConfiguration } from "./validation.ts";
  * });
  * ```
  */
-export function createDdbTransfer(input: DdbTransferInput): DdbMigrationConfiguration {
+export function createDdbConfig(input: DdbConfigInput): DdbMigrationConfiguration {
     const parsed = ddbTransferInputSchema.parse(input);
     return {
         storage: "ddb",

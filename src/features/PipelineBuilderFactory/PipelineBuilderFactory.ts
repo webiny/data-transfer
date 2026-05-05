@@ -1,4 +1,4 @@
-import { type Abstraction, type Constructor, Metadata } from "@webiny/di";
+import { type Abstraction, type Constructor } from "@webiny/di";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
 import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
@@ -6,7 +6,6 @@ import { PipelineBuilderFactory as PipelineBuilderFactoryAbstraction } from "./a
 
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
-type ProcessorInstance = Processor.Interface<any, any>;
 type ScannerInstance = Scanner.Interface<unknown, unknown>;
 
 // Widened input shape used internally — the public generic signature lives on

@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "format": "oxfmt",
     "format:fix": "oxfmt",
-    "format:check": "oxfmt --check"
+    "format:check": "oxfmt --check",
+    "lint": "oxlint --deny-warnings",
+    "lint:fix": "oxlint --fix"
   },
   "keywords": [
     "webiny",
@@ -63,6 +65,7 @@
     "aws-sdk-client-mock": "^4.1.0",
     "dynalite": "^4.0.0",
     "oxfmt": "^0.48.0",
+    "oxlint": "^1.62.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   },

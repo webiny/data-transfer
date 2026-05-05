@@ -5,7 +5,7 @@ import { MigrationConfig } from "./abstractions/MigrationConfig.ts";
 /**
  * Load a transfer configuration file.
  *
- * The config file should use `createDdbTransfer` or `createOsTransfer`
+ * The config file should use `createDdbConfig` or `createOsConfig`
  * to create and validate the config. The loader performs a lightweight
  * check — the builder functions handle full validation.
  */
@@ -20,14 +20,14 @@ export async function loadConfig(configPath: string): Promise<MigrationConfig.In
         if (!config) {
             throw new Error(
                 `Config file ${configPath} must have a default export. ` +
-                    `Use createDdbTransfer() or createOsTransfer() to create your config.`
+                    `Use createDdbConfig() or createOsConfig() to create your config.`
             );
         }
 
         if (!config.storage || (config.storage !== "ddb" && config.storage !== "os")) {
             throw new Error(
                 `Config file ${configPath} has invalid or missing "storage" field. ` +
-                    `Use createDdbTransfer() or createOsTransfer() to create your config.`
+                    `Use createDdbConfig() or createOsConfig() to create your config.`
             );
         }
 

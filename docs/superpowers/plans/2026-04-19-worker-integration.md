@@ -918,7 +918,7 @@ Expected: 7 new commits from this plan (Tasks 1-7) + the spec commit at the bott
 - [ ] **Step 5: Smoke the public-API surface**
 
 Run: `grep -c "RunOptions\|getProcessors" src/index.ts`
-Expected: `RunOptions` and `getProcessors` are NOT exported from `src/index.ts`. They're internal orchestration plumbing — the runner itself is not user-API (users go through `createDdbTransfer` + CLI). If either leaked into `src/index.ts`, remove.
+Expected: `RunOptions` and `getProcessors` are NOT exported from `src/index.ts`. They're internal orchestration plumbing — the runner itself is not user-API (users go through `createDdbConfig` + CLI). If either leaked into `src/index.ts`, remove.
 
 - [ ] **Step 6: Confirm worker stubs are gone**
 

@@ -27,8 +27,8 @@ The `projects/v5-to-v6/` folder is your starting point. Add more project folders
 
 The config builder determines which AWS storage the transfer reads from and writes to:
 
-- **`createDdbTransfer(...)`** — DynamoDB primary table (+ S3 files). Handles all record types: CMS entries + models, security, file manager, folder permissions, mailer settings.
-- **`createOsTransfer(...)`** — OpenSearch companion DynamoDB table. Reads gzipped records, unzips, transforms, zips, writes to target OS DDB table.
+- **`createDdbConfig(...)`** — DynamoDB primary table (+ S3 files). Handles all record types: CMS entries + models, security, file manager, folder permissions, mailer settings.
+- **`createOsConfig(...)`** — OpenSearch companion DynamoDB table. Reads gzipped records, unzips, transforms, zips, writes to target OS DDB table.
 
 Run DDB transfer first, then OS transfer with a separate config file. They don't share state.
 
@@ -39,7 +39,7 @@ Run DDB transfer first, then OS transfer with a separate config file. They don't
 ```typescript
 import {
   loadEnv,
-  createDdbTransfer,
+  createDdbConfig,
   fromAwsProfile,
   fromEnv,
   numberFromEnv
@@ -47,7 +47,7 @@ import {
 
 loadEnv(import.meta.url);
 
-export default createDdbTransfer({
+export default createDdbConfig({
   source: {
     region: fromEnv("SOURCE_REGION", "us-east-1"),
     credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
@@ -75,7 +75,7 @@ export default createDdbTransfer({
 ```typescript
 import {
   loadEnv,
-  createOsTransfer,
+  createOsConfig,
   fromAwsProfile,
   fromEnv,
   numberFromEnv
@@ -83,7 +83,7 @@ import {
 
 loadEnv(import.meta.url);
 
-export default createOsTransfer({
+export default createOsConfig({
   source: {
     region: fromEnv("SOURCE_REGION", "us-east-1"),
     credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),

@@ -1,5 +1,4 @@
 import {
-    addLiveField,
     fixBrokenStorageKeys,
     fixCmePk,
     removeFolderRevision,

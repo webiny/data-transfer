@@ -91,7 +91,7 @@ projects/*/
 
 ```typescript
 // projects/my-env/ddb.transfer.config.ts
-export default createDdbTransfer({
+export default createDdbConfig({
     source: { ... },
     target: { ... },
     pipeline: {

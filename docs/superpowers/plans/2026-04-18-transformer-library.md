@@ -1506,7 +1506,7 @@ git commit -m "feat: v5-to-v6 pipeline definitions (cmsEntry, cmsModel, fmFile)"
 
 - [ ] **Step 1: Read the current `src/index.ts`**
 
-Current public exports: `createDdbTransfer`, `createOsTransfer`, `loadEnv`. This task adds the transformer library surface without disrupting them.
+Current public exports: `createDdbConfig`, `createOsConfig`, `loadEnv`. This task adds the transformer library surface without disrupting them.
 
 - [ ] **Step 2: Expand exports**
 

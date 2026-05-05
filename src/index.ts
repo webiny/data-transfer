@@ -2,13 +2,13 @@
  * Public API for config file authors.
  *
  * ```typescript
- * import { createDdbTransfer } from "@webiny/data-transfer";
+ * import { createDdbConfig } from "@webiny/data-transfer";
  *
- * export default createDdbTransfer({ ... });
+ * export default createDdbConfig({ ... });
  * ```
  */
-export { createDdbTransfer } from "./features/MigrationConfig/createDdbTransfer.ts";
-export { createOsTransfer } from "./features/MigrationConfig/createOsTransfer.ts";
+export { createDdbConfig } from "./features/MigrationConfig/createDdbConfig.ts";
+export { createOsConfig } from "./features/MigrationConfig/createOsConfig.ts";
 export { loadEnv } from "./utils/load-env.ts";
 export { fromEnv, numberFromEnv } from "./utils/fromEnv.ts";
 export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";

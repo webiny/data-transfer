@@ -31,7 +31,9 @@ export async function visitFields(
 ): Promise<void> {
     for (const field of modelFields) {
         const value = values[field.storageId];
-        if (value === undefined) continue;
+        if (value === undefined) {
+            continue;
+        }
 
         // Invoke callback for this field
         await callback(values, field, value);
@@ -39,7 +41,9 @@ export async function visitFields(
         // Recurse into nested structures
         if (field.type === "object") {
             const nestedFields = field.settings && field.settings.fields;
-            if (!nestedFields) continue;
+            if (!nestedFields) {
+                continue;
+            }
 
             if (field.multipleValues && Array.isArray(value)) {
                 // Array of objects
@@ -54,12 +58,16 @@ export async function visitFields(
             }
         } else if (field.type === "dynamicZone") {
             const templates = field.settings && field.settings.templates;
-            if (!templates) continue;
+            if (!templates) {
+                continue;
+            }
 
             const items = Array.isArray(value) ? value : [value];
 
             for (const item of items) {
-                if (!item || typeof item !== "object") continue;
+                if (!item || typeof item !== "object") {
+                    continue;
+                }
 
                 const itemObj = item as Record<string, unknown>;
                 const templateId = itemObj._templateId as string;
