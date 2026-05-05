@@ -1,6 +1,6 @@
 import {
     loadEnv,
-    createOsTransfer,
+    createOsConfig,
     fromAwsProfile,
     fromEnv,
     numberFromEnv
@@ -12,7 +12,7 @@ import {
 // transfer from the repository root.
 loadEnv(import.meta.url);
 
-export default createOsTransfer({
+export default createOsConfig({
     source: {
         region: fromEnv("SOURCE_REGION", "us-east-1"),
         // Profile-based credentials — reads ~/.aws/credentials. For the

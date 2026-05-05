@@ -11,11 +11,11 @@ import { fileURLToPath } from "node:url";
  *
  * @example
  * ```typescript
- * import { loadEnv, createDdbTransfer } from "@webiny/data-transfer";
+ * import { loadEnv, createDdbConfig } from "@webiny/data-transfer";
  *
  * loadEnv(import.meta.url);
  *
- * export default createDdbTransfer({ ... });
+ * export default createDdbConfig({ ... });
  * ```
  */
 export function loadEnv(importMetaUrl: string): void {

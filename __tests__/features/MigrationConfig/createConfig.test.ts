@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { createDdbTransfer } from "../../../src/features/MigrationConfig/createDdbTransfer.ts";
-import { createOsTransfer } from "../../../src/features/MigrationConfig/createOsTransfer.ts";
+import { createDdbConfig } from "../../../src/features/MigrationConfig/createDdbConfig.ts";
+import { createOsConfig } from "../../../src/features/MigrationConfig/createOsConfig.ts";
 
 const creds = { accessKeyId: "AKIA", secretAccessKey: "secret" };
 
-describe("createDdbTransfer", () => {
+describe("createDdbConfig", () => {
     it("should return a valid ddb config with storage set", () => {
-        const config = createDdbTransfer({
+        const config = createDdbConfig({
             source: {
                 region: "us-east-1",
                 credentials: creds,
@@ -30,7 +30,7 @@ describe("createDdbTransfer", () => {
     });
 
     it("should accept optional segments and modelsDir", () => {
-        const config = createDdbTransfer({
+        const config = createDdbConfig({
             source: {
                 region: "us-east-1",
                 credentials: creds,
@@ -53,7 +53,7 @@ describe("createDdbTransfer", () => {
 
     it("should throw on missing source region", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: {
                     credentials: creds,
                     dynamodb: { tableName: "src" },
@@ -73,7 +73,7 @@ describe("createDdbTransfer", () => {
 
     it("should throw on missing credentials", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: {
                     region: "us-east-1",
                     dynamodb: { tableName: "src" },
@@ -93,7 +93,7 @@ describe("createDdbTransfer", () => {
 
     it("should throw on missing preset", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: {
                     region: "us-east-1",
                     credentials: creds,
@@ -113,9 +113,9 @@ describe("createDdbTransfer", () => {
     });
 });
 
-describe("createOsTransfer", () => {
+describe("createOsConfig", () => {
     it("should return a valid os config with storage set", () => {
-        const config = createOsTransfer({
+        const config = createOsConfig({
             source: {
                 region: "us-east-1",
                 credentials: creds,
@@ -142,7 +142,7 @@ describe("createOsTransfer", () => {
     });
 
     it("should accept opensearch-serverless service", () => {
-        const config = createOsTransfer({
+        const config = createOsConfig({
             source: {
                 region: "us-east-1",
                 credentials: creds,
@@ -167,7 +167,7 @@ describe("createOsTransfer", () => {
 
     it("should throw on missing source opensearch", () => {
         expect(() =>
-            createOsTransfer({
+            createOsConfig({
                 source: {
                     region: "us-east-1",
                     credentials: creds,
@@ -190,7 +190,7 @@ describe("createOsTransfer", () => {
 
     it("should throw on missing target opensearch service", () => {
         expect(() =>
-            createOsTransfer({
+            createOsConfig({
                 source: {
                     region: "us-east-1",
                     credentials: creds,
@@ -213,7 +213,7 @@ describe("createOsTransfer", () => {
 
     it("should throw on invalid endpoint URL", () => {
         expect(() =>
-            createOsTransfer({
+            createOsConfig({
                 source: {
                     region: "us-east-1",
                     credentials: creds,
@@ -237,7 +237,7 @@ describe("createOsTransfer", () => {
 
     it("throws when target indexPrefix is missing", () => {
         expect(() =>
-            createOsTransfer({
+            createOsConfig({
                 source: {
                     region: "us-east-1",
                     credentials: creds,
@@ -259,7 +259,7 @@ describe("createOsTransfer", () => {
     });
 
     it("accepts empty string indexPrefix (no prefix)", () => {
-        const config = createOsTransfer({
+        const config = createOsConfig({
             source: {
                 region: "us-east-1",
                 credentials: creds,
@@ -282,7 +282,7 @@ describe("createOsTransfer", () => {
     });
 
     it("accepts and trims a non-empty indexPrefix", () => {
-        const config = createOsTransfer({
+        const config = createOsConfig({
             source: {
                 region: "us-east-1",
                 credentials: creds,
@@ -305,7 +305,7 @@ describe("createOsTransfer", () => {
     });
 });
 
-describe("createDdbTransfer — source/target collision guard", () => {
+describe("createDdbConfig — source/target collision guard", () => {
     const baseDdbSource = {
         region: "us-east-1",
         credentials: creds,
@@ -322,7 +322,7 @@ describe("createDdbTransfer — source/target collision guard", () => {
 
     it("rejects same S3 bucket for source and target", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: baseDdbSource,
                 target: { ...baseDdbTarget, s3: { bucket: baseDdbSource.s3.bucket } },
                 pipeline: { preset: "v5-to-v6" }
@@ -332,7 +332,7 @@ describe("createDdbTransfer — source/target collision guard", () => {
 
     it("rejects same region + same DDB table for source and target", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: baseDdbSource,
                 target: {
                     ...baseDdbTarget,
@@ -346,7 +346,7 @@ describe("createDdbTransfer — source/target collision guard", () => {
 
     it("accepts same DDB table name across different regions", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: baseDdbSource,
                 target: {
                     ...baseDdbTarget,
@@ -359,9 +359,9 @@ describe("createDdbTransfer — source/target collision guard", () => {
     });
 });
 
-describe("createDdbTransfer — string trimming", () => {
+describe("createDdbConfig — string trimming", () => {
     it("trims whitespace around string fields (paste-error tolerance)", () => {
-        const config = createDdbTransfer({
+        const config = createDdbConfig({
             source: {
                 region: "  us-east-1\t",
                 credentials: creds,
@@ -389,7 +389,7 @@ describe("createDdbTransfer — string trimming", () => {
 
     it("rejects whitespace-only strings (empty after trim)", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: {
                     region: "us-east-1",
                     credentials: creds,
@@ -410,7 +410,7 @@ describe("createDdbTransfer — string trimming", () => {
 
     it("collision guard runs against TRIMMED values (trailing-space doesn't mask a same-table mistake)", () => {
         expect(() =>
-            createDdbTransfer({
+            createDdbConfig({
                 source: {
                     region: "us-east-1",
                     credentials: creds,
@@ -430,7 +430,7 @@ describe("createDdbTransfer — string trimming", () => {
     });
 });
 
-describe("createOsTransfer — source/target collision guard", () => {
+describe("createOsConfig — source/target collision guard", () => {
     const baseOsSource = {
         region: "us-east-1",
         credentials: creds,
@@ -450,7 +450,7 @@ describe("createOsTransfer — source/target collision guard", () => {
 
     it("rejects same region + same OS DDB table for source and target", () => {
         expect(() =>
-            createOsTransfer({
+            createOsConfig({
                 source: baseOsSource,
                 target: {
                     ...baseOsTarget,
@@ -467,7 +467,7 @@ describe("createOsTransfer — source/target collision guard", () => {
 
     it("accepts same OS table name across different regions", () => {
         expect(() =>
-            createOsTransfer({
+            createOsConfig({
                 source: baseOsSource,
                 target: {
                     ...baseOsTarget,

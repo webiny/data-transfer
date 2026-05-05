@@ -9,9 +9,9 @@ import type { OsMigrationConfiguration } from "./validation.ts";
  *
  * @example
  * ```typescript
- * import { createOsTransfer } from "@webiny/data-transfer";
+ * import { createOsConfig } from "@webiny/data-transfer";
  *
- * export default createOsTransfer({
+ * export default createOsConfig({
  *   source: {
  *     region: "us-east-1",
  *     credentials: { accessKeyId: "...", secretAccessKey: "..." },
@@ -32,7 +32,7 @@ import type { OsMigrationConfiguration } from "./validation.ts";
  * });
  * ```
  */
-export function createOsTransfer(input: OsTransferInput): OsMigrationConfiguration {
+export function createOsConfig(input: OsTransferInput): OsMigrationConfiguration {
     const parsed = osTransferInputSchema.parse(input);
     return {
         storage: "os",

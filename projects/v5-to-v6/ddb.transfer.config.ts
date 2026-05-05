@@ -1,4 +1,4 @@
-import { loadEnv, createDdbTransfer, fromAwsProfile, fromEnv, numberFromEnv } from "~/index.ts";
+import { loadEnv, createDdbConfig, fromAwsProfile, fromEnv, numberFromEnv } from "~/index.ts";
 
 // Loads projects/v5-to-v6/.env (next to this file). `.env*` is gitignored.
 // Region / tables / buckets come from .env. AWS credentials come from
@@ -11,7 +11,7 @@ loadEnv(import.meta.url);
 const DEFAULT_REGION = "eu-central-1";
 const DEFAULT_PROFILE = "default";
 
-export default createDdbTransfer({
+export default createDdbConfig({
     debug: {
         logLevel: "debug",
         logFile: true

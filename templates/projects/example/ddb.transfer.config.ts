@@ -1,6 +1,6 @@
 import {
     loadEnv,
-    createDdbTransfer,
+    createDdbConfig,
     fromAwsProfile,
     fromEnv,
     numberFromEnv
@@ -12,7 +12,7 @@ import {
 // transfer from the repository root.
 loadEnv(import.meta.url);
 
-export default createDdbTransfer({
+export default createDdbConfig({
     source: {
         region: fromEnv("SOURCE_REGION", "us-east-1"),
         // AWS credentials — TWO SHAPES ACCEPTED. Pick one.

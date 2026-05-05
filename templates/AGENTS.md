@@ -30,7 +30,7 @@ Two Claude skills ship with this project (`.claude/skills/`) and activate automa
 
 Both include:
 
-- The exact shapes `createDdbTransfer` / `createOsTransfer` / `createTransferPreset` accept.
+- The exact shapes `createDdbConfig` / `createOsConfig` / `createTransferPreset` accept.
 - `fromEnv` / `numberFromEnv` / `fromAwsProfile` usage.
 - Source/target collision + whitespace-trimming rules (both built into the Zod validators).
 - Pipeline filter order, first-match-wins semantics, silent-drop behavior for unmatched records.
@@ -54,7 +54,7 @@ Always run DDB before OS — OS depends on models + tenants written by the DDB t
 
 ## Verifying configs before a real run
 
-A misconfigured transfer can destroy production data. The Zod schema in `createDdbTransfer` / `createOsTransfer` already rejects:
+A misconfigured transfer can destroy production data. The Zod schema in `createDdbConfig` / `createOsConfig` already rejects:
 
 - Same S3 bucket on both sides (would overwrite source files).
 - Same region + same DDB/OS-DDB table name (would read and write to the same table).

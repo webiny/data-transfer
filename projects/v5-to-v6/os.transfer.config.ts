@@ -1,11 +1,11 @@
-import { loadEnv, createOsTransfer, fromAwsProfile, fromEnv, numberFromEnv } from "~/index.ts";
+import { loadEnv, createOsConfig, fromAwsProfile, fromEnv, numberFromEnv } from "~/index.ts";
 
 loadEnv(import.meta.url);
 
 const DEFAULT_REGION = "eu-central-1";
 const DEFAULT_PROFILE = "default";
 
-export default createOsTransfer({
+export default createOsConfig({
     debug: {
         logLevel: "debug",
         logFile: true

@@ -1,14 +1,14 @@
 ---
 name: writing-data-transfer-config
-description: Use when writing or editing a @webiny/data-transfer config file (ddb.transfer.config.ts / os.transfer.config.ts / custom.transfer.config.ts). Covers createDdbTransfer / createOsTransfer signatures, credential shapes (fromAwsProfile vs literal), fromEnv / numberFromEnv helpers, loadEnv, source/target collision + trimming rules, pointing at a preset, tuning knobs.
+description: Use when writing or editing a @webiny/data-transfer config file (ddb.transfer.config.ts / os.transfer.config.ts / custom.transfer.config.ts). Covers createDdbConfig / createOsConfig signatures, credential shapes (fromAwsProfile vs literal), fromEnv / numberFromEnv helpers, loadEnv, source/target collision + trimming rules, pointing at a preset, tuning knobs.
 ---
 
 # Writing a `@webiny/data-transfer` config
 
 A config is a `.ts` file that `export default`s one of the two factory calls:
 
-- **`createDdbTransfer(...)`** — DDB primary table (+ S3 files). Covers CMS + security + file manager + tenancy.
-- **`createOsTransfer(...)`** — OpenSearch companion DDB table. CMS entries only, gzipped records.
+- **`createDdbConfig(...)`** — DDB primary table (+ S3 files). Covers CMS + security + file manager + tenancy.
+- **`createOsConfig(...)`** — OpenSearch companion DDB table. CMS entries only, gzipped records.
 
 Both validate with Zod at import time — invalid configs fail fast with a useful message, before any AWS call.
 
@@ -17,7 +17,7 @@ Both validate with Zod at import time — invalid configs fail fast with a usefu
 ```ts
 import {
     loadEnv,
-    createDdbTransfer,
+    createDdbConfig,
     fromAwsProfile,
     fromEnv,
     numberFromEnv
@@ -25,7 +25,7 @@ import {
 
 loadEnv(import.meta.url);
 
-export default createDdbTransfer({
+export default createDdbConfig({
     source: {
         region: fromEnv("SOURCE_REGION", "us-east-1"),
         credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),

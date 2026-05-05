@@ -87,7 +87,7 @@ always set before any worker process is forked.
 | `src/features/OsProcessor/feature.ts` | Register `OsIndexPrefixHook` as `BeforeTransferHook` |
 | `templates/projects/example/os.transfer.config.ts` | Add `indexPrefix: ""` to `target.opensearch` |
 | `projects/v5-to-v6/os.transfer.config.ts` | Add `indexPrefix: ""` to `target.opensearch` |
-| `src/features/MigrationConfig/createOsTransfer.ts` | Update JSDoc example |
+| `src/features/MigrationConfig/createOsConfig.ts` | Update JSDoc example |
 
 ---
 

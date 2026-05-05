@@ -1,6 +1,6 @@
 import {
     loadEnv,
-    createDdbTransfer,
+    createDdbConfig,
     fromAwsProfile,
     fromEnv,
     numberFromEnv
@@ -12,7 +12,7 @@ loadEnv(import.meta.url);
 // Same source/target shape as ddb.transfer.config.ts — the only difference is
 // `pipeline.preset` points at a file path (resolved relative to this config
 // file's directory) instead of a built-in preset name.
-export default createDdbTransfer({
+export default createDdbConfig({
     source: {
         region: fromEnv("SOURCE_REGION", "us-east-1"),
         // Profile-based credentials. See ddb.transfer.config.ts for the
