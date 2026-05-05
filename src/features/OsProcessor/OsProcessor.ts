@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration";
+import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
 import { isRetryableAwsError } from "~/base/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";

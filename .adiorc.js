@@ -3,7 +3,7 @@ import getWorkspaces from "get-yarn-workspaces";
 
 export default {
   ignore: {
-    src: ["~tests", "~"],
+    src: ["~tests", "~", "@/src"],
     dependencies: [
       //"@babel/runtime",
       //// Packages below are defined as peerDependencies in many 3rd party packages

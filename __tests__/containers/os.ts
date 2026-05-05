@@ -43,6 +43,7 @@ export interface OsContainerPipelineOverride {
 export interface OsContainerOptions {
     sourceRecords?: Record<string, SourceDynamoDbClient.Record[]>;
     modelsDir?: string;
+    presetsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: OsContainerPipelineOverride;
     indexPrefix?: string;
@@ -74,6 +75,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
         pipeline: {
             preset: "v5-to-v6-os",
             modelsDir: options.modelsDir,
+            presetsDir: options.presetsDir,
             ...(options.pipelineOverride?.segments !== undefined
                 ? { segments: options.pipelineOverride.segments }
                 : {})

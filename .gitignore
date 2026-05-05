@@ -28,7 +28,9 @@ logs.txt
 .pnp.*
 projects/**/.env
 projects/v5-to-v6/models/
-
+# User project directories — not committed; v5-to-v6 is the committed example
+projects/*/
+!projects/v5-to-v6/
 
 CLAUDE.*.md
 # Ignore .claude/ except the two shipped skills — config/preset writing

@@ -50,7 +50,8 @@ export const credentialsOrProviderSchema = z.union([
 export const pipelineSettingsSchema = z.object({
     preset: trimmedString(),
     segments: z.number().int().positive().optional(),
-    modelsDir: trimmedString().optional()
+    modelsDir: trimmedString().optional(),
+    presetsDir: trimmedString().optional()
 });
 
 /**

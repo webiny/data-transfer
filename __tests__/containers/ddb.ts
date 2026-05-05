@@ -52,6 +52,7 @@ export interface DdbContainerOptions {
      */
     targetRecords?: Record<string, SourceDynamoDbClient.Record[]>;
     modelsDir?: string;
+    presetsDir?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: DdbContainerPipelineOverride;
 }
@@ -78,6 +79,7 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
         pipeline: {
             preset: "v5-to-v6",
             modelsDir: options.modelsDir,
+            presetsDir: options.presetsDir,
             ...(options.pipelineOverride?.segments !== undefined
                 ? { segments: options.pipelineOverride.segments }
                 : {})

@@ -3,7 +3,7 @@ import {
     GetObjectCommand,
     createS3Client,
     type S3Client
-} from "@webiny/aws-sdk/client-s3";
+} from "@webiny/aws-sdk/client-s3/index.js";
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
 import { isRetryableAwsError, isTokenBucketExhausted, retryBackoffMs } from "~/base/index.ts";

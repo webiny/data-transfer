@@ -1,5 +1,6 @@
 import { createTransferPreset } from "~/utils/createTransferPreset.ts";
-import { OsProcessor, OsScanner } from "@/src/index.js";
+import { OsScanner } from "~/features/OsScanner/index.js";
+import { OsProcessor } from "~/features/OsProcessor/index.js";
 
 export default createTransferPreset({
     name: "copy-os",
