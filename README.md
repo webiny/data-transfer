@@ -23,6 +23,16 @@ yarn transfer --config=./projects/v5-to-v6/ddb.transfer.config.ts
 
 The `projects/v5-to-v6/` folder is your starting point. Add more project folders under `projects/` for each environment (staging, prod, etc.) — each with its own `.env` for credential isolation.
 
+To scaffold a new project folder, run:
+
+```bash
+yarn dev init-project <name>
+# e.g.
+yarn dev init-project my-client-prod
+```
+
+This creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `.env.example`, `models/`, and `presets/` already wired up.
+
 ## Storage modes
 
 The config builder determines which AWS storage the transfer reads from and writes to:

@@ -65,7 +65,8 @@ src/
 │                             # formatError (CLI error formatter), isRetryableAwsError
 │                             # (unified AWS retry classifier)
 ├── commands/                 # Self-registering CLI commands
-│   ├── init/                 # Scaffolds a new transfer project from templates/
+│   ├── init/                 # Scaffolds a new standalone transfer project from templates/
+│   ├── initProject/          # Adds a project folder to projects/ in the current repo
 │   ├── run/                  # Main orchestrator ($0)
 │   └── processSegment/       # Worker — calls PipelineRunner.run({ segment, totalSegments })
 │                             # (storage-agnostic; OsProcessor.afterShard handles OS state)
@@ -334,7 +335,8 @@ Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`
 - Format: `yarn format:fix` / `yarn format:check`
 - Type-check: `yarn ts-check`
 - Test: `yarn test` (or `yarn test:coverage`)
-- Scaffold a project: `npx @webiny/data-transfer init my-transfer-folder`
+- Scaffold a standalone user project: `npx @webiny/data-transfer init my-transfer-folder`
+- Add a project folder to this repo: `yarn dev init-project <name>` — creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `.env.example`, `models/`, and `presets/` (with `presetsDir` pre-wired in both configs). Template lives in `templates/internal-project/`.
 - **Dry-run the preset against real AWS (dev use, from this repo):**
   ```bash
   cp projects/v5-to-v6/.env.example projects/v5-to-v6/.env
