@@ -26,6 +26,7 @@ describe("PresetLoader Feature", () => {
             // in src/presets/ and it ships in the next release.
             expect(loader.getBuiltInPresets()).toEqual([
                 "copy-ddb",
+                "copy-files",
                 "copy-os",
                 "v5-to-v6-ddb",
                 "v5-to-v6-os"

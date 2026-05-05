@@ -7,7 +7,7 @@ export default createTransferPreset({
     configure({ runner, pipelineBuilderFactory: factory }): void {
         const everything = factory
             .create({
-                name: "Everything",
+                name: "OpenSearch DynamoDB Table Data",
                 scanner: OsScanner,
                 processors: [OsProcessor]
             })

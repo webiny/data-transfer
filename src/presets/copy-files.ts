@@ -1,16 +1,16 @@
 import { createTransferPreset } from "~/utils/createTransferPreset.ts";
 import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
+import { S3Processor } from "~/features/S3Processor/index.ts";
 
 export default createTransferPreset({
-    name: "copy-ddb",
-    description: "Copy all the data from one table to another - DynamoDB only.",
+    name: "copy-files",
+    description: "Copy all the S3 files loaded via DynamoDB S3 files.",
     configure({ runner, pipelineBuilderFactory: factory }): void {
         const everything = factory
             .create({
-                name: "Regular DynamoDB Table Data",
+                name: "S3 Files",
                 scanner: DdbScanner,
-                processors: [DdbProcessor]
+                processors: [S3Processor]
             })
             .build();
 
