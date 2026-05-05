@@ -38,10 +38,7 @@ export async function handler(projectName: string): Promise<void> {
 
     const envExample = join(targetDir, ".env.example");
     const envContent = fileTool.readFileOrThrow(envExample);
-    fileTool.writeFileOrThrow(
-        envExample,
-        envContent.replace(/\{\{PROJECT_NAME\}\}/g, projectName)
-    );
+    fileTool.writeFileOrThrow(envExample, envContent.replace(/\{\{PROJECT_NAME\}\}/g, projectName));
 
     console.log(`\nCreated "projects/${projectName}" with the following structure:\n`);
     console.log(`  projects/${projectName}/`);
@@ -54,7 +51,5 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`Next steps:\n`);
     console.log(`  cp projects/${projectName}/.env.example projects/${projectName}/.env`);
     console.log(`  # Edit projects/${projectName}/.env with your AWS credentials`);
-    console.log(
-        `  yarn dev --config=./projects/${projectName}/ddb.transfer.config.ts\n`
-    );
+    console.log(`  yarn dev --config=./projects/${projectName}/ddb.transfer.config.ts\n`);
 }
