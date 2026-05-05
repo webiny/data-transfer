@@ -10,7 +10,6 @@ import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { TouchedIndexes } from "~/features/TouchedIndexes/index.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
-import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 import type { OsScanner } from "~/features/OsScanner/index.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";

@@ -9,7 +9,7 @@ import { Pipeline, type PipelineConfig } from "./Pipeline.ts";
 
 export interface PipelineBuilderConfig<
     TRecord,
-    TContext extends BaseTransformContext.Interface<TRecord>,
+    _TContext extends BaseTransformContext.Interface<TRecord>,
     TShard
 > {
     name: string;

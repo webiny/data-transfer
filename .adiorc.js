@@ -1,6 +1,3 @@
-import path from "path";
-import getWorkspaces from "get-yarn-workspaces";
-
 export default {
   ignore: {
     src: ["~tests", "~", "@/src"],

@@ -10,7 +10,7 @@ interface IAfterShardContext {
 interface IProcessor<
     TBaseContext extends BaseTransformContext.Interface<unknown> =
         BaseTransformContext.Interface<unknown>,
-    TSlice = {}
+    TSlice = Record<string, never>
 > {
     /**
      * Per-record helper contribution. Called once per record; returns a slice
@@ -55,7 +55,7 @@ export namespace Processor {
     export type Interface<
         TBaseContext extends BaseTransformContext.Interface<unknown> =
             BaseTransformContext.Interface<unknown>,
-        TSlice = {}
+        TSlice = Record<string, never>
     > = IProcessor<TBaseContext, TSlice>;
 
     export type AfterShardContext = IAfterShardContext;
@@ -69,5 +69,7 @@ export namespace Processor {
     export type Context = BaseTransformContext.Interface<unknown>;
 
     /** Extract the slice type from a Processor Implementation class. */
-    export type SliceOf<P> = P extends { extendContext(base: any): infer S } ? S : {};
+    export type SliceOf<P> = P extends { extendContext(base: any): infer S }
+        ? S
+        : Record<string, never>;
 }

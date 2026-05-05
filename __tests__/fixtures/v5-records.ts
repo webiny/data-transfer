@@ -212,7 +212,7 @@ export const v5CmsFileEntry: DatabaseRecord = {
     _md: "2025-03-19T15:01:11.503Z"
 };
 
-const v6CmsFileEntry: DatabaseRecord = {
+export const v6CmsFileEntry: DatabaseRecord = {
     PK: "T#root#CMS#CME#6994322809f4a46e4a6e1bf0",
     SK: "L",
     data: {
