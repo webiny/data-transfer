@@ -3,7 +3,7 @@ import {
     ScanCommand,
     getDocumentClient,
     type DynamoDBDocument
-} from "@webiny/aws-sdk/client-dynamodb";
+} from "@webiny/aws-sdk/client-dynamodb/index.js";
 // QueryCommand: @webiny/aws-sdk/client-dynamodb re-exports the LOW-LEVEL
 // variant from @aws-sdk/client-dynamodb, which expects pre-marshalled
 // AttributeValue inputs. Our code passes plain JS values and relies on
