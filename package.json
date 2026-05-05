@@ -62,7 +62,7 @@
     "adio": "^3.0.0",
     "aws-sdk-client-mock": "^4.1.0",
     "dynalite": "^4.0.0",
-    "oxfmt": "^0.47.0",
+    "oxfmt": "^0.48.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   },
