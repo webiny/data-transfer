@@ -37,6 +37,9 @@ export async function loadConfig(configPath: string): Promise<MigrationConfig.In
         if (config.pipeline?.modelsDir) {
             config.pipeline.modelsDir = resolve(configDir, config.pipeline.modelsDir);
         }
+        if (config.pipeline?.presetsDir) {
+            config.pipeline.presetsDir = resolve(configDir, config.pipeline.presetsDir);
+        }
         if (
             typeof config.pipeline?.preset === "string" &&
             (config.pipeline.preset.endsWith(".ts") || config.pipeline.preset.endsWith(".js"))

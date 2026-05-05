@@ -126,6 +126,28 @@ describe("MigrationConfig Feature", () => {
 
             expect(config.pipeline.preset).toBe("v5-to-v6");
         });
+
+        it("resolves presetsDir relative to the config file's directory", async () => {
+            const configPath = writeConfig({
+                storage: "ddb",
+                source: {
+                    region: "eu-central-1",
+                    credentials: creds,
+                    dynamodb: { tableName: "src" },
+                    s3: { bucket: "src-bucket" }
+                },
+                target: {
+                    region: "eu-central-1",
+                    credentials: creds,
+                    dynamodb: { tableName: "tgt" },
+                    s3: { bucket: "tgt-bucket" }
+                },
+                pipeline: { preset: "v5-to-v6", presetsDir: "./custom-presets" }
+            });
+
+            const config = await loadConfig(configPath);
+            expect(config.pipeline.presetsDir).toBe(join(tmpDir, "custom-presets"));
+        });
     });
 
     describe("DI registration", () => {
