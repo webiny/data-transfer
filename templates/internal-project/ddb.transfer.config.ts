@@ -8,6 +8,10 @@ const DEFAULT_PROFILE = "default";
 export default createDdbConfig({
     source: {
         region: fromEnv("SOURCE_REGION", DEFAULT_REGION),
+        // Profile-based credentials — reads ~/.aws/credentials.
+        // To use literal credentials instead, replace with:
+        //   { accessKeyId: fromEnv("SOURCE_AWS_ACCESS_KEY_ID"),
+        //     secretAccessKey: fromEnv("SOURCE_AWS_SECRET_ACCESS_KEY") }
         credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", DEFAULT_PROFILE) }),
         dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
         s3: { bucket: fromEnv("SOURCE_S3_BUCKET") }
@@ -17,12 +21,19 @@ export default createDdbConfig({
         credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", DEFAULT_PROFILE) }),
         dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
         s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
-        // Set to an object with a tableName to transfer audit logs, or leave null to skip.
+        // Audit log table. Set tableName to transfer audit logs to a separate
+        // target table, or keep null to skip (audit log records are dropped).
         auditLog: null
+        // auditLog: { dynamodb: { tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE") } }
     },
     pipeline: {
+        // Built-in preset. To use a custom preset, point at a file instead:
+        //   preset: "./presets/my-preset.ts"
         preset: "v5-to-v6-ddb",
+        // presetsDir lets you reference custom presets by name (without a path).
+        // Drop .ts files into ./presets/ and use their filename as the preset name.
         presetsDir: "./presets",
         segments: numberFromEnv("SEGMENTS", 4)
+        // modelsDir: "./models"  // uncomment to load CMS model JSON overrides
     }
 });

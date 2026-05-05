@@ -36,12 +36,15 @@ export async function handler(projectName: string): Promise<void> {
 
     dirTool.copyOrThrow(templatesDir, targetDir);
 
-    const envExample = join(targetDir, ".env.example");
-    const envContent = fileTool.readFileOrThrow(envExample);
-    fileTool.writeFileOrThrow(envExample, envContent.replace(/\{\{PROJECT_NAME\}\}/g, projectName));
+    for (const filename of [".env.example", "README.md"]) {
+        const filePath = join(targetDir, filename);
+        const content = fileTool.readFileOrThrow(filePath);
+        fileTool.writeFileOrThrow(filePath, content.replace(/\{\{PROJECT_NAME\}\}/g, projectName));
+    }
 
     console.log(`\nCreated "projects/${projectName}" with the following structure:\n`);
     console.log(`  projects/${projectName}/`);
+    console.log(`  ├── README.md`);
     console.log(`  ├── ddb.transfer.config.ts`);
     console.log(`  ├── os.transfer.config.ts`);
     console.log(`  ├── .env.example`);

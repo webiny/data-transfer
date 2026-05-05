@@ -31,7 +31,7 @@ yarn dev init-project <name>
 yarn dev init-project my-client-prod
 ```
 
-This creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `.env.example`, `models/`, and `presets/` already wired up.
+This creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `README.md`, `.env.example`, `models/`, and `presets/` already wired up. The README inside the generated folder explains key config options: `auditLog`, `presetsDir`, `modelsDir`, and credential shapes.
 
 New project folders are **gitignored** by default — credentials and env files stay local. Only `projects/v5-to-v6/` is committed as the reference example.
 
