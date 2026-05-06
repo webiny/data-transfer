@@ -28,8 +28,10 @@ export default createOsConfig({
         }
     },
     pipeline: {
-        // Built-in preset. Run AFTER the DDB transfer completes.
-        preset: "v5-to-v6-os",
+        // Uses the example preset in ./presets/os.ts (copies all OS records verbatim).
+        // To use a built-in preset instead: preset: "v5-to-v6-os"
+        // Run AFTER the DDB transfer completes.
+        preset: "os",
         // presetsDir lets you reference custom presets by name (without a path).
         // Drop .ts files into ./presets/ and use their filename as the preset name.
         presetsDir: "./presets",

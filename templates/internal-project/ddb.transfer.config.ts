@@ -27,9 +27,9 @@ export default createDdbConfig({
         // auditLog: { dynamodb: { tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE") } }
     },
     pipeline: {
-        // Built-in preset. To use a custom preset, point at a file instead:
-        //   preset: "./presets/my-preset.ts"
-        preset: "v5-to-v6-ddb",
+        // Uses the example preset in ./presets/ddb.ts (copies all records + S3 files verbatim).
+        // To use a built-in preset instead: preset: "v5-to-v6-ddb"
+        preset: "ddb",
         // presetsDir lets you reference custom presets by name (without a path).
         // Drop .ts files into ./presets/ and use their filename as the preset name.
         presetsDir: "./presets",
