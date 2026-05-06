@@ -41,8 +41,31 @@ export { createTransformer } from "./transformers/createTransformer.ts";
 export { createDdbTransformer } from "./transformers/createDdbTransformer.ts";
 export { createOsTransformer } from "./transformers/createOsTransformer.ts";
 
+// Built-in transformers — ready-made for common patterns in custom presets.
+export { copyFileToTarget } from "./transformers/file-manager/copyFileToTarget.ts";
+
 // Pipeline factories
 export { createFilter, type Filter } from "./domain/pipeline/Filter.ts";
+
+// Built-in filter predicates — use with createFilter() or compose into custom filters.
+export {
+    byType,
+    byTypePrefix,
+    isCmsGroup,
+    isCmsModel,
+    isCmsEntry,
+    byIncludesModelId,
+    isAcoSearchRecord,
+    isBackgroundTask,
+    isFmFile,
+    isFlpRecord,
+    isBuiltInSecurityRole,
+    isSecurityTeam,
+    isOsBackgroundTask,
+    isOsMailerSettings,
+    isAuditLogEntry,
+    isMigrationRecord
+} from "./domain/transform/filters.ts";
 
 // Scanner / processor implementation tokens — passed into
 // `pipelineBuilderFactory.create({ scanner, processors: [...] })` when building a pipeline.

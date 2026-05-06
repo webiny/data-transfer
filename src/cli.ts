@@ -8,6 +8,7 @@ import { hideBin } from "yargs/helpers";
 import {
     registerRunCommand,
     registerInitCommand,
+    registerInitProjectCommand,
     registerProcessSegmentCommand
 } from "./commands/index.ts";
 
@@ -35,6 +36,7 @@ process.on("unhandledRejection", (reason: unknown) => {
 
 let cli = yargs(hideBin(process.argv));
 cli = registerInitCommand(cli);
+cli = registerInitProjectCommand(cli);
 cli = registerRunCommand(cli);
 cli = registerProcessSegmentCommand(cli);
 cli.help().parse();
