@@ -35,7 +35,9 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 - **Snapshot (debugging):** `config.debug.snapshot` (boolean or `{dir?, compress?}`) dumps per-record JSONL files at `<dir>/<pipeline>/segment-<n>.{source,post-transform,commands}.jsonl[.gz]` + `<dir>/dropped/segment-<n>.jsonl[.gz]`. Default dir: `.transfer/<runId>/snapshot`, gzipped. Opt-in, no-op when disabled — PipelineRunner depends on SnapshotWriter unconditionally so the hot path has no branching.
 - **Log file (debugging):** `config.debug.logFile` (boolean or string). `true` → each process writes raw pino JSONL to `.transfer/<runId>/logs/<orchestrator|segment-N>.log` (per-process files so parallel appends can't interleave). String → shared path across all processes. Bootstrap resolves the path; `detectProcessKind()` reads `--segment N` from argv to distinguish workers from the orchestrator.
 - **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
+- **Built-in transformers (public):** `copyFileToTarget` — emits a verbatim S3 copy for file records (`ctx.copyFile(key, key)` on `text@key`). Handles both raw v5 (`record.values["text@key"]`) and post-`wrapInData` (`record.data.values["text@key"]`) shapes. Requires `S3Processor` in the pipeline. Use with `isFmFile` for a verbatim DDB + S3 file copy.
 - **Filter factory:** `createFilter` + `Filter` type
+- **Built-in filter predicates (public):** all predicates from `src/domain/transform/filters.ts` are re-exported: `byType`, `byTypePrefix`, `isCmsGroup`, `isCmsModel`, `isCmsEntry`, `byIncludesModelId`, `isAcoSearchRecord`, `isBackgroundTask`, `isFmFile`, `isFlpRecord`, `isBuiltInSecurityRole`, `isSecurityTeam`, `isOsBackgroundTask`, `isOsMailerSettings`, `isAuditLogEntry`, `isMigrationRecord`. All handle both raw v5 and post-`wrapInData` record shapes. Pass them to `createFilter(predicate)` or compose inline.
 - **Scanner implementations:** `DdbScanner`, `OsScanner` — both share `Symbol("Core/Scanner")`, same as processors share `Symbol("Core/Processor")`.
 - **Processor implementations:** `DdbProcessor`, `OsProcessor`, `S3Processor`, `AuditLogProcessor` (slice-merging; see below). All share `Symbol("Core/Processor")` — no per-processor abstraction tokens.
 - **Processor abstraction:** `Processor` — users implementing custom processors use this.
@@ -50,7 +52,7 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 
 **User-side custom DI — `setup.ts`:** CLI looks for `setup.ts` next to the user's config file. If present, dynamic-imports its default export and awaits `fn({ container })` BEFORE `preset.configure({...})` runs. Use the `initDataTransfer` typed helper to export it. Optional — pure-config users skip the file entirely.
 
-**Rule:** when adding something to `src/index.ts`, it must be infra (something a user building their own transformers/pipelines/presets genuinely needs). Built-ins stay internal until the transformer rewrite; re-exporting them encourages users to depend on examples that will change.
+**Rule:** when adding something to `src/index.ts`, it must be something a user building their own transformers/pipelines/presets genuinely needs. Filter predicates and stable, widely-useful transformers (`copyFileToTarget`) are appropriate. Domain-specific migration transformers (CMS transformers, `createMetadata`, etc.) remain internal — they are tightly coupled to the v5→v6 schema and subject to change. The full transformer and filter catalogue lives in `.claude/skills/data-transfer-transformers/SKILL.md`.
 
 ---
 

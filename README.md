@@ -269,17 +269,47 @@ Point `config.pipeline.preset` at the file path (relative to the config): `"./pr
 
 ### Filters
 
-`createFilter` wraps a predicate into a typed `Filter`:
+`createFilter` wraps a predicate into a typed `Filter`. Write one inline or use a built-in predicate:
 
 ```typescript
-import { createFilter } from "@webiny/data-transfer";
+import {
+  createFilter,
+  isFmFile,
+  isCmsEntry,
+  byType,
+  byIncludesModelId
+} from "@webiny/data-transfer";
 
-// Accept only CMS entries
-const isCmsEntry = createFilter(r => r.TYPE === "cms.entry");
+// Built-in predicates — handle both raw v5 and post-wrapInData record shapes
+.filter(createFilter(isFmFile))                           // file manager files
+.filter(createFilter(isCmsEntry))                         // any CMS entry
+.filter(createFilter(byType("cms.model")))                // exact TYPE match
+.filter(createFilter(byIncludesModelId("article")))       // modelId contains "article"
 
-// Accept only entries for a specific model
-const isArticle = createFilter(r => r.TYPE === "cms.entry" && r.modelId === "article");
+// Inline predicate for anything custom
+.filter(createFilter(r => r.TYPE === "cms.entry" && r.modelId === "article"))
 ```
+
+**All built-in filter predicates** (import from `@webiny/data-transfer`):
+
+| Predicate                   | Matches                                            |
+| --------------------------- | -------------------------------------------------- |
+| `byType(type)`              | `record.TYPE === type`                             |
+| `byTypePrefix(prefix)`      | `record.TYPE.startsWith(prefix)`                   |
+| `isCmsGroup`                | CMS group records                                  |
+| `isCmsModel`                | CMS model records                                  |
+| `isCmsEntry`                | CMS entry records                                  |
+| `byIncludesModelId(target)` | `modelId` contains `target` (case-insensitive)     |
+| `isAcoSearchRecord`         | ACO search records                                 |
+| `isBackgroundTask`          | Webiny background task records                     |
+| `isFmFile`                  | File manager file records                          |
+| `isFlpRecord`               | Folder location permission records                 |
+| `isBuiltInSecurityRole`     | Built-in roles (`full-access`, `anonymous`)        |
+| `isSecurityTeam`            | Security team records                              |
+| `isOsBackgroundTask`        | OS background task records (checks `data.modelId`) |
+| `isOsMailerSettings`        | OS mailer settings records                         |
+| `isAuditLogEntry`           | Audit log entry records                            |
+| `isMigrationRecord`         | Migration tracking records                         |
 
 Multiple `.filter()` calls on the same pipeline AND-compose — a record must pass all of them. Register more-specific filters before catch-alls.
 
@@ -412,6 +442,48 @@ Each processor in the pipeline contributes additional helpers onto the context:
 | `ctx.queryTargetRecord<T>(pk, sk?)` | Query the target OS DDB table. Returns `null` if not found. |
 
 **Auto-put**: `DdbProcessor` and `OsProcessor` include an `onEnd` hook that emits a `PutRecord` for `ctx.record` at chain end. `S3Processor` has no `onEnd` — call `ctx.copyFile(...)` explicitly in your transformers.
+
+### Built-in transformers
+
+Ready-made transformers exported from `@webiny/data-transfer`:
+
+#### `copyFileToTarget`
+
+Emits a verbatim S3 copy for a file record — source key equals target key (`ctx.copyFile(key, key)`). Reads the key from `text@key` and handles both raw v5 and post-`wrapInData` record shapes.
+
+```typescript
+import {
+  createTransferPreset,
+  createFilter,
+  isFmFile,
+  copyFileToTarget,
+  DdbScanner,
+  DdbProcessor,
+  S3Processor
+} from "@webiny/data-transfer";
+
+export default createTransferPreset({
+  name: "ddb-verbatim",
+  description: "Copy all DDB records verbatim, including S3 file objects.",
+  configure({ runner, pipelineBuilderFactory }) {
+    // File records: copy DDB record + S3 object
+    const files = pipelineBuilderFactory
+      .create({ name: "files", scanner: DdbScanner, processors: [DdbProcessor, S3Processor] })
+      .filter(createFilter(isFmFile))
+      .use(copyFileToTarget)
+      .build();
+
+    // Everything else: verbatim DDB copy
+    const everything = pipelineBuilderFactory
+      .create({ name: "everything", scanner: DdbScanner, processors: [DdbProcessor] })
+      .build();
+
+    runner.register(files, everything); // files MUST be registered first (first-match-wins)
+  }
+});
+```
+
+**Requires:** pipeline must include `S3Processor`. **Do not use** when you need a new key path (e.g. the v5→v6 `tenants/<id>/files/<key>` migration) — use the internal `createMetadata` transformer instead.
 
 ### Built-in processors
 
