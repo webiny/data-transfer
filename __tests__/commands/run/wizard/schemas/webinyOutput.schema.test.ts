@@ -42,6 +42,9 @@ describe("webinyOutputSchema", () => {
             fileManagerBucketId: "wby-bucket"
         });
         expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.issues[0].path).toContain("region");
+        }
     });
 
     it("rejects output missing primaryDynamodbTableName", () => {
@@ -50,6 +53,9 @@ describe("webinyOutputSchema", () => {
             fileManagerBucketId: "wby-bucket"
         });
         expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.issues[0].path).toContain("primaryDynamodbTableName");
+        }
     });
 
     it("ignores unknown fields (passthrough)", () => {
@@ -75,6 +81,9 @@ describe("normalizeOutputs", () => {
             elasticsearchDynamodbTableName: "wby-es",
             elasticsearchDomainEndpoint: "search-es.eu-central-1.es.amazonaws.com"
         });
+        expect(result.region).toBe("eu-central-1");
+        expect(result.primaryDynamodbTableName).toBe("wby-primary");
+        expect(result.fileManagerBucketId).toBe("wby-bucket");
         expect(result.osTableName).toBe("wby-os");
         expect(result.osEndpoint).toBe("search-os.eu-central-1.es.amazonaws.com");
     });
