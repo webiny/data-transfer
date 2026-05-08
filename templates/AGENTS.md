@@ -39,14 +39,33 @@ If you're writing code by hand, the same info lives in the skill markdown files 
 
 ## Running a transfer
 
-```bash
-# 1. Copy + fill in your .env (credentials, region, table/bucket names)
-cp projects/example/.env.example projects/example/.env
+### First-time setup — guided wizard
 
-# 2. Run the DDB transfer first
+Run `yarn transfer` (no `--config`) to launch the **guided setup wizard**:
+
+```bash
+yarn transfer
+```
+
+The wizard:
+1. Asks which project to set up (from `projects/`).
+2. Validates Webiny output or Pulumi state JSON files you drop in `projects/<name>/`.
+3. Writes `.env` from the template and exits.
+
+**Before running the wizard, place one of these in `projects/<name>/`:**
+
+- `source.webiny.json` + `target.webiny.json` — output of `yarn webiny output core --json` from each Webiny project.
+- `source.pulumi.json` + `target.pulumi.json` — Pulumi state file at `.pulumi/apps/core/.pulumi/stacks/core/<env>.json`. Mixed formats are allowed.
+
+After reviewing the written `.env`, run `yarn transfer` again. With `.env` present and no JSON files, the wizard skips to config selection and runs the transfer.
+
+### Direct run (skip wizard)
+
+```bash
+# DDB transfer first
 yarn transfer --config=./projects/example/ddb.transfer.config.ts
 
-# 3. Then the OS transfer (if applicable)
+# OS transfer second (if applicable)
 yarn transfer --config=./projects/example/os.transfer.config.ts
 ```
 

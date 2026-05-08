@@ -10,27 +10,41 @@ Transfer Webiny data between environments.
 yarn install
 ```
 
-### 2. Configure a project
+### 2. Set up your project
 
-Copy the example project and fill in your values:
+Run the guided setup wizard to create your project folder and populate your `.env`:
 
 ```bash
-cp -r projects/example projects/my-project
-cp projects/my-project/.env.example projects/my-project/.env
+yarn transfer init-project my-project
+yarn transfer
 ```
 
-Edit `projects/my-project/.env` with your region, table, and bucket names. AWS credentials come from `~/.aws/credentials` — set `SOURCE_PROFILE` / `TARGET_PROFILE` if you want a non-default profile.
+`yarn transfer` (no `--config`) launches the **guided setup wizard**. It helps you select your project, validates Webiny output or Pulumi state JSON files, and writes your `.env` automatically. After writing it exits — review the file and run `yarn transfer` again.
 
-### 3. Run the DynamoDB transfer
+**To populate the .env, you need output files from both Webiny systems. Place them in `projects/my-project/` first:**
 
 ```bash
-yarn transfer --config=./projects/my-project/ddb.transfer.config.ts
+# Option A — Webiny CLI output (recommended):
+# In your source Webiny project:  yarn webiny output core --json > source.webiny.json
+# In your target Webiny project:  yarn webiny output core --json > target.webiny.json
+
+# Option B — Pulumi state file (when you don't have Webiny CLI access):
+# Copy .pulumi/apps/core/.pulumi/stacks/core/<env>.json from each project as:
+#   projects/my-project/source.pulumi.json
+#   projects/my-project/target.pulumi.json
 ```
 
-### 4. Run the OpenSearch transfer (if applicable)
+Mixed formats are allowed. Re-run `yarn transfer` after placing the files.
+
+### 3. Run the transfers
+
+After the wizard writes your `.env`, run `yarn transfer` again. The wizard skips setup and prompts for the config to run.
+
+Or skip the wizard and pass `--config` directly:
 
 ```bash
-yarn transfer --config=./projects/my-project/os.transfer.config.ts
+yarn transfer --config=./projects/my-project/ddb.transfer.config.ts  # DDB + S3 first
+yarn transfer --config=./projects/my-project/os.transfer.config.ts   # OS second (if applicable)
 ```
 
 Always run the DDB transfer first, then the OS transfer.

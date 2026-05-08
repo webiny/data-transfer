@@ -16,14 +16,14 @@ The package ships two built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`) plus full
 git clone git@github.com:webiny/v5-to-v6.git
 cd v5-to-v6
 yarn install
-cp projects/v5-to-v6/.env.example projects/v5-to-v6/.env
-# Edit projects/v5-to-v6/.env with your AWS credentials and table names
-yarn transfer --config=./projects/v5-to-v6/ddb.transfer.config.ts
+yarn dev init-project my-transfer
+# then run the guided setup:
+yarn dev
 ```
 
-The `projects/v5-to-v6/` folder is your starting point. Add more project folders under `projects/` for each environment (staging, prod, etc.) — each with its own `.env` for credential isolation.
+`yarn dev` (no `--config`) launches the **guided setup wizard**. It walks you through selecting your project, collecting your Webiny output or Pulumi state JSON files, and automatically writing your `.env`. After writing the `.env` it exits — review the file and run `yarn dev` again to start the transfer.
 
-To scaffold a new project folder, run:
+To scaffold a new project folder:
 
 ```bash
 yarn dev init-project <name>
@@ -31,9 +31,30 @@ yarn dev init-project <name>
 yarn dev init-project my-client-prod
 ```
 
-This creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `README.md`, `.env.example`, `models/`, and `presets/` already wired up. The README inside the generated folder explains key config options: `auditLog`, `presetsDir`, `modelsDir`, and credential shapes.
+This creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `README.md`, `.env.example`, `models/`, and `presets/` already wired up.
 
 New project folders are **gitignored** by default — credentials and env files stay local. Only `projects/v5-to-v6/` is committed as the reference example.
+
+### Populating your .env
+
+The wizard needs output files from your source and target Webiny systems. Place them in `projects/<name>/` before running `yarn dev`:
+
+**Option A — Webiny CLI output (recommended):**
+```bash
+# In your source Webiny project:
+yarn webiny output core --json > source.webiny.json
+# In your target Webiny project:
+yarn webiny output core --json > target.webiny.json
+```
+
+**Option B — Pulumi state file (when you don't have Webiny CLI access):**
+```bash
+# Copy from: .pulumi/apps/core/.pulumi/stacks/core/<env>.json
+cp /path/to/source-project/state.json projects/<name>/source.pulumi.json
+cp /path/to/target-project/state.json projects/<name>/target.pulumi.json
+```
+
+Mixed formats are allowed (e.g. `source.webiny.json` + `target.pulumi.json`).
 
 ## Storage modes
 
@@ -531,7 +552,7 @@ The CLI picks it up automatically and runs it **before** loading your preset, so
 
 - **AWS throttling** — the SDK self-tunes via `retryMode: "adaptive"`. If you still hit the outer cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; lower `tuning.s3.concurrency` for S3-heavy transfers.
 - **OS indexes not creating** — the transfer aborts if index prep exhausts retries. Tune `tuning.os.maxRetries` and `tuning.os.retryScheduleMs`, or fix the underlying mapping error surfaced in the logs.
-- **Missing env vars** — config files use `loadEnv(import.meta.url)` to load a sibling `.env`. Each project folder should have its own `.env`.
+- **Missing env vars** — run `yarn transfer` (no `--config`) to launch the guided setup wizard, which writes your `.env` automatically. Or copy `.env.example` manually and fill it in. Config files use `loadEnv(import.meta.url)` to load the sibling `.env`.
 - **Target records look wrong** — `DdbProcessor` and `OsProcessor` auto-put `ctx.record` at chain end. If you call `ctx.putRecord(ctx.record)` manually on top of that, you get a duplicate write. Only call `putRecord` for ADDITIONAL records beyond the one being processed.
 - **Unmatched records with no TYPE** — records appear as `PK:SK=N` in the summary instead of a TYPE name. Check the per-record warn lines (`unmatched record — TYPE= PK=... SK=...`) and `segment-N-unmatched.log` to identify what these records are, then decide whether to add a pipeline that handles them or leave them dropped intentionally.
 
