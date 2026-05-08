@@ -22,7 +22,6 @@ export function normalizeOutputs(outputs: WebinyOutputs): RawOutputValues {
         fileManagerBucketId: outputs.fileManagerBucketId,
         osTableName:
             outputs.opensearchDynamodbTableName ?? outputs.elasticsearchDynamodbTableName ?? "",
-        osEndpoint:
-            outputs.opensearchDomainEndpoint ?? outputs.elasticsearchDomainEndpoint ?? ""
+        osEndpoint: outputs.opensearchDomainEndpoint ?? outputs.elasticsearchDomainEndpoint ?? ""
     };
 }

@@ -93,9 +93,7 @@ export class TransferWizard {
         const projects = await discoverProjects(this.cwd);
 
         if (projects.length === 0) {
-            console.error(
-                "\nNo projects found. Run: yarn transfer init-project <name>\n"
-            );
+            console.error("\nNo projects found. Run: yarn transfer init-project <name>\n");
             process.exit(1);
         }
 

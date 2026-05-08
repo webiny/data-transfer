@@ -48,6 +48,7 @@ yarn transfer
 ```
 
 The wizard:
+
 1. Asks which project to set up (from `projects/`).
 2. Validates Webiny output or Pulumi state JSON files you drop in `projects/<name>/`.
 3. Writes `.env` from the template and exits.

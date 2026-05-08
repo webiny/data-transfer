@@ -40,11 +40,7 @@ export function registerRunCommand(yargs: Argv): Argv {
                 if (configPath === null) {
                     process.exit(0);
                 }
-                await handler(
-                    configPath,
-                    argv.segments,
-                    argv["log-level"] as string | undefined
-                );
+                await handler(configPath, argv.segments, argv["log-level"] as string | undefined);
             } catch (err) {
                 if (err instanceof ExitPromptError) {
                     process.exit(0);

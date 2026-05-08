@@ -40,6 +40,7 @@ New project folders are **gitignored** by default — credentials and env files 
 The wizard needs output files from your source and target Webiny systems. Place them in `projects/<name>/` before running `yarn dev`:
 
 **Option A — Webiny CLI output (recommended):**
+
 ```bash
 # In your source Webiny project:
 yarn webiny output core --json > source.webiny.json
@@ -48,6 +49,7 @@ yarn webiny output core --json > target.webiny.json
 ```
 
 **Option B — Pulumi state file (when you don't have Webiny CLI access):**
+
 ```bash
 # Copy from: .pulumi/apps/core/.pulumi/stacks/core/<env>.json
 cp /path/to/source-project/state.json projects/<name>/source.pulumi.json

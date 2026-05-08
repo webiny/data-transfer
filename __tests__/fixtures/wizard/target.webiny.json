@@ -1,9 +1,9 @@
 {
-  "cognitoAppClientId": "bbb",
-  "deploymentId": "222",
-  "region": "us-east-1",
-  "primaryDynamodbTableName": "wby-target-primary",
-  "fileManagerBucketId": "wby-target-bucket",
-  "opensearchDynamodbTableName": "wby-target-os",
-  "opensearchDomainEndpoint": "search-target.us-east-1.es.amazonaws.com"
+    "cognitoAppClientId": "bbb",
+    "deploymentId": "222",
+    "region": "us-east-1",
+    "primaryDynamodbTableName": "wby-target-primary",
+    "fileManagerBucketId": "wby-target-bucket",
+    "opensearchDynamodbTableName": "wby-target-os",
+    "opensearchDomainEndpoint": "search-target.us-east-1.es.amazonaws.com"
 }

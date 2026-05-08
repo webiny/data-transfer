@@ -19,6 +19,7 @@ The wizard asks which project to set up, validates your Webiny output or Pulumi 
 Mixed formats are allowed. After the wizard writes `.env`, review it before running the transfer.
 
 To set up manually instead:
+
 ```bash
 cp .env.example .env
 # Edit .env — fill in region, table names, and AWS credentials

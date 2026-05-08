@@ -356,6 +356,7 @@ Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`
 - Add a project folder to this repo: `yarn dev init-project <name>` — creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `.env.example`, `models/`, and `presets/` (with `presetsDir` pre-wired in both configs). Template lives in `templates/internal-project/`. New project folders are **gitignored** (`projects/*/` except `projects/v5-to-v6/`) — credentials stay local.
 - **Guided setup (first-time use):** `yarn dev` (no `--config`) launches `TransferWizard`. It selects the project, validates the Webiny output or Pulumi state JSON files the user drops into `projects/<name>/`, and writes the `.env` from `.env.example`. After writing the `.env` it exits — user reviews the file and runs `yarn dev` again to run the transfer. On the second run (no JSON files, `.env` exists) the wizard skips to config selection.
 - **Dry-run the preset against real AWS (dev use, from this repo):**
+
   ```bash
   # Option A — guided (recommended):
   yarn dev
@@ -369,7 +370,9 @@ Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`
   yarn dev --config=./projects/v5-to-v6/ddb.transfer.config.ts  # DDB + S3 first
   yarn dev --config=./projects/v5-to-v6/os.transfer.config.ts   # OS table second
   ```
+
   Run DDB transfer first, then OS — they don't share state. `.env*` is gitignored. The OS config additionally needs `SOURCE_OS_TABLE`, `TARGET_OS_TABLE`, `TARGET_OS_ENDPOINT`, and optionally `MODELS_DIR` (defaults to `./models`).
+
 - **JSON file formats for guided setup:** place in `projects/<name>/` before running `yarn dev`:
   - `source.webiny.json` / `target.webiny.json` — output of `yarn webiny output core --json` run in the source/target Webiny project.
   - `source.pulumi.json` / `target.pulumi.json` — Pulumi state file at `.pulumi/apps/core/.pulumi/stacks/core/<env>.json` in the source/target project. Mixed formats (e.g. `source.webiny.json` + `target.pulumi.json`) are allowed.

@@ -1,23 +1,23 @@
 {
-  "version": 3,
-  "checkpoint": {
-    "stack": "organization/core/dev",
-    "latest": {
-      "manifest": { "time": "2026-01-01T00:00:00Z", "magic": "abc", "version": "v3.0.0" },
-      "resources": [
-        {
-          "urn": "urn:pulumi:dev::core::pulumi:pulumi:Stack::core-dev",
-          "custom": false,
-          "type": "pulumi:pulumi:Stack",
-          "outputs": {
-            "region": "eu-central-1",
-            "primaryDynamodbTableName": "wby-source-primary",
-            "fileManagerBucketId": "wby-source-bucket",
-            "elasticsearchDynamodbTableName": "wby-source-es",
-            "elasticsearchDomainEndpoint": "search-source.eu-central-1.es.amazonaws.com"
-          }
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/core/dev",
+        "latest": {
+            "manifest": { "time": "2026-01-01T00:00:00Z", "magic": "abc", "version": "v3.0.0" },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:dev::core::pulumi:pulumi:Stack::core-dev",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "outputs": {
+                        "region": "eu-central-1",
+                        "primaryDynamodbTableName": "wby-source-primary",
+                        "fileManagerBucketId": "wby-source-bucket",
+                        "elasticsearchDynamodbTableName": "wby-source-es",
+                        "elasticsearchDomainEndpoint": "search-source.eu-central-1.es.amazonaws.com"
+                    }
+                }
+            ]
         }
-      ]
     }
-  }
 }

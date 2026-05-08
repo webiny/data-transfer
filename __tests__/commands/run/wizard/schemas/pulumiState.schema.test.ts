@@ -72,9 +72,7 @@ describe("extractStackOutputs", () => {
                 ...VALID_STATE.checkpoint,
                 latest: {
                     ...VALID_STATE.checkpoint.latest,
-                    resources: [
-                        { type: "pulumi:pulumi:Stack", outputs: undefined }
-                    ]
+                    resources: [{ type: "pulumi:pulumi:Stack", outputs: undefined }]
                 }
             }
         };
