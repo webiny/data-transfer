@@ -19,7 +19,8 @@
     "format:fix": "oxfmt",
     "format:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "check:imports": "adio"
   },
   "keywords": [
     "webiny",
