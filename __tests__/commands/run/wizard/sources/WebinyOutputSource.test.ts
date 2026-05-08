@@ -35,7 +35,7 @@ describe("extractFromWebinyOutput", () => {
         const path = join(FIXTURES, "_bad.webiny.json");
         await writeFile(path, "not json");
         try {
-            await expect(extractFromWebinyOutput(path)).rejects.toThrow();
+            await expect(extractFromWebinyOutput(path)).rejects.toThrow(/is not valid JSON/);
         } finally {
             await unlink(path);
         }
