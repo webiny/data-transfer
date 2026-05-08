@@ -1,6 +1,8 @@
 import type { Argv } from "yargs";
 import { handler } from "./handler.ts";
 import { parseSegmentsFilter } from "./segmentsFilter.ts";
+import { TransferWizard } from "./wizard/TransferWizard.ts";
+import { ExitPromptError } from "@inquirer/core";
 
 export function registerRunCommand(yargs: Argv): Argv {
     return yargs.command(
@@ -10,7 +12,7 @@ export function registerRunCommand(yargs: Argv): Argv {
             return yargs
                 .option("config", {
                     type: "string",
-                    demandOption: true,
+                    demandOption: false,
                     description: "Path to configuration file"
                 })
                 .option("segments", {
@@ -27,7 +29,28 @@ export function registerRunCommand(yargs: Argv): Argv {
                 });
         },
         async argv => {
-            await handler(argv.config, argv.segments, argv["log-level"] as string | undefined);
+            if (argv.config) {
+                await handler(argv.config, argv.segments, argv["log-level"] as string | undefined);
+                return;
+            }
+
+            const wizard = new TransferWizard(process.cwd());
+            try {
+                const configPath = await wizard.run();
+                if (configPath === null) {
+                    process.exit(0);
+                }
+                await handler(
+                    configPath,
+                    argv.segments,
+                    argv["log-level"] as string | undefined
+                );
+            } catch (err) {
+                if (err instanceof ExitPromptError) {
+                    process.exit(0);
+                }
+                throw err;
+            }
         }
     );
 }
