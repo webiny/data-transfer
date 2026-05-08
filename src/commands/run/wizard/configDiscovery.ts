@@ -11,6 +11,10 @@ const STORAGE_LABELS: Record<string, string> = {
     os: "OpenSearch Transfer"
 };
 
+interface ConfigModule {
+    storage?: string;
+}
+
 export async function discoverConfigs(projectDir: string): Promise<ConfigEntry[]> {
     let entries;
     try {
@@ -27,12 +31,14 @@ export async function discoverConfigs(projectDir: string): Promise<ConfigEntry[]
     for (const filePath of configFiles) {
         try {
             const mod = await import(filePath);
-            const config = mod.default as { storage?: string } | undefined;
+            const config = mod.default as ConfigModule | undefined;
             const storage = config?.storage ?? "";
             const label = STORAGE_LABELS[storage] ?? filePath.split("/").pop() ?? filePath;
             results.push({ path: filePath, label });
-        } catch {
-            console.warn(`Warning: could not import config ${filePath} — skipping.`);
+        } catch (err) {
+            console.warn(
+                `Warning: could not import config ${filePath} — ${err instanceof Error ? err.message : String(err)} — skipping.`
+            );
         }
     }
     return results;

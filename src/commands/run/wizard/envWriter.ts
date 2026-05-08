@@ -76,11 +76,19 @@ export async function writeEnv(projectDir: string, values: EnvValues): Promise<v
     const examplePath = join(projectDir, ".env.example");
     try {
         const candidate = await readFile(examplePath, "utf8");
-        if (candidate.includes("{{")) {
-            template = candidate;
+        if (!candidate.includes("{{")) {
+            throw new Error(
+                `.env.example at ${examplePath} contains no {{TOKEN}} placeholders. ` +
+                    `Add placeholders or remove the file to use the built-in template.`
+            );
         }
-    } catch {
-        // no .env.example — use built-in
+        template = candidate;
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+            // no .env.example — use built-in
+        } else {
+            throw err;
+        }
     }
 
     const content = substituteTokens(template, values);

@@ -1,6 +1,6 @@
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { access, stat } from "node:fs/promises";
-import { select, input, confirm } from "@inquirer/prompts";
+import { select, input } from "@inquirer/prompts";
 import { discoverProjects } from "./projectDiscovery.ts";
 import { discoverConfigs } from "./configDiscovery.ts";
 import { writeEnv } from "./envWriter.ts";
@@ -41,9 +41,15 @@ async function resolveRawValues(
         return pulumiVals;
     }
 
-    // Both present — check for conflicts on required fields
+    // Both present — check for conflicts on all fields
     const conflicts: string[] = [];
-    for (const key of ["region", "primaryDynamodbTableName", "fileManagerBucketId"] as const) {
+    for (const key of [
+        "region",
+        "primaryDynamodbTableName",
+        "fileManagerBucketId",
+        "osTableName",
+        "osEndpoint"
+    ] as const) {
         if (webinyVals![key] && pulumiVals![key] && webinyVals![key] !== pulumiVals![key]) {
             conflicts.push(`${key}: webiny="${webinyVals![key]}" pulumi="${pulumiVals![key]}"`);
         }
@@ -65,7 +71,7 @@ async function resolveRawValues(
 }
 
 function printInstructions(projectDir: string): void {
-    const rel = projectDir.replace(process.cwd() + "/", "");
+    const rel = relative(process.cwd(), projectDir);
     console.log(`
 To populate your .env, you need output from both your source and target Webiny systems.
 
@@ -121,7 +127,7 @@ export class TransferWizard {
 
         while (sourceVals === null || targetVals === null) {
             printInstructions(projectDir);
-            await confirm({ message: "Press Enter when you have placed the files." });
+            await input({ message: "Press Enter when you have placed the files:", default: "" });
             sourceVals = await resolveRawValues(projectDir, "source");
             targetVals = await resolveRawValues(projectDir, "target");
         }
@@ -181,7 +187,7 @@ export class TransferWizard {
         return null;
     }
 
-    public async runConfigSelection(projectName: string): Promise<string> {
+    private async runConfigSelection(projectName: string): Promise<string> {
         const projectDir = resolve(join(this.cwd, "projects", projectName));
         const configs = await discoverConfigs(projectDir);
 
