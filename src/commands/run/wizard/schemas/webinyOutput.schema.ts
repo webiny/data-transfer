@@ -3,9 +3,9 @@ import type { RawOutputValues } from "../types.ts";
 
 export const webinyOutputSchema = z
     .object({
-        region: z.string(),
-        primaryDynamodbTableName: z.string(),
-        fileManagerBucketId: z.string(),
+        region: z.string().min(1),
+        primaryDynamodbTableName: z.string().min(1),
+        fileManagerBucketId: z.string().min(1),
         opensearchDynamodbTableName: z.string().optional(),
         elasticsearchDynamodbTableName: z.string().optional(),
         opensearchDomainEndpoint: z.string().optional(),

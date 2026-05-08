@@ -1,5 +1,6 @@
 import { readdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export interface ConfigEntry {
     path: string;
@@ -30,10 +31,10 @@ export async function discoverConfigs(projectDir: string): Promise<ConfigEntry[]
     const results: ConfigEntry[] = [];
     for (const filePath of configFiles) {
         try {
-            const mod = await import(filePath);
+            const mod = await import(pathToFileURL(filePath).href);
             const config = mod.default as ConfigModule | undefined;
             const storage = config?.storage ?? "";
-            const label = STORAGE_LABELS[storage] ?? filePath.split("/").pop() ?? filePath;
+            const label = STORAGE_LABELS[storage] ?? basename(filePath);
             results.push({ path: filePath, label });
         } catch (err) {
             console.warn(
