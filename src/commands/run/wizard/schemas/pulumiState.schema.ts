@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const resourceSchema = z.object({
     type: z.string(),
-    outputs: z.record(z.unknown()).optional()
+    outputs: z.record(z.string(), z.unknown()).optional()
 });
 
 export type Resource = z.infer<typeof resourceSchema>;

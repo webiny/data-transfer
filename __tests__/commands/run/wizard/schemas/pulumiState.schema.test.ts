@@ -5,7 +5,7 @@ import {
 } from "../../../../../src/commands/run/wizard/schemas/pulumiState.schema.ts";
 
 const VALID_STATE = {
-    version: 3,
+    version: 3 as const,
     checkpoint: {
         stack: "organization/core/dev",
         latest: {
