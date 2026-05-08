@@ -5,6 +5,8 @@ const resourceSchema = z.object({
     outputs: z.record(z.unknown()).optional()
 });
 
+export type Resource = z.infer<typeof resourceSchema>;
+
 export const pulumiStateSchema = z.object({
     version: z.literal(3),
     checkpoint: z.object({
@@ -28,5 +30,5 @@ export function extractStackOutputs(state: PulumiState): Record<string, unknown>
     if (!stackResource.outputs) {
         throw new Error("Stack resource has no outputs. The state file may be incomplete.");
     }
-    return stackResource.outputs as Record<string, unknown>;
+    return stackResource.outputs;
 }
