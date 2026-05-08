@@ -19,7 +19,8 @@
     "format:fix": "oxfmt",
     "format:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "check:imports": "adio"
   },
   "keywords": [
     "webiny",
@@ -31,7 +32,7 @@
   "author": "Webiny",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/credential-providers": "^3.1043.0",
+    "@aws-sdk/credential-providers": "^3.1045.0",
     "@opensearch-project/opensearch": "^3.6.0",
     "@webiny/api-headless-cms-ddb-es": "^6.3.0",
     "@webiny/api-opensearch": "^6.3.0",
@@ -52,13 +53,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1043.0",
-    "@aws-sdk/client-s3": "^3.1043.0",
-    "@aws-sdk/lib-dynamodb": "^3.1043.0",
+    "@aws-sdk/client-dynamodb": "^3.1045.0",
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/lib-dynamodb": "^3.1045.0",
     "@faker-js/faker": "^10.4.0",
     "@smithy/util-stream": "^4.5.25",
     "@types/jsdom": "^28.0.1",
-    "@types/node": "^24.12.2",
+    "@types/node": "^24.12.3",
     "@types/yargs": "^17.0.35",
     "@vitest/coverage-v8": "4.1.5",
     "adio": "^3.0.0",

@@ -18,7 +18,13 @@ export default defineConfig({
         setupFiles: ["./src/utils/suppressDeprecations.ts"],
         coverage: {
             provider: "v8",
-            reporter: ["text", "json", "html"]
+            reporter: ["text", "json", "html"],
+            thresholds: {
+                lines: 77,
+                functions: 80,
+                branches: 70,
+                statements: 77
+            }
         }
     }
 });
