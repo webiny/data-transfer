@@ -4,6 +4,22 @@ This folder is **gitignored** — credentials and env files stay local only.
 
 ## Setup
 
+Run the guided wizard from the repo root — it will populate your `.env` automatically:
+
+```bash
+# From the repo root:
+yarn dev
+```
+
+The wizard asks which project to set up, validates your Webiny output or Pulumi state JSON files, and writes `.env`. Before running it, place one of these in this folder:
+
+- `source.webiny.json` + `target.webiny.json` (from `yarn webiny output core --json` in each Webiny project)
+- `source.pulumi.json` + `target.pulumi.json` (Pulumi state at `.pulumi/apps/core/.pulumi/stacks/core/<env>.json`)
+
+Mixed formats are allowed. After the wizard writes `.env`, review it before running the transfer.
+
+To set up manually instead:
+
 ```bash
 cp .env.example .env
 # Edit .env — fill in region, table names, and AWS credentials
@@ -14,7 +30,10 @@ cp .env.example .env
 Run DDB transfer first, then OS. They are independent and don't share state.
 
 ```bash
-# From the repo root:
+# From the repo root — guided (wizard selects config):
+yarn dev
+
+# Or direct:
 yarn dev --config=./projects/{{PROJECT_NAME}}/ddb.transfer.config.ts
 yarn dev --config=./projects/{{PROJECT_NAME}}/os.transfer.config.ts
 ```

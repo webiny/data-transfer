@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { gunzip } from "node:zlib";
+import { promisify } from "node:util";
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
@@ -39,6 +41,36 @@ const TINY_PNG = Buffer.from(
 async function loadJson<T>(path: string): Promise<T> {
     const raw = await readFile(path, "utf-8");
     return JSON.parse(raw) as T;
+}
+
+// Decompress gzip+base64 values before comparison so the test is
+// platform-independent (macOS and Linux produce different OS bytes in
+// the gzip header, causing byte-for-byte mismatches on CI).
+async function decompressGzipValues(value: unknown): Promise<unknown> {
+    if (Array.isArray(value)) {
+        return Promise.all(value.map(decompressGzipValues));
+    }
+    if (value !== null && typeof value === "object") {
+        const obj = value as Record<string, unknown>;
+        if (obj.compression === "gzip" && typeof obj.value === "string") {
+            const gunzipAsync = promisify(gunzip);
+            const decompressed = await gunzipAsync(Buffer.from(obj.value, "base64"));
+            const text = decompressed.toString("utf-8");
+            let parsed: unknown;
+            try {
+                parsed = JSON.parse(text);
+            } catch {
+                parsed = text;
+            }
+            return { ...obj, value: parsed };
+        }
+        const result: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(obj)) {
+            result[k] = await decompressGzipValues(v);
+        }
+        return result;
+    }
+    return value;
 }
 
 async function createDdbTable(doc: DynamoDBDocument, tableName: string): Promise<void> {
@@ -168,6 +200,8 @@ describe("preset — v5-to-v6-ddb golden-file correctness", () => {
         }
 
         const expected = await loadJson<BaseRecord[]>(EXPECTED_PATH);
-        expect(transferred).toEqual(expected);
+        expect(await decompressGzipValues(transferred)).toEqual(
+            await decompressGzipValues(expected)
+        );
     }, 60_000);
 });

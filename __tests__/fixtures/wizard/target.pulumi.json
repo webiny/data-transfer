@@ -1,0 +1,23 @@
+{
+    "version": 3,
+    "checkpoint": {
+        "stack": "organization/core/prod",
+        "latest": {
+            "manifest": { "time": "2026-01-01T00:00:00Z", "magic": "def", "version": "v3.0.0" },
+            "resources": [
+                {
+                    "urn": "urn:pulumi:dev::core::pulumi:pulumi:Stack::core-dev",
+                    "custom": false,
+                    "type": "pulumi:pulumi:Stack",
+                    "outputs": {
+                        "region": "us-east-1",
+                        "primaryDynamodbTableName": "wby-target-primary",
+                        "fileManagerBucketId": "wby-target-bucket",
+                        "opensearchDynamodbTableName": "wby-target-os",
+                        "opensearchDomainEndpoint": "search-target.us-east-1.es.amazonaws.com"
+                    }
+                }
+            ]
+        }
+    }
+}
