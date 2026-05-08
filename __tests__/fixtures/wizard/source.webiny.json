@@ -1,0 +1,9 @@
+{
+  "cognitoAppClientId": "aaa",
+  "deploymentId": "111",
+  "region": "eu-central-1",
+  "primaryDynamodbTableName": "wby-source-primary",
+  "fileManagerBucketId": "wby-source-bucket",
+  "elasticsearchDynamodbTableName": "wby-source-es",
+  "elasticsearchDomainEndpoint": "search-source.eu-central-1.es.amazonaws.com"
+}

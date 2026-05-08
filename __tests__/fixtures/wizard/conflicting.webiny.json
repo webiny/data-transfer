@@ -1,0 +1,5 @@
+{
+  "region": "ap-southeast-1",
+  "primaryDynamodbTableName": "wby-source-primary",
+  "fileManagerBucketId": "wby-source-bucket"
+}
