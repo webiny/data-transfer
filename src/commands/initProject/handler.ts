@@ -1,7 +1,12 @@
 import { scaffoldProject } from "./scaffoldProject.ts";
 
 export async function handler(projectName: string): Promise<void> {
-    await scaffoldProject({ name: projectName, cwd: process.cwd() });
+    try {
+        await scaffoldProject({ name: projectName, cwd: process.cwd() });
+    } catch (err) {
+        console.error(`\nError: ${err instanceof Error ? err.message : String(err)}\n`);
+        process.exit(1);
+    }
 
     console.log(`\nCreated "projects/${projectName}" with the following structure:\n`);
     console.log(`  projects/${projectName}/`);

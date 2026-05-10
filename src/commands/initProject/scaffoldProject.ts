@@ -31,6 +31,7 @@ export async function scaffoldProject(params: ScaffoldProjectParams): Promise<vo
 
     cpSync(templatesDir, targetDir, { recursive: true });
 
+    // only README.md uses {{PROJECT_NAME}} — .env.example does not
     for (const filename of ["README.md"]) {
         const filePath = join(targetDir, filename);
         const content = readFileSync(filePath, "utf-8");
