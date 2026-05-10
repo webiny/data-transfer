@@ -10,14 +10,19 @@ vi.mock("../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts");
 vi.mock("../../../../src/commands/run/wizard/sources/PulumiStateSource.ts");
 vi.mock("@inquirer/prompts");
 vi.mock("node:fs/promises");
+vi.mock("node:fs", () => ({ existsSync: vi.fn(() => false) }));
+vi.mock("~/commands/initProject/scaffoldProject.ts", () => ({
+    scaffoldProject: vi.fn().mockResolvedValue(undefined)
+}));
 
 import { discoverProjects } from "../../../../src/commands/run/wizard/projectDiscovery.ts";
 import { discoverConfigs } from "../../../../src/commands/run/wizard/configDiscovery.ts";
 import { writeEnv } from "../../../../src/commands/run/wizard/envWriter.ts";
 import { extractFromWebinyOutput } from "../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "../../../../src/commands/run/wizard/sources/PulumiStateSource.ts";
-import { input } from "@inquirer/prompts";
+import { input, select } from "@inquirer/prompts";
 import { stat, access } from "node:fs/promises";
+import { scaffoldProject } from "../../../../src/commands/initProject/scaffoldProject.ts";
 
 const mockDiscoverProjects = vi.mocked(discoverProjects);
 const mockDiscoverConfigs = vi.mocked(discoverConfigs);
@@ -25,8 +30,10 @@ const mockWriteEnv = vi.mocked(writeEnv);
 const mockExtractFromWebinyOutput = vi.mocked(extractFromWebinyOutput);
 const mockExtractFromPulumiState = vi.mocked(extractFromPulumiState);
 const mockInput = vi.mocked(input);
+const mockSelect = vi.mocked(select);
 const mockStat = vi.mocked(stat);
 const mockAccess = vi.mocked(access);
+const mockScaffoldProject = vi.mocked(scaffoldProject);
 
 const noFile = (): never => {
     throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
@@ -51,21 +58,27 @@ const TARGET_VALS: RawOutputValues = {
 beforeEach(() => {
     vi.resetAllMocks();
     mockWriteEnv.mockResolvedValue(undefined);
+    mockScaffoldProject.mockResolvedValue(undefined);
 });
 
 describe("TransferWizard", () => {
-    it("exits with code 1 when no projects are found", async () => {
+    it("shows CREATE_NEW option even when no projects are found, and scaffolds on selection", async () => {
         mockDiscoverProjects.mockResolvedValue([]);
-        const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
-            throw new Error("process.exit");
-        });
+        mockSelect.mockResolvedValue("__create__");
+        // First input call is for the new project name; second breaks out of the instructions loop.
+        mockInput.mockResolvedValueOnce("brand-new").mockRejectedValue(new Error("stop"));
 
-        await expect(new TransferWizard(process.cwd()).run()).rejects.toThrow("process.exit");
-        expect(exitSpy).toHaveBeenCalledWith(1);
+        await expect(new TransferWizard(process.cwd()).run()).rejects.toThrow("stop");
+
+        expect(mockSelect).toHaveBeenCalledOnce();
+        const choices = mockSelect.mock.calls[0][0].choices as Array<{ value: string }>;
+        expect(choices.some((c: { value: string }) => c.value === "__create__")).toBe(true);
+        expect(mockScaffoldProject).toHaveBeenCalledWith({ name: "brand-new", cwd: process.cwd() });
     });
 
     it("routes to config selection when no JSON files and .env exists", async () => {
         mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
         mockStat.mockImplementation(async (p: unknown) => {
             if (String(p).endsWith(".env")) {
                 return { size: 100 } as unknown as Stats;
@@ -84,6 +97,7 @@ describe("TransferWizard", () => {
 
     it("throws when same-side files disagree on osTableName", async () => {
         mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
         mockStat.mockImplementation(async (p: unknown) => {
             const path = String(p);
             if (path.endsWith("source.webiny.json") || path.endsWith("source.pulumi.json")) {
@@ -105,6 +119,7 @@ describe("TransferWizard", () => {
 
     it("writes .env with correct values and returns null on happy path", async () => {
         mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
         mockStat.mockImplementation(async (p: unknown) => {
             const path = String(p);
             if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
