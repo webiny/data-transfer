@@ -1,8 +1,7 @@
-import { resolve } from "node:path";
 import { scaffoldProject } from "./scaffoldProject.ts";
 
 export async function handler(projectName: string): Promise<void> {
-    await scaffoldProject({ name: projectName, cwd: resolve(process.cwd()) });
+    await scaffoldProject({ name: projectName, cwd: process.cwd() });
 
     console.log(`\nCreated "projects/${projectName}" with the following structure:\n`);
     console.log(`  projects/${projectName}/`);

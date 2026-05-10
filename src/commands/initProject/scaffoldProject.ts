@@ -31,7 +31,7 @@ export async function scaffoldProject(params: ScaffoldProjectParams): Promise<vo
 
     cpSync(templatesDir, targetDir, { recursive: true });
 
-    for (const filename of [".env.example", "README.md"]) {
+    for (const filename of ["README.md"]) {
         const filePath = join(targetDir, filename);
         const content = readFileSync(filePath, "utf-8");
         writeFileSync(filePath, content.replace(/\{\{PROJECT_NAME\}\}/g, name), "utf-8");
