@@ -16,19 +16,19 @@ The package ships two built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`) plus full
 git clone git@github.com:webiny/v5-to-v6.git
 cd v5-to-v6
 yarn install
-yarn dev init-project my-transfer
+yarn transfer init-project my-transfer
 # then run the guided setup:
-yarn dev
+yarn transfer
 ```
 
-`yarn dev` (no `--config`) launches the **guided setup wizard**. It walks you through selecting your project, collecting your Webiny output or Pulumi state JSON files, and automatically writing your `.env`. After writing the `.env` it exits — review the file and run `yarn dev` again to start the transfer.
+`yarn transfer` (no `--config`) launches the **guided setup wizard**. It walks you through selecting your project, collecting your Webiny output or Pulumi state JSON files, and automatically writing your `.env`. After writing the `.env` it exits — review the file and run `yarn transfer` again to start the transfer.
 
 To scaffold a new project folder:
 
 ```bash
-yarn dev init-project <name>
+yarn transfer init-project <name>
 # e.g.
-yarn dev init-project my-client-prod
+yarn transfer init-project my-client-prod
 ```
 
 This creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `README.md`, `.env.example`, `models/`, and `presets/` already wired up.
@@ -37,7 +37,7 @@ New project folders are **gitignored** by default — credentials and env files 
 
 ### Populating your .env
 
-The wizard needs output files from your source and target Webiny systems. Place them in `projects/<name>/` before running `yarn dev`:
+The wizard needs output files from your source and target Webiny systems. Place them in `projects/<name>/` before running `yarn transfer`:
 
 **Option A — Webiny CLI output (recommended):**
 
