@@ -111,6 +111,7 @@ export class TransferWizard {
         });
 
         let projectName: string;
+        let justCreated: boolean;
         if (selected === CREATE_NEW) {
             const rawName = await input({
                 message: "Project name:",
@@ -138,8 +139,10 @@ export class TransferWizard {
             }
             console.log(`\n✓ Created projects/${newName}/\n`);
             projectName = newName;
+            justCreated = true;
         } else {
             projectName = selected;
+            justCreated = false;
         }
 
         const projectDir = resolve(join(this.cwd, "projects", projectName));
@@ -149,7 +152,7 @@ export class TransferWizard {
 
         const envExists = await fileNonEmpty(join(projectDir, ".env"));
 
-        if (sourceValsInitial === null && targetValsInitial === null && envExists) {
+        if (!justCreated && sourceValsInitial === null && targetValsInitial === null && envExists) {
             return await this.runConfigSelection(projectName);
         }
 

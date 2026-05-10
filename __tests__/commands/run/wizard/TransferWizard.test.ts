@@ -11,7 +11,7 @@ vi.mock("../../../../src/commands/run/wizard/sources/PulumiStateSource.ts");
 vi.mock("@inquirer/prompts");
 vi.mock("node:fs/promises");
 vi.mock("node:fs", () => ({ existsSync: vi.fn(() => false) }));
-vi.mock("~/commands/initProject/scaffoldProject.ts", () => ({
+vi.mock("../../../../src/commands/initProject/scaffoldProject.ts", () => ({
     scaffoldProject: vi.fn().mockResolvedValue(undefined)
 }));
 
