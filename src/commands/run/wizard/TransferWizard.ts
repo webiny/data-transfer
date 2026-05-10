@@ -1,11 +1,13 @@
 import { join, relative, resolve } from "node:path";
 import { access, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { select, input } from "@inquirer/prompts";
 import { discoverProjects } from "./projectDiscovery.ts";
 import { discoverConfigs } from "./configDiscovery.ts";
 import { writeEnv } from "./envWriter.ts";
 import { extractFromWebinyOutput } from "./sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "./sources/PulumiStateSource.ts";
+import { scaffoldProject } from "~/commands/initProject/scaffoldProject.ts";
 import type { RawOutputValues, EnvValues } from "./types.ts";
 
 async function fileNonEmpty(path: string): Promise<boolean> {
@@ -88,6 +90,8 @@ You can mix formats (e.g. source.webiny.json + target.pulumi.json).
 `);
 }
 
+const CREATE_NEW = "__create__";
+
 export class TransferWizard {
     private readonly cwd: string;
 
@@ -98,18 +102,48 @@ export class TransferWizard {
     public async run(): Promise<string | null> {
         const projects = await discoverProjects(this.cwd);
 
-        if (projects.length === 0) {
-            console.error("\nNo projects found. Run: yarn transfer init-project <name>\n");
-            process.exit(1);
-        }
+        const selected = await select({
+            message: "Which project do you want to transfer?",
+            choices: [
+                ...projects.map(p => ({ value: p, name: p })),
+                { value: CREATE_NEW, name: "+ Create new project" }
+            ]
+        });
 
-        const projectName =
-            projects.length === 1
-                ? projects[0]
-                : await select({
-                      message: "Which project do you want to transfer?",
-                      choices: projects.map(p => ({ value: p, name: p }))
-                  });
+        let projectName: string;
+        let justCreated: boolean;
+        if (selected === CREATE_NEW) {
+            const rawName = await input({
+                message: "Project name:",
+                validate: (v: string) => {
+                    const trimmed = v.trim();
+                    if (!trimmed) {
+                        return "Name cannot be empty.";
+                    }
+                    if (/[/\\]/.test(trimmed)) {
+                        return "Name cannot contain path separators.";
+                    }
+                    if (existsSync(join(this.cwd, "projects", trimmed))) {
+                        return `Project "projects/${trimmed}" already exists.`;
+                    }
+                    return true;
+                }
+            });
+            const newName = rawName.trim();
+            try {
+                await scaffoldProject({ name: newName, cwd: this.cwd });
+            } catch (err) {
+                throw new Error(
+                    `Failed to create project "${newName}": ${err instanceof Error ? err.message : String(err)}`
+                );
+            }
+            console.log(`\n✓ Created projects/${newName}/\n`);
+            projectName = newName;
+            justCreated = true;
+        } else {
+            projectName = selected;
+            justCreated = false;
+        }
 
         const projectDir = resolve(join(this.cwd, "projects", projectName));
 
@@ -118,7 +152,7 @@ export class TransferWizard {
 
         const envExists = await fileNonEmpty(join(projectDir, ".env"));
 
-        if (sourceValsInitial === null && targetValsInitial === null && envExists) {
+        if (!justCreated && sourceValsInitial === null && targetValsInitial === null && envExists) {
             return await this.runConfigSelection(projectName);
         }
 

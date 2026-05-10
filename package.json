@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "dev": "tsx src/cli.ts",
+    "transfer": "tsx src/cli.ts",
     "ts-check": "yarn tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.include=\"src/**/**\"",

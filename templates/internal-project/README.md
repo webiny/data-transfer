@@ -8,7 +8,7 @@ Run the guided wizard from the repo root — it will populate your `.env` automa
 
 ```bash
 # From the repo root:
-yarn dev
+yarn transfer
 ```
 
 The wizard asks which project to set up, validates your Webiny output or Pulumi state JSON files, and writes `.env`. Before running it, place one of these in this folder:
@@ -31,11 +31,11 @@ Run DDB transfer first, then OS. They are independent and don't share state.
 
 ```bash
 # From the repo root — guided (wizard selects config):
-yarn dev
+yarn transfer
 
 # Or direct:
-yarn dev --config=./projects/{{PROJECT_NAME}}/ddb.transfer.config.ts
-yarn dev --config=./projects/{{PROJECT_NAME}}/os.transfer.config.ts
+yarn transfer --config=./projects/{{PROJECT_NAME}}/ddb.transfer.config.ts
+yarn transfer --config=./projects/{{PROJECT_NAME}}/os.transfer.config.ts
 ```
 
 ## Config notes
