@@ -1,46 +1,8 @@
-import { resolve, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { Container } from "@webiny/di";
-import { LoggerFeature } from "~/tools/Logger/index.ts";
-import { DirectoryTool, DirectoryToolFeature } from "~/tools/DirectoryTool/index.ts";
-import { FileTool, FileToolFeature } from "~/tools/FileTool/index.ts";
+import { resolve } from "node:path";
+import { scaffoldProject } from "./scaffoldProject.ts";
 
 export async function handler(projectName: string): Promise<void> {
-    const container = new Container();
-    LoggerFeature.register(container, { logLevel: "debug", json: false });
-    DirectoryToolFeature.register(container);
-    FileToolFeature.register(container);
-
-    const dirTool = container.resolve(DirectoryTool);
-    const fileTool = container.resolve(FileTool);
-
-    const targetDir = resolve(process.cwd(), "projects", projectName);
-
-    if (dirTool.exists(targetDir)) {
-        throw new Error(`Project "projects/${projectName}" already exists.`);
-    }
-
-    const templatesDir = resolve(
-        fileURLToPath(import.meta.url),
-        "..",
-        "..",
-        "..",
-        "..",
-        "templates",
-        "internal-project"
-    );
-
-    if (!dirTool.exists(templatesDir)) {
-        throw new Error(`Internal project templates not found at ${templatesDir}`);
-    }
-
-    dirTool.copyOrThrow(templatesDir, targetDir);
-
-    for (const filename of [".env.example", "README.md"]) {
-        const filePath = join(targetDir, filename);
-        const content = fileTool.readFileOrThrow(filePath);
-        fileTool.writeFileOrThrow(filePath, content.replace(/\{\{PROJECT_NAME\}\}/g, projectName));
-    }
+    await scaffoldProject({ name: projectName, cwd: resolve(process.cwd()) });
 
     console.log(`\nCreated "projects/${projectName}" with the following structure:\n`);
     console.log(`  projects/${projectName}/`);
