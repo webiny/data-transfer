@@ -112,22 +112,30 @@ export class TransferWizard {
 
         let projectName: string;
         if (selected === CREATE_NEW) {
-            const newName = await input({
+            const rawName = await input({
                 message: "Project name:",
                 validate: (v: string) => {
-                    if (!v.trim()) {
+                    const trimmed = v.trim();
+                    if (!trimmed) {
                         return "Name cannot be empty.";
                     }
-                    if (/[/\\]/.test(v)) {
+                    if (/[/\\]/.test(trimmed)) {
                         return "Name cannot contain path separators.";
                     }
-                    if (existsSync(resolve(join(this.cwd, "projects", v)))) {
-                        return `Project "projects/${v}" already exists.`;
+                    if (existsSync(join(this.cwd, "projects", trimmed))) {
+                        return `Project "projects/${trimmed}" already exists.`;
                     }
                     return true;
                 }
             });
-            await scaffoldProject({ name: newName, cwd: this.cwd });
+            const newName = rawName.trim();
+            try {
+                await scaffoldProject({ name: newName, cwd: this.cwd });
+            } catch (err) {
+                throw new Error(
+                    `Failed to create project "${newName}": ${err instanceof Error ? err.message : String(err)}`
+                );
+            }
             console.log(`\n✓ Created projects/${newName}/\n`);
             projectName = newName;
         } else {
