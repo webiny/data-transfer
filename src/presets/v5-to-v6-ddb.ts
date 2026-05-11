@@ -298,13 +298,13 @@ export default createTransferPreset({
             .register(contentModelGroups)
             .register(backgroundTasks)
             .register(fmSettings)
-            .register(fmFiles) // Before cmsEntries
+            .register(fmFiles)
             .register(mailerSettings)
             .register(securityGroups)
             .register(securityTeams)
             .register(cmsModels)
             .register(folderPermissions)
-            .register(cmsEntries) // After fmFiles
-            .register(formBuilderRecords); // After cmsEntries
+            .register(cmsEntries)
+            .register(formBuilderRecords);
     }
 });
