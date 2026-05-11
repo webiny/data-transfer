@@ -19,8 +19,8 @@ async function loadFixture(path: string): Promise<BaseRecord[]> {
     return JSON.parse(raw) as BaseRecord[];
 }
 
-async function createDdbTable(doc: DynamoDBDocument, tableName: string): Promise<void> {
-    await doc.send(
+async function createDdbTable(client: DynamoDBClient, tableName: string): Promise<void> {
+    await client.send(
         new CreateTableCommand({
             TableName: tableName,
             BillingMode: "PAY_PER_REQUEST",
@@ -73,12 +73,13 @@ function indexByPkSk(records: BaseRecord[]): Map<string, BaseRecord> {
 
 describe("pipeline — real-world data transfer against dynalite", () => {
     let instance: DynaliteInstance;
+    let client: DynamoDBClient;
     let doc: DynamoDBDocument;
     let fixture: BaseRecord[];
 
     beforeAll(async () => {
         instance = await startDynalite();
-        const client = new DynamoDBClient({
+        client = new DynamoDBClient({
             endpoint: instance.endpoint,
             region: "us-east-1",
             credentials: FAKE_CREDS
@@ -94,8 +95,8 @@ describe("pipeline — real-world data transfer against dynalite", () => {
     it("roundtrips every record in __tests__/data/small-one.json byte-exact via the pipeline", async () => {
         const source = "real-small-src";
         const target = "real-small-tgt";
-        await createDdbTable(doc, source);
-        await createDdbTable(doc, target);
+        await createDdbTable(client, source);
+        await createDdbTable(client, target);
         await seedRecords(doc, source, fixture);
 
         // Sanity check: dynalite actually stored what we seeded.
