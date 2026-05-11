@@ -16,6 +16,7 @@ export interface ProcessSegmentArgs {
     segment: number;
     total: number;
     config: string;
+    preset: string;
     logLevel?: string;
 }
 
@@ -39,7 +40,7 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const beforeLoadPreset = container.resolve(BeforeLoadPresetHook);
     await beforeLoadPreset.execute(config);
 
-    const preset = await presetLoader.load(config.pipeline.preset);
+    const preset = await presetLoader.load(argv.preset);
     await preset.configure({
         runner,
         pipelineBuilderFactory: container.resolve(PipelineBuilderFactory),

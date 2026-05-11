@@ -23,6 +23,11 @@ export function registerProcessSegmentCommand(yargs: Argv): Argv {
                     demandOption: true,
                     description: "Config file path"
                 })
+                .option("preset", {
+                    type: "string",
+                    demandOption: true,
+                    description: "Preset name to use for this segment"
+                })
                 .option("log-level", {
                     type: "string",
                     choices: ["debug", "info", "warn", "error"] as const,
@@ -30,7 +35,11 @@ export function registerProcessSegmentCommand(yargs: Argv): Argv {
                 });
         },
         async argv => {
-            await handler({ ...argv, logLevel: argv["log-level"] as string | undefined });
+            await handler({
+                ...argv,
+                logLevel: argv["log-level"] as string | undefined,
+                preset: argv.preset
+            });
         }
     );
 }

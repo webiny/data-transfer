@@ -12,7 +12,21 @@ const resolveMap = new Map<unknown, unknown>();
 const registerInstanceSpy = vi.fn();
 
 vi.mock("~/features/MigrationConfig/loadConfig.ts", () => ({
-    loadConfig: vi.fn(async (_path: string) => ({ storage: "ddb", pipeline: { preset: "x" } }))
+    loadConfig: vi.fn(async (_path: string) => ({
+        source: {
+            region: "us-east-1",
+            credentials: { accessKeyId: "t", secretAccessKey: "t" },
+            dynamodb: { tableName: "src" },
+            s3: { bucket: "src-b" }
+        },
+        target: {
+            region: "us-east-1",
+            credentials: { accessKeyId: "t", secretAccessKey: "t" },
+            dynamodb: { tableName: "tgt" },
+            s3: { bucket: "tgt-b" }
+        },
+        pipeline: {}
+    }))
 }));
 vi.mock("~/bootstrap.ts", () => ({
     bootstrap: vi.fn(() => ({
@@ -60,14 +74,26 @@ describe("processSegment handler", () => {
     });
 
     it("loads preset, configures runner, calls run({segment, totalSegments})", async () => {
-        await handler({ runId: "r1", segment: 2, total: 4, config: "./x.ts" });
+        await handler({
+            runId: "r1",
+            segment: 2,
+            total: 4,
+            config: "./x.ts",
+            preset: "test-preset"
+        });
 
-        expect(loadSpy).toHaveBeenCalledWith("x");
+        expect(loadSpy).toHaveBeenCalledWith("test-preset");
         expect(runSpy).toHaveBeenCalledWith({ segment: 2, totalSegments: 4 });
     });
 
     it("registers TransferContext with the provided runId", async () => {
-        await handler({ runId: "r-xyz", segment: 0, total: 1, config: "./x.ts" });
+        await handler({
+            runId: "r-xyz",
+            segment: 0,
+            total: 1,
+            config: "./x.ts",
+            preset: "test-preset"
+        });
 
         expect(registerInstanceSpy).toHaveBeenCalledWith(
             expect.anything(),
@@ -78,7 +104,13 @@ describe("processSegment handler", () => {
     it("calls process.exit(1) on runner failure", async () => {
         const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
         runSpy.mockRejectedValueOnce(new Error("boom"));
-        await handler({ runId: "r1", segment: 0, total: 1, config: "./x.ts" });
+        await handler({
+            runId: "r1",
+            segment: 0,
+            total: 1,
+            config: "./x.ts",
+            preset: "test-preset"
+        });
         expect(exitSpy).toHaveBeenCalledWith(1);
         exitSpy.mockRestore();
     });
