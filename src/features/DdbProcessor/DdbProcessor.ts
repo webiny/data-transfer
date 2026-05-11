@@ -9,6 +9,8 @@ import { TransferContext } from "~/features/TransferLifecycle/abstractions/Trans
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
+import { isAccessDeniedError } from "~/base/index.ts";
 
 interface DdbProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
@@ -65,7 +67,40 @@ class DdbProcessorImpl implements Processor.Interface<
     }
 
     public async checkAccess(): Promise<AccessCheck.Entry[]> {
-        return [];
+        const [sourceEntry, targetEntry] = await Promise.all([
+            this.describeTable(
+                this.config.source.credentials,
+                this.config.source.region,
+                this.config.source.dynamodb.tableName,
+                "source"
+            ),
+            this.describeTable(
+                this.config.target.credentials,
+                this.config.target.region,
+                this.config.target.dynamodb.tableName,
+                "target"
+            )
+        ]);
+        return [sourceEntry, targetEntry];
+    }
+
+    private async describeTable(
+        credentials: MigrationConfig.Interface["source"]["credentials"],
+        region: string,
+        tableName: string,
+        side: string
+    ): Promise<AccessCheck.Entry> {
+        const label = `DynamoDB ${side} table: ${tableName}`;
+        try {
+            const client = new DynamoDB({ region, credentials: credentials as never });
+            await client.describeTable({ TableName: tableName });
+            return { label, status: "ok" };
+        } catch (error) {
+            if (isAccessDeniedError(error)) {
+                return { label, status: "denied" };
+            }
+            return { label, status: "unknown" };
+        }
     }
 
     public async execute(commands: Commands): Promise<void> {

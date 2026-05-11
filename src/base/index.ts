@@ -9,6 +9,7 @@ export { formatError } from "./formatError.ts";
 export {
     isRetryableAwsError,
     isThrottlingError,
+    isAccessDeniedError,
     isTokenBucketExhausted
 } from "./isRetryableAwsError.ts";
 export { retryBackoffMs } from "./retryBackoff.ts";

@@ -127,6 +127,22 @@ export function isThrottlingError(error: unknown): boolean {
 }
 
 /**
+ * Returns true when the error indicates an IAM / credentials access denial.
+ * Covers DynamoDB AccessDeniedException, S3 AccessDenied, and HTTP 403.
+ */
+export function isAccessDeniedError(error: unknown): boolean {
+    if (!error || typeof error !== "object") {
+        return false;
+    }
+    const candidate = error as AwsErrorLike;
+    const name = candidate.name ?? candidate.code;
+    if (typeof name === "string" && TERMINAL_ERROR_NAMES.has(name)) {
+        return true;
+    }
+    return candidate.$metadata?.httpStatusCode === 403;
+}
+
+/**
  * Returns true when the AWS SDK adaptive retry token bucket is depleted.
  * Callers should use a longer minimum backoff (≥10s) so the bucket has time
  * to refill before the next attempt.
