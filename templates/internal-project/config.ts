@@ -12,29 +12,36 @@ loadEnv(import.meta.url);
 const DEFAULT_REGION = "eu-central-1";
 const DEFAULT_PROFILE = "default";
 
+const sourceOsTable = fromEnv("SOURCE_OS_TABLE", null);
+const sourceAuditLogTable = fromEnv("SOURCE_AUDIT_LOGS_TABLE", null);
+const targetOsTable = fromEnv("TARGET_OS_TABLE", null);
+const targetOsEndpoint = fromEnv("TARGET_OS_ENDPOINT", null);
+const targetAuditLogTable = fromEnv("TARGET_AUDIT_LOGS_TABLE", null);
+
 export default createConfig({
     source: {
         region: fromEnv("SOURCE_REGION", DEFAULT_REGION),
         credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", DEFAULT_PROFILE) }),
         dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
         s3: { bucket: fromEnv("SOURCE_S3_BUCKET") },
-        // Remove or set to null if your environment has no OpenSearch:
-        opensearch: { tableName: fromEnv("SOURCE_OS_TABLE") }
+        auditLog: sourceAuditLogTable ? { dynamodb: { tableName: sourceAuditLogTable } } : null,
+        opensearch: sourceOsTable ? { tableName: sourceOsTable } : null
     },
     target: {
         region: fromEnv("TARGET_REGION", DEFAULT_REGION),
         credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", DEFAULT_PROFILE) }),
         dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
         s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
-        // Audit log table. Set tableName to null or omit the block to skip:
-        auditLog: { dynamodb: { tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE") } },
-        // Remove or set to null if your target has no OpenSearch:
-        opensearch: {
-            endpoint: fromEnv("TARGET_OS_ENDPOINT"),
-            tableName: fromEnv("TARGET_OS_TABLE"),
-            service: "opensearch",
-            indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
-        }
+        auditLog: targetAuditLogTable ? { dynamodb: { tableName: targetAuditLogTable } } : null,
+        opensearch:
+            targetOsTable && targetOsEndpoint
+                ? {
+                      endpoint: targetOsEndpoint,
+                      tableName: targetOsTable,
+                      service: "opensearch" as const,
+                      indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
+                  }
+                : null
     },
     pipeline: {
         segments: numberFromEnv("SEGMENTS", 4),

@@ -15,10 +15,14 @@
  */
 export function fromEnv(name: string): string;
 export function fromEnv(name: string, defaultValue: string): string;
-export function fromEnv(name: string, defaultValue?: string): string {
-    const value = readEnvValue(name) ?? defaultValue;
+export function fromEnv(name: string, defaultValue: null): string | null;
+export function fromEnv(name: string, defaultValue?: string | null): string | null {
+    const value = readEnvValue(name);
     if (value !== undefined) {
         return value;
+    }
+    if (defaultValue !== undefined) {
+        return defaultValue;
     }
     throw missingVariableError(name);
 }

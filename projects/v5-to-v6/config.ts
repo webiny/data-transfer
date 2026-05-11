@@ -10,16 +10,12 @@ loadEnv(import.meta.url);
 
 const DEFAULT_REGION = "eu-central-1";
 const DEFAULT_PROFILE = "default";
-/**
- * It is possible that config is created for dynamodb only system. at that point, the opensearch stuff will be null
- *
- * if any of the opensearch stuff is not null, validation should kick in, so:
- * - if anything os related in source is not null, then target must not be null
- * - if anything os related in target is not null, then source must not be null
- *
- * also note that users can disable the audit log by setting table to null or explicitly setting enabled to false.
- * enabled should be in the config and set to true by default
- */
+
+const sourceOsTable = fromEnv("SOURCE_OS_TABLE", null);
+const sourceAuditLogTable = fromEnv("SOURCE_AUDIT_LOGS_TABLE", null);
+const targetOsTable = fromEnv("TARGET_OS_TABLE", null);
+const targetOsEndpoint = fromEnv("TARGET_OS_ENDPOINT", null);
+const targetAuditLogTable = fromEnv("TARGET_AUDIT_LOGS_TABLE", null);
 
 export default createConfig({
     debug: {
@@ -37,10 +33,8 @@ export default createConfig({
         s3: {
             bucket: fromEnv("SOURCE_S3_BUCKET")
         },
-        opensearch: {
-            // table can be null if the source environment does not have it
-            tableName: fromEnv("SOURCE_OS_TABLE")
-        }
+        auditLog: sourceAuditLogTable ? { dynamodb: { tableName: sourceAuditLogTable } } : null,
+        opensearch: sourceOsTable ? { tableName: sourceOsTable } : null
     },
     target: {
         region: fromEnv("TARGET_REGION", DEFAULT_REGION),
@@ -53,21 +47,16 @@ export default createConfig({
         s3: {
             bucket: fromEnv("TARGET_S3_BUCKET")
         },
-        auditLog: {
-            dynamodb: {
-                tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE")
-            }
-        },
-        opensearch: {
-            // endpoint can be null if the target environment does not have it
-            endpoint: fromEnv("TARGET_OS_ENDPOINT"),
-            // endpoint can be null if the target environment does not have it
-            tableName: fromEnv("TARGET_OS_TABLE"),
-            // endpoint can be null if the target environment does not have it
-            service: "opensearch",
-            // endpoint can be null if the target environment does not have it
-            indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
-        }
+        auditLog: targetAuditLogTable ? { dynamodb: { tableName: targetAuditLogTable } } : null,
+        opensearch:
+            targetOsTable && targetOsEndpoint
+                ? {
+                      endpoint: targetOsEndpoint,
+                      tableName: targetOsTable,
+                      service: "opensearch" as const,
+                      indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
+                  }
+                : null
     },
     pipeline: {
         segments: numberFromEnv("SEGMENTS", 4),
