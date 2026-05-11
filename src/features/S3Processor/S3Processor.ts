@@ -1,7 +1,7 @@
 import { STS } from "@webiny/aws-sdk/client-sts/index.js";
 import { S3 } from "@webiny/aws-sdk/client-s3/index.js";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { isAccessDeniedError } from "~/base/index.ts";
+import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
@@ -92,9 +92,8 @@ class S3ProcessorImpl implements Processor.Interface<
             if (isAccessDeniedError(error)) {
                 return { label, status: "denied" };
             }
-            const errName = (error as { name?: string }).name;
-            const httpStatus = (error as { $metadata?: { httpStatusCode?: number } }).$metadata
-                ?.httpStatusCode;
+            const errName = (error as AwsErrorLike).name ?? (error as AwsErrorLike).code;
+            const httpStatus = (error as AwsErrorLike).$metadata?.httpStatusCode;
             if (errName === "NoSuchBucket" || httpStatus === 404) {
                 return { label, status: "missing" };
             }

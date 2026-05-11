@@ -10,6 +10,7 @@ export {
     isRetryableAwsError,
     isThrottlingError,
     isAccessDeniedError,
-    isTokenBucketExhausted
+    isTokenBucketExhausted,
+    type AwsErrorLike
 } from "./isRetryableAwsError.ts";
 export { retryBackoffMs } from "./retryBackoff.ts";

@@ -20,6 +20,10 @@ import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
+interface OpenSearchErrorLike {
+    statusCode?: number;
+}
+
 const DEFAULT_RETRY_SCHEDULE: number[] = [5000, 10000, 20000, 30000, 30000];
 const DEFAULT_REFRESH_INTERVAL = "1s";
 const DISABLED_REFRESH_INTERVAL = "-1";
@@ -124,13 +128,14 @@ class OsProcessorImpl implements Processor.Interface<
         if (!this.config.target.opensearch) {
             return [];
         }
+        // Source OS data is read indirectly via the source DDB table; no source-side OS probe needed.
         const endpoint = this.config.target.opensearch.endpoint;
         const label = `OpenSearch cluster: ${endpoint}`;
         try {
             await this.osClient.listIndexes();
             return [{ label, status: "ok" }];
         } catch (error) {
-            const statusCode = (error as { statusCode?: number }).statusCode;
+            const statusCode = (error as OpenSearchErrorLike).statusCode;
             if (statusCode === 401 || statusCode === 403) {
                 return [{ label, status: "denied" }];
             }

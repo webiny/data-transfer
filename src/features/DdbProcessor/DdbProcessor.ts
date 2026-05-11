@@ -10,7 +10,7 @@ import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
-import { isAccessDeniedError } from "~/base/index.ts";
+import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
 
 interface DdbProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
@@ -99,7 +99,7 @@ class DdbProcessorImpl implements Processor.Interface<
             if (isAccessDeniedError(error)) {
                 return { label, status: "denied" };
             }
-            const errName = (error as { name?: string }).name;
+            const errName = (error as AwsErrorLike).name ?? (error as AwsErrorLike).code;
             if (errName === "ResourceNotFoundException") {
                 return { label, status: "missing" };
             }

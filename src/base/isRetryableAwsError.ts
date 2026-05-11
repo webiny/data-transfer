@@ -49,7 +49,7 @@ const RETRYABLE_ERROR_NAMES = new Set<string>([
 
 const RETRYABLE_STATUS_CODES = new Set<number>([408, 425, 429, 500, 502, 503, 504]);
 
-interface AwsErrorLike {
+export interface AwsErrorLike {
     name?: string;
     code?: string;
     message?: string;
