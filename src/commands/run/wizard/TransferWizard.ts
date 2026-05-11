@@ -189,11 +189,15 @@ export class TransferWizard {
             targetVals.accountId &&
             sourceVals.accountId !== targetVals.accountId
         ) {
+            const bold = "\x1b[1m";
+            const yellow = "\x1b[33m";
+            const dim = "\x1b[2m";
+            const reset = "\x1b[0m";
             console.warn(
-                `\n⚠  Source and target are in different AWS accounts:` +
-                    `\n   source: ${sourceVals.accountId}` +
-                    `\n   target: ${targetVals.accountId}` +
-                    `\n   Set SOURCE_PROFILE and TARGET_PROFILE in .env to use the correct credentials.\n`
+                `\n${bold}${yellow}⚠  Source and target are in different AWS accounts:${reset}` +
+                    `\n   ${dim}source:${reset} ${bold}${sourceVals.accountId}${reset}` +
+                    `\n   ${dim}target:${reset} ${bold}${targetVals.accountId}${reset}` +
+                    `\n   ${dim}Set SOURCE_PROFILE and TARGET_PROFILE in .env to use the correct credentials.${reset}\n`
             );
         }
 
