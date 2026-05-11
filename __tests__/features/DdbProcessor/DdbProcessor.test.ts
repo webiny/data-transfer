@@ -179,6 +179,7 @@ describe("DdbProcessor", () => {
                 this: Record<string, unknown>
             ) {
                 this["describeTable"] = mockDescribeTable;
+                this["destroy"] = vi.fn();
             } as unknown as typeof DynamoDB);
         });
 
@@ -187,7 +188,7 @@ describe("DdbProcessor", () => {
             const container = createDdbContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "DdbProcessorImpl")!;
+                .find(p => p.constructor === DdbProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -205,7 +206,7 @@ describe("DdbProcessor", () => {
             const container = createDdbContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "DdbProcessorImpl")!;
+                .find(p => p.constructor === DdbProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -226,7 +227,7 @@ describe("DdbProcessor", () => {
             const container = createDdbContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "DdbProcessorImpl")!;
+                .find(p => p.constructor === DdbProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -237,6 +238,27 @@ describe("DdbProcessor", () => {
             expect(entries[1]).toEqual({
                 label: "DynamoDB target table: target-table",
                 status: "unknown"
+            });
+        });
+
+        it("returns denied when DescribeTable throws ResourceNotFoundException", async () => {
+            mockDescribeTable.mockRejectedValue(
+                Object.assign(new Error("Table not found"), { name: "ResourceNotFoundException" })
+            );
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor)!;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "DynamoDB source table: source-table",
+                status: "denied"
+            });
+            expect(entries[1]).toEqual({
+                label: "DynamoDB target table: target-table",
+                status: "denied"
             });
         });
     });

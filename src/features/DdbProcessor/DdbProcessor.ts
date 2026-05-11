@@ -91,15 +91,21 @@ class DdbProcessorImpl implements Processor.Interface<
         side: string
     ): Promise<AccessCheck.Entry> {
         const label = `DynamoDB ${side} table: ${tableName}`;
+        const client = new DynamoDB({ region, credentials: credentials as never });
         try {
-            const client = new DynamoDB({ region, credentials: credentials as never });
             await client.describeTable({ TableName: tableName });
             return { label, status: "ok" };
         } catch (error) {
             if (isAccessDeniedError(error)) {
                 return { label, status: "denied" };
             }
+            const errName = (error as { name?: string }).name;
+            if (errName === "ResourceNotFoundException") {
+                return { label, status: "denied" };
+            }
             return { label, status: "unknown" };
+        } finally {
+            client.destroy();
         }
     }
 
