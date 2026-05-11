@@ -23,6 +23,12 @@ const sourceSchema = z.object({
     credentials: credentialsOrProviderSchema,
     dynamodb: z.object({ tableName: trimmedString() }),
     s3: z.object({ bucket: trimmedString() }),
+    auditLog: z
+        .object({
+            dynamodb: z.object({ tableName: trimmedString().nullable() })
+        })
+        .nullable()
+        .optional(),
     opensearch: opensearchSourceSchema.nullable().optional()
 });
 

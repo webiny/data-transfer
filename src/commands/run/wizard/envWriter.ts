@@ -6,6 +6,7 @@ const TOKEN_MAP: Record<string, keyof EnvValues> = {
     SOURCE_REGION: "sourceRegion",
     SOURCE_DDB_TABLE: "sourceDdbTable",
     SOURCE_S3_BUCKET: "sourceS3Bucket",
+    SOURCE_AUDIT_LOGS_TABLE: "sourceAuditLogTable",
     SOURCE_OS_TABLE: "sourceOsTable",
     TARGET_REGION: "targetRegion",
     TARGET_DDB_TABLE: "targetDdbTable",
@@ -41,6 +42,7 @@ SOURCE_REGION={{SOURCE_REGION}}
 
 SOURCE_DDB_TABLE={{SOURCE_DDB_TABLE}}
 SOURCE_S3_BUCKET={{SOURCE_S3_BUCKET}}
+SOURCE_AUDIT_LOGS_TABLE={{SOURCE_AUDIT_LOGS_TABLE}}
 SOURCE_OS_TABLE={{SOURCE_OS_TABLE}}
 
 # --- Target environment ------------------------------------------------

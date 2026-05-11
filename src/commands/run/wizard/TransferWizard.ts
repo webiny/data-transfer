@@ -223,6 +223,7 @@ export class TransferWizard {
             sourceRegion: sourceVals.region,
             sourceDdbTable: sourceVals.primaryDynamodbTableName,
             sourceS3Bucket: sourceVals.fileManagerBucketId,
+            sourceAuditLogTable: sourceVals.auditLogTableName ?? "",
             sourceOsTable: sourceVals.osTableName,
             targetRegion: targetVals.region,
             targetDdbTable: targetVals.primaryDynamodbTableName,

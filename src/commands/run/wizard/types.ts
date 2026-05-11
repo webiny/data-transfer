@@ -12,6 +12,7 @@ export interface EnvValues {
     sourceRegion: string;
     sourceDdbTable: string;
     sourceS3Bucket: string;
+    sourceAuditLogTable: string;
     sourceOsTable: string;
     targetRegion: string;
     targetDdbTable: string;
