@@ -16,8 +16,16 @@ describe("BeforeTransferHookComposite", () => {
     it("calls all registered hooks", async () => {
         const container = createContainer();
         const calls: number[] = [];
-        container.registerInstance(BeforeTransferHook, { execute: async () => { calls.push(1); } });
-        container.registerInstance(BeforeTransferHook, { execute: async () => { calls.push(2); } });
+        container.registerInstance(BeforeTransferHook, {
+            execute: async () => {
+                calls.push(1);
+            }
+        });
+        container.registerInstance(BeforeTransferHook, {
+            execute: async () => {
+                calls.push(2);
+            }
+        });
 
         await container.resolve(BeforeTransferHook).execute();
         expect(calls).toEqual([1, 2]);
@@ -26,9 +34,21 @@ describe("BeforeTransferHookComposite", () => {
     it("calls hooks in registration order", async () => {
         const container = createContainer();
         const order: string[] = [];
-        container.registerInstance(BeforeTransferHook, { execute: async () => { order.push("first"); } });
-        container.registerInstance(BeforeTransferHook, { execute: async () => { order.push("second"); } });
-        container.registerInstance(BeforeTransferHook, { execute: async () => { order.push("third"); } });
+        container.registerInstance(BeforeTransferHook, {
+            execute: async () => {
+                order.push("first");
+            }
+        });
+        container.registerInstance(BeforeTransferHook, {
+            execute: async () => {
+                order.push("second");
+            }
+        });
+        container.registerInstance(BeforeTransferHook, {
+            execute: async () => {
+                order.push("third");
+            }
+        });
 
         await container.resolve(BeforeTransferHook).execute();
         expect(order).toEqual(["first", "second", "third"]);

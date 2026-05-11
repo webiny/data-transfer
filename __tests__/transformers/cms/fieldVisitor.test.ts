@@ -6,11 +6,7 @@ function textField(id: string): ModelField {
     return { id, fieldId: id, storageId: `text@${id}`, type: "text" };
 }
 
-function objectField(
-    id: string,
-    nestedFields: ModelField[],
-    multipleValues = false
-): ModelField {
+function objectField(id: string, nestedFields: ModelField[], multipleValues = false): ModelField {
     return {
         id,
         fieldId: id,
@@ -76,10 +72,7 @@ describe("visitFields", () => {
     it("recurses into each item of an object array (multipleValues=true)", async () => {
         const calls: string[] = [];
         const values = {
-            "object@tags": [
-                { "text@label": "a" },
-                { "text@label": "b" }
-            ]
+            "object@tags": [{ "text@label": "a" }, { "text@label": "b" }]
         };
         const fields = [objectField("tags", [textField("label")], true)];
         await visitFields(values, fields, (_v, field) => {
@@ -117,11 +110,11 @@ describe("visitFields", () => {
     it("recurses into a dynamicZone item whose templateId matches", async () => {
         const calls: string[] = [];
         const values = {
-            "dynamicZone@hero": [
-                { _templateId: "banner", "text@headline": "Hello" }
-            ]
+            "dynamicZone@hero": [{ _templateId: "banner", "text@headline": "Hello" }]
         };
-        const fields = [dynamicZoneField("hero", [{ id: "banner", fields: [textField("headline")] }])];
+        const fields = [
+            dynamicZoneField("hero", [{ id: "banner", fields: [textField("headline")] }])
+        ];
         await visitFields(values, fields, (_v, field) => {
             calls.push(field.id);
         });
@@ -132,11 +125,11 @@ describe("visitFields", () => {
     it("does not recurse into a dynamicZone item with an unknown templateId", async () => {
         const calls: string[] = [];
         const values = {
-            "dynamicZone@hero": [
-                { _templateId: "unknown", "text@headline": "Hello" }
-            ]
+            "dynamicZone@hero": [{ _templateId: "unknown", "text@headline": "Hello" }]
         };
-        const fields = [dynamicZoneField("hero", [{ id: "banner", fields: [textField("headline")] }])];
+        const fields = [
+            dynamicZoneField("hero", [{ id: "banner", fields: [textField("headline")] }])
+        ];
         await visitFields(values, fields, (_v, field) => {
             calls.push(field.id);
         });
@@ -148,7 +141,9 @@ describe("visitFields", () => {
         const values = {
             "dynamicZone@hero": { _templateId: "banner", "text@headline": "Hello" }
         };
-        const fields = [dynamicZoneField("hero", [{ id: "banner", fields: [textField("headline")] }])];
+        const fields = [
+            dynamicZoneField("hero", [{ id: "banner", fields: [textField("headline")] }])
+        ];
         await visitFields(values, fields, (_v, field) => {
             calls.push(field.id);
         });
