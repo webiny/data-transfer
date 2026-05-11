@@ -75,5 +75,11 @@ class DdbProcessorImpl implements Processor.Interface<
 
 export const DdbProcessor = Processor.createImplementation({
     implementation: DdbProcessorImpl,
-    dependencies: [DdbExecutor, MigrationConfig, SourceDynamoDbClient, TargetDynamoDbClient, TransferContext]
+    dependencies: [
+        DdbExecutor,
+        MigrationConfig,
+        SourceDynamoDbClient,
+        TargetDynamoDbClient,
+        TransferContext
+    ]
 });

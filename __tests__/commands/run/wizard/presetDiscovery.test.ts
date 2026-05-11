@@ -92,7 +92,10 @@ describe("listAvailablePresetsWithDescriptions", () => {
     it("returns empty description when preset exports no description field", async () => {
         const tmp = mkdtempSync(join(tmpdir(), "presetdiscovery-nodesc-"));
         try {
-            writeFileSync(join(tmp, "nodesc.js"), "export default { name: 'nodesc', configure() {} }");
+            writeFileSync(
+                join(tmp, "nodesc.js"),
+                "export default { name: 'nodesc', configure() {} }"
+            );
             const entries = await listAvailablePresetsWithDescriptions(tmp);
             const nodesc = entries.find(e => e.name === "nodesc");
             expect(nodesc?.description).toBe("");

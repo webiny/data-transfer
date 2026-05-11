@@ -115,8 +115,7 @@ describe("normalizeOutputs", () => {
             region: "eu-central-1",
             primaryDynamodbTableName: "wby-primary",
             fileManagerBucketId: "wby-bucket",
-            primaryDynamodbTableArn:
-                "arn:aws:dynamodb:eu-central-1:250532744892:table/wby-primary"
+            primaryDynamodbTableArn: "arn:aws:dynamodb:eu-central-1:250532744892:table/wby-primary"
         });
         expect(result.accountId).toBe("250532744892");
     });

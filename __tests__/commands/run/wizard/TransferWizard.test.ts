@@ -195,8 +195,16 @@ describe("TransferWizard", () => {
     });
 
     it("prompts for OS index prefix when OS fields are present", async () => {
-        const OS_SOURCE = { ...SOURCE_VALS, osTableName: "wby-es-source", osEndpoint: "https://es.source" };
-        const OS_TARGET = { ...TARGET_VALS, osTableName: "wby-es-target", osEndpoint: "https://es.target" };
+        const OS_SOURCE = {
+            ...SOURCE_VALS,
+            osTableName: "wby-es-source",
+            osEndpoint: "https://es.source"
+        };
+        const OS_TARGET = {
+            ...TARGET_VALS,
+            osTableName: "wby-es-target",
+            osEndpoint: "https://es.target"
+        };
         mockDiscoverProjects.mockResolvedValue(["my-project"]);
         mockSelect.mockResolvedValue("my-project");
         mockStat.mockImplementation(async (p: unknown) => {
