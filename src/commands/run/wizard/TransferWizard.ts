@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { select, input } from "@inquirer/prompts";
 import { discoverProjects } from "./projectDiscovery.ts";
 import { discoverConfig } from "./configDiscovery.ts";
-import { listAvailablePresets } from "./presetDiscovery.ts";
+import { listAvailablePresetsWithDescriptions } from "./presetDiscovery.ts";
 import { writeEnv } from "./envWriter.ts";
 import { extractFromWebinyOutput } from "./sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "./sources/PulumiStateSource.ts";
@@ -243,7 +243,7 @@ export class TransferWizard {
             // ignore — presets from built-ins only
         }
 
-        const presets = listAvailablePresets(presetsDir);
+        const presets = await listAvailablePresetsWithDescriptions(presetsDir);
 
         if (presets.length === 0) {
             console.error("\nNo presets available. Check your presetsDir configuration.\n");
@@ -252,7 +252,10 @@ export class TransferWizard {
 
         const preset = await select({
             message: "Which preset do you want to run?",
-            choices: presets.map(p => ({ value: p, name: p }))
+            choices: presets.map(p => ({
+                value: p.name,
+                name: p.description ? `${p.name} — ${p.description}` : p.name
+            }))
         });
 
         return { configPath, preset };
