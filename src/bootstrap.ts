@@ -82,22 +82,20 @@ export function bootstrap(options: BootstrapOptions): Container {
     });
     DynamoDbClientFeature.register(container);
 
-    if (config.storage === "ddb") {
-        container.registerInstance(S3ClientConfig, {
-            source: {
-                region: config.source.region,
-                credentials: config.source.credentials
-            },
-            target: {
-                region: config.target.region,
-                credentials: config.target.credentials
-            },
-            tuning: config.tuning?.s3
-        });
-        S3ClientFeature.register(container);
-    }
+    container.registerInstance(S3ClientConfig, {
+        source: {
+            region: config.source.region,
+            credentials: config.source.credentials
+        },
+        target: {
+            region: config.target.region,
+            credentials: config.target.credentials
+        },
+        tuning: config.tuning?.s3
+    });
+    S3ClientFeature.register(container);
 
-    if (config.storage === "os") {
+    if (config.target.opensearch != null) {
         container.registerInstance(OpenSearchClientConfig, {
             endpoint: config.target.opensearch.endpoint,
             region: config.target.region,
@@ -122,19 +120,15 @@ export function bootstrap(options: BootstrapOptions): Container {
     TransferredRecordLogFeature.register(container);
     PipelineRunnerFeature.register(container);
 
-    if (config.storage === "ddb") {
-        DdbExecutorFeature.register(container);
-        S3ProcessorFeature.register(container);
-        DdbScannerFeature.register(container);
-        DdbProcessorFeature.register(container);
-        AuditLogProcessorFeature.register(container);
-    } else {
-        TouchedIndexesFeature.register(container);
-        DdbExecutorFeature.register(container);
-        OsRecordDecompressorFeature.register(container);
-        OsScannerFeature.register(container);
-        OsProcessorFeature.register(container);
-    }
+    DdbExecutorFeature.register(container);
+    S3ProcessorFeature.register(container);
+    DdbScannerFeature.register(container);
+    DdbProcessorFeature.register(container);
+    AuditLogProcessorFeature.register(container);
+    TouchedIndexesFeature.register(container);
+    OsRecordDecompressorFeature.register(container);
+    OsScannerFeature.register(container);
+    OsProcessorFeature.register(container);
 
     return container;
 }

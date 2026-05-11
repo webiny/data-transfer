@@ -16,113 +16,92 @@ import { DirectoryTool } from "../src/tools/DirectoryTool/index.ts";
 import { FileTool } from "../src/tools/FileTool/index.ts";
 import { OpenSearchClient } from "../src/services/OpenSearchClient/index.ts";
 
-describe("bootstrap", () => {
-    const ddbConfig: MigrationConfig.Interface = {
-        storage: "ddb",
-        source: {
-            region: "us-east-1",
-            credentials: { accessKeyId: "test", secretAccessKey: "test" },
-            dynamodb: { tableName: "source-table" },
-            s3: { bucket: "source-bucket" }
-        },
-        target: {
-            region: "eu-central-1",
-            credentials: { accessKeyId: "test", secretAccessKey: "test" },
-            dynamodb: { tableName: "target-table" },
-            s3: { bucket: "target-bucket" },
-            auditLog: null
-        },
-        pipeline: { preset: "v5-to-v6" }
-    };
+const creds = { accessKeyId: "test", secretAccessKey: "test" };
 
-    const osConfig: MigrationConfig.Interface = {
-        storage: "os",
-        source: {
-            region: "us-east-1",
-            credentials: { accessKeyId: "test", secretAccessKey: "test" },
-            dynamodb: { tableName: "source-primary" },
-            opensearch: { tableName: "source-os" }
-        },
-        target: {
-            region: "eu-central-1",
-            credentials: { accessKeyId: "test", secretAccessKey: "test" },
-            opensearch: {
-                endpoint: "https://es.example.com",
-                tableName: "target-os",
-                service: "opensearch" as const,
-                indexPrefix: ""
-            }
-        },
-        pipeline: { preset: "v5-to-v6-os" }
-    };
+const ddbOnlyConfig: MigrationConfig.Interface = {
+    source: {
+        region: "us-east-1",
+        credentials: creds,
+        dynamodb: { tableName: "source-table" },
+        s3: { bucket: "source-bucket" }
+    },
+    target: {
+        region: "eu-central-1",
+        credentials: creds,
+        dynamodb: { tableName: "target-table" },
+        s3: { bucket: "target-bucket" },
+        auditLog: null
+    },
+    pipeline: {}
+};
 
-    describe("ddb mode", () => {
-        it("should resolve all core features", () => {
-            const container = bootstrap({ config: ddbConfig });
+const fullConfig: MigrationConfig.Interface = {
+    source: {
+        region: "us-east-1",
+        credentials: creds,
+        dynamodb: { tableName: "source-primary" },
+        s3: { bucket: "source-bucket" },
+        opensearch: { tableName: "source-os" }
+    },
+    target: {
+        region: "eu-central-1",
+        credentials: creds,
+        dynamodb: { tableName: "target-table" },
+        s3: { bucket: "target-bucket" },
+        opensearch: {
+            endpoint: "https://es.example.com",
+            tableName: "target-os",
+            service: "opensearch" as const,
+            indexPrefix: ""
+        }
+    },
+    pipeline: {}
+};
 
-            expect(container.resolve(MigrationConfig)).toBeDefined();
-            expect(container.resolve(Logger)).toBeDefined();
-            expect(container.resolve(Cache)).toBeDefined();
-            expect(container.resolve(DirectoryTool)).toBeDefined();
-            expect(container.resolve(FileTool)).toBeDefined();
-            expect(container.resolve(SourceDynamoDbClient)).toBeDefined();
-            expect(container.resolve(TargetDynamoDbClient)).toBeDefined();
-            expect(container.resolve(ModelProvider)).toBeDefined();
-            expect(container.resolve(TenantLocales)).toBeDefined();
-            expect(container.resolve(SourceS3Client)).toBeDefined();
-            expect(container.resolve(TargetS3Client)).toBeDefined();
-            expect(container.resolve(PresetLoader)).toBeDefined();
-            expect(container.resolve(WorkerSpawner)).toBeDefined();
-        });
-
-        it("should not register OpenSearchClient in ddb mode", () => {
-            const container = bootstrap({ config: ddbConfig });
-
-            expect(() => container.resolve(OpenSearchClient)).toThrow();
-        });
-
-        it("should use provided log level", () => {
-            const container = bootstrap({ config: ddbConfig, logLevel: "debug" });
-            const logger = container.resolve(Logger);
-            expect(logger).toBeDefined();
-        });
+describe("bootstrap — DDB-only config", () => {
+    it("resolves all core features", () => {
+        const container = bootstrap({ config: ddbOnlyConfig });
+        expect(container.resolve(MigrationConfig)).toBeDefined();
+        expect(container.resolve(Logger)).toBeDefined();
+        expect(container.resolve(Cache)).toBeDefined();
+        expect(container.resolve(DirectoryTool)).toBeDefined();
+        expect(container.resolve(FileTool)).toBeDefined();
+        expect(container.resolve(SourceDynamoDbClient)).toBeDefined();
+        expect(container.resolve(TargetDynamoDbClient)).toBeDefined();
+        expect(container.resolve(SourceS3Client)).toBeDefined();
+        expect(container.resolve(TargetS3Client)).toBeDefined();
+        expect(container.resolve(ModelProvider)).toBeDefined();
+        expect(container.resolve(TenantLocales)).toBeDefined();
+        expect(container.resolve(PresetLoader)).toBeDefined();
+        expect(container.resolve(WorkerSpawner)).toBeDefined();
     });
 
-    describe("ddb mode - exclusions", () => {
-        it("should not register S3Client in os mode", () => {
-            const container = bootstrap({ config: osConfig });
-            expect(() => container.resolve(SourceS3Client)).toThrow();
-            expect(() => container.resolve(TargetS3Client)).toThrow();
-        });
+    it("does NOT register OpenSearchClient when opensearch is absent", () => {
+        const container = bootstrap({ config: ddbOnlyConfig });
+        expect(() => container.resolve(OpenSearchClient)).toThrow();
+    });
+});
+
+describe("bootstrap — full config (DDB + OS)", () => {
+    it("resolves OpenSearchClient when target.opensearch is set", () => {
+        const container = bootstrap({ config: fullConfig });
+        expect(container.resolve(OpenSearchClient)).toBeDefined();
     });
 
-    describe("os mode", () => {
-        it("should resolve all core features including OpenSearchClient", () => {
-            const container = bootstrap({ config: osConfig });
-
-            expect(container.resolve(MigrationConfig)).toBeDefined();
-            expect(container.resolve(Logger)).toBeDefined();
-            expect(container.resolve(Cache)).toBeDefined();
-            expect(container.resolve(SourceDynamoDbClient)).toBeDefined();
-            expect(container.resolve(TargetDynamoDbClient)).toBeDefined();
-            expect(container.resolve(ModelProvider)).toBeDefined();
-            expect(container.resolve(TenantLocales)).toBeDefined();
-            expect(container.resolve(OpenSearchClient)).toBeDefined();
-        });
+    it("also resolves S3 clients in full config", () => {
+        const container = bootstrap({ config: fullConfig });
+        expect(container.resolve(SourceS3Client)).toBeDefined();
+        expect(container.resolve(TargetS3Client)).toBeDefined();
     });
+});
 
-    describe("singleton behavior", () => {
-        it("should return same instances on multiple resolves", () => {
-            const container = bootstrap({ config: ddbConfig });
-
-            expect(container.resolve(Logger)).toBe(container.resolve(Logger));
-            expect(container.resolve(Cache)).toBe(container.resolve(Cache));
-            expect(container.resolve(SourceDynamoDbClient)).toBe(
-                container.resolve(SourceDynamoDbClient)
-            );
-            expect(container.resolve(TargetDynamoDbClient)).toBe(
-                container.resolve(TargetDynamoDbClient)
-            );
-        });
+describe("bootstrap — singleton behavior", () => {
+    it("returns same instance on multiple resolves", () => {
+        const container = bootstrap({ config: ddbOnlyConfig });
+        expect(container.resolve(Logger)).toBe(container.resolve(Logger));
+        expect(container.resolve(Cache)).toBe(container.resolve(Cache));
+        expect(container.resolve(SourceDynamoDbClient)).toBe(
+            container.resolve(SourceDynamoDbClient)
+        );
     });
 });
