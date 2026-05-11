@@ -17,6 +17,7 @@ import {
     TransferContext
 } from "~/features/TransferLifecycle/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
+import { AccessChecker } from "~/features/AccessChecker/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
@@ -91,6 +92,30 @@ export async function handler(
         const runner = container.resolve(PipelineRunner);
         const pipelineBuilderFactory = container.resolve(PipelineBuilderFactory);
         await preset.configure({ runner, pipelineBuilderFactory, container });
+
+        const accessChecker = container.resolve(AccessChecker);
+        const accessReport = await accessChecker.run();
+
+        if (accessReport.length > 0) {
+            logger.info("Pre-transfer access check:");
+            for (const entry of accessReport) {
+                if (entry.status === "ok") {
+                    logger.info(`  ok       ${entry.label}`);
+                } else if (entry.status === "denied") {
+                    logger.error(`  DENIED   ${entry.label}`);
+                } else if (entry.status === "missing") {
+                    logger.error(`  MISSING  ${entry.label}`);
+                } else {
+                    logger.warn(`  unknown  ${entry.label}`);
+                }
+            }
+        }
+
+        const blocked = accessReport.filter(e => e.status === "denied" || e.status === "missing");
+        if (blocked.length > 0) {
+            logger.fatal("Access check failed — aborting transfer.");
+            process.exit(1);
+        }
 
         const guardWarnings = (
             await Promise.all(runner.getProcessors().map(p => p.getGuardWarning?.() ?? null))

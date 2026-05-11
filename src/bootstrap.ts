@@ -31,6 +31,7 @@ import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/ind
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
 import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.ts";
+import { AccessCheckerFeature } from "~/features/AccessChecker/index.ts";
 import { DroppedRecordLogFeature } from "~/features/DroppedRecordLog/index.ts";
 import { TransferredRecordLogFeature } from "~/features/TransferredRecordLog/index.ts";
 import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
@@ -129,6 +130,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     OsRecordDecompressorFeature.register(container);
     OsScannerFeature.register(container);
     OsProcessorFeature.register(container);
+    AccessCheckerFeature.register(container);
 
     return container;
 }

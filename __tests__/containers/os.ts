@@ -31,6 +31,7 @@ import { TouchedIndexesFeature } from "../../src/features/TouchedIndexes/index.t
 import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "../../src/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "../../src/features/OsProcessor/index.ts";
+import { AccessCheckerFeature } from "../../src/features/AccessChecker/index.ts";
 import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockOpenSearchClient } from "../services/OpenSearchClient/MockOpenSearchClient.ts";
 
@@ -122,6 +123,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     OsRecordDecompressorFeature.register(container);
     OsScannerFeature.register(container);
     OsProcessorFeature.register(container);
+    AccessCheckerFeature.register(container);
 
     return container;
 }
