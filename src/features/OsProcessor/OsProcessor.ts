@@ -1,6 +1,7 @@
 import { join } from "node:path";
+import { Container } from "@webiny/di";
 import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
-import { isRetryableAwsError } from "~/base/index.ts";
+import { isRetryableAwsError, ContainerToken } from "~/base/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import {
@@ -40,10 +41,12 @@ class OsProcessorImpl implements Processor.Interface<
     BaseTransformContext.Interface<unknown>,
     OsProcessorSlice
 > {
+    private _osClient: OpenSearchClient.Interface | null = null;
+
     public constructor(
         private readonly logger: Logger.Interface,
         private readonly ddbExecutor: DdbExecutor.Interface,
-        private readonly osClient: OpenSearchClient.Interface,
+        private readonly container: Container,
         private readonly compression: CompressionHandler.Interface,
         private readonly touchedIndexes: TouchedIndexes.Interface,
         private readonly config: MigrationConfig.Interface,
@@ -53,6 +56,13 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly sourceDb: SourceDynamoDbClient.Interface,
         private readonly targetDb: TargetDynamoDbClient.Interface
     ) {}
+
+    private get osClient(): OpenSearchClient.Interface {
+        if (!this._osClient) {
+            this._osClient = this.container.resolve(OpenSearchClient);
+        }
+        return this._osClient;
+    }
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): OsProcessorSlice {
         if (!this.config.target.opensearch) {
@@ -260,7 +270,7 @@ export const OsProcessor = Processor.createImplementation({
     dependencies: [
         Logger,
         DdbExecutor,
-        OpenSearchClient,
+        ContainerToken,
         CompressionHandler,
         TouchedIndexes,
         MigrationConfig,
