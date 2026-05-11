@@ -236,7 +236,7 @@ describe("OsProcessor", () => {
             const container = createOsContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === OsProcessor)!;
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -255,7 +255,7 @@ describe("OsProcessor", () => {
             );
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === OsProcessor)!;
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -273,7 +273,7 @@ describe("OsProcessor", () => {
             );
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === OsProcessor)!;
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -291,7 +291,7 @@ describe("OsProcessor", () => {
             );
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === OsProcessor)!;
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -307,7 +307,7 @@ describe("OsProcessor", () => {
             vi.spyOn(osClient, "listIndexes").mockRejectedValue(new Error("connection refused"));
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === OsProcessor)!;
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -321,7 +321,7 @@ describe("OsProcessor", () => {
             const container = createOsContainer({ noOpenSearch: true });
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === OsProcessor)!;
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 

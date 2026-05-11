@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
 
-vi.mock("@webiny/aws-sdk/client-dynamodb/index.js", () => ({
+vi.mock("@aws-sdk/client-dynamodb", () => ({
     DynamoDB: vi.fn()
 }));
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
@@ -190,7 +190,7 @@ describe("DdbProcessor", () => {
             const container = createDdbContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === DdbProcessor)!;
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -214,7 +214,7 @@ describe("DdbProcessor", () => {
             const container = createDdbContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === DdbProcessor)!;
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -235,7 +235,7 @@ describe("DdbProcessor", () => {
             const container = createDdbContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === DdbProcessor)!;
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 
@@ -256,7 +256,7 @@ describe("DdbProcessor", () => {
             const container = createDdbContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor === DdbProcessor)!;
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
 
             const entries = await processor.checkAccess();
 

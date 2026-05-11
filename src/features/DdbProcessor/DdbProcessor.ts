@@ -9,7 +9,7 @@ import { TransferContext } from "~/features/TransferLifecycle/abstractions/Trans
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
 import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
 
 interface DdbProcessorSlice {

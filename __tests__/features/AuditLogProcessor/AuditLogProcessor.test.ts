@@ -5,9 +5,9 @@ import { AuditLogPutRecord } from "~/domain/transform/commands/AuditLogPutRecord
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { createDdbContainer } from "../../containers/ddb.ts";
-import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
 
-vi.mock("@webiny/aws-sdk/client-dynamodb/index.js", () => ({
+vi.mock("@aws-sdk/client-dynamodb", () => ({
     DynamoDB: vi.fn()
 }));
 
@@ -130,7 +130,7 @@ describe("checkAccess", () => {
         const container = createDdbContainer();
         const processor = container
             .resolveAll(Processor)
-            .find(p => p.constructor === AuditLogProcessor)!;
+            .find(p => p.constructor === AuditLogProcessor) as unknown as Processor.Interface;
 
         const entries = await processor.checkAccess();
 
@@ -142,7 +142,7 @@ describe("checkAccess", () => {
         const container = createDdbContainer({ auditLogTable: "audit-log-table" });
         const processor = container
             .resolveAll(Processor)
-            .find(p => p.constructor === AuditLogProcessor)!;
+            .find(p => p.constructor === AuditLogProcessor) as unknown as Processor.Interface;
 
         const entries = await processor.checkAccess();
 
@@ -160,7 +160,7 @@ describe("checkAccess", () => {
         const container = createDdbContainer({ auditLogTable: "audit-log-table" });
         const processor = container
             .resolveAll(Processor)
-            .find(p => p.constructor === AuditLogProcessor)!;
+            .find(p => p.constructor === AuditLogProcessor) as unknown as Processor.Interface;
 
         const entries = await processor.checkAccess();
 
@@ -177,7 +177,7 @@ describe("checkAccess", () => {
         const container = createDdbContainer({ auditLogTable: "audit-log-table" });
         const processor = container
             .resolveAll(Processor)
-            .find(p => p.constructor === AuditLogProcessor)!;
+            .find(p => p.constructor === AuditLogProcessor) as unknown as Processor.Interface;
 
         const entries = await processor.checkAccess();
 
@@ -192,7 +192,7 @@ describe("checkAccess", () => {
         const container = createDdbContainer({ auditLogTable: "audit-log-table" });
         const processor = container
             .resolveAll(Processor)
-            .find(p => p.constructor === AuditLogProcessor)!;
+            .find(p => p.constructor === AuditLogProcessor) as unknown as Processor.Interface;
 
         const entries = await processor.checkAccess();
 
