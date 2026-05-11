@@ -19,6 +19,7 @@ import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
 export async function handler(
     configPath: string,
+    presetName: string,
     segmentsFilter?: number[],
     logLevel?: string
 ): Promise<void> {
@@ -49,7 +50,7 @@ export async function handler(
 
     const resolvedLogLevel = (logLevel ?? config.debug?.logLevel) as string | undefined;
     const verbose = resolvedLogLevel === "debug";
-    const segments = config.pipeline.segments || 1;
+    const segments = config.pipeline?.segments || 1;
 
     let segmentsToRun: number[];
     try {
@@ -67,6 +68,7 @@ export async function handler(
         runId,
         segments,
         segmentsToRun,
+        presetName,
         logLevel: logLevel ?? config.debug?.logLevel
     });
 
@@ -76,14 +78,14 @@ export async function handler(
         await loadUserSetup(configPath, container, logger);
 
         const presetLoader = container.resolve(PresetLoader);
-        await presetLoader.load(config.pipeline.preset);
+        await presetLoader.load(presetName);
 
         const beforeHook = container.resolve(BeforeTransferHook);
         logger.info("Running before-transfer hooks...");
         await beforeHook.execute();
 
         const workers = segmentsToRun.map(segment =>
-            spawnWorker(segment, segments, runId, configPath, logLevel ?? config.debug?.logLevel)
+            spawnWorker(segment, segments, runId, configPath, presetName, logLevel ?? config.debug?.logLevel)
         );
 
         const results = await Promise.allSettled(workers);
@@ -132,6 +134,7 @@ interface LogConfigParams {
     runId: string;
     segments: number;
     segmentsToRun: number[];
+    presetName: string;
     logLevel?: string;
 }
 
@@ -141,12 +144,12 @@ function logConfig({
     runId,
     segments,
     segmentsToRun,
+    presetName,
     logLevel
 }: LogConfigParams): void {
     logger.info("Starting transfer with configuration:");
     logger.info(`  Run ID: ${runId}`);
-    logger.info(`  Storage: ${config.storage}`);
-    logger.info(`  Preset: ${config.pipeline.preset}`);
+    logger.info(`  Preset: ${presetName}`);
     logger.info(`  Log Level: ${logLevel ?? "info"}`);
     if (segmentsToRun.length === segments) {
         logger.info(`  Segments: ${segments}`);
@@ -154,18 +157,16 @@ function logConfig({
         logger.info(`  Segments: ${segments} (running only [${segmentsToRun.join(", ")}])`);
     }
 
-    if (config.storage === "ddb") {
-        logger.info(`  Source Region: ${config.source.region}`);
-        logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
-        logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
-        logger.info(`  Target Region: ${config.target.region}`);
-        logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
-        logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
-    } else {
-        logger.info(`  Source Region: ${config.source.region}`);
-        logger.info(`  Source Primary Table: ${config.source.dynamodb.tableName}`);
+    logger.info(`  Source Region: ${config.source.region}`);
+    logger.info(`  Source DDB Table: ${config.source.dynamodb.tableName}`);
+    logger.info(`  Source S3 Bucket: ${config.source.s3.bucket}`);
+    if (config.source.opensearch) {
         logger.info(`  Source OS Table: ${config.source.opensearch.tableName}`);
-        logger.info(`  Target Region: ${config.target.region}`);
+    }
+    logger.info(`  Target Region: ${config.target.region}`);
+    logger.info(`  Target DDB Table: ${config.target.dynamodb.tableName}`);
+    logger.info(`  Target S3 Bucket: ${config.target.s3.bucket}`);
+    if (config.target.opensearch) {
         logger.info(`  Target OS Table: ${config.target.opensearch.tableName}`);
         logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
     }
@@ -176,6 +177,7 @@ async function spawnWorker(
     total: number,
     runId: string,
     configPath: string,
+    presetName: string,
     logLevel?: string
 ): Promise<void> {
     const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
@@ -191,6 +193,8 @@ async function spawnWorker(
         total.toString(),
         "--config",
         configPath,
+        "--preset",
+        presetName,
         ...(logLevel ? ["--log-level", logLevel] : [])
     ];
 
