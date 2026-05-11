@@ -26,8 +26,12 @@ export class MockS3Client implements SourceS3Client.Interface {
         return stored;
     }
 
-    // Test helpers
-    public putObject(bucket: string, key: string, data: Buffer): void {
+    public async putObject(bucket: string, key: string, body: Buffer): Promise<void> {
+        this.objects.set(`${bucket}/${key}`, body);
+    }
+
+    // Test helper — seed objects without going through the async interface.
+    public seedObject(bucket: string, key: string, data: Buffer): void {
         this.objects.set(`${bucket}/${key}`, data);
     }
 

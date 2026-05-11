@@ -11,6 +11,7 @@ interface IS3Client {
     copy(options: CopyOptions): Promise<void>;
     batchCopy(operations: CopyOptions[]): Promise<void>;
     getObject(bucket: string, key: string): Promise<Buffer>;
+    putObject(bucket: string, key: string, body: Buffer): Promise<void>;
 }
 
 export const SourceS3Client = createAbstraction<IS3Client>("Core/SourceS3Client");

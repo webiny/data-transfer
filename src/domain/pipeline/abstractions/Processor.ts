@@ -32,6 +32,14 @@ interface IProcessor<
     onEnd?(ctx: TBaseContext & TSlice): void | Promise<void>;
 
     /**
+     * Pre-transfer guard check. Called in the orchestrator before any segment
+     * workers are spawned. Return a human-readable warning string when the
+     * processor detects a condition that requires user confirmation (e.g.
+     * cross-account S3 copy), or null to proceed silently.
+     */
+    getGuardWarning?(): Promise<string | null>;
+
+    /**
      * Drain the processor's commands from the bag and write to target. The
      * act of calling commands.get(key) marks that key as "claimed" — the
      * runner uses Commands.unclaimedKeys() to warn-once on commands no

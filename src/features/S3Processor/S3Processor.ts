@@ -1,3 +1,4 @@
+import { STS } from "@webiny/aws-sdk/client-sts/index.js";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
@@ -40,6 +41,34 @@ class S3ProcessorImpl implements Processor.Interface<
 
     // No onEnd — S3 has no sensible per-record default. Transformers call
     // ctx.copyFile(...) explicitly when they want to emit a copy.
+
+    public async getGuardWarning(): Promise<string | null> {
+        const [sourceAccount, targetAccount] = await Promise.all([
+            this.resolveAccountId(this.config.source.credentials, this.config.source.region),
+            this.resolveAccountId(this.config.target.credentials, this.config.target.region)
+        ]);
+        if (sourceAccount === null || targetAccount === null || sourceAccount === targetAccount) {
+            return null;
+        }
+        return (
+            `S3 file copy is cross-account: source account ${sourceAccount} → target account ${targetAccount}.\n` +
+            `CopyObject runs with target credentials — the source bucket "${this.config.source.s3.bucket}"\n` +
+            `must have a bucket policy granting account ${targetAccount} s3:GetObject access.`
+        );
+    }
+
+    private async resolveAccountId(
+        credentials: MigrationConfig.Interface["source"]["credentials"],
+        region: string
+    ): Promise<string | null> {
+        try {
+            const sts = new STS({ region, credentials: credentials as never });
+            const result = await sts.getCallerIdentity({});
+            return result.Account ?? null;
+        } catch {
+            return null;
+        }
+    }
 
     public async execute(commands: Commands): Promise<void> {
         if (this.transferContext.dryRun) {

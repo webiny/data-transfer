@@ -2,9 +2,12 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { execa } from "execa";
+import { confirm } from "@inquirer/prompts";
 import { bootstrap } from "~/bootstrap.ts";
 import { formatError } from "~/base/index.ts";
 import type { RunStats } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
@@ -83,7 +86,25 @@ export async function handler(
         await loadUserSetup(configPath, container, logger);
 
         const presetLoader = container.resolve(PresetLoader);
-        await presetLoader.load(presetName);
+        const preset = await presetLoader.load(presetName);
+
+        const runner = container.resolve(PipelineRunner);
+        const pipelineBuilderFactory = container.resolve(PipelineBuilderFactory);
+        await preset.configure({ runner, pipelineBuilderFactory, container });
+
+        const guardWarnings = (
+            await Promise.all(runner.getProcessors().map(p => p.getGuardWarning?.() ?? null))
+        ).filter((w): w is string => w !== null);
+
+        if (guardWarnings.length > 0) {
+            for (const warning of guardWarnings) {
+                logger.warn(warning);
+            }
+            const proceed = await confirm({ message: "Proceed with transfer?" });
+            if (!proceed) {
+                process.exit(0);
+            }
+        }
 
         const beforeHook = container.resolve(BeforeTransferHook);
         logger.info("Running before-transfer hooks...");
