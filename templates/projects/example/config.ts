@@ -62,6 +62,9 @@ export default createConfig({
         segments: numberFromEnv("SEGMENTS", 4),
         modelsDir: fromEnv("MODELS_DIR", "./models"),
         presetsDir: "./presets"
+    },
+    tuning: {
+        flushEvery: numberFromEnv("FLUSH_EVERY", 500)
     }
     //
     // Optional debug helpers — uncomment either or both to enable.
