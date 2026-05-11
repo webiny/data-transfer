@@ -16,8 +16,6 @@ The package ships four built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`, `copy-dd
 git clone git@github.com:webiny/data-transfer.git
 cd data-transfer
 yarn install
-yarn transfer init-project my-transfer
-# then run the guided setup:
 yarn transfer
 ```
 
@@ -38,14 +36,6 @@ yarn transfer
 **Preset selection:** each preset is listed with its one-line description (`v5-to-v6-ddb — Full DDB migration`). User-supplied presets in `presetsDir` appear alongside built-ins.
 
 **Dry-run mode:** after selecting a preset the wizard asks "Dry run?" (default: No). In dry-run mode the tool scans and transforms records normally but skips all writes to the target (DynamoDB, S3, OpenSearch). Useful for validating your pipeline and transformer chain before committing a full transfer.
-
-To scaffold a new project folder:
-
-```bash
-yarn transfer init-project my-client-prod
-```
-
-This creates `projects/my-client-prod/` with `config.ts`, `.env.example`, `models/`, and `presets/` already wired up.
 
 New project folders are **gitignored** by default — credentials and env files stay local. Only `projects/v5-to-v6/` is committed as the reference example.
 
