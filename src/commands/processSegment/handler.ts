@@ -59,7 +59,7 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
         await runner.run({ segment: argv.segment, totalSegments: argv.total });
     } catch (error) {
         logger.error(
-            `Shard ${argv.segment} failed: ${formatError(error, resolvedLogLevel === "debug")}`
+            `Shard ${argv.segment} failed: ${formatError(error, (resolvedLogLevel ?? "debug") === "debug")}`
         );
         process.exit(1);
     }

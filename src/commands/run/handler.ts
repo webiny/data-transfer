@@ -50,7 +50,7 @@ export async function handler(
     }
 
     const resolvedLogLevel = (logLevel ?? config.debug?.logLevel) as string | undefined;
-    const verbose = resolvedLogLevel === "debug";
+    const verbose = (resolvedLogLevel ?? "debug") === "debug";
     const segments = config.pipeline?.segments || 1;
 
     let segmentsToRun: number[];
