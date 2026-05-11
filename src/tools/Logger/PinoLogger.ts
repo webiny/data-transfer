@@ -1,4 +1,9 @@
-import pino, { multistream, type DestinationStream, type LevelWithSilentOrString, type StreamEntry } from "pino";
+import pino, {
+    multistream,
+    type DestinationStream,
+    type LevelWithSilentOrString,
+    type StreamEntry
+} from "pino";
 import pretty from "pino-pretty";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
