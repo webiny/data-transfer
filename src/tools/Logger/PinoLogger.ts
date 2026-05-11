@@ -1,6 +1,6 @@
-import pino, { multistream, type LevelWithSilentOrString, type StreamEntry } from "pino";
+import pino, { multistream, type DestinationStream, type LevelWithSilentOrString, type StreamEntry } from "pino";
 import pretty from "pino-pretty";
-import { createWriteStream, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Writable } from "node:stream";
 import { Logger } from "./abstractions/Logger.ts";
@@ -59,13 +59,14 @@ const createPrettyDestination = (): Writable => {
         colorize: true,
         customColors: "fatal:red,error:red,warn:yellow,info:blue,debug:gray",
         ignore: "pid,hostname,time",
-        messageFormat: "{msg}"
+        messageFormat: "{msg}",
+        sync: true
     });
 };
 
-const createFileDestination = (path: string): Writable => {
+const createFileDestination = (path: string): DestinationStream => {
     mkdirSync(dirname(path), { recursive: true });
-    return createWriteStream(path, { flags: "a" });
+    return pino.destination({ dest: path, append: true, minLength: 0 });
 };
 
 export class PinoLogger implements Logger.Interface {
