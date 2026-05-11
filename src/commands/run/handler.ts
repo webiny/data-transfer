@@ -21,7 +21,8 @@ export async function handler(
     configPath: string,
     presetName: string,
     segmentsFilter?: number[],
-    logLevel?: string
+    logLevel?: string,
+    dryRun = false
 ): Promise<void> {
     const runId = String(Date.now());
     let container;
@@ -60,7 +61,11 @@ export async function handler(
         process.exit(1);
     }
 
-    container.registerInstance(TransferContext, { runId });
+    container.registerInstance(TransferContext, { runId, dryRun });
+
+    if (dryRun) {
+        logger.warn("DRY RUN: no writes will be made to the target system.");
+    }
 
     logConfig({
         logger,
@@ -91,7 +96,8 @@ export async function handler(
                 runId,
                 configPath,
                 presetName,
-                logLevel ?? config.debug?.logLevel
+                logLevel ?? config.debug?.logLevel,
+                dryRun
             )
         );
 
@@ -185,7 +191,8 @@ async function spawnWorker(
     runId: string,
     configPath: string,
     presetName: string,
-    logLevel?: string
+    logLevel?: string,
+    dryRun = false
 ): Promise<void> {
     const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
 
@@ -202,7 +209,8 @@ async function spawnWorker(
         configPath,
         "--preset",
         presetName,
-        ...(logLevel ? ["--log-level", logLevel] : [])
+        ...(logLevel ? ["--log-level", logLevel] : []),
+        ...(dryRun ? ["--dry-run"] : [])
     ];
 
     const { exitCode } = await execa("node", args, {

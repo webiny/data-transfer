@@ -91,6 +91,9 @@ class OsProcessorImpl implements Processor.Interface<
     }
 
     public async execute(commands: Commands): Promise<void> {
+        if (this.transferContext.dryRun) {
+            return;
+        }
         const puts = commands.get<PutRecord>(PutRecord.key);
         if (puts.length === 0) {
             return;

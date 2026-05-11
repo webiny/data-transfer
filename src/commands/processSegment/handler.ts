@@ -18,6 +18,7 @@ export interface ProcessSegmentArgs {
     config: string;
     preset: string;
     logLevel?: string;
+    dryRun?: boolean;
 }
 
 export async function handler(argv: ProcessSegmentArgs): Promise<void> {
@@ -29,7 +30,7 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
         | "error"
         | undefined;
     const container = bootstrap({ config, runId: argv.runId, logLevel: resolvedLogLevel });
-    container.registerInstance(TransferContext, { runId: argv.runId });
+    container.registerInstance(TransferContext, { runId: argv.runId, dryRun: argv.dryRun });
 
     const logger = container.resolve(Logger).child(`[segment ${argv.segment}]`);
     const runner = container.resolve(PipelineRunner);
@@ -50,7 +51,9 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     const afterLoadPreset = container.resolve(AfterLoadPresetHook);
     await afterLoadPreset.execute(config, preset);
 
-    logger.info(`Processing shard ${argv.segment + 1}/${argv.total}...`);
+    logger.info(
+        `Processing shard ${argv.segment + 1}/${argv.total}${argv.dryRun ? " (DRY RUN)" : ""}...`
+    );
 
     try {
         await runner.run({ segment: argv.segment, totalSegments: argv.total });

@@ -2,7 +2,7 @@ import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { select, input } from "@inquirer/prompts";
+import { select, input, confirm } from "@inquirer/prompts";
 import { discoverProjects } from "./projectDiscovery.ts";
 import { discoverConfig } from "./configDiscovery.ts";
 import { listAvailablePresetsWithDescriptions } from "./presetDiscovery.ts";
@@ -276,6 +276,11 @@ export class TransferWizard {
             }))
         });
 
-        return { configPath, preset };
+        const dryRun = await confirm({
+            message: "Dry run? (reads source, skips all writes to target)",
+            default: false
+        });
+
+        return { configPath, preset, dryRun };
     }
 }

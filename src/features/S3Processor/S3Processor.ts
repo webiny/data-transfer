@@ -1,6 +1,7 @@
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
@@ -17,7 +18,8 @@ class S3ProcessorImpl implements Processor.Interface<
     public constructor(
         private readonly sourceS3: SourceS3Client.Interface,
         private readonly targetS3: TargetS3Client.Interface,
-        private readonly config: MigrationConfig.Interface
+        private readonly config: MigrationConfig.Interface,
+        private readonly transferContext: TransferContext.Interface
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): S3ProcessorSlice {
@@ -40,6 +42,9 @@ class S3ProcessorImpl implements Processor.Interface<
     // ctx.copyFile(...) explicitly when they want to emit a copy.
 
     public async execute(commands: Commands): Promise<void> {
+        if (this.transferContext.dryRun) {
+            return;
+        }
         const copies = commands.get<S3Copy>(S3Copy.key);
         if (copies.length === 0) {
             return;
@@ -57,5 +62,5 @@ class S3ProcessorImpl implements Processor.Interface<
 
 export const S3Processor = Processor.createImplementation({
     implementation: S3ProcessorImpl,
-    dependencies: [SourceS3Client, TargetS3Client, MigrationConfig]
+    dependencies: [SourceS3Client, TargetS3Client, MigrationConfig, TransferContext]
 });

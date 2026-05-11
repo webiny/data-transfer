@@ -24,4 +24,5 @@ export interface EnvValues {
 export interface WizardResult {
     configPath: string;
     preset: string;
+    dryRun: boolean;
 }

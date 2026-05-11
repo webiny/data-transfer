@@ -39,7 +39,8 @@ export function registerRunCommand(yargs: Argv): Argv {
                     result.configPath,
                     result.preset,
                     argv.segments,
-                    argv["log-level"] as string | undefined
+                    argv["log-level"] as string | undefined,
+                    result.dryRun
                 );
             } catch (err) {
                 if (err instanceof ExitPromptError) {

@@ -5,6 +5,7 @@ import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
 } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
@@ -29,7 +30,8 @@ class DdbProcessorImpl implements Processor.Interface<
         private readonly executor: DdbExecutor.Interface,
         private readonly config: MigrationConfig.Interface,
         private readonly sourceDb: SourceDynamoDbClient.Interface,
-        private readonly targetDb: TargetDynamoDbClient.Interface
+        private readonly targetDb: TargetDynamoDbClient.Interface,
+        private readonly transferContext: TransferContext.Interface
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): DdbProcessorSlice {
@@ -63,6 +65,9 @@ class DdbProcessorImpl implements Processor.Interface<
     }
 
     public async execute(commands: Commands): Promise<void> {
+        if (this.transferContext.dryRun) {
+            return;
+        }
         const puts = commands.get<PutRecord>(PutRecord.key);
         await this.executor.execute(puts);
     }
@@ -70,5 +75,5 @@ class DdbProcessorImpl implements Processor.Interface<
 
 export const DdbProcessor = Processor.createImplementation({
     implementation: DdbProcessorImpl,
-    dependencies: [DdbExecutor, MigrationConfig, SourceDynamoDbClient, TargetDynamoDbClient]
+    dependencies: [DdbExecutor, MigrationConfig, SourceDynamoDbClient, TargetDynamoDbClient, TransferContext]
 });
