@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { AuditLogProcessor } from "~/features/AuditLogProcessor/AuditLogProcessor.ts";
 import { AuditLogPutRecord } from "~/domain/transform/commands/AuditLogPutRecord.ts";
@@ -15,6 +15,12 @@ import {
 } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { createDdbContainer } from "../../containers/ddb.ts";
+import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
+
+vi.mock("@webiny/aws-sdk/client-dynamodb/index.js", () => ({
+    DynamoDB: vi.fn()
+}));
 
 const DEFAULT_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
 
@@ -133,5 +139,96 @@ describe("AuditLogProcessor.execute", () => {
         );
 
         await processor.execute(commands);
+    });
+});
+
+describe("checkAccess", () => {
+    let mockDescribeTable: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+        mockDescribeTable = vi.fn();
+        vi.mocked(DynamoDB).mockImplementation(function (this: {
+            describeTable: typeof mockDescribeTable;
+            destroy: ReturnType<typeof vi.fn>;
+        }) {
+            this.describeTable = mockDescribeTable;
+            this.destroy = vi.fn();
+        } as unknown as typeof DynamoDB);
+    });
+
+    it("returns empty array when audit log is not configured", async () => {
+        const container = createDdbContainer();
+        const processor = container
+            .resolveAll(Processor)
+            .find(p => p.constructor === AuditLogProcessor)!;
+
+        const entries = await processor.checkAccess();
+
+        expect(entries).toHaveLength(0);
+    });
+
+    it("returns ok when DescribeTable succeeds for the audit log table", async () => {
+        mockDescribeTable.mockResolvedValue({});
+        const container = createDdbContainer({ auditLogTable: "audit-log-table" });
+        const processor = container
+            .resolveAll(Processor)
+            .find(p => p.constructor === AuditLogProcessor)!;
+
+        const entries = await processor.checkAccess();
+
+        expect(entries).toHaveLength(1);
+        expect(entries[0]).toEqual({
+            label: "DynamoDB audit log table: audit-log-table",
+            status: "ok"
+        });
+    });
+
+    it("returns denied when DescribeTable throws AccessDeniedException", async () => {
+        mockDescribeTable.mockRejectedValue(
+            Object.assign(new Error("Access denied"), { name: "AccessDeniedException" })
+        );
+        const container = createDdbContainer({ auditLogTable: "audit-log-table" });
+        const processor = container
+            .resolveAll(Processor)
+            .find(p => p.constructor === AuditLogProcessor)!;
+
+        const entries = await processor.checkAccess();
+
+        expect(entries[0]).toEqual({
+            label: "DynamoDB audit log table: audit-log-table",
+            status: "denied"
+        });
+    });
+
+    it("returns denied when DescribeTable throws ResourceNotFoundException", async () => {
+        mockDescribeTable.mockRejectedValue(
+            Object.assign(new Error("Table not found"), { name: "ResourceNotFoundException" })
+        );
+        const container = createDdbContainer({ auditLogTable: "audit-log-table" });
+        const processor = container
+            .resolveAll(Processor)
+            .find(p => p.constructor === AuditLogProcessor)!;
+
+        const entries = await processor.checkAccess();
+
+        expect(entries[0]).toEqual({
+            label: "DynamoDB audit log table: audit-log-table",
+            status: "denied"
+        });
+    });
+
+    it("returns unknown for non-access errors", async () => {
+        mockDescribeTable.mockRejectedValue(new Error("connection refused"));
+        const container = createDdbContainer({ auditLogTable: "audit-log-table" });
+        const processor = container
+            .resolveAll(Processor)
+            .find(p => p.constructor === AuditLogProcessor)!;
+
+        const entries = await processor.checkAccess();
+
+        expect(entries[0]).toEqual({
+            label: "DynamoDB audit log table: audit-log-table",
+            status: "unknown"
+        });
     });
 });

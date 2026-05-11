@@ -175,9 +175,7 @@ describe("DdbProcessor", () => {
 
         beforeEach(() => {
             mockDescribeTable = vi.fn();
-            vi.mocked(DynamoDB).mockImplementation(function (
-                this: Record<string, unknown>
-            ) {
+            vi.mocked(DynamoDB).mockImplementation(function (this: Record<string, unknown>) {
                 this["describeTable"] = mockDescribeTable;
                 this["destroy"] = vi.fn();
             } as unknown as typeof DynamoDB);
@@ -193,8 +191,14 @@ describe("DdbProcessor", () => {
             const entries = await processor.checkAccess();
 
             expect(entries).toHaveLength(2);
-            expect(entries[0]).toEqual({ label: "DynamoDB source table: source-table", status: "ok" });
-            expect(entries[1]).toEqual({ label: "DynamoDB target table: target-table", status: "ok" });
+            expect(entries[0]).toEqual({
+                label: "DynamoDB source table: source-table",
+                status: "ok"
+            });
+            expect(entries[1]).toEqual({
+                label: "DynamoDB target table: target-table",
+                status: "ok"
+            });
         });
 
         it("returns denied when DescribeTable throws AccessDeniedException on source", async () => {

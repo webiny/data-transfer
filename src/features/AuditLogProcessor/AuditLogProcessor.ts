@@ -5,6 +5,8 @@ import { AuditLogPutRecord } from "~/domain/transform/commands/AuditLogPutRecord
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
+import { isAccessDeniedError } from "~/base/index.ts";
 
 interface AuditLogProcessorSlice {
     putAuditLog(record: Record<string, unknown>): void;
@@ -39,7 +41,30 @@ class AuditLogProcessorImpl implements Processor.Interface<
     }
 
     public async checkAccess(): Promise<AccessCheck.Entry[]> {
-        return [];
+        const tableName = this.config.target.auditLog?.dynamodb?.tableName ?? null;
+        if (!tableName) {
+            return [];
+        }
+        const label = `DynamoDB audit log table: ${tableName}`;
+        const client = new DynamoDB({
+            region: this.config.target.region,
+            credentials: this.config.target.credentials as never
+        });
+        try {
+            await client.describeTable({ TableName: tableName });
+            return [{ label, status: "ok" }];
+        } catch (error) {
+            if (isAccessDeniedError(error)) {
+                return [{ label, status: "denied" }];
+            }
+            const errName = (error as { name?: string }).name;
+            if (errName === "ResourceNotFoundException") {
+                return [{ label, status: "denied" }];
+            }
+            return [{ label, status: "unknown" }];
+        } finally {
+            client.destroy();
+        }
     }
 
     public async execute(commands: Commands): Promise<void> {

@@ -53,6 +53,7 @@ export interface DdbContainerOptions {
     targetRecords?: Record<string, SourceDynamoDbClient.Record[]>;
     modelsDir?: string;
     presetsDir?: string;
+    auditLogTable?: string;
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: DdbContainerPipelineOverride;
 }
@@ -73,7 +74,9 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
             credentials: DEFAULT_CREDS,
             dynamodb: { tableName: "target-table" },
             s3: { bucket: "target-bucket" },
-            auditLog: null
+            auditLog: options.auditLogTable
+                ? { dynamodb: { tableName: options.auditLogTable } }
+                : null
         },
         pipeline: {
             modelsDir: options.modelsDir,
