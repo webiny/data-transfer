@@ -1,4 +1,4 @@
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import {
@@ -62,6 +62,10 @@ class DdbProcessorImpl implements Processor.Interface<
 
     public onEnd(ctx: BaseTransformContext.Interface<unknown> & DdbProcessorSlice): void {
         ctx.putRecord(ctx.record as Record<string, unknown>);
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        return [];
     }
 
     public async execute(commands: Commands): Promise<void> {

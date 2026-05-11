@@ -2,6 +2,7 @@ import { Container } from "@webiny/di";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { Scanner, Processor, Hook } from "~/domain/pipeline/index.ts";
+import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import type { FakeRecord, FakeShard, FakeSlice, FakeContext } from "./types.ts";
 
@@ -60,6 +61,10 @@ export class FakeProcessor implements Processor.Interface<
         // Mark the well-known key we care about so unclaimed-tracking stays honest.
         commands.get(PutRecord.key);
         this.executed.push(commands);
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        return [];
     }
 
     public afterShardCalls: Processor.AfterShardContext[] = [];

@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { Container } from "@webiny/di";
 import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
 import { isRetryableAwsError, ContainerToken } from "~/base/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import {
     SourceDynamoDbClient,
@@ -118,6 +118,10 @@ class OsProcessorImpl implements Processor.Interface<
 
         this.logger.info(`Writing ${gzippedPuts.length} records to database`);
         await this.ddbExecutor.execute(gzippedPuts);
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        return [];
     }
 
     public afterShard(ctx: Processor.AfterShardContext): void {

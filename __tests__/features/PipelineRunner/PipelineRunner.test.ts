@@ -19,6 +19,7 @@ import { MigrationConfig } from "~/features/MigrationConfig/abstractions/Migrati
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { Processor, Hook, createFilter } from "~/domain/pipeline/index.ts";
+import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
 import type { Pipeline } from "~/domain/pipeline/index.ts";
 import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
@@ -647,6 +648,10 @@ class SecondaryFakeProcessor implements Processor.Interface<
 > {
     public extendContext(): SecondarySlice {
         return { label: () => "secondary" };
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        return [];
     }
 
     public async execute(): Promise<void> {

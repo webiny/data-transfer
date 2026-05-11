@@ -32,6 +32,13 @@ interface IProcessor<
     onEnd?(ctx: TBaseContext & TSlice): void | Promise<void>;
 
     /**
+     * Pre-transfer access check. Called before any segment worker is spawned.
+     * Returns one entry per probed resource (table, bucket, cluster endpoint).
+     * "denied" entries abort the transfer; "unknown" entries warn and proceed.
+     */
+    checkAccess(): Promise<AccessCheck.Entry[]>;
+
+    /**
      * Pre-transfer guard check. Called in the orchestrator before any segment
      * workers are spawned. Return a human-readable warning string when the
      * processor detects a condition that requires user confirmation (e.g.
@@ -58,6 +65,17 @@ interface IProcessor<
 }
 
 export const Processor = createAbstraction<IProcessor<any, any>>("Core/Processor");
+
+export namespace AccessCheck {
+    export type Status = "ok" | "denied" | "unknown";
+
+    export interface Entry {
+        label: string;
+        status: Status;
+    }
+
+    export type Report = Entry[];
+}
 
 export namespace Processor {
     export type Interface<

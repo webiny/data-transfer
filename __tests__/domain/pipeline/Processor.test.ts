@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
 import { Processor } from "~/domain/pipeline/index.ts";
+import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
@@ -51,6 +52,10 @@ class FakeProcessor implements Processor.Interface<TestBase, TestSlice> {
     public async execute(commands: Commands): Promise<void> {
         commands.get(PutRecord.key);
         this.executed.push(commands);
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        return [];
     }
 
     public afterShard(ctx: Processor.AfterShardContext): void {

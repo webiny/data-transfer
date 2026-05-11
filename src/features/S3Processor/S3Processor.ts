@@ -1,5 +1,5 @@
 import { STS } from "@webiny/aws-sdk/client-sts/index.js";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
@@ -55,6 +55,10 @@ class S3ProcessorImpl implements Processor.Interface<
             `CopyObject runs with target credentials — the source bucket "${this.config.source.s3.bucket}"\n` +
             `must have a bucket policy granting account ${targetAccount} s3:GetObject access.`
         );
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        return [];
     }
 
     private async resolveAccountId(
