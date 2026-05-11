@@ -21,6 +21,13 @@ import { AccessChecker } from "~/features/AccessChecker/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
+class AccessCheckError extends Error {
+    public constructor(count: number) {
+        super(`Access check failed — ${count} resource(s) denied or missing`);
+        this.name = "AccessCheckError";
+    }
+}
+
 export async function handler(
     configPath: string,
     presetName: string,
@@ -113,8 +120,7 @@ export async function handler(
 
         const blocked = accessReport.filter(e => e.status === "denied" || e.status === "missing");
         if (blocked.length > 0) {
-            logger.fatal("Access check failed — aborting transfer.");
-            process.exit(1);
+            throw new AccessCheckError(blocked.length);
         }
 
         const guardWarnings = (
