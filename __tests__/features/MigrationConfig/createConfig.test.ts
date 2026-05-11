@@ -264,3 +264,48 @@ describe("createConfig — validation errors", () => {
         ).toThrow(/matches source/);
     });
 });
+
+describe("createConfig — tuning.flushEvery", () => {
+    it("accepts a positive integer", () => {
+        const config = createConfig({
+            source: baseSource,
+            target: baseTarget,
+            pipeline: {},
+            tuning: { flushEvery: 100 }
+        });
+        expect(config.tuning?.flushEvery).toBe(100);
+    });
+
+    it("rejects 0 (not positive)", () => {
+        expect(() =>
+            createConfig({
+                source: baseSource,
+                target: baseTarget,
+                pipeline: {},
+                tuning: { flushEvery: 0 }
+            })
+        ).toThrow();
+    });
+
+    it("rejects -1 (negative)", () => {
+        expect(() =>
+            createConfig({
+                source: baseSource,
+                target: baseTarget,
+                pipeline: {},
+                tuning: { flushEvery: -1 }
+            })
+        ).toThrow();
+    });
+
+    it("rejects 1.5 (non-integer)", () => {
+        expect(() =>
+            createConfig({
+                source: baseSource,
+                target: baseTarget,
+                pipeline: {},
+                tuning: { flushEvery: 1.5 }
+            })
+        ).toThrow();
+    });
+});

@@ -90,6 +90,7 @@ export const debugSettingsSchema = z
 // rate-limited AWS account.
 export const tuningSchema = z
     .object({
+        flushEvery: z.number().int().positive().optional(),
         ddb: z
             .object({
                 maxRetries: z.number().int().nonnegative().optional(),
