@@ -16,7 +16,7 @@ The package ships four built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`, `copy-dd
 git clone git@github.com:webiny/data-transfer.git
 cd data-transfer
 yarn install
-yarn transfer
+yarn transferw
 ```
 
 `yarn transfer` (no `--config`) launches the **guided setup wizard**. It walks you through:
@@ -62,7 +62,7 @@ cp /path/to/target-project/state.json projects/<name>/target.pulumi.json
 
 Mixed formats are allowed (e.g. `source.webiny.json` + `target.pulumi.json`).
 
-**CMS model exports (optional):** if your transfer uses the OS preset or rich-text / field-key transformers, drop your exported model definitions into `projects/<name>/models/`. Export them from the Webiny Admin CMS → Models → Export, then copy the file there. See [`modelsDir`](#modelsdir) for accepted formats.
+**CMS model exports (optional):** drop your exported model definitions into `projects/<name>/models/`. Export them from the Webiny Admin CMS → Models → Export, then copy the file there. See [`modelsDir`](#modelsdir) for accepted formats.
 
 ## Config reference
 
