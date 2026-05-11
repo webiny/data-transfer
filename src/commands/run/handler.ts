@@ -60,7 +60,7 @@ export async function handler(
         process.exit(1);
     }
 
-    const resolvedLogLevel = (logLevel ?? config.debug?.logLevel) as string | undefined;
+    const resolvedLogLevel = logLevel ?? config.debug?.logLevel;
     const verbose = (resolvedLogLevel ?? "debug") === "debug";
     const segments = config.pipeline?.segments || 1;
 

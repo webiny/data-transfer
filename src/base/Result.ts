@@ -97,7 +97,7 @@ export class Result<TValue, TError = never> {
      */
     public map<U>(fn: (value: TValue) => U): Result<U, TError> {
         if (this.isOk()) {
-            return Result.ok(fn(this._value as TValue));
+            return Result.ok(fn(this._value));
         }
 
         return Result.fail(this._error as TError);
@@ -112,7 +112,7 @@ export class Result<TValue, TError = never> {
      */
     public mapError<F>(fn: (error: TError) => F): Result<TValue, F> {
         if (this.isFail()) {
-            return Result.fail(fn(this._error as TError));
+            return Result.fail(fn(this._error));
         }
 
         return Result.ok(this._value as TValue);
@@ -129,7 +129,7 @@ export class Result<TValue, TError = never> {
      */
     public flatMap<U>(fn: (value: TValue) => Result<U, TError>): Result<U, TError> {
         if (this.isOk()) {
-            return fn(this._value as TValue);
+            return fn(this._value);
         }
 
         return Result.fail(this._error as TError);
@@ -144,7 +144,7 @@ export class Result<TValue, TError = never> {
      */
     public match<U>(handlers: { ok: (value: TValue) => U; fail: (error: TError) => U }): U {
         if (this.isOk()) {
-            return handlers.ok(this._value as TValue);
+            return handlers.ok(this._value);
         }
 
         return handlers.fail(this._error as TError);
