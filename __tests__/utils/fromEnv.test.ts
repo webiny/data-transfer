@@ -48,6 +48,20 @@ describe("fromEnv", () => {
         process.env[TEST_VAR] = "";
         expect(() => fromEnv(TEST_VAR)).toThrow(/__TEST_FROM_ENV_VAR__/);
     });
+
+    it("returns null when defaultValue is null and the env var is absent", () => {
+        expect(fromEnv(TEST_VAR, null)).toBeNull();
+    });
+
+    it("returns null when defaultValue is null and the env var is empty", () => {
+        process.env[TEST_VAR] = "";
+        expect(fromEnv(TEST_VAR, null)).toBeNull();
+    });
+
+    it("returns the env var value when set, even with null default", () => {
+        process.env[TEST_VAR] = "present";
+        expect(fromEnv(TEST_VAR, null)).toBe("present");
+    });
 });
 
 describe("numberFromEnv", () => {

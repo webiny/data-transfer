@@ -58,8 +58,7 @@ export async function handler(folderName: string): Promise<void> {
     console.log(`  ├── .env.example`);
     console.log(`  ├── projects/`);
     console.log(`  │   └── example/`);
-    console.log(`  │       ├── ddb.transfer.config.ts`);
-    console.log(`  │       ├── os.transfer.config.ts`);
+    console.log(`  │       ├── config.ts`);
     console.log(`  │       ├── setup.ts            # optional custom DI wiring`);
     console.log(`  │       ├── models/             # custom CMS model JSON overrides`);
     console.log(`  │       └── .env.example`);
@@ -71,5 +70,5 @@ export async function handler(folderName: string): Promise<void> {
     console.log(`  yarn install          # or npm install`);
     console.log(`  cp projects/example/.env.example projects/example/.env`);
     console.log(`  # Edit projects/example/.env with your AWS credentials`);
-    console.log(`  yarn transfer --config=./projects/example/ddb.transfer.config.ts\n`);
+    console.log(`  yarn transfer --config=./projects/example/config.ts\n`);
 }

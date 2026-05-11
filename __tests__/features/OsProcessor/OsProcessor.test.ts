@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -13,6 +13,7 @@ import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenS
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 import type { OsScanner } from "~/features/OsScanner/index.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { OsProcessor } from "~/features/OsProcessor/index.ts";
 import { MockOpenSearchClient } from "../../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 interface OsProcessorSlice {
@@ -227,6 +228,104 @@ describe("OsProcessor", () => {
             // Directory must not exist — EnableRefreshHook treats its absence
             // as "no indexes were touched" and early-returns.
             await expect(readdir(transferDir)).rejects.toThrow(/ENOENT/);
+        });
+    });
+
+    describe("checkAccess", () => {
+        it("returns ok when listIndexes succeeds", async () => {
+            const container = createOsContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries).toHaveLength(1);
+            expect(entries[0]).toEqual({
+                label: "OpenSearch cluster: https://es.example.com",
+                status: "ok"
+            });
+        });
+
+        it("returns denied when listIndexes throws HTTP 403", async () => {
+            const container = createOsContainer();
+            const osClient = container.resolve(OpenSearchClient) as MockOpenSearchClient;
+            vi.spyOn(osClient, "listIndexes").mockRejectedValue(
+                Object.assign(new Error("Forbidden"), { statusCode: 403 })
+            );
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "OpenSearch cluster: https://es.example.com",
+                status: "denied"
+            });
+        });
+
+        it("returns denied when listIndexes throws HTTP 401", async () => {
+            const container = createOsContainer();
+            const osClient = container.resolve(OpenSearchClient) as MockOpenSearchClient;
+            vi.spyOn(osClient, "listIndexes").mockRejectedValue(
+                Object.assign(new Error("Unauthorized"), { statusCode: 401 })
+            );
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "OpenSearch cluster: https://es.example.com",
+                status: "denied"
+            });
+        });
+
+        it("returns missing when listIndexes throws HTTP 404", async () => {
+            const container = createOsContainer();
+            const osClient = container.resolve(OpenSearchClient) as MockOpenSearchClient;
+            vi.spyOn(osClient, "listIndexes").mockRejectedValue(
+                Object.assign(new Error("Not found"), { statusCode: 404 })
+            );
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "OpenSearch cluster: https://es.example.com",
+                status: "missing"
+            });
+        });
+
+        it("returns unknown when listIndexes throws a non-auth error", async () => {
+            const container = createOsContainer();
+            const osClient = container.resolve(OpenSearchClient) as MockOpenSearchClient;
+            vi.spyOn(osClient, "listIndexes").mockRejectedValue(new Error("connection refused"));
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "OpenSearch cluster: https://es.example.com",
+                status: "unknown"
+            });
+        });
+
+        it("returns empty array when OpenSearch is not configured", async () => {
+            const container = createOsContainer({ noOpenSearch: true });
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === OsProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries).toHaveLength(0);
         });
     });
 });

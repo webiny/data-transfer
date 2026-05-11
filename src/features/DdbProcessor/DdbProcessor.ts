@@ -1,13 +1,16 @@
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
 } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
+import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
 
 interface DdbProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
@@ -29,13 +32,11 @@ class DdbProcessorImpl implements Processor.Interface<
         private readonly executor: DdbExecutor.Interface,
         private readonly config: MigrationConfig.Interface,
         private readonly sourceDb: SourceDynamoDbClient.Interface,
-        private readonly targetDb: TargetDynamoDbClient.Interface
+        private readonly targetDb: TargetDynamoDbClient.Interface,
+        private readonly transferContext: TransferContext.Interface
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): DdbProcessorSlice {
-        if (this.config.storage !== "ddb") {
-            throw new Error("DdbProcessor can only be used in ddb mode");
-        }
         const sourceTable = this.config.source.dynamodb.tableName;
         const targetTable = this.config.target.dynamodb.tableName;
         const sourceDb = this.sourceDb;
@@ -65,7 +66,53 @@ class DdbProcessorImpl implements Processor.Interface<
         ctx.putRecord(ctx.record as Record<string, unknown>);
     }
 
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        const [sourceEntry, targetEntry] = await Promise.all([
+            this.describeTable(
+                this.config.source.credentials,
+                this.config.source.region,
+                this.config.source.dynamodb.tableName,
+                "source"
+            ),
+            this.describeTable(
+                this.config.target.credentials,
+                this.config.target.region,
+                this.config.target.dynamodb.tableName,
+                "target"
+            )
+        ]);
+        return [sourceEntry, targetEntry];
+    }
+
+    private async describeTable(
+        credentials: MigrationConfig.Interface["source"]["credentials"],
+        region: string,
+        tableName: string,
+        side: string
+    ): Promise<AccessCheck.Entry> {
+        const label = `DynamoDB ${side} table: ${tableName}`;
+        const client = new DynamoDB({ region, credentials: credentials as never });
+        try {
+            await client.describeTable({ TableName: tableName });
+            return { label, status: "ok" };
+        } catch (error) {
+            if (isAccessDeniedError(error)) {
+                return { label, status: "denied" };
+            }
+            const errName = (error as AwsErrorLike).name ?? (error as AwsErrorLike).code;
+            if (errName === "ResourceNotFoundException") {
+                return { label, status: "missing" };
+            }
+            return { label, status: "unknown" };
+        } finally {
+            client.destroy();
+        }
+    }
+
     public async execute(commands: Commands): Promise<void> {
+        if (this.transferContext.dryRun) {
+            return;
+        }
         const puts = commands.get<PutRecord>(PutRecord.key);
         await this.executor.execute(puts);
     }
@@ -73,5 +120,11 @@ class DdbProcessorImpl implements Processor.Interface<
 
 export const DdbProcessor = Processor.createImplementation({
     implementation: DdbProcessorImpl,
-    dependencies: [DdbExecutor, MigrationConfig, SourceDynamoDbClient, TargetDynamoDbClient]
+    dependencies: [
+        DdbExecutor,
+        MigrationConfig,
+        SourceDynamoDbClient,
+        TargetDynamoDbClient,
+        TransferContext
+    ]
 });

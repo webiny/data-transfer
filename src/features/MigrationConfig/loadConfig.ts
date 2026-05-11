@@ -1,57 +1,41 @@
 import { pathToFileURL } from "node:url";
 import { dirname, resolve } from "node:path";
-import { MigrationConfig } from "./abstractions/MigrationConfig.ts";
+import type { MigrationConfig } from "./abstractions/MigrationConfig.ts";
+import { migrationConfigSchema } from "./validation.ts";
 
-/**
- * Load a transfer configuration file.
- *
- * The config file should use `createDdbConfig` or `createOsConfig`
- * to create and validate the config. The loader performs a lightweight
- * check — the builder functions handle full validation.
- */
 export async function loadConfig(configPath: string): Promise<MigrationConfig.Interface> {
     const absolutePath = resolve(process.cwd(), configPath);
     const fileUrl = pathToFileURL(absolutePath).href;
 
-    try {
-        const module = await import(fileUrl);
-        const config = module.default;
+    const module = await import(fileUrl).catch((err: unknown) => {
+        throw new Error(
+            `Failed to load config from ${configPath}: ${err instanceof Error ? err.message : String(err)}`
+        );
+    });
 
-        if (!config) {
-            throw new Error(
-                `Config file ${configPath} must have a default export. ` +
-                    `Use createDdbConfig() or createOsConfig() to create your config.`
-            );
-        }
+    const raw = module.default;
 
-        if (!config.storage || (config.storage !== "ddb" && config.storage !== "os")) {
-            throw new Error(
-                `Config file ${configPath} has invalid or missing "storage" field. ` +
-                    `Use createDdbConfig() or createOsConfig() to create your config.`
-            );
-        }
-
-        // Resolve path-shaped pipeline fields relative to the config file's
-        // directory. Built-in preset NAMES (e.g. "v5-to-v6") are left alone.
-        const configDir = dirname(absolutePath);
-        if (config.pipeline?.modelsDir) {
-            config.pipeline.modelsDir = resolve(configDir, config.pipeline.modelsDir);
-        }
-        if (config.pipeline?.presetsDir) {
-            config.pipeline.presetsDir = resolve(configDir, config.pipeline.presetsDir);
-        }
-        if (
-            typeof config.pipeline?.preset === "string" &&
-            (config.pipeline.preset.endsWith(".ts") || config.pipeline.preset.endsWith(".js"))
-        ) {
-            config.pipeline.preset = resolve(configDir, config.pipeline.preset);
-        }
-
-        return config as MigrationConfig.Interface;
-    } catch (error) {
-        if (error instanceof Error) {
-            throw new Error(`Failed to load config from ${configPath}: ${error.message}`);
-        }
-        throw error;
+    if (!raw) {
+        throw new Error(
+            `Config file ${configPath} must have a default export. Use createConfig() to create your config.`
+        );
     }
+
+    const parsed = migrationConfigSchema.safeParse(raw);
+    if (!parsed.success) {
+        throw new Error(`Invalid config in ${configPath}:\n${parsed.error.message}`);
+    }
+
+    const config = parsed.data;
+    const configDir = dirname(absolutePath);
+    const pipeline = config.pipeline ?? {};
+
+    return {
+        ...config,
+        pipeline: {
+            ...pipeline,
+            ...(pipeline.modelsDir ? { modelsDir: resolve(configDir, pipeline.modelsDir) } : {}),
+            ...(pipeline.presetsDir ? { presetsDir: resolve(configDir, pipeline.presetsDir) } : {})
+        }
+    };
 }

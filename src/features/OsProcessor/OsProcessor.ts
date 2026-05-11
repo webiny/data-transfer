@@ -1,7 +1,8 @@
 import { join } from "node:path";
+import { Container } from "@webiny/di";
 import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
-import { isRetryableAwsError } from "~/base/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { isRetryableAwsError, ContainerToken } from "~/base/index.ts";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import {
     SourceDynamoDbClient,
@@ -18,6 +19,10 @@ import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
+
+interface OpenSearchErrorLike {
+    statusCode?: number;
+}
 
 const DEFAULT_RETRY_SCHEDULE: number[] = [5000, 10000, 20000, 30000, 30000];
 const DEFAULT_REFRESH_INTERVAL = "1s";
@@ -40,10 +45,12 @@ class OsProcessorImpl implements Processor.Interface<
     BaseTransformContext.Interface<unknown>,
     OsProcessorSlice
 > {
+    private _osClient: OpenSearchClient.Interface | null = null;
+
     public constructor(
         private readonly logger: Logger.Interface,
         private readonly ddbExecutor: DdbExecutor.Interface,
-        private readonly osClient: OpenSearchClient.Interface,
+        private readonly container: Container,
         private readonly compression: CompressionHandler.Interface,
         private readonly touchedIndexes: TouchedIndexes.Interface,
         private readonly config: MigrationConfig.Interface,
@@ -54,9 +61,19 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly targetDb: TargetDynamoDbClient.Interface
     ) {}
 
+    private get osClient(): OpenSearchClient.Interface {
+        if (!this._osClient) {
+            this._osClient = this.container.resolve(OpenSearchClient);
+        }
+        return this._osClient;
+    }
+
     public extendContext(base: BaseTransformContext.Interface<unknown>): OsProcessorSlice {
-        if (this.config.storage !== "os") {
-            throw new Error("OsProcessor can only be used in os mode");
+        if (!this.config.target.opensearch) {
+            throw new Error("OsProcessor: config.target.opensearch is not configured.");
+        }
+        if (!this.config.source.opensearch) {
+            throw new Error("OsProcessor: config.source.opensearch is not configured.");
         }
         const sourceTable = this.config.source.opensearch.tableName;
         const targetTable = this.config.target.opensearch.tableName;
@@ -88,6 +105,9 @@ class OsProcessorImpl implements Processor.Interface<
     }
 
     public async execute(commands: Commands): Promise<void> {
+        if (this.transferContext.dryRun) {
+            return;
+        }
         const puts = commands.get<PutRecord>(PutRecord.key);
         if (puts.length === 0) {
             return;
@@ -102,6 +122,28 @@ class OsProcessorImpl implements Processor.Interface<
 
         this.logger.info(`Writing ${gzippedPuts.length} records to database`);
         await this.ddbExecutor.execute(gzippedPuts);
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        if (!this.config.target.opensearch) {
+            return [];
+        }
+        // Source OS data is read indirectly via the source DDB table; no source-side OS probe needed.
+        const endpoint = this.config.target.opensearch.endpoint;
+        const label = `OpenSearch cluster: ${endpoint}`;
+        try {
+            await this.osClient.listIndexes();
+            return [{ label, status: "ok" }];
+        } catch (error) {
+            const statusCode = (error as OpenSearchErrorLike).statusCode;
+            if (statusCode === 401 || statusCode === 403) {
+                return [{ label, status: "denied" }];
+            }
+            if (statusCode === 404) {
+                return [{ label, status: "missing" }];
+            }
+            return [{ label, status: "unknown" }];
+        }
     }
 
     public afterShard(ctx: Processor.AfterShardContext): void {
@@ -254,7 +296,7 @@ export const OsProcessor = Processor.createImplementation({
     dependencies: [
         Logger,
         DdbExecutor,
-        OpenSearchClient,
+        ContainerToken,
         CompressionHandler,
         TouchedIndexes,
         MigrationConfig,

@@ -61,4 +61,9 @@ describe("formatError", () => {
         expect(formatError(42)).toBe("42");
         expect(formatError({ arbitrary: "object" })).toBe("[object Object]");
     });
+
+    it("returns generic message when ZodError has no issues", () => {
+        const zodLike = { name: "ZodError", issues: [] };
+        expect(formatError(zodLike)).toContain("Validation failed (no details).");
+    });
 });

@@ -2,9 +2,12 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { execa } from "execa";
+import { confirm } from "@inquirer/prompts";
 import { bootstrap } from "~/bootstrap.ts";
 import { formatError } from "~/base/index.ts";
 import type { RunStats } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
 import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
 import { Logger } from "~/tools/Logger/index.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
@@ -14,13 +17,23 @@ import {
     TransferContext
 } from "~/features/TransferLifecycle/index.ts";
 import { PresetLoader } from "~/features/PresetLoader/index.ts";
+import { AccessChecker } from "~/features/AccessChecker/index.ts";
 import { loadUserSetup } from "~/utils/loadUserSetup.ts";
 import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
+class AccessCheckError extends Error {
+    public constructor(count: number) {
+        super(`Access check failed — ${count} resource(s) denied or missing`);
+        this.name = "AccessCheckError";
+    }
+}
+
 export async function handler(
     configPath: string,
+    presetName: string,
     segmentsFilter?: number[],
-    logLevel?: string
+    logLevel?: string,
+    dryRun = false
 ): Promise<void> {
     const runId = String(Date.now());
     let container;
@@ -42,14 +55,14 @@ export async function handler(
     } catch (error) {
         // Config-load / Zod validation failures happen before we have a logger
         // — write directly to stderr so the user sees the friendly format.
-        const verbose = (logLevel ?? "info") === "debug";
+        const verbose = (logLevel ?? "debug") === "debug";
         process.stderr.write(`\n${formatError(error, verbose)}\n`);
         process.exit(1);
     }
 
-    const resolvedLogLevel = (logLevel ?? config.debug?.logLevel) as string | undefined;
-    const verbose = resolvedLogLevel === "debug";
-    const segments = config.pipeline.segments || 1;
+    const resolvedLogLevel = logLevel ?? config.debug?.logLevel;
+    const verbose = (resolvedLogLevel ?? "debug") === "debug";
+    const segments = config.pipeline?.segments || 1;
 
     let segmentsToRun: number[];
     try {
@@ -59,7 +72,11 @@ export async function handler(
         process.exit(1);
     }
 
-    container.registerInstance(TransferContext, { runId });
+    container.registerInstance(TransferContext, { runId, dryRun });
+
+    if (dryRun) {
+        logger.warn("DRY RUN: no writes will be made to the target system.");
+    }
 
     logConfig({
         logger,
@@ -67,6 +84,7 @@ export async function handler(
         runId,
         segments,
         segmentsToRun,
+        presetName,
         logLevel: logLevel ?? config.debug?.logLevel
     });
 
@@ -76,14 +94,63 @@ export async function handler(
         await loadUserSetup(configPath, container, logger);
 
         const presetLoader = container.resolve(PresetLoader);
-        await presetLoader.load(config.pipeline.preset);
+        const preset = await presetLoader.load(presetName);
+
+        const runner = container.resolve(PipelineRunner);
+        const pipelineBuilderFactory = container.resolve(PipelineBuilderFactory);
+        await preset.configure({ runner, pipelineBuilderFactory, container });
+
+        const accessChecker = container.resolve(AccessChecker);
+        const accessReport = await accessChecker.run();
+
+        if (accessReport.length > 0) {
+            logger.info("Pre-transfer access check:");
+            for (const entry of accessReport) {
+                if (entry.status === "ok") {
+                    logger.info(`  ok       ${entry.label}`);
+                } else if (entry.status === "denied") {
+                    logger.error(`  DENIED   ${entry.label}`);
+                } else if (entry.status === "missing") {
+                    logger.error(`  MISSING  ${entry.label}`);
+                } else {
+                    logger.warn(`  unknown  ${entry.label}`);
+                }
+            }
+        }
+
+        const blocked = accessReport.filter(e => e.status === "denied" || e.status === "missing");
+        if (blocked.length > 0) {
+            throw new AccessCheckError(blocked.length);
+        }
+
+        const guardWarnings = (
+            await Promise.all(runner.getProcessors().map(p => p.getGuardWarning?.() ?? null))
+        ).filter((w): w is string => w !== null);
+
+        if (guardWarnings.length > 0) {
+            for (const warning of guardWarnings) {
+                logger.warn(warning);
+            }
+            const proceed = await confirm({ message: "Proceed with transfer?" });
+            if (!proceed) {
+                process.exit(0);
+            }
+        }
 
         const beforeHook = container.resolve(BeforeTransferHook);
         logger.info("Running before-transfer hooks...");
         await beforeHook.execute();
 
         const workers = segmentsToRun.map(segment =>
-            spawnWorker(segment, segments, runId, configPath, logLevel ?? config.debug?.logLevel)
+            spawnWorker(
+                segment,
+                segments,
+                runId,
+                configPath,
+                presetName,
+                logLevel ?? config.debug?.logLevel,
+                dryRun
+            )
         );
 
         const results = await Promise.allSettled(workers);
@@ -132,6 +199,7 @@ interface LogConfigParams {
     runId: string;
     segments: number;
     segmentsToRun: number[];
+    presetName: string;
     logLevel?: string;
 }
 
@@ -141,31 +209,29 @@ function logConfig({
     runId,
     segments,
     segmentsToRun,
+    presetName,
     logLevel
 }: LogConfigParams): void {
     logger.info("Starting transfer with configuration:");
     logger.info(`  Run ID: ${runId}`);
-    logger.info(`  Storage: ${config.storage}`);
-    logger.info(`  Preset: ${config.pipeline.preset}`);
-    logger.info(`  Log Level: ${logLevel ?? "info"}`);
+    logger.info(`  Preset: ${presetName}`);
+    logger.info(`  Log Level: ${logLevel ?? "debug"}`);
     if (segmentsToRun.length === segments) {
         logger.info(`  Segments: ${segments}`);
     } else {
         logger.info(`  Segments: ${segments} (running only [${segmentsToRun.join(", ")}])`);
     }
 
-    if (config.storage === "ddb") {
-        logger.info(`  Source Region: ${config.source.region}`);
-        logger.info(`  Source Table: ${config.source.dynamodb.tableName}`);
-        logger.info(`  Source Bucket: ${config.source.s3.bucket}`);
-        logger.info(`  Target Region: ${config.target.region}`);
-        logger.info(`  Target Table: ${config.target.dynamodb.tableName}`);
-        logger.info(`  Target Bucket: ${config.target.s3.bucket}`);
-    } else {
-        logger.info(`  Source Region: ${config.source.region}`);
-        logger.info(`  Source Primary Table: ${config.source.dynamodb.tableName}`);
+    logger.info(`  Source Region: ${config.source.region}`);
+    logger.info(`  Source DDB Table: ${config.source.dynamodb.tableName}`);
+    logger.info(`  Source S3 Bucket: ${config.source.s3.bucket}`);
+    if (config.source.opensearch) {
         logger.info(`  Source OS Table: ${config.source.opensearch.tableName}`);
-        logger.info(`  Target Region: ${config.target.region}`);
+    }
+    logger.info(`  Target Region: ${config.target.region}`);
+    logger.info(`  Target DDB Table: ${config.target.dynamodb.tableName}`);
+    logger.info(`  Target S3 Bucket: ${config.target.s3.bucket}`);
+    if (config.target.opensearch) {
         logger.info(`  Target OS Table: ${config.target.opensearch.tableName}`);
         logger.info(`  OS Endpoint: ${config.target.opensearch.endpoint}`);
     }
@@ -176,7 +242,9 @@ async function spawnWorker(
     total: number,
     runId: string,
     configPath: string,
-    logLevel?: string
+    presetName: string,
+    logLevel?: string,
+    dryRun = false
 ): Promise<void> {
     const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
 
@@ -191,7 +259,10 @@ async function spawnWorker(
         total.toString(),
         "--config",
         configPath,
-        ...(logLevel ? ["--log-level", logLevel] : [])
+        "--preset",
+        presetName,
+        ...(logLevel ? ["--log-level", logLevel] : []),
+        ...(dryRun ? ["--dry-run"] : [])
     ];
 
     const { exitCode } = await execa("node", args, {

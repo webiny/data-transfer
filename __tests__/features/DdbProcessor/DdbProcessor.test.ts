@@ -1,4 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DynamoDB } from "@aws-sdk/client-dynamodb";
+
+vi.mock("@aws-sdk/client-dynamodb", () => ({
+    DynamoDB: vi.fn()
+}));
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
@@ -74,6 +79,10 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
 }
 
 describe("DdbProcessor", () => {
+    afterEach(() => {
+        vi.resetAllMocks();
+    });
+
     describe("extendContext", () => {
         it("returns a slice with putRecord that pushes PutRecord commands via ctx.addCommand", () => {
             const container = createDdbContainer();
@@ -162,6 +171,103 @@ describe("DdbProcessor", () => {
                 .resolveAll(Processor)
                 .find(p => p.constructor === DdbProcessor) as unknown as DdbProcessorInstance;
             expect(processor.afterShard).toBeUndefined();
+        });
+    });
+
+    describe("checkAccess", () => {
+        let mockDescribeTable: ReturnType<typeof vi.fn>;
+
+        beforeEach(() => {
+            mockDescribeTable = vi.fn();
+            vi.mocked(DynamoDB).mockImplementation(function (this: Record<string, unknown>) {
+                this["describeTable"] = mockDescribeTable;
+                this["destroy"] = vi.fn();
+            } as unknown as typeof DynamoDB);
+        });
+
+        it("returns ok entries for source and target tables when DescribeTable succeeds", async () => {
+            mockDescribeTable.mockResolvedValue({});
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries).toHaveLength(2);
+            expect(entries[0]).toEqual({
+                label: "DynamoDB source table: source-table",
+                status: "ok"
+            });
+            expect(entries[1]).toEqual({
+                label: "DynamoDB target table: target-table",
+                status: "ok"
+            });
+        });
+
+        it("returns denied when DescribeTable throws AccessDeniedException on source", async () => {
+            mockDescribeTable
+                .mockRejectedValueOnce(
+                    Object.assign(new Error("Access denied"), { name: "AccessDeniedException" })
+                )
+                .mockResolvedValue({});
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "DynamoDB source table: source-table",
+                status: "denied"
+            });
+            expect(entries[1]).toEqual({
+                label: "DynamoDB target table: target-table",
+                status: "ok"
+            });
+        });
+
+        it("returns unknown when DescribeTable throws a non-access error", async () => {
+            mockDescribeTable.mockRejectedValue(
+                Object.assign(new Error("connection timeout"), { name: "ETIMEDOUT" })
+            );
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "DynamoDB source table: source-table",
+                status: "unknown"
+            });
+            expect(entries[1]).toEqual({
+                label: "DynamoDB target table: target-table",
+                status: "unknown"
+            });
+        });
+
+        it("returns missing when DescribeTable throws ResourceNotFoundException", async () => {
+            mockDescribeTable.mockRejectedValue(
+                Object.assign(new Error("Table not found"), { name: "ResourceNotFoundException" })
+            );
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === DdbProcessor) as unknown as Processor.Interface;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "DynamoDB source table: source-table",
+                status: "missing"
+            });
+            expect(entries[1]).toEqual({
+                label: "DynamoDB target table: target-table",
+                status: "missing"
+            });
         });
     });
 });

@@ -11,8 +11,7 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`\nCreated "projects/${projectName}" with the following structure:\n`);
     console.log(`  projects/${projectName}/`);
     console.log(`  ├── README.md`);
-    console.log(`  ├── ddb.transfer.config.ts`);
-    console.log(`  ├── os.transfer.config.ts`);
+    console.log(`  ├── config.ts`);
     console.log(`  ├── .env.example`);
     console.log(`  ├── models/`);
     console.log(`  └── presets/\n`);
@@ -23,7 +22,9 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`         (from: yarn webiny output core --json  in each Webiny project)`);
     console.log(`       source.pulumi.json + target.pulumi.json`);
     console.log(`         (from: .pulumi/apps/core/.pulumi/stacks/core/<env>.json)`);
-    console.log(`     Mixed formats (e.g. source.webiny.json + target.pulumi.json) are allowed.\n`);
+    console.log(`     Mixed formats (e.g. source.webiny.json + target.pulumi.json) are allowed.`);
+    console.log(`     You can also drop CMS model exports into projects/${projectName}/models/`);
+    console.log(`       (export from Webiny Admin → CMS → Models → Export)\n`);
     console.log(`  2. Run the wizard — it validates the JSON files and writes .env:`);
     console.log(`       yarn transfer\n`);
     console.log(`  3. Review projects/${projectName}/.env, then run again:`);
@@ -31,5 +32,5 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`To set up manually instead:`);
     console.log(`  cp projects/${projectName}/.env.example projects/${projectName}/.env`);
     console.log(`  # Edit .env — fill in region, table names, and AWS credentials`);
-    console.log(`  yarn transfer --config=./projects/${projectName}/ddb.transfer.config.ts\n`);
+    console.log(`  yarn transfer --config=./projects/${projectName}/config.ts\n`);
 }

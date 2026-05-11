@@ -159,10 +159,10 @@ describe("OsScanner", () => {
             await import("~/features/OsRecordDecompressor/index.ts");
         const { OsScannerFeature: ScannerFeature } = await import("~/features/OsScanner/index.ts");
 
-        // Construct a DDB-mode config and inject it into a fresh container that still
-        // registers OsScanner as the Scanner. When scan() is called, its guard should fire.
+        // Construct a DDB-only config (no opensearch) and inject it into a fresh container
+        // that still registers OsScanner as the Scanner. When scan() is called, its guard
+        // should fire because config.source.opensearch is absent.
         const ddbConfig = {
-            storage: "ddb" as const,
             source: {
                 region: "us-east-1",
                 credentials: { accessKeyId: "x", secretAccessKey: "y" },
@@ -176,7 +176,7 @@ describe("OsScanner", () => {
                 s3: { bucket: "ddb-target-bucket" },
                 auditLog: null
             },
-            pipeline: { preset: "v5-to-v6" }
+            pipeline: {}
         };
 
         const container = new Container();
@@ -201,6 +201,6 @@ describe("OsScanner", () => {
             for await (const _ of scanner.scan({ segment: 0, total: 1 })) {
                 // Should never iterate
             }
-        }).rejects.toThrow(/OS storage mode/i);
+        }).rejects.toThrow(/config\.source\.opensearch is not configured/i);
     });
 });

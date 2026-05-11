@@ -23,14 +23,29 @@ export function registerProcessSegmentCommand(yargs: Argv): Argv {
                     demandOption: true,
                     description: "Config file path"
                 })
+                .option("preset", {
+                    type: "string",
+                    demandOption: true,
+                    description: "Preset name to use for this segment"
+                })
                 .option("log-level", {
                     type: "string",
                     choices: ["debug", "info", "warn", "error"] as const,
                     description: "Log level"
+                })
+                .option("dry-run", {
+                    type: "boolean",
+                    default: false,
+                    description: "Skip all writes to the target system"
                 });
         },
         async argv => {
-            await handler({ ...argv, logLevel: argv["log-level"] as string | undefined });
+            await handler({
+                ...argv,
+                logLevel: argv["log-level"] as string | undefined,
+                preset: argv.preset,
+                dryRun: argv["dry-run"]
+            });
         }
     );
 }

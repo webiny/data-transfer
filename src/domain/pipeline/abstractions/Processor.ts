@@ -32,6 +32,33 @@ interface IProcessor<
     onEnd?(ctx: TBaseContext & TSlice): void | Promise<void>;
 
     /**
+     * Pre-transfer access check. Called once in the orchestrator process before
+     * any segment worker is spawned.
+     *
+     * Returns one entry per probed resource (table, bucket, cluster endpoint).
+     * Mandatory (not optional) so every processor author must consciously decide
+     * what to check — return `[]` if the processor has no AWS resources to probe.
+     *
+     * Status meanings:
+     *   "ok"      — probe succeeded; proceed
+     *   "denied"  — IAM / credentials error; transfer will be aborted
+     *   "missing" — resource does not exist; transfer will be aborted
+     *   "unknown" — probe failed for an unclassified reason; warn and proceed
+     *
+     * Implementations must not throw — catch all errors and return an "unknown"
+     * entry instead.
+     */
+    checkAccess(): Promise<AccessCheck.Entry[]>;
+
+    /**
+     * Pre-transfer guard check. Called in the orchestrator before any segment
+     * workers are spawned. Return a human-readable warning string when the
+     * processor detects a condition that requires user confirmation (e.g.
+     * cross-account S3 copy), or null to proceed silently.
+     */
+    getGuardWarning?(): Promise<string | null>;
+
+    /**
      * Drain the processor's commands from the bag and write to target. The
      * act of calling commands.get(key) marks that key as "claimed" — the
      * runner uses Commands.unclaimedKeys() to warn-once on commands no
@@ -50,6 +77,17 @@ interface IProcessor<
 }
 
 export const Processor = createAbstraction<IProcessor<any, any>>("Core/Processor");
+
+export namespace AccessCheck {
+    export type Status = "ok" | "denied" | "missing" | "unknown";
+
+    export interface Entry {
+        label: string;
+        status: Status;
+    }
+
+    export type Report = Entry[];
+}
 
 export namespace Processor {
     export type Interface<

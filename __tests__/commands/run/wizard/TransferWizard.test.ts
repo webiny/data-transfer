@@ -5,6 +5,7 @@ import type { RawOutputValues } from "../../../../src/commands/run/wizard/types.
 
 vi.mock("../../../../src/commands/run/wizard/projectDiscovery.ts");
 vi.mock("../../../../src/commands/run/wizard/configDiscovery.ts");
+vi.mock("../../../../src/commands/run/wizard/presetDiscovery.ts");
 vi.mock("../../../../src/commands/run/wizard/envWriter.ts");
 vi.mock("../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts");
 vi.mock("../../../../src/commands/run/wizard/sources/PulumiStateSource.ts");
@@ -16,23 +17,24 @@ vi.mock("../../../../src/commands/initProject/scaffoldProject.ts", () => ({
 }));
 
 import { discoverProjects } from "../../../../src/commands/run/wizard/projectDiscovery.ts";
-import { discoverConfigs } from "../../../../src/commands/run/wizard/configDiscovery.ts";
+import { discoverConfig } from "../../../../src/commands/run/wizard/configDiscovery.ts";
+import { listAvailablePresetsWithDescriptions } from "../../../../src/commands/run/wizard/presetDiscovery.ts";
 import { writeEnv } from "../../../../src/commands/run/wizard/envWriter.ts";
 import { extractFromWebinyOutput } from "../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "../../../../src/commands/run/wizard/sources/PulumiStateSource.ts";
 import { input, select } from "@inquirer/prompts";
-import { stat, access } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { scaffoldProject } from "../../../../src/commands/initProject/scaffoldProject.ts";
 
 const mockDiscoverProjects = vi.mocked(discoverProjects);
-const mockDiscoverConfigs = vi.mocked(discoverConfigs);
+const mockDiscoverConfig = vi.mocked(discoverConfig);
+const mockListAvailablePresetsWithDescriptions = vi.mocked(listAvailablePresetsWithDescriptions);
 const mockWriteEnv = vi.mocked(writeEnv);
 const mockExtractFromWebinyOutput = vi.mocked(extractFromWebinyOutput);
 const mockExtractFromPulumiState = vi.mocked(extractFromPulumiState);
 const mockInput = vi.mocked(input);
 const mockSelect = vi.mocked(select);
 const mockStat = vi.mocked(stat);
-const mockAccess = vi.mocked(access);
 const mockScaffoldProject = vi.mocked(scaffoldProject);
 
 const noFile = (): never => {
@@ -62,27 +64,9 @@ beforeEach(() => {
 });
 
 describe("TransferWizard", () => {
-    it("shows CREATE_NEW option even when no projects are found, and scaffolds on selection", async () => {
-        mockDiscoverProjects.mockResolvedValue([]);
-        mockSelect.mockResolvedValue("__create__");
-        mockStat.mockRejectedValue(new Error("ENOENT"));
-        // First input call is for the new project name; second breaks out of the instructions loop.
-        mockInput.mockResolvedValueOnce("brand-new").mockRejectedValue(new Error("stop"));
-
-        await expect(new TransferWizard(process.cwd()).run()).rejects.toThrow("stop");
-
-        expect(mockSelect).toHaveBeenCalledOnce();
-        const choices = mockSelect.mock.calls[0][0].choices as Array<{ value: string }>;
-        expect(choices.some((c: { value: string }) => c.value === "__create__")).toBe(true);
-        expect(mockScaffoldProject).toHaveBeenCalledWith({ name: "brand-new", cwd: process.cwd() });
-    });
-
-    it("create-new happy path: scaffolds project, writes env, returns null", async () => {
-        mockDiscoverProjects.mockResolvedValue([]);
-        mockSelect.mockResolvedValue("__create__");
-        mockScaffoldProject.mockResolvedValue(undefined);
-        // First input call: project name. Second: segment count.
-        mockInput.mockResolvedValueOnce("my-project").mockResolvedValueOnce("4");
+    it("env-setup path: writes .env and returns null", async () => {
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
         mockStat.mockImplementation(async (p: unknown) => {
             const path = String(p);
             if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
@@ -90,22 +74,40 @@ describe("TransferWizard", () => {
             }
             return noFile();
         });
-        mockAccess.mockRejectedValue(Object.assign(new Error("ENOENT"), { code: "ENOENT" }));
         mockExtractFromWebinyOutput
             .mockResolvedValueOnce(SOURCE_VALS)
             .mockResolvedValueOnce(TARGET_VALS);
+        mockInput.mockResolvedValue("4");
 
         const result = await new TransferWizard(process.cwd()).run();
 
-        expect(mockScaffoldProject).toHaveBeenCalledWith({
-            name: "my-project",
-            cwd: expect.any(String)
-        });
-        expect(mockWriteEnv).toHaveBeenCalledOnce();
         expect(result).toBeNull();
+        expect(mockWriteEnv).toHaveBeenCalledOnce();
     });
 
-    it("routes to config selection when no JSON files and .env exists", async () => {
+    it("re-run path: .env exists, no JSON → finds config.ts, prompts for preset, returns WizardResult", async () => {
+        const CONFIG_PATH = "/projects/my-project/config.ts";
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValueOnce("my-project").mockResolvedValueOnce("v5-to-v6-ddb");
+        mockStat.mockImplementation(async (p: unknown) => {
+            if (String(p).endsWith(".env")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockDiscoverConfig.mockResolvedValue(CONFIG_PATH);
+        mockListAvailablePresetsWithDescriptions.mockResolvedValue([
+            { name: "v5-to-v6-ddb", description: "DDB only" },
+            { name: "v5-to-v6-os", description: "DDB + OpenSearch" }
+        ]);
+
+        const result = await new TransferWizard(process.cwd()).run();
+
+        expect(result).toEqual({ configPath: CONFIG_PATH, preset: "v5-to-v6-ddb" });
+        expect(mockWriteEnv).not.toHaveBeenCalled();
+    });
+
+    it("re-run path: exits with error when no config.ts found in project", async () => {
         mockDiscoverProjects.mockResolvedValue(["my-project"]);
         mockSelect.mockResolvedValue("my-project");
         mockStat.mockImplementation(async (p: unknown) => {
@@ -114,14 +116,133 @@ describe("TransferWizard", () => {
             }
             return noFile();
         });
-        mockDiscoverConfigs.mockResolvedValue([
-            { path: "/projects/my-project/ddb.config.ts", label: "DynamoDB Transfer" }
-        ]);
+        mockDiscoverConfig.mockResolvedValue(null);
 
-        const result = await new TransferWizard(process.cwd()).run();
+        const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("exit");
+        });
+        await expect(new TransferWizard(process.cwd()).run()).rejects.toThrow("exit");
+        exitSpy.mockRestore();
+    });
 
-        expect(result).toBe("/projects/my-project/ddb.config.ts");
-        expect(mockWriteEnv).not.toHaveBeenCalled();
+    it("writes .env with correct values from webiny output", async () => {
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            const path = String(p);
+            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockExtractFromWebinyOutput
+            .mockResolvedValueOnce(SOURCE_VALS)
+            .mockResolvedValueOnce(TARGET_VALS);
+        mockInput.mockResolvedValue("4");
+
+        await new TransferWizard(process.cwd()).run();
+
+        expect(mockWriteEnv).toHaveBeenCalledOnce();
+        const [, envValues] = mockWriteEnv.mock.calls[0];
+        expect(envValues.sourceRegion).toBe("eu-central-1");
+        expect(envValues.targetRegion).toBe("us-east-1");
+        expect(envValues.segments).toBe(4);
+    });
+
+    it("warns when source and target are in different AWS accounts", async () => {
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            const path = String(p);
+            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockExtractFromWebinyOutput
+            .mockResolvedValueOnce({ ...SOURCE_VALS, accountId: "111111111111" })
+            .mockResolvedValueOnce({ ...TARGET_VALS, accountId: "999999999999" });
+        mockInput.mockResolvedValue("4");
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        await new TransferWizard(process.cwd()).run();
+
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("111111111111"));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("999999999999"));
+        warnSpy.mockRestore();
+    });
+
+    it("does not warn when source and target share the same AWS account", async () => {
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            const path = String(p);
+            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockExtractFromWebinyOutput
+            .mockResolvedValueOnce({ ...SOURCE_VALS, accountId: "111111111111" })
+            .mockResolvedValueOnce({ ...TARGET_VALS, accountId: "111111111111" });
+        mockInput.mockResolvedValue("4");
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        await new TransferWizard(process.cwd()).run();
+
+        expect(warnSpy).not.toHaveBeenCalled();
+        warnSpy.mockRestore();
+    });
+
+    it("prompts for OS index prefix when OS fields are present", async () => {
+        const OS_SOURCE = {
+            ...SOURCE_VALS,
+            osTableName: "wby-es-source",
+            osEndpoint: "https://es.source"
+        };
+        const OS_TARGET = {
+            ...TARGET_VALS,
+            osTableName: "wby-es-target",
+            osEndpoint: "https://es.target"
+        };
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            const path = String(p);
+            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockExtractFromWebinyOutput
+            .mockResolvedValueOnce(OS_SOURCE)
+            .mockResolvedValueOnce(OS_TARGET);
+        mockInput.mockResolvedValueOnce("4").mockResolvedValueOnce("v6-");
+
+        await new TransferWizard(process.cwd()).run();
+
+        const [, envValues] = mockWriteEnv.mock.calls[0];
+        expect(envValues.targetOsIndexPrefix).toBe("v6-");
+    });
+
+    it("exits with error when no presets are available", async () => {
+        const CONFIG_PATH = "/projects/my-project/config.ts";
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            if (String(p).endsWith(".env")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockDiscoverConfig.mockResolvedValue(CONFIG_PATH);
+        mockListAvailablePresetsWithDescriptions.mockResolvedValue([]);
+
+        const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("exit");
+        });
+        await expect(new TransferWizard(process.cwd()).run()).rejects.toThrow("exit");
+        exitSpy.mockRestore();
     });
 
     it("throws when same-side files disagree on osTableName", async () => {
@@ -144,31 +265,5 @@ describe("TransferWizard", () => {
         });
 
         await expect(new TransferWizard(process.cwd()).run()).rejects.toThrow(/osTableName/);
-    });
-
-    it("writes .env with correct values and returns null on happy path", async () => {
-        mockDiscoverProjects.mockResolvedValue(["my-project"]);
-        mockSelect.mockResolvedValue("my-project");
-        mockStat.mockImplementation(async (p: unknown) => {
-            const path = String(p);
-            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
-                return { size: 100 } as unknown as Stats;
-            }
-            return noFile();
-        });
-        mockAccess.mockRejectedValue(Object.assign(new Error("ENOENT"), { code: "ENOENT" }));
-        mockExtractFromWebinyOutput
-            .mockResolvedValueOnce(SOURCE_VALS)
-            .mockResolvedValueOnce(TARGET_VALS);
-        mockInput.mockResolvedValue("4");
-
-        const result = await new TransferWizard(process.cwd()).run();
-
-        expect(result).toBeNull();
-        expect(mockWriteEnv).toHaveBeenCalledOnce();
-        const [, envValues] = mockWriteEnv.mock.calls[0];
-        expect(envValues.sourceRegion).toBe("eu-central-1");
-        expect(envValues.targetRegion).toBe("us-east-1");
-        expect(envValues.segments).toBe(4);
     });
 });

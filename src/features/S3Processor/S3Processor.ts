@@ -1,6 +1,9 @@
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { S3 } from "@webiny/aws-sdk/client-s3/index.js";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
 import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
 import type { Commands } from "~/domain/transform/commands/Commands.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
@@ -17,13 +20,11 @@ class S3ProcessorImpl implements Processor.Interface<
     public constructor(
         private readonly sourceS3: SourceS3Client.Interface,
         private readonly targetS3: TargetS3Client.Interface,
-        private readonly config: MigrationConfig.Interface
+        private readonly config: MigrationConfig.Interface,
+        private readonly transferContext: TransferContext.Interface
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): S3ProcessorSlice {
-        if (this.config.storage !== "ddb") {
-            throw new Error("S3Processor can only be used in ddb mode");
-        }
         const sourceBucket = this.config.source.s3.bucket;
         const targetBucket = this.config.target.s3.bucket;
         const sourceS3 = this.sourceS3;
@@ -42,7 +43,67 @@ class S3ProcessorImpl implements Processor.Interface<
     // No onEnd — S3 has no sensible per-record default. Transformers call
     // ctx.copyFile(...) explicitly when they want to emit a copy.
 
+    public async getGuardWarning(): Promise<string | null> {
+        const sourceAccount = this.config.source.accountId || null;
+        const targetAccount = this.config.target.accountId || null;
+        if (sourceAccount === null || targetAccount === null || sourceAccount === targetAccount) {
+            return null;
+        }
+        return (
+            `S3 file copy is cross-account: source account ${sourceAccount} → target account ${targetAccount}.\n` +
+            `CopyObject runs with target credentials — the source bucket "${this.config.source.s3.bucket}"\n` +
+            `must have a bucket policy granting account ${targetAccount} s3:GetObject access.`
+        );
+    }
+
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
+        const [sourceEntry, targetEntry] = await Promise.all([
+            this.headBucket(
+                this.config.source.credentials,
+                this.config.source.region,
+                this.config.source.s3.bucket,
+                "source"
+            ),
+            this.headBucket(
+                this.config.target.credentials,
+                this.config.target.region,
+                this.config.target.s3.bucket,
+                "target"
+            )
+        ]);
+        return [sourceEntry, targetEntry];
+    }
+
+    private async headBucket(
+        credentials: MigrationConfig.Interface["source"]["credentials"],
+        region: string,
+        bucket: string,
+        side: string
+    ): Promise<AccessCheck.Entry> {
+        const label = `S3 ${side} bucket: ${bucket}`;
+        const client = new S3({ region, credentials: credentials as never });
+        try {
+            await client.headBucket({ Bucket: bucket });
+            return { label, status: "ok" };
+        } catch (error) {
+            if (isAccessDeniedError(error)) {
+                return { label, status: "denied" };
+            }
+            const errName = (error as AwsErrorLike).name ?? (error as AwsErrorLike).code;
+            const httpStatus = (error as AwsErrorLike).$metadata?.httpStatusCode;
+            if (errName === "NoSuchBucket" || httpStatus === 404) {
+                return { label, status: "missing" };
+            }
+            return { label, status: "unknown" };
+        } finally {
+            client.destroy();
+        }
+    }
+
     public async execute(commands: Commands): Promise<void> {
+        if (this.transferContext.dryRun) {
+            return;
+        }
         const copies = commands.get<S3Copy>(S3Copy.key);
         if (copies.length === 0) {
             return;
@@ -60,5 +121,5 @@ class S3ProcessorImpl implements Processor.Interface<
 
 export const S3Processor = Processor.createImplementation({
     implementation: S3ProcessorImpl,
-    dependencies: [SourceS3Client, TargetS3Client, MigrationConfig]
+    dependencies: [SourceS3Client, TargetS3Client, MigrationConfig, TransferContext]
 });

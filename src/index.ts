@@ -2,13 +2,14 @@
  * Public API for config file authors.
  *
  * ```typescript
- * import { createDdbConfig } from "@webiny/data-transfer";
+ * import { createConfig } from "@webiny/data-transfer";
  *
- * export default createDdbConfig({ ... });
+ * export default createConfig({ ... });
  * ```
  */
-export { createDdbConfig } from "./features/MigrationConfig/createDdbConfig.ts";
-export { createOsConfig } from "./features/MigrationConfig/createOsConfig.ts";
+export { createConfig } from "./features/MigrationConfig/createConfig.ts";
+export { migrationConfigSchema } from "./features/MigrationConfig/validation.ts";
+export type { MigrationConfiguration } from "./features/MigrationConfig/validation.ts";
 export { loadEnv } from "./utils/load-env.ts";
 export { fromEnv, numberFromEnv } from "./utils/fromEnv.ts";
 export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";
@@ -64,7 +65,8 @@ export {
     isOsBackgroundTask,
     isOsMailerSettings,
     isAuditLogEntry,
-    isMigrationRecord
+    isMigrationRecord,
+    isFormBuilderRecord
 } from "./domain/transform/filters.ts";
 
 // Scanner / processor implementation tokens — passed into

@@ -2,11 +2,12 @@ import { Client } from "@opensearch-project/opensearch";
 import { AwsSigv4Signer } from "@opensearch-project/opensearch/aws";
 import { OpenSearchClient as OpenSearchClientAbstraction } from "./abstractions/OpenSearchClient.ts";
 import { OpenSearchClientConfig } from "./abstractions/OpenSearchClientConfig.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
     private client: Client;
 
-    public constructor(config: OpenSearchClientConfig.Interface) {
+    public constructor(config: OpenSearchClientConfig.Interface, logger: Logger.Interface) {
         // Normalize credentials: user config may pass either a literal
         // object or a provider function (fromAwsProfile). AwsSigv4Signer
         // wants a `getCredentials` async function, so wrap either shape.
@@ -31,6 +32,12 @@ class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
             }),
             node: config.endpoint,
             maxRetries: config.maxRetries ?? 3
+        });
+
+        this.client.on("response", (err, _meta) => {
+            if (err && "statusCode" in err && (err as { statusCode?: number }).statusCode === 429) {
+                logger.debug(`OpenSearch throttled — 429 Too Many Requests`);
+            }
         });
     }
 
@@ -78,5 +85,5 @@ class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
 
 export const OpenSearchClient = OpenSearchClientAbstraction.createImplementation({
     implementation: OpenSearchClientImpl,
-    dependencies: [OpenSearchClientConfig]
+    dependencies: [OpenSearchClientConfig, Logger]
 });

@@ -9,201 +9,154 @@ import {
     loadConfig
 } from "../../../src/features/MigrationConfig/index.ts";
 
-describe("MigrationConfig Feature", () => {
+describe("loadConfig", () => {
     let tmpDir: string;
 
     beforeEach(() => {
-        tmpDir = mkdtempSync(join(tmpdir(), "migration-config-test-"));
+        tmpDir = mkdtempSync(join(tmpdir(), "mc-test-"));
     });
-
     afterEach(() => {
         rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    function writeConfig(config: object): string {
-        const filePath = join(tmpDir, "config.ts");
-        writeFileSync(filePath, `export default ${JSON.stringify(config, null, 2)};`);
-        return filePath;
-    }
-
     const creds = { accessKeyId: "AKIA", secretAccessKey: "secret" };
 
-    describe("loadConfig", () => {
-        it("should load and validate a ddb config", async () => {
-            const configPath = writeConfig({
-                storage: "ddb",
-                source: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "src-bucket" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "tgt-bucket" }
-                },
-                pipeline: { preset: "v5-to-v6" }
-            });
+    function writeConfig(config: object): string {
+        const p = join(tmpDir, "config.ts");
+        writeFileSync(p, `export default ${JSON.stringify(config, null, 2)};`);
+        return p;
+    }
 
-            const config = await loadConfig(configPath);
-            expect(config.storage).toBe("ddb");
+    it("loads a valid unified config", async () => {
+        const p = writeConfig({
+            source: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "src" },
+                s3: { bucket: "src-b" }
+            },
+            target: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "tgt" },
+                s3: { bucket: "tgt-b" }
+            },
+            pipeline: {}
         });
-
-        it("should load and validate an os config", async () => {
-            const configPath = writeConfig({
-                storage: "os",
-                source: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    opensearch: { tableName: "src-es" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    opensearch: {
-                        endpoint: "https://es.example.com",
-                        tableName: "tgt-es",
-                        service: "opensearch"
-                    }
-                },
-                pipeline: { preset: "v5-to-v6-os" }
-            });
-
-            const config = await loadConfig(configPath);
-            expect(config.storage).toBe("os");
-        });
-
-        it("should reject invalid config", async () => {
-            const configPath = writeConfig({ invalid: true });
-            await expect(loadConfig(configPath)).rejects.toThrow();
-        });
-
-        it("resolves a file-path preset relative to the config file's directory", async () => {
-            const configPath = writeConfig({
-                storage: "ddb",
-                source: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "src-bucket" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "tgt-bucket" }
-                },
-                pipeline: { preset: "./my-preset.ts" }
-            });
-
-            const config = await loadConfig(configPath);
-
-            expect(config.pipeline.preset).toBe(join(tmpDir, "my-preset.ts"));
-        });
-
-        it("leaves built-in preset names unchanged", async () => {
-            const configPath = writeConfig({
-                storage: "ddb",
-                source: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "src-bucket" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "tgt-bucket" }
-                },
-                pipeline: { preset: "v5-to-v6" }
-            });
-
-            const config = await loadConfig(configPath);
-
-            expect(config.pipeline.preset).toBe("v5-to-v6");
-        });
-
-        it("resolves presetsDir relative to the config file's directory", async () => {
-            const configPath = writeConfig({
-                storage: "ddb",
-                source: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "src-bucket" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "tgt-bucket" }
-                },
-                pipeline: { preset: "v5-to-v6", presetsDir: "./custom-presets" }
-            });
-
-            const config = await loadConfig(configPath);
-            expect(config.pipeline.presetsDir).toBe(join(tmpDir, "custom-presets"));
-        });
+        const config = await loadConfig(p);
+        expect(config.source.dynamodb.tableName).toBe("src");
+        expect((config as any).storage).toBeUndefined();
     });
 
-    describe("DI registration", () => {
-        it("should register config and resolve it from container", async () => {
-            const configPath = writeConfig({
-                storage: "ddb",
-                source: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "src-bucket" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "tgt-bucket" }
-                },
-                pipeline: { preset: "v5-to-v6" }
-            });
-
-            const config = await loadConfig(configPath);
-            const container = new Container();
-
-            MigrationConfigFeature.register(container, { config });
-
-            const resolved = container.resolve(MigrationConfig);
-            expect(resolved.storage).toBe("ddb");
+    it("loads a config with opensearch fields", async () => {
+        const p = writeConfig({
+            source: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "src" },
+                s3: { bucket: "src-b" },
+                opensearch: { tableName: "src-os" }
+            },
+            target: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "tgt" },
+                s3: { bucket: "tgt-b" },
+                opensearch: {
+                    endpoint: "https://es.example.com",
+                    tableName: "tgt-os",
+                    service: "opensearch",
+                    indexPrefix: ""
+                }
+            },
+            pipeline: {}
         });
+        const config = await loadConfig(p);
+        expect(config.source.opensearch?.tableName).toBe("src-os");
+    });
 
-        it("should resolve same instance on multiple resolves", async () => {
-            const configPath = writeConfig({
-                storage: "ddb",
-                source: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "src-bucket" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "tgt-bucket" }
-                },
-                pipeline: { preset: "v5-to-v6" }
-            });
+    it("rejects invalid config", async () => {
+        const p = writeConfig({ invalid: true });
+        await expect(loadConfig(p)).rejects.toThrow();
+    });
 
-            const config = await loadConfig(configPath);
-            const container = new Container();
+    it("rejects config missing required fields", async () => {
+        const p = writeConfig({ source: { region: "us-east-1" } });
+        await expect(loadConfig(p)).rejects.toThrow();
+    });
 
-            MigrationConfigFeature.register(container, { config });
+    it("rejects file with no default export", async () => {
+        const p = join(tmpDir, "config.ts");
+        writeFileSync(p, "export const x = 1;");
+        await expect(loadConfig(p)).rejects.toThrow(/default export/);
+    });
 
-            const first = container.resolve(MigrationConfig);
-            const second = container.resolve(MigrationConfig);
-            expect(first).toBe(second);
+    it("resolves presetsDir relative to config file directory", async () => {
+        const p = writeConfig({
+            source: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "src" },
+                s3: { bucket: "src-b" }
+            },
+            target: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "tgt" },
+                s3: { bucket: "tgt-b" }
+            },
+            pipeline: { presetsDir: "./custom-presets" }
         });
+        const config = await loadConfig(p);
+        expect(config.pipeline?.presetsDir).toBe(join(tmpDir, "custom-presets"));
+    });
+
+    it("resolves modelsDir relative to config file directory", async () => {
+        const p = writeConfig({
+            source: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "src" },
+                s3: { bucket: "src-b" }
+            },
+            target: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "tgt" },
+                s3: { bucket: "tgt-b" }
+            },
+            pipeline: { modelsDir: "./models" }
+        });
+        const config = await loadConfig(p);
+        expect(config.pipeline?.modelsDir).toBe(join(tmpDir, "models"));
+    });
+});
+
+describe("MigrationConfig DI registration", () => {
+    it("registers and resolves the config", async () => {
+        const creds = { accessKeyId: "AKIA", secretAccessKey: "secret" };
+        const { migrationConfigSchema } =
+            await import("../../../src/features/MigrationConfig/validation.ts");
+        const config = migrationConfigSchema.parse({
+            source: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "src" },
+                s3: { bucket: "src-b" }
+            },
+            target: {
+                region: "eu-central-1",
+                credentials: creds,
+                dynamodb: { tableName: "tgt" },
+                s3: { bucket: "tgt-b" }
+            },
+            pipeline: {}
+        });
+        const container = new Container();
+        MigrationConfigFeature.register(container, { config });
+        const resolved = container.resolve(MigrationConfig);
+        expect(resolved.source.dynamodb.tableName).toBe("src");
+        const second = container.resolve(MigrationConfig);
+        expect(resolved).toBe(second);
     });
 });

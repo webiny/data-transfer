@@ -1,23 +1,22 @@
 ---
 name: writing-data-transfer-config
-description: Use when writing or editing a @webiny/data-transfer config file (ddb.transfer.config.ts / os.transfer.config.ts / custom.transfer.config.ts). Covers createDdbConfig / createOsConfig signatures, credential shapes (fromAwsProfile vs literal), fromEnv / numberFromEnv helpers, loadEnv, source/target collision + trimming rules, pointing at a preset, tuning knobs.
+description: Use when writing or editing a @webiny/data-transfer config file (config.ts). Covers createConfig signature, credential shapes (fromAwsProfile vs literal), fromEnv / numberFromEnv helpers, loadEnv, source/target collision + trimming rules, tuning knobs.
 ---
 
 # Writing a `@webiny/data-transfer` config
 
-A config is a `.ts` file that `export default`s one of the two factory calls:
+A config is a `config.ts` file (one per project folder) that `export default`s `createConfig(...)`.
 
-- **`createDdbConfig(...)`** — DDB primary table (+ S3 files). Covers CMS + security + file manager + tenancy.
-- **`createOsConfig(...)`** — OpenSearch companion DDB table. CMS entries only, gzipped records.
+`createConfig` validates with Zod at import time — invalid configs fail fast with a useful message, before any AWS call.
 
-Both validate with Zod at import time — invalid configs fail fast with a useful message, before any AWS call.
+OpenSearch fields (`source.opensearch` / `target.opensearch`) are optional — omit them entirely for a DDB-only transfer.
 
 ## Minimal shape
 
 ```ts
 import {
     loadEnv,
-    createDdbConfig,
+    createConfig,
     fromAwsProfile,
     fromEnv,
     numberFromEnv
@@ -25,22 +24,31 @@ import {
 
 loadEnv(import.meta.url);
 
-export default createDdbConfig({
+export default createConfig({
     source: {
-        region: fromEnv("SOURCE_REGION", "us-east-1"),
+        region: fromEnv("SOURCE_REGION", "eu-central-1"),
         credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
         dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
         s3: { bucket: fromEnv("SOURCE_S3_BUCKET") }
+        // opensearch: { tableName: fromEnv("SOURCE_OS_TABLE") }
     },
     target: {
-        region: fromEnv("TARGET_REGION", "us-east-1"),
+        region: fromEnv("TARGET_REGION", "eu-central-1"),
         credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", "default") }),
         dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
-        s3: { bucket: fromEnv("TARGET_S3_BUCKET") }
+        s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
+        auditLog: { dynamodb: { tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE") } }
+        // opensearch: {
+        //     endpoint: fromEnv("TARGET_OS_ENDPOINT"),
+        //     tableName: fromEnv("TARGET_OS_TABLE"),
+        //     service: "opensearch",
+        //     indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
+        // }
     },
     pipeline: {
-        preset: "v5-to-v6-ddb", // built-in, OR "./presets/my-preset.ts"
-        segments: numberFromEnv("SEGMENTS", 4)
+        segments: numberFromEnv("SEGMENTS", 4),
+        modelsDir: fromEnv("MODELS_DIR", "./models"),
+        presetsDir: "./presets"
     }
 });
 ```
@@ -112,26 +120,24 @@ Loads the `.env` file **next to the config file** (not the one at the repo root)
 
 Enforced by Zod at build time:
 
-- **All string fields are trimmed** (`region`, `tableName`, `bucket`, `endpoint`, creds, preset). A trailing-space paste error doesn't silently corrupt anything.
+- **All string fields are trimmed** (`region`, `tableName`, `bucket`, `endpoint`, creds). A trailing-space paste error doesn't silently corrupt anything.
 - **Whitespace-only rejected** — empty-after-trim is treated as missing.
 - **Source/target collision guard**:
   - Same S3 bucket on both sides → rejected (would overwrite source files).
   - Same region + same DDB / OS-DDB table name → rejected (would read and write to the same table). Same table name across DIFFERENT regions is allowed — distinct physical tables.
 
-## Pointing at a preset
+## `pipeline.presetsDir` — preset discovery
 
-`pipeline.preset` takes one of:
-- **A built-in name**: `"v5-to-v6-ddb"` or `"v5-to-v6-os"` (filename in `src/presets/` without extension). The runner auto-discovers built-ins.
-- **A file path**: `"./presets/my-preset.ts"` or `"../shared/presets/foo.ts"`. Resolved relative to the CONFIG file's directory.
+`pipeline.presetsDir` points at a directory of preset files (e.g., `"./presets"`). The runner discovers them at startup; the transfer wizard lets you pick one at runtime. No preset path is needed in the config file itself.
 
 ## `pipeline.modelsDir` — CMS model definitions
 
-Required by the OS preset (`v5-to-v6-os`) and by built-in transformers that inspect field types (`fixBrokenStorageKeys`, `transformRichText`, `addLiveField`). Point at a directory of exported model definitions.
+Used by built-in transformers that inspect field types (`fixBrokenStorageKeys`, `transformRichText`, `addLiveField`). Point at a directory of exported model definitions.
 
 ```ts
 pipeline: {
-    preset: "v5-to-v6-os",
-    modelsDir: fromEnv("MODELS_DIR", "./models")
+    modelsDir: fromEnv("MODELS_DIR", "./models"),
+    presetsDir: "./presets"
 }
 ```
 
@@ -182,6 +188,7 @@ Post-run inspection: `cat .transfer/<runId>/logs/*.log | pino-pretty`. Default p
 
 ```ts
 tuning: {
+    flushEvery: numberFromEnv("FLUSH_EVERY", 500), // records per shard flush — bounds peak memory
     ddb: { maxRetries: 3, initialBackoffMs: 100 },
     s3:  { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
     os:  {
@@ -194,12 +201,14 @@ tuning: {
 
 All optional; absent = built-in defaults. AWS SDK `retryMode: "adaptive"` is always on for DDB + S3 — it self-tunes backoff based on real throttle signals, so you usually don't need to tune these.
 
+**`flushEvery`** caps peak per-shard memory. The runner calls `processor.execute()` every N records and resets the pending-commands buffer. Default 500 (≈ 5 MB at a 10 KB average record). Lower to 100 for tables with very large records (approaching the 400 KB DDB max).
+
 ## Running it
 
 From the user project root:
 
 ```bash
-yarn transfer --config=./projects/<name>/ddb.transfer.config.ts
+yarn transfer --config=./projects/<name>/config.ts
 ```
 
 Or with a specific AWS profile pre-set in `.env`:
@@ -211,9 +220,9 @@ TARGET_PROFILE=staging-writer
 
 ## Common patterns
 
-- **DDB first, then OS** — run them as separate transfers with separate config files. They don't share state. DDB uses `v5-to-v6-ddb`; OS uses `v5-to-v6-os`. Both can share the same `.env`.
-- **Multiple target environments** — duplicate the project folder under `projects/` with different `.env`. Configs stay identical.
-- **Custom preset** — if the built-in doesn't match your needs, write one (see `writing-data-transfer-preset` skill) and point `pipeline.preset` at its file path.
+- **One config per project** — a single `config.ts` handles both DDB and OS transfers. The wizard picks the preset at runtime.
+- **Multiple target environments** — duplicate the project folder under `projects/` with different `.env`. The `config.ts` stays identical.
+- **Custom preset** — write one (see `writing-data-transfer-preset` skill), drop it in `presetsDir`, and the wizard will discover it automatically.
 
 ## Anti-patterns
 

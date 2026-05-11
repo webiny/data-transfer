@@ -14,9 +14,10 @@ This document is read by AI agents when working on this codebase. It describes t
 
 **Runtime flow (when deployed):**
 
-1. User writes a config file: `createDdbConfig({ source, target, pipeline })` or `createOsConfig(...)`.
-2. CLI `transfer` command bootstraps a DI container, loads the named preset, spawns worker processes per segment.
-3. Each worker runs one or more shards: scans source → for each record, first-match-wins pipeline runs: filters → transformers → each processor's `onEnd?` hook (sequential, array order) → commands accumulate in a shared shard buffer. At shard end, each processor's `execute()` drains its own keys from that buffer (sequential, array order). `Commands.unclaimedKeys()` surfaces commands no processor claimed.
+1. User writes a single `config.ts`: `createConfig({ source, target, pipeline })`. One file covers DDB, S3, and optional OpenSearch.
+2. CLI `transfer` command (no `--config`): the `TransferWizard` selects a project, writes `.env`, then on subsequent runs prompts for a preset and returns `WizardResult { configPath, preset }`. With `--config`: skips wizard, preset passed as `--preset` flag.
+3. Bootstrap loads the config, registers all features (DDB + S3 always; OS conditional on `config.target.opensearch != null`), loads the named preset, spawns worker processes per segment.
+4. Each worker runs one or more shards: scans source → for each record, first-match-wins pipeline runs: filters → transformers → each processor's `onEnd?` hook (sequential, array order) → commands accumulate in a pending buffer. Every `tuning.flushEvery` records (default 500) each processor's `execute()` drains its own keys from that buffer (sequential, array order) and the buffer resets — this bounds peak memory to `flushEvery × avg_record_size`. A final flush at shard end drains any remainder. `Commands.unclaimedKeys()` surfaces commands no processor claimed.
 
 **Read before big refactors:**
 
@@ -29,7 +30,7 @@ This document is read by AI agents when working on this codebase. It describes t
 
 Everything users import lives in `src/index.ts`. The surface is **infrastructure-only** — no built-in transformers or pipelines are re-exported. The package ships two built-in presets: **`v5-to-v6-ddb`** (full DDB + S3 migration) and **`v5-to-v6-os`** (OpenSearch companion table migration). `PresetLoader` scans `src/presets/` (resolved relative to its own `import.meta.url`, works from source or `node_modules/`) — convention is **filename = preset name**, drop a `.ts` file in there and it ships, no other code change. The authoring reference lives in `templates/presets/example.ts` (scaffolded into user projects by `init`).
 
-- **Config builders:** `createDdbConfig`, `createOsConfig`
+- **Config builder:** `createConfig` — single unified builder; replaces the old `createDdbConfig` / `createOsConfig` (both deleted 2026-05-10). DDB + S3 always required; `source.opensearch` / `target.opensearch` optional.
 - **Env helpers:** `loadEnv` (dotenv loader), `fromEnv(name, default?)` (required string env, throws on missing), `numberFromEnv(name, default?)` (typed numeric, throws on parse failure). Empty string counts as missing in both — `.env`'s `KEY=` is almost always a forgotten value, not an intentional empty override.
 - **AWS credential helpers:** re-exports from `@aws-sdk/credential-providers` so users don't need the direct dep. `fromAwsProfile` (= `fromIni`) binds an explicit profile from `~/.aws/credentials` — best for local dev where a stray env var shouldn't hijack auth. `fromAwsCredentialChain` (= `fromNodeProviderChain`) runs the AWS SDK default chain (env → ini → SSO → EC2/ECS IAM) — best for CI / cloud. `credentials` in config also accepts a literal `{accessKeyId, secretAccessKey, sessionToken?}`; the union is schema-validated at `createDdbConfig` / `createOsConfig` time.
 - **Snapshot (debugging):** `config.debug.snapshot` (boolean or `{dir?, compress?}`) dumps per-record JSONL files at `<dir>/<pipeline>/segment-<n>.{source,post-transform,commands}.jsonl[.gz]` + `<dir>/dropped/segment-<n>.jsonl[.gz]`. Default dir: `.transfer/<runId>/snapshot`, gzipped. Opt-in, no-op when disabled — PipelineRunner depends on SnapshotWriter unconditionally so the hot path has no branching.
@@ -49,6 +50,8 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 - **Setup helper:** `initDataTransfer` + `InitDataTransferContext` (user-side custom DI wiring — see "setup.ts" below)
 
 **Pipeline construction:** inside a preset's `configure({ runner, pipelineBuilderFactory, container })` callback, users call `pipelineBuilderFactory.create({ name, scanner, processors: [...] })`. `processors` is a `NonEmptyArray<ProcessorImpl>` — TS rejects empty arrays AND rejects processors whose slice keys collide (`DisjointKeys<...>`). Returns a typed `PipelineBuilder` whose `ctx` is `BaseTransformContext & (union of processor slices)`. Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order; `.build()` takes no arguments (terminal behavior comes from each processor's `onEnd?` hook). Pass the built pipeline to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20; `runner.pipeline()` was moved to `PipelineBuilderFactory.create()` shortly after.
+
+**Preset selection:** `pipeline.preset` was **removed** from the config schema on 2026-05-10. Preset is chosen at runtime — interactively by `TransferWizard` (returns `WizardResult { configPath: string; preset: string; dryRun: boolean }`), or passed as `--preset <name>` directly. Workers receive `--preset` on their CLI argv. Do NOT add `preset` back to `pipelineSettingsSchema`. `dryRun: true` causes `DdbProcessor`, `OsProcessor`, and `S3Processor` to skip their `execute()` bodies entirely — reads still happen, but nothing is written to the target.
 
 **User-side custom DI — `setup.ts`:** CLI looks for `setup.ts` next to the user's config file. If present, dynamic-imports its default export and awaits `fn({ container })` BEFORE `preset.configure({...})` runs. Use the `initDataTransfer` typed helper to export it. Optional — pure-config users skip the file entirely.
 
@@ -74,11 +77,14 @@ src/
 │   │   ├── handler.ts        # Unchanged — runs a resolved config path
 │   │   └── wizard/           # Guided .env setup + config selection
 │   │       ├── TransferWizard.ts    # Orchestrator: project select → JSON extract → write .env
-│   │       │                        # OR (re-run, .env exists, no JSON) → config select → return path
+│   │       │                        # OR (re-run, .env exists, no JSON) → preset select → return WizardResult
 │   │       ├── projectDiscovery.ts  # Scans projects/, returns sorted names
-│   │       ├── configDiscovery.ts   # Scans *.config.ts, imports each, reads storage field
+│   │       ├── configDiscovery.ts   # Finds config.ts in project dir; returns path or null
+│   │       ├── presetDiscovery.ts   # listAvailablePresets(presetsDir?) — names only (sync)
+│                        # listAvailablePresetsWithDescriptions(presetsDir?) — async,
+│                        # dynamically imports each preset to read .description
 │   │       ├── envWriter.ts         # {{TOKEN}} substitution from .env.example → writes .env
-│   │       ├── types.ts             # RawOutputValues + EnvValues interfaces
+│   │       ├── types.ts             # RawOutputValues + EnvValues + WizardResult interfaces
 │   │       ├── sources/
 │   │       │   ├── WebinyOutputSource.ts  # Reads source/target.webiny.json → RawOutputValues
 │   │       │   └── PulumiStateSource.ts   # Reads source/target.pulumi.json → RawOutputValues
@@ -249,6 +255,7 @@ Optional `tuning` section on `MigrationConfig`:
 
 ```typescript
 tuning?: {
+    flushEvery?: number;  // records per shard flush (default 500); bounds peak memory
     ddb?: { maxRetries?: number; initialBackoffMs?: number };
     s3?:  { concurrency?: number; maxRetries?: number; initialBackoffMs?: number };
     os?:  { maxRetries?: number; retryScheduleMs?: number[]; gzipConcurrency?: number };
@@ -256,6 +263,8 @@ tuning?: {
 ```
 
 Fields flow to the respective client/executor; absent = module-level defaults. `BATCH_SIZE = 25` in DDB is AWS-enforced, NOT a user knob.
+
+`flushEvery` caps peak per-shard memory: at default 500 × 10 KB avg = ~5 MB/shard. For tables with very large records (approaching the 400 KB DDB max) lower this to 100. Set via `tuning: { flushEvery: numberFromEnv("FLUSH_EVERY", 500) }` in the config.
 
 ### AWS retry + error classification
 
@@ -290,11 +299,15 @@ No custom token-bucket pacing — the AWS SDK's adaptive mode handles remote-sig
 Verification before any commit:
 
 ```bash
-yarn format:fix    # oxfmt
-yarn ts-check      # expect 0 errors
-yarn test          # expect all green
-git status         # include ALL modified files
+yarn format:fix      # oxfmt — must be clean before ts-check
+yarn ts-check        # expect 0 errors
+yarn test:coverage   # expect all green (use :coverage to keep thresholds enforced)
+yarn lint            # expect 0 errors
+yarn check:imports   # expect 0 errors
+git status           # include ALL modified files
 ```
+
+All five checks are required. Missing any one of them has broken CI in the past.
 
 ---
 
@@ -302,6 +315,9 @@ git status         # include ALL modified files
 
 These are one-line summaries. Each links to a spec or PR if fuller context is needed.
 
+- **Periodic shard flush (`flushEvery`, 2026-05-11)** — `PipelineRunner.runShard` no longer buffers all commands for the entire shard. Every `tuning.flushEvery` records (default 500) `processor.execute()` is called and the buffer resets. A final flush drains the remainder. This bounds memory to `flushEvery × avg_record_size` regardless of table size. `afterShard` still fires exactly once per shard, after all flushes. Env var: `FLUSH_EVERY`.
+- **One `createConfig`, no `createDdbConfig`/`createOsConfig`** (2026-05-10) — a single unified config covers all storage types. `source.opensearch` / `target.opensearch` are optional; omit or set to `null` to skip OpenSearch. Bootstrap registers DDB + S3 unconditionally; OS features only when `config.target.opensearch != null`. Storage guards (`storage !== "ddb"`) in `DdbScanner`, `DdbProcessor`, `S3Processor` were deleted. `OsScanner`/`OsProcessor` check `!config.source.opensearch` / `!config.target.opensearch`. Never reintroduce a `storage` discriminator field or per-storage config builders.
+- **Preset selected at runtime, not in config** (2026-05-10) — `pipeline.preset` is gone from the schema. `TransferWizard` prompts the user and returns `WizardResult { configPath, preset }`. Workers receive `--preset <name>` on their argv. Preset name is never derived from config. Never add `preset` back to `pipelineSettingsSchema`.
 - **Zero transformers must work** — infra supports pure data-transfer (prod→dev seeding). `PipelineBuilder.build()` never throws for missing `.filter()`; if the pipeline includes a processor with `onEnd` (e.g. `DdbProcessor`), the terminal put fires via that hook for every matching record.
 - **Record carries everything** — processors + executors trust `ctx.record` at execute time; no side-channel queues or pre-transform snapshot passing. The OS refactor on 2026-04-19 made this explicit.
 - **`ctx.original` always present** — frozen pre-transform snapshot, on every context, permanently. Don't remove even if no built-in code consumes it.
@@ -340,7 +356,7 @@ Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`
 ### Broader open work
 
 1. **npm publish story** — the package isn't on npm yet. Needs version strategy, publish script, CI. `npx @webiny/data-transfer init` in the README won't work until this lands.
-2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. All three scaffold files exist (`stampMigratedAt.ts`, `presets/example.ts`, `ddb.transfer.config.ts` + optional `setup.ts`). Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
+2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. Scaffold output: `config.ts`, `presets/example.ts`, optional `setup.ts`. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
 3. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
 4. **Public API audit pass (post-refactor)** — `src/index.ts` grew with `Processor`, `NonEmptyArray`, `InitDataTransferContext`, `BaseTransformContext`, `DdbTransformContext`, `OsTransformContext`, `initDataTransfer`. Re-audit before publish to confirm the surface matches user-authoring intent (e.g., should `DdbTransformContext` stay as-is or split into the narrower `BaseTransformContext & DdbProcessorSlice` for users who don't include S3Processor?).
 
@@ -353,25 +369,26 @@ Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`
 - Type-check: `yarn ts-check`
 - Test: `yarn test` (or `yarn test:coverage`)
 - Scaffold a standalone user project: `npx @webiny/data-transfer init my-transfer-folder`
-- Add a project folder to this repo: `yarn transfer init-project <name>` — creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `.env.example`, `models/`, and `presets/` (with `presetsDir` pre-wired in both configs). Template lives in `templates/internal-project/`. New project folders are **gitignored** (`projects/*/` except `projects/v5-to-v6/`) — credentials stay local.
-- **Guided setup (first-time use):** `yarn transfer` (no `--config`) launches `TransferWizard`. It selects the project, validates the Webiny output or Pulumi state JSON files the user drops into `projects/<name>/`, and writes the `.env` from `.env.example`. After writing the `.env` it exits — user reviews the file and runs `yarn transfer` again to run the transfer. On the second run (no JSON files, `.env` exists) the wizard skips to config selection.
-- **Dry-run the preset against real AWS (dev use, from this repo):**
+- Add a project folder to this repo: `yarn transfer init-project <name>` — creates `projects/<name>/` with `config.ts`, `.env.example`, `models/`, and `presets/`. Template lives in `templates/internal-project/`. New project folders are **gitignored** (`projects/*/` except `projects/v5-to-v6/`) — credentials stay local.
+- **Guided setup (recommended):** `yarn transfer` (no `--config`) launches `TransferWizard`:
+  - Selects a project from `projects/`.
+  - If JSON output files are present (`source/target.webiny.json` or `.pulumi.json`):
+    - If `.env` also exists, asks whether to **repopulate** it from the JSON files or **use the existing** `.env`.
+    - If `.env` does not exist, extracts values and writes `.env`, then exits (user reviews and re-runs).
+    - Account IDs extracted from `primaryDynamodbTableArn` in the JSON files. If source and target account IDs differ, the wizard warns and advises setting `SOURCE_PROFILE` / `TARGET_PROFILE`.
+  - Preset selection: lists available presets with their one-line `description` in the prompt (`v5-to-v6-ddb — Full DDB migration`). User-supplied presets in `presetsDir` appear alongside built-ins.
+  - Dry-run prompt: after selecting a preset, the wizard asks if this is a dry run. Dry-run mode reads the source but skips all writes (`DdbProcessor`, `OsProcessor`, `S3Processor` skip `execute()`). Useful for validation passes.
+  - Returns `WizardResult { configPath, preset, dryRun }`. Workers receive `--preset <name>` and optionally `--dry-run`.
+- **Direct run with config:**
 
   ```bash
-  # Option A — guided (recommended):
-  yarn transfer
-  # Wizard prompts for project, validates JSON files, writes .env, exits.
-  # After reviewing .env, run again:
-  yarn transfer
-
-  # Option B — manual .env then direct config:
-  cp projects/v5-to-v6/.env.example projects/v5-to-v6/.env
-  # edit .env — set region, DDB/S3/OS tables, optional profiles
-  yarn transfer --config=./projects/v5-to-v6/ddb.transfer.config.ts  # DDB + S3 first
-  yarn transfer --config=./projects/v5-to-v6/os.transfer.config.ts   # OS table second
+  # After .env is written:
+  yarn transfer --config=./projects/v5-to-v6/config.ts --preset=v5-to-v6-ddb
+  # Then OpenSearch (if needed):
+  yarn transfer --config=./projects/v5-to-v6/config.ts --preset=v5-to-v6-os
   ```
 
-  Run DDB transfer first, then OS — they don't share state. `.env*` is gitignored. The OS config additionally needs `SOURCE_OS_TABLE`, `TARGET_OS_TABLE`, `TARGET_OS_ENDPOINT`, and optionally `MODELS_DIR` (defaults to `./models`).
+  `.env*` is gitignored. One `config.ts` covers both DDB and OS runs — the preset determines which storage operations execute.
 
 - **JSON file formats for guided setup:** place in `projects/<name>/` before running `yarn transfer`:
   - `source.webiny.json` / `target.webiny.json` — output of `yarn webiny output core --json` run in the source/target Webiny project.

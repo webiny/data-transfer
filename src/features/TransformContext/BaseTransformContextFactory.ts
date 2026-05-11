@@ -27,7 +27,7 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
 
         const ctx: BaseTransformContextAbstraction.Interface<TRecord> = {
             record: structuredClone(params.record),
-            original: Object.freeze(structuredClone(params.record)) as Readonly<TRecord>,
+            original: Object.freeze(structuredClone(params.record)),
             modelProvider,
             cache,
             logger,

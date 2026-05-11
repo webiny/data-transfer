@@ -26,7 +26,7 @@ export class MockS3Client implements SourceS3Client.Interface {
         return stored;
     }
 
-    // Test helpers
+    // Test helper — seed objects into the in-memory store.
     public putObject(bucket: string, key: string, data: Buffer): void {
         this.objects.set(`${bucket}/${key}`, data);
     }

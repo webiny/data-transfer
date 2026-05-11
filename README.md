@@ -8,30 +8,34 @@ A generic data-transfer tool for Webiny environments. Copies DynamoDB + S3 (or O
 - **Prod → dev seeding** — zero transformers, just copy.
 - **Custom transfers** — write your own transformers + pipelines + preset for bespoke data moves.
 
-The package ships two built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`) plus full authoring support for your own.
+The package ships four built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`, `copy-ddb`, `copy-files`) plus full authoring support for your own.
 
 ## Quick start
 
 ```bash
-git clone git@github.com:webiny/v5-to-v6.git
-cd v5-to-v6
+git clone git@github.com:webiny/data-transfer.git
+cd data-transfer
 yarn install
-yarn transfer init-project my-transfer
-# then run the guided setup:
 yarn transfer
 ```
 
-`yarn transfer` (no `--config`) launches the **guided setup wizard**. It walks you through selecting your project, collecting your Webiny output or Pulumi state JSON files, and automatically writing your `.env`. After writing the `.env` it exits — review the file and run `yarn transfer` again to start the transfer.
+`yarn transfer` (no `--config`) launches the **guided setup wizard**. It walks you through:
 
-To scaffold a new project folder:
+1. Selecting (or creating) a project folder under `projects/`
+2. Collecting your Webiny output or Pulumi state JSON files and writing `.env`
+3. Selecting a preset and optional dry-run mode, then starting the transfer
 
-```bash
-yarn transfer init-project <name>
-# e.g.
-yarn transfer init-project my-client-prod
-```
+**First run (no `.env` yet):** the wizard extracts values from your JSON files, writes `.env`, and exits so you can review it before anything runs. Run `yarn transfer` again to continue.
 
-This creates `projects/<name>/` with `ddb.transfer.config.ts`, `os.transfer.config.ts`, `README.md`, `.env.example`, `models/`, and `presets/` already wired up.
+**Subsequent runs (`.env` exists, no JSON files):** the wizard skips env setup entirely and goes straight to preset selection.
+
+**`.env` exists AND JSON files present:** the wizard asks whether to repopulate `.env` from the JSON files or keep the existing values. Choose "repopulate" to refresh after deploying a new environment; choose "use existing" to skip to preset selection.
+
+**Account ID warning:** the wizard extracts the AWS account ID from `primaryDynamodbTableArn` in the JSON files. If source and target accounts differ, it warns you to set `SOURCE_PROFILE` and `TARGET_PROFILE` in `.env` so the right credentials are used for each side.
+
+**Preset selection:** each preset is listed with its one-line description (`v5-to-v6-ddb — Full DDB migration`). User-supplied presets in `presetsDir` appear alongside built-ins.
+
+**Dry-run mode:** after selecting a preset the wizard asks "Dry run?" (default: No). In dry-run mode the tool scans and transforms records normally but skips all writes to the target (DynamoDB, S3, OpenSearch). Useful for validating your pipeline and transformer chain before committing a full transfer.
 
 New project folders are **gitignored** by default — credentials and env files stay local. Only `projects/v5-to-v6/` is committed as the reference example.
 
@@ -58,23 +62,16 @@ cp /path/to/target-project/state.json projects/<name>/target.pulumi.json
 
 Mixed formats are allowed (e.g. `source.webiny.json` + `target.pulumi.json`).
 
-## Storage modes
-
-The config builder determines which AWS storage the transfer reads from and writes to:
-
-- **`createDdbConfig(...)`** — DynamoDB primary table (+ S3 files). Handles all record types: CMS entries + models, security, file manager, folder permissions, mailer settings.
-- **`createOsConfig(...)`** — OpenSearch companion DynamoDB table. Reads gzipped records, unzips, transforms, zips, writes to target OS DDB table.
-
-Run DDB transfer first, then OS transfer with a separate config file. They don't share state.
+**CMS model exports (optional):** drop your exported model definitions into `projects/<name>/models/`. Export them from the Webiny Admin CMS → Models → Export, then copy the file there. See [`modelsDir`](#modelsdir) for accepted formats.
 
 ## Config reference
 
-### DDB config
+One `config.ts` file covers all storage types. DynamoDB and S3 are required; OpenSearch is optional — omit or set to `null` if your environment doesn't use it. The preset you select at runtime determines which storage operations actually run.
 
 ```typescript
 import {
   loadEnv,
-  createDdbConfig,
+  createConfig,
   fromAwsProfile,
   fromEnv,
   numberFromEnv
@@ -82,52 +79,23 @@ import {
 
 loadEnv(import.meta.url);
 
-export default createDdbConfig({
+export default createConfig({
   source: {
-    region: fromEnv("SOURCE_REGION", "us-east-1"),
+    region: fromEnv("SOURCE_REGION", "eu-central-1"),
     credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
     dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
-    s3: { bucket: fromEnv("SOURCE_S3_BUCKET") }
-  },
-  target: {
-    region: fromEnv("TARGET_REGION", "us-east-1"),
-    credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", "default") }),
-    dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
-    s3: { bucket: fromEnv("TARGET_S3_BUCKET") }
-  },
-  pipeline: {
-    preset: "./presets/my-preset.ts",
-    segments: numberFromEnv("SEGMENTS", 4),
-    modelsDir: "./models" // optional
-  }
-});
-```
-
-`loadEnv(import.meta.url)` loads the `.env` file sitting next to this config file. Each project folder should have its own `.env` so credentials stay isolated between projects.
-
-### OS config
-
-```typescript
-import {
-  loadEnv,
-  createOsConfig,
-  fromAwsProfile,
-  fromEnv,
-  numberFromEnv
-} from "@webiny/data-transfer";
-
-loadEnv(import.meta.url);
-
-export default createOsConfig({
-  source: {
-    region: fromEnv("SOURCE_REGION", "us-east-1"),
-    credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
-    dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
+    s3: { bucket: fromEnv("SOURCE_S3_BUCKET") },
+    // Remove or set to null if your source has no OpenSearch:
     opensearch: { tableName: fromEnv("SOURCE_OS_TABLE") }
   },
   target: {
-    region: fromEnv("TARGET_REGION", "us-east-1"),
+    region: fromEnv("TARGET_REGION", "eu-central-1"),
     credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", "default") }),
+    dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
+    s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
+    // Set tableName to null or omit the block to skip the audit log:
+    auditLog: { dynamodb: { tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE") } },
+    // Remove or set to null if your target has no OpenSearch:
     opensearch: {
       endpoint: fromEnv("TARGET_OS_ENDPOINT"),
       tableName: fromEnv("TARGET_OS_TABLE"),
@@ -136,14 +104,17 @@ export default createOsConfig({
     }
   },
   pipeline: {
-    preset: "v5-to-v6-os",
     segments: numberFromEnv("SEGMENTS", 4),
-    modelsDir: fromEnv("MODELS_DIR", "./models")
+    modelsDir: fromEnv("MODELS_DIR", "./models"),
+    // Optional: point at your own preset files (alongside built-ins):
+    presetsDir: "./presets"
   }
 });
 ```
 
-**Index management** (OS mode): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected.
+`loadEnv(import.meta.url)` loads the `.env` file sitting next to this config file. Each project folder should have its own `.env` so credentials stay isolated between projects.
+
+**Index management** (OpenSearch): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected.
 
 ### Env helpers
 
@@ -186,6 +157,7 @@ JSON models override DB-loaded models when both exist.
 
 ```typescript
 tuning: {
+  flushEvery: numberFromEnv("FLUSH_EVERY", 500), // records per shard flush — bounds peak memory
   ddb: { maxRetries: 3, initialBackoffMs: 100 },
   s3:  { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
   os:  { maxRetries: 3, retryScheduleMs: [5000, 10000, 20000], gzipConcurrency: 16 }
@@ -193,6 +165,8 @@ tuning: {
 ```
 
 All fields are optional; absent = built-in defaults. `BATCH_SIZE` for DynamoDB is NOT tunable (AWS enforces 25 items per `BatchWriteItem`). DDB and S3 clients run in AWS SDK `adaptive` retry mode — `tuning.{ddb,s3}.maxRetries` caps the outer retry envelope on top of the SDK's own self-tuning backoff.
+
+**`tuning.flushEvery`** controls how often accumulated write commands are flushed during a shard scan. The runner calls `processor.execute()` every N records and resets the buffer, so peak memory stays at `flushEvery × avg_record_size` regardless of table size. Default 500 (≈ 5 MB at a 10 KB average). Lower to 100 for tables with very large records.
 
 ### Debug options
 
@@ -269,7 +243,7 @@ export default createTransferPreset({
 });
 ```
 
-Point `config.pipeline.preset` at the file path (relative to the config): `"./presets/my-preset.ts"`. Or use a built-in name like `"v5-to-v6-ddb"`.
+Drop the file in your `projects/<name>/presets/` directory. The wizard will offer it by name alongside built-ins.
 
 ### `pipelineBuilderFactory.create({ name, scanner, processors })`
 
@@ -380,12 +354,14 @@ export default createTransferPreset({
 
 ### Built-in presets
 
-Pass by name in `config.pipeline.preset`:
+Select by name when the wizard asks "Which preset do you want to run?":
 
 - **`"v5-to-v6-ddb"`** — full Webiny v5 → v6 migration of the primary DynamoDB table (CMS entries, file manager, security, mailer, folder permissions, etc.).
 - **`"v5-to-v6-os"`** — migration of the OpenSearch companion DynamoDB table. Run **after** `v5-to-v6-ddb`.
+- **`"copy-ddb"`** — verbatim DynamoDB-only copy (no transformations).
+- **`"copy-files"`** — verbatim DynamoDB + S3 file copy.
 
-Custom presets are path-resolved from your config file's directory.
+Custom presets placed in your `presetsDir` are listed alongside built-ins.
 
 ---
 
@@ -552,6 +528,7 @@ The CLI picks it up automatically and runs it **before** loading your preset, so
 
 ## Troubleshooting
 
+- **Out-of-memory on large tables** — each worker buffers write commands between flushes. Reduce `tuning.flushEvery` (default 500) to a smaller value (e.g. `FLUSH_EVERY=100`) so each flush covers fewer records and peak memory stays manageable.
 - **AWS throttling** — the SDK self-tunes via `retryMode: "adaptive"`. If you still hit the outer cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; lower `tuning.s3.concurrency` for S3-heavy transfers.
 - **OS indexes not creating** — the transfer aborts if index prep exhausts retries. Tune `tuning.os.maxRetries` and `tuning.os.retryScheduleMs`, or fix the underlying mapping error surfaced in the logs.
 - **Missing env vars** — run `yarn transfer` (no `--config`) to launch the guided setup wizard, which writes your `.env` automatically. Or copy `.env.example` manually and fill it in. Config files use `loadEnv(import.meta.url)` to load the sibling `.env`.

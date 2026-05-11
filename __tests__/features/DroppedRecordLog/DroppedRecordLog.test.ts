@@ -117,6 +117,21 @@ describe("DroppedRecordLog", () => {
         ).rejects.toThrow(/ENOENT/);
     });
 
+    it("uses empty string for missing PK and SK in label", async () => {
+        const log = createContainer().resolve(DroppedRecordLog);
+        log.add(
+            { TYPE: "cms.entry.l" } as Record<string, unknown>,
+            new RecordDisposition.Unmatched()
+        );
+        log.flush(0);
+
+        const content = await readFile(
+            join(workDir, ".transfer", "test-run-id", "segment-0-unmatched.log"),
+            "utf-8"
+        );
+        expect(content.trim()).toBe("[cms.entry.l]  :");
+    });
+
     it("clears buffer after flush — second flush with no new adds is a no-op", async () => {
         const log = createContainer().resolve(DroppedRecordLog);
         log.add({ PK: "PK1", SK: "SK1", TYPE: "t1" }, new RecordDisposition.Unmatched());

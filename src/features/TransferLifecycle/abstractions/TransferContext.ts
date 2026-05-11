@@ -2,6 +2,7 @@ import { createAbstraction } from "~/base/index.ts";
 
 interface ITransferContext {
     runId: string;
+    dryRun?: boolean;
 }
 
 export const TransferContext = createAbstraction<ITransferContext>("Transfer/TransferContext");

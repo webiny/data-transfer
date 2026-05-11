@@ -9,13 +9,17 @@ const SAMPLE_VALUES: EnvValues = {
     sourceRegion: "eu-central-1",
     sourceDdbTable: "wby-source-primary",
     sourceS3Bucket: "wby-source-bucket",
+    sourceAuditLogTable: "",
     sourceOsTable: "wby-source-es",
+    sourceAccountId: "111111111111",
     targetRegion: "us-east-1",
     targetDdbTable: "wby-target-primary",
     targetS3Bucket: "wby-target-bucket",
+    targetAuditLogTable: "wby-target-audit-logs",
     targetOsTable: "wby-target-os",
     targetOsEndpoint: "search-target.us-east-1.es.amazonaws.com",
     targetOsIndexPrefix: "my-prefix",
+    targetAccountId: "222222222222",
     segments: 8
 };
 
@@ -46,10 +50,12 @@ describe("writeEnv", () => {
             "SOURCE_REGION={{SOURCE_REGION}}",
             "SOURCE_DDB_TABLE={{SOURCE_DDB_TABLE}}",
             "SOURCE_S3_BUCKET={{SOURCE_S3_BUCKET}}",
+            "SOURCE_AUDIT_LOGS_TABLE={{SOURCE_AUDIT_LOGS_TABLE}}",
             "SOURCE_OS_TABLE={{SOURCE_OS_TABLE}}",
             "TARGET_REGION={{TARGET_REGION}}",
             "TARGET_DDB_TABLE={{TARGET_DDB_TABLE}}",
             "TARGET_S3_BUCKET={{TARGET_S3_BUCKET}}",
+            "TARGET_AUDIT_LOGS_TABLE={{TARGET_AUDIT_LOGS_TABLE}}",
             "TARGET_OS_TABLE={{TARGET_OS_TABLE}}",
             "TARGET_OS_ENDPOINT={{TARGET_OS_ENDPOINT}}",
             "TARGET_OS_INDEX_PREFIX={{TARGET_OS_INDEX_PREFIX}}",
@@ -67,6 +73,7 @@ describe("writeEnv", () => {
         expect(content).toContain("TARGET_REGION=us-east-1");
         expect(content).toContain("TARGET_DDB_TABLE=wby-target-primary");
         expect(content).toContain("TARGET_S3_BUCKET=wby-target-bucket");
+        expect(content).toContain("TARGET_AUDIT_LOGS_TABLE=wby-target-audit-logs");
         expect(content).toContain("TARGET_OS_TABLE=wby-target-os");
         expect(content).toContain("TARGET_OS_ENDPOINT=search-target.us-east-1.es.amazonaws.com");
         expect(content).toContain("TARGET_OS_INDEX_PREFIX=my-prefix");

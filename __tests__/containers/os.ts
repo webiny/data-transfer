@@ -31,6 +31,7 @@ import { TouchedIndexesFeature } from "../../src/features/TouchedIndexes/index.t
 import { OsRecordDecompressorFeature } from "../../src/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "../../src/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "../../src/features/OsProcessor/index.ts";
+import { AccessCheckerFeature } from "../../src/features/AccessChecker/index.ts";
 import { MockDynamoDbClient } from "../services/DynamoDbClient/MockDynamoDbClient.ts";
 import { MockOpenSearchClient } from "../services/OpenSearchClient/MockOpenSearchClient.ts";
 
@@ -47,6 +48,7 @@ export interface OsContainerOptions {
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: OsContainerPipelineOverride;
     indexPrefix?: string;
+    noOpenSearch?: boolean;
 }
 
 export function createOsContainer(options: OsContainerOptions = {}): Container {
@@ -55,25 +57,28 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     const osClient = new MockOpenSearchClient();
 
     const config: MigrationConfig.Interface = {
-        storage: "os",
         source: {
             region: "us-east-1",
             credentials: DEFAULT_CREDS,
             dynamodb: { tableName: "source-primary" },
+            s3: { bucket: "source-bucket" },
             opensearch: { tableName: "source-os" }
         },
         target: {
             region: "eu-central-1",
             credentials: DEFAULT_CREDS,
-            opensearch: {
-                endpoint: "https://es.example.com",
-                tableName: "target-os",
-                service: "opensearch" as const,
-                indexPrefix: options.indexPrefix ?? ""
-            }
+            dynamodb: { tableName: "target-table" },
+            s3: { bucket: "target-bucket" },
+            opensearch: options.noOpenSearch
+                ? undefined
+                : {
+                      endpoint: "https://es.example.com",
+                      tableName: "target-os",
+                      service: "opensearch" as const,
+                      indexPrefix: options.indexPrefix ?? ""
+                  }
         },
         pipeline: {
-            preset: "v5-to-v6-os",
             modelsDir: options.modelsDir,
             presetsDir: options.presetsDir,
             ...(options.pipelineOverride?.segments !== undefined
@@ -118,6 +123,7 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     OsRecordDecompressorFeature.register(container);
     OsScannerFeature.register(container);
     OsProcessorFeature.register(container);
+    AccessCheckerFeature.register(container);
 
     return container;
 }
