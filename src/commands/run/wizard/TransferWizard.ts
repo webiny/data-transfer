@@ -1,6 +1,6 @@
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { access, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { select, input } from "@inquirer/prompts";
 import { discoverProjects } from "./projectDiscovery.ts";
@@ -158,6 +158,24 @@ export class TransferWizard {
             return await this.runPresetSelection(projectName);
         }
 
+        if (
+            !justCreated &&
+            envExists &&
+            sourceValsInitial !== null &&
+            targetValsInitial !== null
+        ) {
+            const choice = await select({
+                message: ".env already exists. What would you like to do?",
+                choices: [
+                    { value: "existing", name: "Use existing .env" },
+                    { value: "repopulate", name: "Repopulate .env from JSON files" }
+                ]
+            });
+            if (choice === "existing") {
+                return await this.runPresetSelection(projectName);
+            }
+        }
+
         let sourceVals: RawOutputValues | null = sourceValsInitial;
         let targetVals: RawOutputValues | null = targetValsInitial;
 
@@ -203,15 +221,6 @@ export class TransferWizard {
             targetOsIndexPrefix,
             segments: Number(segmentsRaw)
         };
-
-        try {
-            await access(join(projectDir, ".env"));
-            console.warn(
-                "\n⚠  .env already exists and will be overwritten. Manual edits will be lost.\n"
-            );
-        } catch {
-            // no existing .env — silent
-        }
 
         await writeEnv(projectDir, envValues);
 
