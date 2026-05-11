@@ -55,8 +55,8 @@ class OsProcessorImpl implements Processor.Interface<
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): OsProcessorSlice {
-        if (this.config.storage !== "os") {
-            throw new Error("OsProcessor can only be used in os mode");
+        if (!this.config.target.opensearch) {
+            throw new Error("OsProcessor: config.target.opensearch is not configured.");
         }
         const sourceTable = this.config.source.opensearch.tableName;
         const targetTable = this.config.target.opensearch.tableName;

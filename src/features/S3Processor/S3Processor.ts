@@ -21,9 +21,6 @@ class S3ProcessorImpl implements Processor.Interface<
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): S3ProcessorSlice {
-        if (this.config.storage !== "ddb") {
-            throw new Error("S3Processor can only be used in ddb mode");
-        }
         const sourceBucket = this.config.source.s3.bucket;
         const targetBucket = this.config.target.s3.bucket;
         const sourceS3 = this.sourceS3;

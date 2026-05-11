@@ -20,10 +20,7 @@ class AuditLogProcessorImpl implements Processor.Interface<
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): AuditLogProcessorSlice {
-        const tableName =
-            this.config.storage === "ddb"
-                ? (this.config.target.auditLog?.dynamodb?.tableName ?? null)
-                : null;
+        const tableName = this.config.target.auditLog?.dynamodb?.tableName ?? null;
         return {
             putAuditLog(record: Record<string, unknown>): void {
                 if (!tableName) {
@@ -42,10 +39,7 @@ class AuditLogProcessorImpl implements Processor.Interface<
     }
 
     public async execute(commands: Commands): Promise<void> {
-        const tableName =
-            this.config.storage === "ddb"
-                ? (this.config.target.auditLog?.dynamodb?.tableName ?? null)
-                : null;
+        const tableName = this.config.target.auditLog?.dynamodb?.tableName ?? null;
         if (!tableName) {
             return;
         }

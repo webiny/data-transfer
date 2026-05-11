@@ -23,8 +23,8 @@ class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
     }
 
     public async *scan(shard: OsShard): AsyncIterable<OsRecord> {
-        if (this.config.storage !== "os") {
-            throw new Error("OsScanner: source is not in OS storage mode; check config.storage");
+        if (!this.config.source.opensearch) {
+            throw new Error("OsScanner: config.source.opensearch is not configured.");
         }
         const tableName = this.config.source.opensearch.tableName;
         for await (const raw of this.source.scan<OsRecordDecompressor.Compressed>(tableName, {

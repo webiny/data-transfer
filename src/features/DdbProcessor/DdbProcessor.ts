@@ -33,9 +33,6 @@ class DdbProcessorImpl implements Processor.Interface<
     ) {}
 
     public extendContext(base: BaseTransformContext.Interface<unknown>): DdbProcessorSlice {
-        if (this.config.storage !== "ddb") {
-            throw new Error("DdbProcessor can only be used in ddb mode");
-        }
         const sourceTable = this.config.source.dynamodb.tableName;
         const targetTable = this.config.target.dynamodb.tableName;
         const sourceDb = this.sourceDb;

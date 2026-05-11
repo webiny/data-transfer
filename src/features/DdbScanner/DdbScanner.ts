@@ -20,9 +20,6 @@ class DdbScannerImpl implements Scanner.Interface<BaseRecord, DdbShard> {
     }
 
     public async *scan(shard: DdbShard): AsyncIterable<BaseRecord> {
-        if (this.config.storage !== "ddb") {
-            throw new Error("DdbScanner: source is not in DDB storage mode; check config.storage");
-        }
         yield* this.source.scan(this.config.source.dynamodb.tableName, {
             segment: shard.segment,
             totalSegments: shard.total
