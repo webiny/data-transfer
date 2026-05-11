@@ -19,3 +19,8 @@ export interface EnvValues {
     targetOsIndexPrefix: string;
     segments: number;
 }
+
+export interface WizardResult {
+    configPath: string;
+    preset: string;
+}

@@ -29,18 +29,18 @@ export function registerRunCommand(yargs: Argv): Argv {
                 });
         },
         async argv => {
-            if (argv.config) {
-                await handler(argv.config, argv.segments, argv["log-level"] as string | undefined);
-                return;
-            }
-
             const wizard = new TransferWizard(process.cwd());
             try {
-                const configPath = await wizard.run();
-                if (configPath === null) {
+                const result = await wizard.run();
+                if (result === null) {
                     process.exit(0);
                 }
-                await handler(configPath, argv.segments, argv["log-level"] as string | undefined);
+                await handler(
+                    result.configPath,
+                    result.preset,
+                    argv.segments,
+                    argv["log-level"] as string | undefined
+                );
             } catch (err) {
                 if (err instanceof ExitPromptError) {
                     process.exit(0);

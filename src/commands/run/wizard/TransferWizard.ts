@@ -1,14 +1,16 @@
 import { join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { access, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { select, input } from "@inquirer/prompts";
 import { discoverProjects } from "./projectDiscovery.ts";
-import { discoverConfigs } from "./configDiscovery.ts";
+import { discoverConfig } from "./configDiscovery.ts";
+import { listAvailablePresets } from "./presetDiscovery.ts";
 import { writeEnv } from "./envWriter.ts";
 import { extractFromWebinyOutput } from "./sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "./sources/PulumiStateSource.ts";
 import { scaffoldProject } from "~/commands/initProject/scaffoldProject.ts";
-import type { RawOutputValues, EnvValues } from "./types.ts";
+import type { RawOutputValues, EnvValues, WizardResult } from "./types.ts";
 
 async function fileNonEmpty(path: string): Promise<boolean> {
     try {
@@ -99,7 +101,7 @@ export class TransferWizard {
         this.cwd = cwd;
     }
 
-    public async run(): Promise<string | null> {
+    public async run(): Promise<WizardResult | null> {
         const projects = await discoverProjects(this.cwd);
 
         const selected = await select({
@@ -153,7 +155,7 @@ export class TransferWizard {
         const envExists = await fileNonEmpty(join(projectDir, ".env"));
 
         if (!justCreated && sourceValsInitial === null && targetValsInitial === null && envExists) {
-            return await this.runConfigSelection(projectName);
+            return await this.runPresetSelection(projectName);
         }
 
         let sourceVals: RawOutputValues | null = sourceValsInitial;
@@ -221,25 +223,38 @@ export class TransferWizard {
         return null;
     }
 
-    private async runConfigSelection(projectName: string): Promise<string> {
+    private async runPresetSelection(projectName: string): Promise<WizardResult> {
         const projectDir = resolve(join(this.cwd, "projects", projectName));
-        const configs = await discoverConfigs(projectDir);
+        const configPath = await discoverConfig(projectDir);
 
-        if (configs.length === 0) {
+        if (!configPath) {
             console.error(
-                `\nNo transfer configs found in projects/${projectName}/.\n` +
-                    `Add a ddb.transfer.config.ts or os.transfer.config.ts.\n`
+                `\nNo config.ts found in projects/${projectName}/.\n` +
+                    `Run "yarn transfer" to set up the project first.\n`
             );
             process.exit(1);
         }
 
-        if (configs.length === 1) {
-            return configs[0].path;
+        let presetsDir: string | undefined;
+        try {
+            const mod = await import(pathToFileURL(configPath).href);
+            presetsDir = mod.default?.pipeline?.presetsDir;
+        } catch {
+            // ignore — presets from built-ins only
         }
 
-        return select({
-            message: "Which transfer do you want to run?",
-            choices: configs.map(c => ({ value: c.path, name: c.label }))
+        const presets = listAvailablePresets(presetsDir);
+
+        if (presets.length === 0) {
+            console.error("\nNo presets available. Check your presetsDir configuration.\n");
+            process.exit(1);
+        }
+
+        const preset = await select({
+            message: "Which preset do you want to run?",
+            choices: presets.map(p => ({ value: p, name: p }))
         });
+
+        return { configPath, preset };
     }
 }
