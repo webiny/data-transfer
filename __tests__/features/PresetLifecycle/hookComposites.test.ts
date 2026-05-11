@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
 import { BeforeLoadPresetHookComposite } from "~/features/PresetLifecycle/BeforeLoadPresetHookComposite.ts";
 import { AfterLoadPresetHookComposite } from "~/features/PresetLifecycle/AfterLoadPresetHookComposite.ts";
@@ -24,10 +24,14 @@ describe("BeforeLoadPresetHookComposite", () => {
         const container = createContainer();
         const received: MigrationConfig.Interface[] = [];
         container.registerInstance(BeforeLoadPresetHook, {
-            execute: async (cfg) => { received.push(cfg); }
+            execute: async cfg => {
+                received.push(cfg);
+            }
         });
         container.registerInstance(BeforeLoadPresetHook, {
-            execute: async (cfg) => { received.push(cfg); }
+            execute: async cfg => {
+                received.push(cfg);
+            }
         });
 
         await container.resolve(BeforeLoadPresetHook).execute(STUB_CONFIG);
@@ -50,10 +54,16 @@ describe("AfterLoadPresetHookComposite", () => {
         const argsB: [MigrationConfig.Interface, MigrationPreset][] = [];
 
         container.registerInstance(AfterLoadPresetHook, {
-            execute: async (cfg, preset) => { order.push("a"); argsA.push([cfg, preset]); }
+            execute: async (cfg, preset) => {
+                order.push("a");
+                argsA.push([cfg, preset]);
+            }
         });
         container.registerInstance(AfterLoadPresetHook, {
-            execute: async (cfg, preset) => { order.push("b"); argsB.push([cfg, preset]); }
+            execute: async (cfg, preset) => {
+                order.push("b");
+                argsB.push([cfg, preset]);
+            }
         });
 
         await container.resolve(AfterLoadPresetHook).execute(STUB_CONFIG, STUB_PRESET);

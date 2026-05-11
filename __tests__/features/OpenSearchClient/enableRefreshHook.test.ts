@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { join } from "path";
 import { Container } from "@webiny/di";
 import { EnableRefreshHook } from "~/services/OpenSearchClient/hooks/EnableRefreshHook.ts";
@@ -41,8 +41,12 @@ function makeHarness(
 
     const mockLogger: Logger.Interface = {
         debug: vi.fn(),
-        info: (_msg: string) => { infoCalls.push(_msg); },
-        warn: (_msg: string) => { warnCalls.push(_msg); },
+        info: (_msg: string) => {
+            infoCalls.push(_msg);
+        },
+        warn: (_msg: string) => {
+            warnCalls.push(_msg);
+        },
         error: vi.fn(),
         fatal: vi.fn(),
         done: vi.fn(),
