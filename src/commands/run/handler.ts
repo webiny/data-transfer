@@ -44,7 +44,7 @@ export async function handler(
     } catch (error) {
         // Config-load / Zod validation failures happen before we have a logger
         // — write directly to stderr so the user sees the friendly format.
-        const verbose = (logLevel ?? "info") === "debug";
+        const verbose = (logLevel ?? "debug") === "debug";
         process.stderr.write(`\n${formatError(error, verbose)}\n`);
         process.exit(1);
     }
@@ -163,7 +163,7 @@ function logConfig({
     logger.info("Starting transfer with configuration:");
     logger.info(`  Run ID: ${runId}`);
     logger.info(`  Preset: ${presetName}`);
-    logger.info(`  Log Level: ${logLevel ?? "info"}`);
+    logger.info(`  Log Level: ${logLevel ?? "debug"}`);
     if (segmentsToRun.length === segments) {
         logger.info(`  Segments: ${segments}`);
     } else {

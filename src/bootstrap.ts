@@ -59,7 +59,7 @@ export function bootstrap(options: BootstrapOptions): Container {
 
     // Tools
     LoggerFeature.register(container, {
-        logLevel: options.logLevel || config.debug?.logLevel || "info",
+        logLevel: options.logLevel || config.debug?.logLevel || "debug",
         json: options.json || false,
         logFile: resolveLogFile(config, options.runId)
     });
