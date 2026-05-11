@@ -1,3 +1,13 @@
+const THROTTLING_ERROR_NAMES = new Set<string>([
+    "ProvisionedThroughputExceededException",
+    "ThrottlingException",
+    "RequestLimitExceeded",
+    "SlowDown",
+    "TooManyRequestsException",
+    "LimitExceededException",
+    "Throttling"
+]);
+
 const RETRYABLE_ERROR_NAMES = new Set<string>([
     // DynamoDB throttles
     "ProvisionedThroughputExceededException",
@@ -72,6 +82,29 @@ export function isRetryableAwsError(error: unknown): boolean {
     }
 
     return false;
+}
+
+/**
+ * Returns true when the error is a service-level throttle (rate limit exceeded),
+ * as opposed to a transient network or server error.
+ */
+export function isThrottlingError(error: unknown): boolean {
+    if (!error || typeof error !== "object") {
+        return false;
+    }
+    const candidate = error as AwsErrorLike;
+
+    if (candidate.$retryable?.throttling === true) {
+        return true;
+    }
+
+    const name = candidate.name ?? candidate.code;
+    if (typeof name === "string" && THROTTLING_ERROR_NAMES.has(name)) {
+        return true;
+    }
+
+    const status = candidate.$metadata?.httpStatusCode;
+    return status === 429;
 }
 
 /**

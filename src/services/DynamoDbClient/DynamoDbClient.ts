@@ -12,7 +12,12 @@ import {
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { SourceDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";
-import { isRetryableAwsError, isTokenBucketExhausted, retryBackoffMs } from "~/base/index.ts";
+import {
+    isRetryableAwsError,
+    isThrottlingError,
+    isTokenBucketExhausted,
+    retryBackoffMs
+} from "~/base/index.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import type { BaseRecord } from "~/domain/transform/types/records.ts";
 
@@ -204,9 +209,15 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
                 // Token bucket needs time to refill — enforce a minimum 10s wait.
                 const backoff = isTokenBucketExhausted(error) ? Math.max(base, 10000) : base;
                 const err = error as { message?: string; name?: string };
-                this.logger.warn(
-                    `DynamoDB retry ${attempt + 1}/${this.maxRetries}: ${err.name ?? "Error"} — ${err.message ?? String(error)} (backoff ${backoff}ms)`
-                );
+                if (isThrottlingError(error)) {
+                    this.logger.debug(
+                        `DDB throttled — ${err.name ?? "ThrottlingError"} (attempt ${attempt + 1}/${this.maxRetries}, backoff ${backoff}ms)`
+                    );
+                } else {
+                    this.logger.warn(
+                        `DDB retry ${attempt + 1}/${this.maxRetries}: ${err.name ?? "Error"} — ${err.message ?? String(error)} (backoff ${backoff}ms)`
+                    );
+                }
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }

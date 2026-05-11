@@ -6,7 +6,12 @@ import {
 } from "@webiny/aws-sdk/client-s3/index.js";
 import { SourceS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";
-import { isRetryableAwsError, isTokenBucketExhausted, retryBackoffMs } from "~/base/index.ts";
+import {
+    isRetryableAwsError,
+    isThrottlingError,
+    isTokenBucketExhausted,
+    retryBackoffMs
+} from "~/base/index.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 // See DynamoDbClient for the rationale on 6 retries + the jittered
@@ -135,9 +140,15 @@ export class S3ClientImpl implements SourceS3Client.Interface {
                 const base = retryBackoffMs(attempt, this.initialBackoff);
                 const backoff = isTokenBucketExhausted(error) ? Math.max(base, 10000) : base;
                 const err = error as { message?: string; name?: string };
-                this.logger.warn(
-                    `S3 retry ${attempt + 1}/${this.maxRetries}: ${err.name ?? "Error"} — ${err.message ?? String(error)} (backoff ${backoff}ms)`
-                );
+                if (isThrottlingError(error)) {
+                    this.logger.debug(
+                        `S3 throttled — ${err.name ?? "ThrottlingError"} (attempt ${attempt + 1}/${this.maxRetries}, backoff ${backoff}ms)`
+                    );
+                } else {
+                    this.logger.warn(
+                        `S3 retry ${attempt + 1}/${this.maxRetries}: ${err.name ?? "Error"} — ${err.message ?? String(error)} (backoff ${backoff}ms)`
+                    );
+                }
                 await new Promise(resolve => setTimeout(resolve, backoff));
             }
         }
