@@ -20,7 +20,6 @@
         "outDir": "./dist",
         "rootDirs": ["./src", "__tests__"],
         "paths": {
-            "@/*": ["./*"],
             "~/*": ["./src/*"]
         }
     },
