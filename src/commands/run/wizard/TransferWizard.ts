@@ -92,6 +92,9 @@ Option B — Pulumi state file (use when you don't have Webiny CLI access):
   State files are at: .pulumi/apps/core/.pulumi/stacks/core/<env>.json
 
 You can mix formats (e.g. source.webiny.json + target.pulumi.json).
+
+Optionally, drop CMS model exports into ${rel}/models/
+  (export from Webiny Admin → CMS → Models → Export)
 `);
 }
 
