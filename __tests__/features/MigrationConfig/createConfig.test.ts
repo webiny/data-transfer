@@ -1,483 +1,249 @@
 import { describe, it, expect } from "vitest";
-import { createDdbConfig } from "../../../src/features/MigrationConfig/createDdbConfig.ts";
-import { createOsConfig } from "../../../src/features/MigrationConfig/createOsConfig.ts";
+import { createConfig } from "../../../src/features/MigrationConfig/createConfig.ts";
 
 const creds = { accessKeyId: "AKIA", secretAccessKey: "secret" };
 
-describe("createDdbConfig", () => {
-    it("should return a valid ddb config with storage set", () => {
-        const config = createDdbConfig({
-            source: {
-                region: "us-east-1",
-                credentials: creds,
-                dynamodb: { tableName: "src" },
-                s3: { bucket: "src-bucket" }
-            },
-            target: {
-                region: "eu-central-1",
-                credentials: creds,
-                dynamodb: { tableName: "tgt" },
-                s3: { bucket: "tgt-bucket" },
-                auditLog: null
-            },
-            pipeline: { preset: "v5-to-v6" }
-        });
+const baseSource = {
+    region: "us-east-1",
+    credentials: creds,
+    dynamodb: { tableName: "src-table" },
+    s3: { bucket: "src-bucket" }
+};
 
-        expect(config.storage).toBe("ddb");
-        expect(config.source.dynamodb.tableName).toBe("src");
+const baseTarget = {
+    region: "eu-central-1",
+    credentials: creds,
+    dynamodb: { tableName: "tgt-table" },
+    s3: { bucket: "tgt-bucket" }
+};
+
+describe("createConfig — happy path", () => {
+    it("returns a config with required fields, no storage field", () => {
+        const config = createConfig({ source: baseSource, target: baseTarget, pipeline: {} });
+        expect(config.source.dynamodb.tableName).toBe("src-table");
         expect(config.target.s3.bucket).toBe("tgt-bucket");
-        expect(config.pipeline.preset).toBe("v5-to-v6");
+        expect((config as any).storage).toBeUndefined();
+        expect((config as any).pipeline?.preset).toBeUndefined();
     });
 
-    it("should accept optional segments and modelsDir", () => {
-        const config = createDdbConfig({
-            source: {
-                region: "us-east-1",
-                credentials: creds,
-                dynamodb: { tableName: "src" },
-                s3: { bucket: "src-bucket" }
-            },
+    it("accepts optional opensearch on both sides", () => {
+        const config = createConfig({
+            source: { ...baseSource, opensearch: { tableName: "src-os" } },
             target: {
-                region: "us-east-1",
-                credentials: creds,
-                dynamodb: { tableName: "tgt" },
-                s3: { bucket: "tgt-bucket" },
-                auditLog: null
-            },
-            pipeline: { preset: "v5-to-v6", segments: 8, modelsDir: "./models" }
-        });
-
-        expect(config.pipeline.segments).toBe(8);
-        expect(config.pipeline.modelsDir).toBe("./models");
-    });
-
-    it("should throw on missing source region", () => {
-        expect(() =>
-            createDdbConfig({
-                source: {
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "b" }
-                } as any,
-                target: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "b" },
-                    auditLog: null
-                },
-                pipeline: { preset: "v5-to-v6" }
-            })
-        ).toThrow();
-    });
-
-    it("should throw on missing credentials", () => {
-        expect(() =>
-            createDdbConfig({
-                source: {
-                    region: "us-east-1",
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "b" }
-                } as any,
-                target: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "b" },
-                    auditLog: null
-                },
-                pipeline: { preset: "v5-to-v6" }
-            })
-        ).toThrow();
-    });
-
-    it("should throw on missing preset", () => {
-        expect(() =>
-            createDdbConfig({
-                source: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    s3: { bucket: "b" }
-                },
-                target: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt" },
-                    s3: { bucket: "b" },
-                    auditLog: null
-                },
-                pipeline: {} as any
-            })
-        ).toThrow();
-    });
-});
-
-describe("createOsConfig", () => {
-    it("should return a valid os config with storage set", () => {
-        const config = createOsConfig({
-            source: {
-                region: "us-east-1",
-                credentials: creds,
-                dynamodb: { tableName: "src-primary" },
-                opensearch: { tableName: "src-es" }
-            },
-            target: {
-                region: "eu-central-1",
-                credentials: creds,
+                ...baseTarget,
                 opensearch: {
-                    endpoint: "https://search-xxx.es.amazonaws.com",
-                    tableName: "tgt-es",
+                    endpoint: "https://search-x.es.amazonaws.com",
+                    tableName: "tgt-os",
                     service: "opensearch",
                     indexPrefix: ""
                 }
             },
-            pipeline: { preset: "v5-to-v6-os" }
+            pipeline: {}
         });
-
-        expect(config.storage).toBe("os");
-        expect(config.source.opensearch.tableName).toBe("src-es");
-        expect(config.source.dynamodb.tableName).toBe("src-primary");
-        expect(config.target.opensearch.endpoint).toBe("https://search-xxx.es.amazonaws.com");
+        expect(config.source.opensearch?.tableName).toBe("src-os");
+        expect(config.target.opensearch?.endpoint).toBe("https://search-x.es.amazonaws.com");
     });
 
-    it("should accept opensearch-serverless service", () => {
-        const config = createOsConfig({
-            source: {
-                region: "us-east-1",
-                credentials: creds,
-                dynamodb: { tableName: "src" },
-                opensearch: { tableName: "src-es" }
-            },
+    it("accepts opensearch-serverless service", () => {
+        const config = createConfig({
+            source: { ...baseSource, opensearch: { tableName: "src-os" } },
             target: {
-                region: "us-east-1",
-                credentials: creds,
+                ...baseTarget,
                 opensearch: {
                     endpoint: "https://xxx.aoss.amazonaws.com",
-                    tableName: "tgt-es",
+                    tableName: "tgt-os",
                     service: "opensearch-serverless",
                     indexPrefix: ""
                 }
             },
-            pipeline: { preset: "v5-to-v6-os" }
+            pipeline: {}
         });
-
-        expect(config.target.opensearch.service).toBe("opensearch-serverless");
+        expect(config.target.opensearch?.service).toBe("opensearch-serverless");
     });
 
-    it("should throw on missing source opensearch", () => {
-        expect(() =>
-            createOsConfig({
-                source: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" }
-                } as any,
-                target: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    opensearch: {
-                        endpoint: "https://es.example.com",
-                        tableName: "tgt-es",
-                        service: "opensearch",
-                        indexPrefix: ""
-                    }
-                },
-                pipeline: { preset: "v5-to-v6-os" }
-            })
-        ).toThrow();
-    });
-
-    it("should throw on missing target opensearch service", () => {
-        expect(() =>
-            createOsConfig({
-                source: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    opensearch: { tableName: "src-es" }
-                },
-                target: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    opensearch: {
-                        endpoint: "https://es.example.com",
-                        tableName: "tgt-es",
-                        indexPrefix: ""
-                    } as any
-                },
-                pipeline: { preset: "v5-to-v6-os" }
-            })
-        ).toThrow();
-    });
-
-    it("should throw on invalid endpoint URL", () => {
-        expect(() =>
-            createOsConfig({
-                source: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src" },
-                    opensearch: { tableName: "src-es" }
-                },
-                target: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    opensearch: {
-                        endpoint: "not-a-url",
-                        tableName: "tgt-es",
-                        service: "opensearch",
-                        indexPrefix: ""
-                    }
-                },
-                pipeline: { preset: "v5-to-v6-os" }
-            })
-        ).toThrow();
-    });
-
-    it("throws when target indexPrefix is missing", () => {
-        expect(() =>
-            createOsConfig({
-                source: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "src-primary" },
-                    opensearch: { tableName: "src-es" }
-                },
-                target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    opensearch: {
-                        endpoint: "https://search-xxx.es.amazonaws.com",
-                        tableName: "tgt-es",
-                        service: "opensearch"
-                    } as any
-                },
-                pipeline: { preset: "v5-to-v6-os" }
-            })
-        ).toThrow();
-    });
-
-    it("accepts empty string indexPrefix (no prefix)", () => {
-        const config = createOsConfig({
-            source: {
-                region: "us-east-1",
-                credentials: creds,
-                dynamodb: { tableName: "src-primary" },
-                opensearch: { tableName: "src-es" }
-            },
-            target: {
-                region: "eu-central-1",
-                credentials: creds,
-                opensearch: {
-                    endpoint: "https://search-xxx.es.amazonaws.com",
-                    tableName: "tgt-es",
-                    service: "opensearch",
-                    indexPrefix: ""
-                }
-            },
-            pipeline: { preset: "v5-to-v6-os" }
+    it("accepts optional auditLog", () => {
+        const config = createConfig({
+            source: baseSource,
+            target: { ...baseTarget, auditLog: { dynamodb: { tableName: "audit-table" } } },
+            pipeline: {}
         });
-        expect(config.target.opensearch.indexPrefix).toBe("");
+        expect(config.target.auditLog?.dynamodb?.tableName).toBe("audit-table");
     });
 
-    it("accepts and trims a non-empty indexPrefix", () => {
-        const config = createOsConfig({
-            source: {
-                region: "us-east-1",
-                credentials: creds,
-                dynamodb: { tableName: "src-primary" },
-                opensearch: { tableName: "src-es" }
-            },
-            target: {
-                region: "eu-central-1",
-                credentials: creds,
-                opensearch: {
-                    endpoint: "https://search-xxx.es.amazonaws.com",
-                    tableName: "tgt-es",
-                    service: "opensearch",
-                    indexPrefix: "  my-prefix-  "
-                }
-            },
-            pipeline: { preset: "v5-to-v6-os" }
+    it("accepts nullable auditLog (null = skip)", () => {
+        const config = createConfig({
+            source: baseSource,
+            target: { ...baseTarget, auditLog: null },
+            pipeline: {}
         });
-        expect(config.target.opensearch.indexPrefix).toBe("my-prefix-");
+        expect(config.target.auditLog).toBeNull();
+    });
+
+    it("trims whitespace from string fields", () => {
+        const config = createConfig({
+            source: { ...baseSource, region: "  us-east-1  ", dynamodb: { tableName: "  src  " }, s3: { bucket: "  src-b  " } },
+            target: { ...baseTarget, region: " eu-central-1 " },
+            pipeline: {}
+        });
+        expect(config.source.region).toBe("us-east-1");
+        expect(config.source.dynamodb.tableName).toBe("src");
+        expect(config.source.s3.bucket).toBe("src-b");
+        expect(config.target.region).toBe("eu-central-1");
+    });
+
+    it("accepts optional segments / modelsDir / presetsDir in pipeline", () => {
+        const config = createConfig({
+            source: baseSource,
+            target: baseTarget,
+            pipeline: { segments: 8, modelsDir: "./models", presetsDir: "./presets" }
+        });
+        expect(config.pipeline?.segments).toBe(8);
+        expect(config.pipeline?.modelsDir).toBe("./models");
     });
 });
 
-describe("createDdbConfig — source/target collision guard", () => {
-    const baseDdbSource = {
-        region: "us-east-1",
-        credentials: creds,
-        dynamodb: { tableName: "src-table" },
-        s3: { bucket: "src-bucket" }
-    };
-    const baseDdbTarget = {
-        region: "eu-central-1",
-        credentials: creds,
-        dynamodb: { tableName: "tgt-table" },
-        s3: { bucket: "tgt-bucket" },
-        auditLog: null
-    };
-
-    it("rejects same S3 bucket for source and target", () => {
+describe("createConfig — validation errors", () => {
+    it("throws on missing source region", () => {
         expect(() =>
-            createDdbConfig({
-                source: baseDdbSource,
-                target: { ...baseDdbTarget, s3: { bucket: baseDdbSource.s3.bucket } },
-                pipeline: { preset: "v5-to-v6" }
+            createConfig({ source: { ...baseSource, region: "" } as any, target: baseTarget, pipeline: {} })
+        ).toThrow();
+    });
+
+    it("throws on whitespace-only table name", () => {
+        expect(() =>
+            createConfig({
+                source: { ...baseSource, dynamodb: { tableName: "   " } },
+                target: baseTarget,
+                pipeline: {}
+            })
+        ).toThrow();
+    });
+
+    it("throws on missing credentials", () => {
+        expect(() =>
+            createConfig({ source: { ...baseSource, credentials: undefined as any }, target: baseTarget, pipeline: {} })
+        ).toThrow();
+    });
+
+    it("throws when only source.opensearch is set (target must match)", () => {
+        expect(() =>
+            createConfig({
+                source: { ...baseSource, opensearch: { tableName: "src-os" } },
+                target: baseTarget,
+                pipeline: {}
+            })
+        ).toThrow(/both be set or both be absent/);
+    });
+
+    it("throws when only target.opensearch is set", () => {
+        expect(() =>
+            createConfig({
+                source: baseSource,
+                target: {
+                    ...baseTarget,
+                    opensearch: {
+                        endpoint: "https://es.example.com",
+                        tableName: "tgt-os",
+                        service: "opensearch",
+                        indexPrefix: ""
+                    }
+                },
+                pipeline: {}
+            })
+        ).toThrow(/both be set or both be absent/);
+    });
+
+    it("throws on same S3 bucket for source and target", () => {
+        expect(() =>
+            createConfig({
+                source: baseSource,
+                target: { ...baseTarget, s3: { bucket: baseSource.s3.bucket } },
+                pipeline: {}
             })
         ).toThrow(/same as source/);
     });
 
-    it("rejects same region + same DDB table for source and target", () => {
+    it("throws on same region + same DDB table", () => {
         expect(() =>
-            createDdbConfig({
-                source: baseDdbSource,
-                target: {
-                    ...baseDdbTarget,
-                    region: baseDdbSource.region,
-                    dynamodb: { tableName: baseDdbSource.dynamodb.tableName }
-                },
-                pipeline: { preset: "v5-to-v6" }
+            createConfig({
+                source: baseSource,
+                target: { ...baseTarget, region: baseSource.region, dynamodb: { tableName: baseSource.dynamodb.tableName } },
+                pipeline: {}
             })
         ).toThrow(/matches source/);
     });
 
-    it("accepts same DDB table name across different regions", () => {
+    it("accepts same DDB table across different regions", () => {
         expect(() =>
-            createDdbConfig({
-                source: baseDdbSource,
-                target: {
-                    ...baseDdbTarget,
-                    // different region, same table name — distinct physical tables
-                    dynamodb: { tableName: baseDdbSource.dynamodb.tableName }
-                },
-                pipeline: { preset: "v5-to-v6" }
+            createConfig({
+                source: baseSource,
+                target: { ...baseTarget, dynamodb: { tableName: baseSource.dynamodb.tableName } },
+                pipeline: {}
             })
         ).not.toThrow();
     });
-});
 
-describe("createDdbConfig — string trimming", () => {
-    it("trims whitespace around string fields (paste-error tolerance)", () => {
-        const config = createDdbConfig({
-            source: {
-                region: "  us-east-1\t",
-                credentials: creds,
-                dynamodb: { tableName: "  src-table  " },
-                s3: { bucket: " src-bucket\n" }
-            },
-            target: {
-                region: " eu-central-1 ",
-                credentials: creds,
-                dynamodb: { tableName: "tgt-table " },
-                s3: { bucket: " tgt-bucket " },
-                auditLog: null
-            },
-            pipeline: { preset: "  v5-to-v6-ddb " }
-        });
-
-        expect(config.source.region).toBe("us-east-1");
-        expect(config.source.dynamodb.tableName).toBe("src-table");
-        expect(config.source.s3.bucket).toBe("src-bucket");
-        expect(config.target.region).toBe("eu-central-1");
-        expect(config.target.dynamodb.tableName).toBe("tgt-table");
-        expect(config.target.s3.bucket).toBe("tgt-bucket");
-        expect(config.pipeline.preset).toBe("v5-to-v6-ddb");
+    it("throws on same region + same OS table when opensearch present", () => {
+        expect(() =>
+            createConfig({
+                source: { ...baseSource, opensearch: { tableName: "same-os" } },
+                target: {
+                    ...baseTarget,
+                    region: baseSource.region,
+                    opensearch: {
+                        endpoint: "https://es.example.com",
+                        tableName: "same-os",
+                        service: "opensearch",
+                        indexPrefix: ""
+                    }
+                },
+                pipeline: {}
+            })
+        ).toThrow(/matches source/);
     });
 
-    it("rejects whitespace-only strings (empty after trim)", () => {
+    it("throws on auditLog table matching main target table", () => {
         expect(() =>
-            createDdbConfig({
-                source: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "   " },
-                    s3: { bucket: "src-bucket" }
-                },
+            createConfig({
+                source: baseSource,
                 target: {
-                    region: "eu-central-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "tgt-table" },
-                    s3: { bucket: "tgt-bucket" },
-                    auditLog: null
+                    ...baseTarget,
+                    auditLog: { dynamodb: { tableName: baseTarget.dynamodb.tableName } }
                 },
-                pipeline: { preset: "v5-to-v6-ddb" }
+                pipeline: {}
+            })
+        ).toThrow(/must differ/);
+    });
+
+    it("throws on invalid opensearch endpoint URL", () => {
+        expect(() =>
+            createConfig({
+                source: { ...baseSource, opensearch: { tableName: "src-os" } },
+                target: {
+                    ...baseTarget,
+                    opensearch: {
+                        endpoint: "not-a-url",
+                        tableName: "tgt-os",
+                        service: "opensearch",
+                        indexPrefix: ""
+                    }
+                },
+                pipeline: {}
             })
         ).toThrow();
     });
 
-    it("collision guard runs against TRIMMED values (trailing-space doesn't mask a same-table mistake)", () => {
+    it("collision guard runs on trimmed values", () => {
         expect(() =>
-            createDdbConfig({
-                source: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "same-table" },
-                    s3: { bucket: "src-bucket" }
-                },
+            createConfig({
+                source: baseSource,
                 target: {
-                    region: "us-east-1",
-                    credentials: creds,
-                    dynamodb: { tableName: "same-table " },
-                    s3: { bucket: "tgt-bucket" },
-                    auditLog: null
+                    ...baseTarget,
+                    region: baseSource.region,
+                    dynamodb: { tableName: "src-table " }
                 },
-                pipeline: { preset: "v5-to-v6-ddb" }
+                pipeline: {}
             })
         ).toThrow(/matches source/);
-    });
-});
-
-describe("createOsConfig — source/target collision guard", () => {
-    const baseOsSource = {
-        region: "us-east-1",
-        credentials: creds,
-        dynamodb: { tableName: "src-primary" },
-        opensearch: { tableName: "src-es-table" }
-    };
-    const baseOsTarget = {
-        region: "eu-central-1",
-        credentials: creds,
-        opensearch: {
-            endpoint: "https://search-xxx.example.com",
-            tableName: "tgt-es-table",
-            service: "opensearch" as const,
-            indexPrefix: ""
-        }
-    };
-
-    it("rejects same region + same OS DDB table for source and target", () => {
-        expect(() =>
-            createOsConfig({
-                source: baseOsSource,
-                target: {
-                    ...baseOsTarget,
-                    region: baseOsSource.region,
-                    opensearch: {
-                        ...baseOsTarget.opensearch,
-                        tableName: baseOsSource.opensearch.tableName
-                    }
-                },
-                pipeline: { preset: "v5-to-v6-os" }
-            })
-        ).toThrow(/matches source/);
-    });
-
-    it("accepts same OS table name across different regions", () => {
-        expect(() =>
-            createOsConfig({
-                source: baseOsSource,
-                target: {
-                    ...baseOsTarget,
-                    opensearch: {
-                        ...baseOsTarget.opensearch,
-                        tableName: baseOsSource.opensearch.tableName
-                    }
-                },
-                pipeline: { preset: "v5-to-v6-os" }
-            })
-        ).not.toThrow();
     });
 });

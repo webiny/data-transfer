@@ -55,16 +55,18 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
     const osClient = new MockOpenSearchClient();
 
     const config: MigrationConfig.Interface = {
-        storage: "os",
         source: {
             region: "us-east-1",
             credentials: DEFAULT_CREDS,
             dynamodb: { tableName: "source-primary" },
+            s3: { bucket: "source-bucket" },
             opensearch: { tableName: "source-os" }
         },
         target: {
             region: "eu-central-1",
             credentials: DEFAULT_CREDS,
+            dynamodb: { tableName: "target-table" },
+            s3: { bucket: "target-bucket" },
             opensearch: {
                 endpoint: "https://es.example.com",
                 tableName: "target-os",
@@ -73,7 +75,6 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
             }
         },
         pipeline: {
-            preset: "v5-to-v6-os",
             modelsDir: options.modelsDir,
             presetsDir: options.presetsDir,
             ...(options.pipelineOverride?.segments !== undefined

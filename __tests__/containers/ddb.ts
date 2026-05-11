@@ -62,7 +62,6 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
     const targetDb = new MockDynamoDbClient(options.targetRecords || {});
 
     const config: MigrationConfig.Interface = {
-        storage: "ddb",
         source: {
             region: "us-east-1",
             credentials: DEFAULT_CREDS,
@@ -77,7 +76,6 @@ export function createDdbContainer(options: DdbContainerOptions = {}): Container
             auditLog: null
         },
         pipeline: {
-            preset: "v5-to-v6",
             modelsDir: options.modelsDir,
             presetsDir: options.presetsDir,
             ...(options.pipelineOverride?.segments !== undefined

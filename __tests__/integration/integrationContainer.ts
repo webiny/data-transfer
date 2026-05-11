@@ -71,7 +71,6 @@ export interface DdbIntegrationContainerOptions {
  */
 export function createDdbIntegrationContainer(options: DdbIntegrationContainerOptions): Container {
     const config: MigrationConfig.Interface = {
-        storage: "ddb",
         source: {
             region: "us-east-1",
             credentials: FAKE_CREDS,
@@ -90,7 +89,6 @@ export function createDdbIntegrationContainer(options: DdbIntegrationContainerOp
             auditLog: null
         },
         pipeline: {
-            preset: "integration",
             segments: options.segments ?? 1,
             modelsDir: options.modelsDir
         },

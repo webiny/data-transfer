@@ -47,12 +47,13 @@ export const credentialsOrProviderSchema = z.union([
     })
 ]);
 
-export const pipelineSettingsSchema = z.object({
-    preset: trimmedString(),
-    segments: z.number().int().positive().optional(),
-    modelsDir: trimmedString().optional(),
-    presetsDir: trimmedString().optional()
-});
+export const pipelineSettingsSchema = z
+    .object({
+        segments: z.number().int().positive().optional(),
+        modelsDir: trimmedString().optional(),
+        presetsDir: trimmedString().optional()
+    })
+    .optional();
 
 /**
  * Snapshot settings — when enabled, the runner dumps per-record JSONL
