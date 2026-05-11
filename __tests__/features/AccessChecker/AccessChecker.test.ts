@@ -71,4 +71,29 @@ describe("AccessChecker", () => {
 
         expect(report).toHaveLength(0);
     });
+
+    it("returns unknown entry for a processor that throws instead of returning a result", async () => {
+        const throwing = {
+            checkAccess: vi.fn().mockRejectedValue(new Error("unexpected SDK error")),
+            execute: vi.fn()
+        };
+        const good = {
+            checkAccess: vi
+                .fn()
+                .mockResolvedValue([{ label: "DynamoDB source", status: "ok" as const }]),
+            execute: vi.fn()
+        };
+
+        const container = new Container();
+        container.registerInstance(ContainerToken, container);
+        container.registerInstance(PipelineRunner, makeRunner([throwing, good]));
+        AccessCheckerFeature.register(container);
+
+        const checker = container.resolve(AccessChecker);
+        const report = await checker.run();
+
+        expect(report).toHaveLength(2);
+        expect(report[0].status).toBe("unknown");
+        expect(report[1]).toEqual({ label: "DynamoDB source", status: "ok" });
+    });
 });

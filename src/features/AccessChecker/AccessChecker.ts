@@ -7,8 +7,14 @@ class AccessCheckerImpl implements AccessCheckerAbstraction.Interface {
 
     public async run(): Promise<AccessCheck.Report> {
         const processors = this.runner.getProcessors();
-        const nested = await Promise.all(processors.map(p => p.checkAccess()));
-        return nested.flat();
+        const results = await Promise.allSettled(processors.map(p => p.checkAccess()));
+        return results.flatMap((result, i) => {
+            if (result.status === "fulfilled") {
+                return result.value;
+            }
+            const label = processors[i].constructor.name ?? "unknown processor";
+            return [{ label, status: "unknown" as const }];
+        });
     }
 }
 

@@ -32,9 +32,21 @@ interface IProcessor<
     onEnd?(ctx: TBaseContext & TSlice): void | Promise<void>;
 
     /**
-     * Pre-transfer access check. Called before any segment worker is spawned.
+     * Pre-transfer access check. Called once in the orchestrator process before
+     * any segment worker is spawned.
+     *
      * Returns one entry per probed resource (table, bucket, cluster endpoint).
-     * "denied" entries abort the transfer; "unknown" entries warn and proceed.
+     * Mandatory (not optional) so every processor author must consciously decide
+     * what to check — return `[]` if the processor has no AWS resources to probe.
+     *
+     * Status meanings:
+     *   "ok"      — probe succeeded; proceed
+     *   "denied"  — IAM / credentials error; transfer will be aborted
+     *   "missing" — resource does not exist; transfer will be aborted
+     *   "unknown" — probe failed for an unclassified reason; warn and proceed
+     *
+     * Implementations must not throw — catch all errors and return an "unknown"
+     * entry instead.
      */
     checkAccess(): Promise<AccessCheck.Entry[]>;
 
