@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DynamoDB } from "@webiny/aws-sdk/client-dynamodb/index.js";
 
 vi.mock("@webiny/aws-sdk/client-dynamodb/index.js", () => ({
@@ -79,6 +79,10 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
 }
 
 describe("DdbProcessor", () => {
+    afterEach(() => {
+        vi.resetAllMocks();
+    });
+
     describe("extendContext", () => {
         it("returns a slice with putRecord that pushes PutRecord commands via ctx.addCommand", () => {
             const container = createDdbContainer();

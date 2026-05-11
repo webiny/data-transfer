@@ -13,6 +13,7 @@ import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenS
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 import type { OsScanner } from "~/features/OsScanner/index.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { OsProcessor } from "~/features/OsProcessor/index.ts";
 import { MockOpenSearchClient } from "../../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 interface OsProcessorSlice {
@@ -235,7 +236,7 @@ describe("OsProcessor", () => {
             const container = createOsContainer();
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "OsProcessorImpl")!;
+                .find(p => p.constructor === OsProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -254,7 +255,7 @@ describe("OsProcessor", () => {
             );
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "OsProcessorImpl")!;
+                .find(p => p.constructor === OsProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -272,7 +273,7 @@ describe("OsProcessor", () => {
             );
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "OsProcessorImpl")!;
+                .find(p => p.constructor === OsProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -290,7 +291,7 @@ describe("OsProcessor", () => {
             );
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "OsProcessorImpl")!;
+                .find(p => p.constructor === OsProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -306,7 +307,7 @@ describe("OsProcessor", () => {
             vi.spyOn(osClient, "listIndexes").mockRejectedValue(new Error("connection refused"));
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "OsProcessorImpl")!;
+                .find(p => p.constructor === OsProcessor)!;
 
             const entries = await processor.checkAccess();
 
@@ -320,7 +321,7 @@ describe("OsProcessor", () => {
             const container = createOsContainer({ noOpenSearch: true });
             const processor = container
                 .resolveAll(Processor)
-                .find(p => p.constructor.name === "OsProcessorImpl")!;
+                .find(p => p.constructor === OsProcessor)!;
 
             const entries = await processor.checkAccess();
 
