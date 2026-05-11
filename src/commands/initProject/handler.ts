@@ -11,8 +11,7 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`\nCreated "projects/${projectName}" with the following structure:\n`);
     console.log(`  projects/${projectName}/`);
     console.log(`  ├── README.md`);
-    console.log(`  ├── ddb.transfer.config.ts`);
-    console.log(`  ├── os.transfer.config.ts`);
+    console.log(`  ├── config.ts`);
     console.log(`  ├── .env.example`);
     console.log(`  ├── models/`);
     console.log(`  └── presets/\n`);
@@ -31,5 +30,5 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`To set up manually instead:`);
     console.log(`  cp projects/${projectName}/.env.example projects/${projectName}/.env`);
     console.log(`  # Edit .env — fill in region, table names, and AWS credentials`);
-    console.log(`  yarn transfer --config=./projects/${projectName}/ddb.transfer.config.ts\n`);
+    console.log(`  yarn transfer --config=./projects/${projectName}/config.ts\n`);
 }
