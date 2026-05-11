@@ -34,6 +34,7 @@ export default createConfig({
         //     // Optional — only set for temporary STS credentials:
         //     // sessionToken: fromEnv("SOURCE_AWS_SESSION_TOKEN")
         // },
+        accountId: fromEnv("SOURCE_ACCOUNT_ID", ""),
         dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
         s3: { bucket: fromEnv("SOURCE_S3_BUCKET") }
         // Uncomment if your Webiny project uses OpenSearch (Elasticsearch):
@@ -47,6 +48,7 @@ export default createConfig({
         //     secretAccessKey: fromEnv("TARGET_AWS_SECRET_ACCESS_KEY"),
         //     // sessionToken: fromEnv("TARGET_AWS_SESSION_TOKEN")
         // },
+        accountId: fromEnv("TARGET_ACCOUNT_ID", ""),
         dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
         s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
         auditLog: { dynamodb: { tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE") } }

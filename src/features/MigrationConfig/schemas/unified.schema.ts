@@ -21,6 +21,7 @@ const opensearchTargetSchema = z.object({
 const sourceSchema = z.object({
     region: trimmedString(),
     credentials: credentialsOrProviderSchema,
+    accountId: z.string().optional(),
     dynamodb: z.object({ tableName: trimmedString() }),
     s3: z.object({ bucket: trimmedString() }),
     auditLog: z
@@ -35,6 +36,7 @@ const sourceSchema = z.object({
 const targetSchema = z.object({
     region: trimmedString(),
     credentials: credentialsOrProviderSchema,
+    accountId: z.string().optional(),
     dynamodb: z.object({ tableName: trimmedString() }),
     s3: z.object({ bucket: trimmedString() }),
     opensearch: opensearchTargetSchema.nullable().optional(),

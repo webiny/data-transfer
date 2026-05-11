@@ -22,6 +22,7 @@ export default createConfig({
     source: {
         region: fromEnv("SOURCE_REGION", DEFAULT_REGION),
         credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", DEFAULT_PROFILE) }),
+        accountId: fromEnv("SOURCE_ACCOUNT_ID", ""),
         dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
         s3: { bucket: fromEnv("SOURCE_S3_BUCKET") },
         auditLog: sourceAuditLogTable ? { dynamodb: { tableName: sourceAuditLogTable } } : null,
@@ -30,6 +31,7 @@ export default createConfig({
     target: {
         region: fromEnv("TARGET_REGION", DEFAULT_REGION),
         credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", DEFAULT_PROFILE) }),
+        accountId: fromEnv("TARGET_ACCOUNT_ID", ""),
         dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
         s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
         auditLog: targetAuditLogTable ? { dynamodb: { tableName: targetAuditLogTable } } : null,

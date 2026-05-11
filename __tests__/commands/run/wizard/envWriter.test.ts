@@ -11,6 +11,7 @@ const SAMPLE_VALUES: EnvValues = {
     sourceS3Bucket: "wby-source-bucket",
     sourceAuditLogTable: "",
     sourceOsTable: "wby-source-es",
+    sourceAccountId: "111111111111",
     targetRegion: "us-east-1",
     targetDdbTable: "wby-target-primary",
     targetS3Bucket: "wby-target-bucket",
@@ -18,6 +19,7 @@ const SAMPLE_VALUES: EnvValues = {
     targetOsTable: "wby-target-os",
     targetOsEndpoint: "search-target.us-east-1.es.amazonaws.com",
     targetOsIndexPrefix: "my-prefix",
+    targetAccountId: "222222222222",
     segments: 8
 };
 

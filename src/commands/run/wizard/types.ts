@@ -14,6 +14,7 @@ export interface EnvValues {
     sourceS3Bucket: string;
     sourceAuditLogTable: string;
     sourceOsTable: string;
+    sourceAccountId: string;
     targetRegion: string;
     targetDdbTable: string;
     targetS3Bucket: string;
@@ -21,6 +22,7 @@ export interface EnvValues {
     targetOsTable: string;
     targetOsEndpoint: string;
     targetOsIndexPrefix: string;
+    targetAccountId: string;
     segments: number;
 }
 

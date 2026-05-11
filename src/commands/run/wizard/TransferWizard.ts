@@ -229,6 +229,7 @@ export class TransferWizard {
             sourceS3Bucket: sourceVals.fileManagerBucketId,
             sourceAuditLogTable: sourceVals.auditLogTableName ?? "",
             sourceOsTable: sourceVals.osTableName,
+            sourceAccountId: sourceVals.accountId ?? "",
             targetRegion: targetVals.region,
             targetDdbTable: targetVals.primaryDynamodbTableName,
             targetS3Bucket: targetVals.fileManagerBucketId,
@@ -236,6 +237,7 @@ export class TransferWizard {
             targetOsTable: targetVals.osTableName,
             targetOsEndpoint: targetVals.osEndpoint,
             targetOsIndexPrefix,
+            targetAccountId: targetVals.accountId ?? "",
             segments: Number(segmentsRaw)
         };
 

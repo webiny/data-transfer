@@ -1,4 +1,3 @@
-import { STS } from "@webiny/aws-sdk/client-sts/index.js";
 import { S3 } from "@webiny/aws-sdk/client-s3/index.js";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
@@ -45,10 +44,8 @@ class S3ProcessorImpl implements Processor.Interface<
     // ctx.copyFile(...) explicitly when they want to emit a copy.
 
     public async getGuardWarning(): Promise<string | null> {
-        const [sourceAccount, targetAccount] = await Promise.all([
-            this.resolveAccountId(this.config.source.credentials, this.config.source.region),
-            this.resolveAccountId(this.config.target.credentials, this.config.target.region)
-        ]);
+        const sourceAccount = this.config.source.accountId || null;
+        const targetAccount = this.config.target.accountId || null;
         if (sourceAccount === null || targetAccount === null || sourceAccount === targetAccount) {
             return null;
         }
@@ -100,19 +97,6 @@ class S3ProcessorImpl implements Processor.Interface<
             return { label, status: "unknown" };
         } finally {
             client.destroy();
-        }
-    }
-
-    private async resolveAccountId(
-        credentials: MigrationConfig.Interface["source"]["credentials"],
-        region: string
-    ): Promise<string | null> {
-        try {
-            const sts = new STS({ region, credentials: credentials as never });
-            const result = await sts.getCallerIdentity({});
-            return result.Account ?? null;
-        } catch {
-            return null;
         }
     }
 
