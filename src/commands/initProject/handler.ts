@@ -22,7 +22,9 @@ export async function handler(projectName: string): Promise<void> {
     console.log(`         (from: yarn webiny output core --json  in each Webiny project)`);
     console.log(`       source.pulumi.json + target.pulumi.json`);
     console.log(`         (from: .pulumi/apps/core/.pulumi/stacks/core/<env>.json)`);
-    console.log(`     Mixed formats (e.g. source.webiny.json + target.pulumi.json) are allowed.\n`);
+    console.log(`     Mixed formats (e.g. source.webiny.json + target.pulumi.json) are allowed.`);
+    console.log(`     You can also drop CMS model exports into projects/${projectName}/models/`);
+    console.log(`       (export from Webiny Admin → CMS → Models → Export)\n`);
     console.log(`  2. Run the wizard — it validates the JSON files and writes .env:`);
     console.log(`       yarn transfer\n`);
     console.log(`  3. Review projects/${projectName}/.env, then run again:`);
