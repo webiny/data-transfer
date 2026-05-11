@@ -17,7 +17,7 @@ This document is read by AI agents when working on this codebase. It describes t
 1. User writes a single `config.ts`: `createConfig({ source, target, pipeline })`. One file covers DDB, S3, and optional OpenSearch.
 2. CLI `transfer` command (no `--config`): the `TransferWizard` selects a project, writes `.env`, then on subsequent runs prompts for a preset and returns `WizardResult { configPath, preset }`. With `--config`: skips wizard, preset passed as `--preset` flag.
 3. Bootstrap loads the config, registers all features (DDB + S3 always; OS conditional on `config.target.opensearch != null`), loads the named preset, spawns worker processes per segment.
-4. Each worker runs one or more shards: scans source → for each record, first-match-wins pipeline runs: filters → transformers → each processor's `onEnd?` hook (sequential, array order) → commands accumulate in a shared shard buffer. At shard end, each processor's `execute()` drains its own keys from that buffer (sequential, array order). `Commands.unclaimedKeys()` surfaces commands no processor claimed.
+4. Each worker runs one or more shards: scans source → for each record, first-match-wins pipeline runs: filters → transformers → each processor's `onEnd?` hook (sequential, array order) → commands accumulate in a pending buffer. Every `tuning.flushEvery` records (default 500) each processor's `execute()` drains its own keys from that buffer (sequential, array order) and the buffer resets — this bounds peak memory to `flushEvery × avg_record_size`. A final flush at shard end drains any remainder. `Commands.unclaimedKeys()` surfaces commands no processor claimed.
 
 **Read before big refactors:**
 
@@ -255,6 +255,7 @@ Optional `tuning` section on `MigrationConfig`:
 
 ```typescript
 tuning?: {
+    flushEvery?: number;  // records per shard flush (default 500); bounds peak memory
     ddb?: { maxRetries?: number; initialBackoffMs?: number };
     s3?:  { concurrency?: number; maxRetries?: number; initialBackoffMs?: number };
     os?:  { maxRetries?: number; retryScheduleMs?: number[]; gzipConcurrency?: number };
@@ -262,6 +263,8 @@ tuning?: {
 ```
 
 Fields flow to the respective client/executor; absent = module-level defaults. `BATCH_SIZE = 25` in DDB is AWS-enforced, NOT a user knob.
+
+`flushEvery` caps peak per-shard memory: at default 500 × 10 KB avg = ~5 MB/shard. For tables with very large records (approaching the 400 KB DDB max) lower this to 100. Set via `tuning: { flushEvery: numberFromEnv("FLUSH_EVERY", 500) }` in the config.
 
 ### AWS retry + error classification
 
@@ -312,6 +315,7 @@ All five checks are required. Missing any one of them has broken CI in the past.
 
 These are one-line summaries. Each links to a spec or PR if fuller context is needed.
 
+- **Periodic shard flush (`flushEvery`, 2026-05-11)** — `PipelineRunner.runShard` no longer buffers all commands for the entire shard. Every `tuning.flushEvery` records (default 500) `processor.execute()` is called and the buffer resets. A final flush drains the remainder. This bounds memory to `flushEvery × avg_record_size` regardless of table size. `afterShard` still fires exactly once per shard, after all flushes. Env var: `FLUSH_EVERY`.
 - **One `createConfig`, no `createDdbConfig`/`createOsConfig`** (2026-05-10) — a single unified config covers all storage types. `source.opensearch` / `target.opensearch` are optional; omit or set to `null` to skip OpenSearch. Bootstrap registers DDB + S3 unconditionally; OS features only when `config.target.opensearch != null`. Storage guards (`storage !== "ddb"`) in `DdbScanner`, `DdbProcessor`, `S3Processor` were deleted. `OsScanner`/`OsProcessor` check `!config.source.opensearch` / `!config.target.opensearch`. Never reintroduce a `storage` discriminator field or per-storage config builders.
 - **Preset selected at runtime, not in config** (2026-05-10) — `pipeline.preset` is gone from the schema. `TransferWizard` prompts the user and returns `WizardResult { configPath, preset }`. Workers receive `--preset <name>` on their argv. Preset name is never derived from config. Never add `preset` back to `pipelineSettingsSchema`.
 - **Zero transformers must work** — infra supports pure data-transfer (prod→dev seeding). `PipelineBuilder.build()` never throws for missing `.filter()`; if the pipeline includes a processor with `onEnd` (e.g. `DdbProcessor`), the terminal put fires via that hook for every matching record.

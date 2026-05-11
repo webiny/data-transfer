@@ -165,6 +165,7 @@ JSON models override DB-loaded models when both exist.
 
 ```typescript
 tuning: {
+  flushEvery: numberFromEnv("FLUSH_EVERY", 500), // records per shard flush — bounds peak memory
   ddb: { maxRetries: 3, initialBackoffMs: 100 },
   s3:  { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
   os:  { maxRetries: 3, retryScheduleMs: [5000, 10000, 20000], gzipConcurrency: 16 }
@@ -172,6 +173,8 @@ tuning: {
 ```
 
 All fields are optional; absent = built-in defaults. `BATCH_SIZE` for DynamoDB is NOT tunable (AWS enforces 25 items per `BatchWriteItem`). DDB and S3 clients run in AWS SDK `adaptive` retry mode — `tuning.{ddb,s3}.maxRetries` caps the outer retry envelope on top of the SDK's own self-tuning backoff.
+
+**`tuning.flushEvery`** controls how often accumulated write commands are flushed during a shard scan. The runner calls `processor.execute()` every N records and resets the buffer, so peak memory stays at `flushEvery × avg_record_size` regardless of table size. Default 500 (≈ 5 MB at a 10 KB average). Lower to 100 for tables with very large records.
 
 ### Debug options
 
@@ -533,6 +536,7 @@ The CLI picks it up automatically and runs it **before** loading your preset, so
 
 ## Troubleshooting
 
+- **Out-of-memory on large tables** — each worker buffers write commands between flushes. Reduce `tuning.flushEvery` (default 500) to a smaller value (e.g. `FLUSH_EVERY=100`) so each flush covers fewer records and peak memory stays manageable.
 - **AWS throttling** — the SDK self-tunes via `retryMode: "adaptive"`. If you still hit the outer cap, bump `tuning.ddb.maxRetries` / `tuning.s3.maxRetries`; lower `tuning.s3.concurrency` for S3-heavy transfers.
 - **OS indexes not creating** — the transfer aborts if index prep exhausts retries. Tune `tuning.os.maxRetries` and `tuning.os.retryScheduleMs`, or fix the underlying mapping error surfaced in the logs.
 - **Missing env vars** — run `yarn transfer` (no `--config`) to launch the guided setup wizard, which writes your `.env` automatically. Or copy `.env.example` manually and fill it in. Config files use `loadEnv(import.meta.url)` to load the sibling `.env`.

@@ -188,6 +188,7 @@ Post-run inspection: `cat .transfer/<runId>/logs/*.log | pino-pretty`. Default p
 
 ```ts
 tuning: {
+    flushEvery: numberFromEnv("FLUSH_EVERY", 500), // records per shard flush — bounds peak memory
     ddb: { maxRetries: 3, initialBackoffMs: 100 },
     s3:  { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
     os:  {
@@ -199,6 +200,8 @@ tuning: {
 ```
 
 All optional; absent = built-in defaults. AWS SDK `retryMode: "adaptive"` is always on for DDB + S3 — it self-tunes backoff based on real throttle signals, so you usually don't need to tune these.
+
+**`flushEvery`** caps peak per-shard memory. The runner calls `processor.execute()` every N records and resets the pending-commands buffer. Default 500 (≈ 5 MB at a 10 KB average record). Lower to 100 for tables with very large records (approaching the 400 KB DDB max).
 
 ## Running it
 
