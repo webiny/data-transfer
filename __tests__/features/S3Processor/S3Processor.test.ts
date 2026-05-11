@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
@@ -51,6 +51,10 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
 }
 
 describe("S3Processor", () => {
+    afterEach(() => {
+        vi.resetAllMocks();
+    });
+
     describe("extendContext", () => {
         it("returns copyFile that pushes S3Copy commands using configured source/target buckets", () => {
             const container = createDdbContainer();
