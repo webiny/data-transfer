@@ -51,7 +51,7 @@ Everything users import lives in `src/index.ts`. The surface is **infrastructure
 
 **Pipeline construction:** inside a preset's `configure({ runner, pipelineBuilderFactory, container })` callback, users call `pipelineBuilderFactory.create({ name, scanner, processors: [...] })`. `processors` is a `NonEmptyArray<ProcessorImpl>` — TS rejects empty arrays AND rejects processors whose slice keys collide (`DisjointKeys<...>`). Returns a typed `PipelineBuilder` whose `ctx` is `BaseTransformContext & (union of processor slices)`. Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order; `.build()` takes no arguments (terminal behavior comes from each processor's `onEnd?` hook). Pass the built pipeline to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20; `runner.pipeline()` was moved to `PipelineBuilderFactory.create()` shortly after.
 
-**Preset selection:** `pipeline.preset` was **removed** from the config schema on 2026-05-10. Preset is chosen at runtime — interactively by `TransferWizard` (returns `WizardResult { configPath: string; preset: string }`), or passed as `--preset <name>` directly. Workers receive `--preset` on their CLI argv. Do NOT add `preset` back to `pipelineSettingsSchema`.
+**Preset selection:** `pipeline.preset` was **removed** from the config schema on 2026-05-10. Preset is chosen at runtime — interactively by `TransferWizard` (returns `WizardResult { configPath: string; preset: string; dryRun: boolean }`), or passed as `--preset <name>` directly. Workers receive `--preset` on their CLI argv. Do NOT add `preset` back to `pipelineSettingsSchema`. `dryRun: true` causes `DdbProcessor`, `OsProcessor`, and `S3Processor` to skip their `execute()` bodies entirely — reads still happen, but nothing is written to the target.
 
 **User-side custom DI — `setup.ts`:** CLI looks for `setup.ts` next to the user's config file. If present, dynamic-imports its default export and awaits `fn({ container })` BEFORE `preset.configure({...})` runs. Use the `initDataTransfer` typed helper to export it. Optional — pure-config users skip the file entirely.
 
@@ -80,7 +80,9 @@ src/
 │   │       │                        # OR (re-run, .env exists, no JSON) → preset select → return WizardResult
 │   │       ├── projectDiscovery.ts  # Scans projects/, returns sorted names
 │   │       ├── configDiscovery.ts   # Finds config.ts in project dir; returns path or null
-│   │       ├── presetDiscovery.ts   # listAvailablePresets(presetsDir?) — built-ins + user dir
+│   │       ├── presetDiscovery.ts   # listAvailablePresets(presetsDir?) — names only (sync)
+│                        # listAvailablePresetsWithDescriptions(presetsDir?) — async,
+│                        # dynamically imports each preset to read .description
 │   │       ├── envWriter.ts         # {{TOKEN}} substitution from .env.example → writes .env
 │   │       ├── types.ts             # RawOutputValues + EnvValues + WizardResult interfaces
 │   │       ├── sources/
@@ -294,11 +296,15 @@ No custom token-bucket pacing — the AWS SDK's adaptive mode handles remote-sig
 Verification before any commit:
 
 ```bash
-yarn format:fix    # oxfmt
-yarn ts-check      # expect 0 errors
-yarn test          # expect all green
-git status         # include ALL modified files
+yarn format:fix      # oxfmt — must be clean before ts-check
+yarn ts-check        # expect 0 errors
+yarn test:coverage   # expect all green (use :coverage to keep thresholds enforced)
+yarn lint            # expect 0 errors
+yarn check:imports   # expect 0 errors
+git status           # include ALL modified files
 ```
+
+All five checks are required. Missing any one of them has broken CI in the past.
 
 ---
 
@@ -361,8 +367,14 @@ Built on top of `bruno/feat/di-features`. Adds: `v5-to-v6-os` built-in preset (`
 - Scaffold a standalone user project: `npx @webiny/data-transfer init my-transfer-folder`
 - Add a project folder to this repo: `yarn transfer init-project <name>` — creates `projects/<name>/` with `config.ts`, `.env.example`, `models/`, and `presets/`. Template lives in `templates/internal-project/`. New project folders are **gitignored** (`projects/*/` except `projects/v5-to-v6/`) — credentials stay local.
 - **Guided setup (recommended):** `yarn transfer` (no `--config`) launches `TransferWizard`:
-  - First run: selects project, validates Webiny output / Pulumi state JSON files, writes `.env`, exits.
-  - Subsequent runs: skips JSON setup (`.env` exists, no JSON files), prompts for preset, starts transfer.
+  - Selects a project from `projects/`.
+  - If JSON output files are present (`source/target.webiny.json` or `.pulumi.json`):
+    - If `.env` also exists, asks whether to **repopulate** it from the JSON files or **use the existing** `.env`.
+    - If `.env` does not exist, extracts values and writes `.env`, then exits (user reviews and re-runs).
+    - Account IDs extracted from `primaryDynamodbTableArn` in the JSON files. If source and target account IDs differ, the wizard warns and advises setting `SOURCE_PROFILE` / `TARGET_PROFILE`.
+  - Preset selection: lists available presets with their one-line `description` in the prompt (`v5-to-v6-ddb — Full DDB migration`). User-supplied presets in `presetsDir` appear alongside built-ins.
+  - Dry-run prompt: after selecting a preset, the wizard asks if this is a dry run. Dry-run mode reads the source but skips all writes (`DdbProcessor`, `OsProcessor`, `S3Processor` skip `execute()`). Useful for validation passes.
+  - Returns `WizardResult { configPath, preset, dryRun }`. Workers receive `--preset <name>` and optionally `--dry-run`.
 - **Direct run with config:**
 
   ```bash

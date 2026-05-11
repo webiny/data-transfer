@@ -24,10 +24,20 @@ yarn transfer
 `yarn transfer` (no `--config`) launches the **guided setup wizard**. It walks you through:
 
 1. Selecting (or creating) a project folder under `projects/`
-2. Collecting your Webiny output or Pulumi state JSON files
-3. Writing your `.env` automatically
+2. Collecting your Webiny output or Pulumi state JSON files and writing `.env`
+3. Selecting a preset and optional dry-run mode, then starting the transfer
 
-After writing `.env` it exits — review the file and run `yarn transfer` again. On the second run the wizard skips straight to preset selection and starts the transfer.
+**First run (no `.env` yet):** the wizard extracts values from your JSON files, writes `.env`, and exits so you can review it before anything runs. Run `yarn transfer` again to continue.
+
+**Subsequent runs (`.env` exists, no JSON files):** the wizard skips env setup entirely and goes straight to preset selection.
+
+**`.env` exists AND JSON files present:** the wizard asks whether to repopulate `.env` from the JSON files or keep the existing values. Choose "repopulate" to refresh after deploying a new environment; choose "use existing" to skip to preset selection.
+
+**Account ID warning:** the wizard extracts the AWS account ID from `primaryDynamodbTableArn` in the JSON files. If source and target accounts differ, it warns you to set `SOURCE_PROFILE` and `TARGET_PROFILE` in `.env` so the right credentials are used for each side.
+
+**Preset selection:** each preset is listed with its one-line description (`v5-to-v6-ddb — Full DDB migration`). User-supplied presets in `presetsDir` appear alongside built-ins.
+
+**Dry-run mode:** after selecting a preset the wizard asks "Dry run?" (default: No). In dry-run mode the tool scans and transforms records normally but skips all writes to the target (DynamoDB, S3, OpenSearch). Useful for validating your pipeline and transformer chain before committing a full transfer.
 
 To scaffold a new project folder:
 
