@@ -1,5 +1,7 @@
 import { STS } from "@webiny/aws-sdk/client-sts/index.js";
+import { S3 } from "@webiny/aws-sdk/client-s3/index.js";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { isAccessDeniedError } from "~/base/index.ts";
 import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
@@ -58,7 +60,48 @@ class S3ProcessorImpl implements Processor.Interface<
     }
 
     public async checkAccess(): Promise<AccessCheck.Entry[]> {
-        return [];
+        const [sourceEntry, targetEntry] = await Promise.all([
+            this.headBucket(
+                this.config.source.credentials,
+                this.config.source.region,
+                this.config.source.s3.bucket,
+                "source"
+            ),
+            this.headBucket(
+                this.config.target.credentials,
+                this.config.target.region,
+                this.config.target.s3.bucket,
+                "target"
+            )
+        ]);
+        return [sourceEntry, targetEntry];
+    }
+
+    private async headBucket(
+        credentials: MigrationConfig.Interface["source"]["credentials"],
+        region: string,
+        bucket: string,
+        side: string
+    ): Promise<AccessCheck.Entry> {
+        const label = `S3 ${side} bucket: ${bucket}`;
+        const client = new S3({ region, credentials: credentials as never });
+        try {
+            await client.headBucket({ Bucket: bucket });
+            return { label, status: "ok" };
+        } catch (error) {
+            if (isAccessDeniedError(error)) {
+                return { label, status: "denied" };
+            }
+            const errName = (error as { name?: string }).name;
+            const httpStatus = (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+                ?.httpStatusCode;
+            if (errName === "NoSuchBucket" || httpStatus === 404) {
+                return { label, status: "missing" };
+            }
+            return { label, status: "unknown" };
+        } finally {
+            client.destroy();
+        }
     }
 
     private async resolveAccountId(

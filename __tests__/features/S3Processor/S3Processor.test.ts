@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 import { createDdbContainer } from "../../containers/index.ts";
 import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
@@ -10,6 +10,11 @@ import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
+import { S3 } from "@webiny/aws-sdk/client-s3/index.js";
+
+vi.mock("@webiny/aws-sdk/client-s3/index.js", () => ({
+    S3: vi.fn()
+}));
 
 interface BaseStub<TRecord> {
     base: BaseTransformContext.Interface<TRecord>;
@@ -153,6 +158,155 @@ describe("S3Processor", () => {
                 any
             >;
             expect(processor.afterShard).toBeUndefined();
+        });
+    });
+
+    describe("checkAccess", () => {
+        let mockHeadBucket: ReturnType<typeof vi.fn>;
+
+        beforeEach(() => {
+            mockHeadBucket = vi.fn();
+            vi.mocked(S3).mockImplementation(function (this: {
+                headBucket: typeof mockHeadBucket;
+                destroy: ReturnType<typeof vi.fn>;
+            }) {
+                this.headBucket = mockHeadBucket;
+                this.destroy = vi.fn();
+            } as unknown as typeof S3);
+        });
+
+        it("returns ok entries for source and target buckets when HeadBucket succeeds", async () => {
+            mockHeadBucket.mockResolvedValue({});
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries).toHaveLength(2);
+            expect(entries[0]).toEqual({ label: "S3 source bucket: source-bucket", status: "ok" });
+            expect(entries[1]).toEqual({ label: "S3 target bucket: target-bucket", status: "ok" });
+        });
+
+        it("returns denied when HeadBucket throws AccessDenied on source", async () => {
+            mockHeadBucket
+                .mockRejectedValueOnce(
+                    Object.assign(new Error("Access denied"), { name: "AccessDenied" })
+                )
+                .mockResolvedValue({});
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "S3 source bucket: source-bucket",
+                status: "denied"
+            });
+            expect(entries[1]).toEqual({ label: "S3 target bucket: target-bucket", status: "ok" });
+        });
+
+        it("returns denied when HeadBucket returns HTTP 403", async () => {
+            mockHeadBucket.mockRejectedValue(
+                Object.assign(new Error("Forbidden"), { $metadata: { httpStatusCode: 403 } })
+            );
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "S3 source bucket: source-bucket",
+                status: "denied"
+            });
+            expect(entries[1]).toEqual({
+                label: "S3 target bucket: target-bucket",
+                status: "denied"
+            });
+        });
+
+        it("returns missing when HeadBucket throws NoSuchBucket", async () => {
+            mockHeadBucket.mockRejectedValue(
+                Object.assign(new Error("Bucket not found"), { name: "NoSuchBucket" })
+            );
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "S3 source bucket: source-bucket",
+                status: "missing"
+            });
+            expect(entries[1]).toEqual({
+                label: "S3 target bucket: target-bucket",
+                status: "missing"
+            });
+        });
+
+        it("returns missing when HeadBucket returns HTTP 404", async () => {
+            mockHeadBucket.mockRejectedValue(
+                Object.assign(new Error("Not found"), { $metadata: { httpStatusCode: 404 } })
+            );
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "S3 source bucket: source-bucket",
+                status: "missing"
+            });
+            expect(entries[1]).toEqual({
+                label: "S3 target bucket: target-bucket",
+                status: "missing"
+            });
+        });
+
+        it("returns unknown for other errors", async () => {
+            mockHeadBucket.mockRejectedValue(new Error("connection refused"));
+            const container = createDdbContainer();
+            const processor = container
+                .resolveAll(Processor)
+                .find(p => p.constructor === S3Processor) as unknown as Processor.Interface<
+                any,
+                any
+            >;
+
+            const entries = await processor.checkAccess();
+
+            expect(entries[0]).toEqual({
+                label: "S3 source bucket: source-bucket",
+                status: "unknown"
+            });
+            expect(entries[1]).toEqual({
+                label: "S3 target bucket: target-bucket",
+                status: "unknown"
+            });
         });
     });
 });
