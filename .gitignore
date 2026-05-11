@@ -26,11 +26,11 @@ logs.txt
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
-projects/**/.env
-projects/v5-to-v6/models/
-# User project directories — not committed; v5-to-v6 is the committed example
-projects/*/
+# Projects — only the two reference files below are committed; everything else is local
+projects/**
 !projects/v5-to-v6/
+!projects/v5-to-v6/config.ts
+!projects/v5-to-v6/.env.example
 
 CLAUDE.*.md
 # Ignore .claude/ except the two shipped skills — config/preset writing
