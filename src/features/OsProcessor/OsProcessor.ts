@@ -58,6 +58,9 @@ class OsProcessorImpl implements Processor.Interface<
         if (!this.config.target.opensearch) {
             throw new Error("OsProcessor: config.target.opensearch is not configured.");
         }
+        if (!this.config.source.opensearch) {
+            throw new Error("OsProcessor: config.source.opensearch is not configured.");
+        }
         const sourceTable = this.config.source.opensearch.tableName;
         const targetTable = this.config.target.opensearch.tableName;
         const sourceDb = this.sourceDb;

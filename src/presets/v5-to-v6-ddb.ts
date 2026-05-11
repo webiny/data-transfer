@@ -89,7 +89,7 @@ export default createTransferPreset({
             .filter(createFilter(isAuditLogEntry))
             .use(auditLogTransformers)
             .blackhole(() => {
-                return config.storage !== "ddb" || !config.target.auditLog?.dynamodb?.tableName;
+                return !config.target.auditLog?.dynamodb?.tableName;
             })
             .build();
 

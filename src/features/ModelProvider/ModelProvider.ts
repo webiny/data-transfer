@@ -28,7 +28,7 @@ class ModelProviderImpl implements ModelProviderAbstraction.Interface {
         config: MigrationConfig.Interface
     ) {
         this.tableName = config.source.dynamodb.tableName;
-        this.modelsDir = config.pipeline.modelsDir;
+        this.modelsDir = config.pipeline?.modelsDir;
     }
 
     public async preloadModels(tenantLocales: Map<string, string>): Promise<void> {

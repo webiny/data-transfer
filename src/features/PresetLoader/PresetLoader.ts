@@ -71,7 +71,7 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
             return builtInPath;
         }
 
-        const presetsDir = this.config.pipeline.presetsDir;
+        const presetsDir = this.config.pipeline?.presetsDir;
         if (presetsDir) {
             const userPath = this.findUserPresetPath(presetNameOrPath, presetsDir);
             if (userPath) {

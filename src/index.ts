@@ -8,6 +8,8 @@
  * ```
  */
 export { createConfig } from "./features/MigrationConfig/createConfig.ts";
+export { migrationConfigSchema } from "./features/MigrationConfig/validation.ts";
+export type { MigrationConfiguration } from "./features/MigrationConfig/validation.ts";
 export { loadEnv } from "./utils/load-env.ts";
 export { fromEnv, numberFromEnv } from "./utils/fromEnv.ts";
 export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";

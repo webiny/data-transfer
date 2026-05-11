@@ -14,7 +14,7 @@ class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
     ) {}
 
     public async listShards(): Promise<OsShard[]> {
-        const total = this.config.pipeline.segments ?? 1;
+        const total = this.config.pipeline?.segments ?? 1;
         const shards: OsShard[] = [];
         for (let i = 0; i < total; i++) {
             shards.push({ segment: i, total });

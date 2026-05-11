@@ -11,7 +11,7 @@ class DdbScannerImpl implements Scanner.Interface<BaseRecord, DdbShard> {
     ) {}
 
     public async listShards(): Promise<DdbShard[]> {
-        const total = this.config.pipeline.segments ?? 1;
+        const total = this.config.pipeline?.segments ?? 1;
         const shards: DdbShard[] = [];
         for (let i = 0; i < total; i++) {
             shards.push({ segment: i, total });

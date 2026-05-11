@@ -60,7 +60,6 @@ function buildContainer(options: BuildOptions = {}): {
     const logger = new CapturingLogger();
     container.registerInstance(Logger, logger);
     const config: MigrationConfig.Interface = {
-        storage: "ddb",
         source: {
             region: "us-east-1",
             credentials: { accessKeyId: "x", secretAccessKey: "y" },
@@ -74,7 +73,7 @@ function buildContainer(options: BuildOptions = {}): {
             s3: { bucket: "t-b" },
             auditLog: null
         },
-        pipeline: { preset: "noop" },
+        pipeline: { segments: 1 },
         debug: options.snapshot !== undefined ? { snapshot: options.snapshot } : undefined
     };
     container.registerInstance(MigrationConfig, config);
