@@ -16,7 +16,7 @@ The package ships four built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`, `copy-dd
 git clone git@github.com:webiny/data-transfer.git
 cd data-transfer
 yarn install
-yarn transferw
+yarn transfer
 ```
 
 `yarn transfer` (no `--config`) launches the **guided setup wizard**. It walks you through:
