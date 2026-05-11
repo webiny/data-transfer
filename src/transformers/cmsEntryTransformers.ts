@@ -2,7 +2,6 @@ import {
     fixBrokenStorageKeys,
     fixCmePk,
     removeFolderRevision,
-    transformLongText,
     transformRichText,
     updateModelIds,
     updateOsIndex
@@ -25,7 +24,6 @@ export const cmsEntryTransformers = [
     removeLocale,
     fixCmePk,
     fixBrokenStorageKeys,
-    transformLongText,
     transformRichText,
     updateModelIds,
     removeFolderRevision,
@@ -40,7 +38,6 @@ export const osCmsEntryTransformers = [
     removeLocale,
     fixCmePk,
     fixBrokenStorageKeys,
-    transformLongText,
     transformRichText,
     updateModelIds,
     updateOsIndex,
