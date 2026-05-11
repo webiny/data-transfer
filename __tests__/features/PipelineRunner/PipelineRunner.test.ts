@@ -960,4 +960,20 @@ describe("PipelineRunner — periodic flush (flushEvery)", () => {
         expect(processor.executed).toHaveLength(1);
         expect(processor.executed[0]?.size()).toBe(2);
     });
+
+    it("calls execute() once when the shard yields zero records", async () => {
+        const { container } = makeContainer({ flushEvery: 2 });
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "flush-empty-shard"));
+        await runner.run();
+
+        // periodicFlushCount === 0 path: no mid-shard flush occurred, so final flush
+        // still fires once to honour the "execute at least once per shard" contract
+        expect(processor.executed).toHaveLength(1);
+        expect(processor.executed[0]?.size()).toBe(0);
+    });
 });
