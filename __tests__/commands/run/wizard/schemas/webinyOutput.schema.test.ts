@@ -109,4 +109,34 @@ describe("normalizeOutputs", () => {
         expect(result.osTableName).toBe("");
         expect(result.osEndpoint).toBe("");
     });
+
+    it("extracts accountId from primaryDynamodbTableArn", () => {
+        const result = normalizeOutputs({
+            region: "eu-central-1",
+            primaryDynamodbTableName: "wby-primary",
+            fileManagerBucketId: "wby-bucket",
+            primaryDynamodbTableArn:
+                "arn:aws:dynamodb:eu-central-1:250532744892:table/wby-primary"
+        });
+        expect(result.accountId).toBe("250532744892");
+    });
+
+    it("sets accountId to undefined when primaryDynamodbTableArn is absent", () => {
+        const result = normalizeOutputs({
+            region: "eu-central-1",
+            primaryDynamodbTableName: "wby-primary",
+            fileManagerBucketId: "wby-bucket"
+        });
+        expect(result.accountId).toBeUndefined();
+    });
+
+    it("sets accountId to undefined for a malformed ARN", () => {
+        const result = normalizeOutputs({
+            region: "eu-central-1",
+            primaryDynamodbTableName: "wby-primary",
+            fileManagerBucketId: "wby-bucket",
+            primaryDynamodbTableArn: "not-an-arn"
+        });
+        expect(result.accountId).toBeUndefined();
+    });
 });

@@ -70,7 +70,8 @@ async function resolveRawValues(
         primaryDynamodbTableName: webinyVals!.primaryDynamodbTableName,
         fileManagerBucketId: webinyVals!.fileManagerBucketId,
         osTableName: webinyVals!.osTableName || pulumiVals!.osTableName,
-        osEndpoint: webinyVals!.osEndpoint || pulumiVals!.osEndpoint
+        osEndpoint: webinyVals!.osEndpoint || pulumiVals!.osEndpoint,
+        accountId: webinyVals!.accountId ?? pulumiVals!.accountId
     };
 }
 
@@ -158,12 +159,7 @@ export class TransferWizard {
             return await this.runPresetSelection(projectName);
         }
 
-        if (
-            !justCreated &&
-            envExists &&
-            sourceValsInitial !== null &&
-            targetValsInitial !== null
-        ) {
+        if (!justCreated && envExists && sourceValsInitial !== null && targetValsInitial !== null) {
             const choice = await select({
                 message: ".env already exists. What would you like to do?",
                 choices: [

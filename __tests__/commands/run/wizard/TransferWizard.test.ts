@@ -149,6 +149,94 @@ describe("TransferWizard", () => {
         expect(envValues.segments).toBe(4);
     });
 
+    it("warns when source and target are in different AWS accounts", async () => {
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            const path = String(p);
+            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockExtractFromWebinyOutput
+            .mockResolvedValueOnce({ ...SOURCE_VALS, accountId: "111111111111" })
+            .mockResolvedValueOnce({ ...TARGET_VALS, accountId: "999999999999" });
+        mockInput.mockResolvedValue("4");
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        await new TransferWizard(process.cwd()).run();
+
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("111111111111"));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("999999999999"));
+        warnSpy.mockRestore();
+    });
+
+    it("does not warn when source and target share the same AWS account", async () => {
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            const path = String(p);
+            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockExtractFromWebinyOutput
+            .mockResolvedValueOnce({ ...SOURCE_VALS, accountId: "111111111111" })
+            .mockResolvedValueOnce({ ...TARGET_VALS, accountId: "111111111111" });
+        mockInput.mockResolvedValue("4");
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        await new TransferWizard(process.cwd()).run();
+
+        expect(warnSpy).not.toHaveBeenCalled();
+        warnSpy.mockRestore();
+    });
+
+    it("prompts for OS index prefix when OS fields are present", async () => {
+        const OS_SOURCE = { ...SOURCE_VALS, osTableName: "wby-es-source", osEndpoint: "https://es.source" };
+        const OS_TARGET = { ...TARGET_VALS, osTableName: "wby-es-target", osEndpoint: "https://es.target" };
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            const path = String(p);
+            if (path.endsWith("source.webiny.json") || path.endsWith("target.webiny.json")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockExtractFromWebinyOutput
+            .mockResolvedValueOnce(OS_SOURCE)
+            .mockResolvedValueOnce(OS_TARGET);
+        mockInput.mockResolvedValueOnce("4").mockResolvedValueOnce("v6-");
+
+        await new TransferWizard(process.cwd()).run();
+
+        const [, envValues] = mockWriteEnv.mock.calls[0];
+        expect(envValues.targetOsIndexPrefix).toBe("v6-");
+    });
+
+    it("exits with error when no presets are available", async () => {
+        const CONFIG_PATH = "/projects/my-project/config.ts";
+        mockDiscoverProjects.mockResolvedValue(["my-project"]);
+        mockSelect.mockResolvedValue("my-project");
+        mockStat.mockImplementation(async (p: unknown) => {
+            if (String(p).endsWith(".env")) {
+                return { size: 100 } as unknown as Stats;
+            }
+            return noFile();
+        });
+        mockDiscoverConfig.mockResolvedValue(CONFIG_PATH);
+        mockListAvailablePresetsWithDescriptions.mockResolvedValue([]);
+
+        const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("exit");
+        });
+        await expect(new TransferWizard(process.cwd()).run()).rejects.toThrow("exit");
+        exitSpy.mockRestore();
+    });
+
     it("throws when same-side files disagree on osTableName", async () => {
         mockDiscoverProjects.mockResolvedValue(["my-project"]);
         mockSelect.mockResolvedValue("my-project");
