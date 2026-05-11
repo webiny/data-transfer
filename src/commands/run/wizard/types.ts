@@ -4,6 +4,7 @@ export interface RawOutputValues {
     fileManagerBucketId: string;
     osTableName: string;
     osEndpoint: string;
+    accountId?: string;
 }
 
 export interface EnvValues {

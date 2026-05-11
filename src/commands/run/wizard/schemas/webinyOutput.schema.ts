@@ -5,6 +5,7 @@ export const webinyOutputSchema = z
     .object({
         region: z.string().min(1),
         primaryDynamodbTableName: z.string().min(1),
+        primaryDynamodbTableArn: z.string().optional(),
         fileManagerBucketId: z.string().min(1),
         opensearchDynamodbTableName: z.string().optional(),
         elasticsearchDynamodbTableName: z.string().optional(),
@@ -15,6 +16,14 @@ export const webinyOutputSchema = z
 
 export type WebinyOutputs = z.infer<typeof webinyOutputSchema>;
 
+function extractAccountId(arn: string | undefined): string | undefined {
+    if (!arn) {
+        return undefined;
+    }
+    const parts = arn.split(":");
+    return parts.length >= 5 && parts[4] ? parts[4] : undefined;
+}
+
 export function normalizeOutputs(outputs: WebinyOutputs): RawOutputValues {
     return {
         region: outputs.region,
@@ -22,6 +31,7 @@ export function normalizeOutputs(outputs: WebinyOutputs): RawOutputValues {
         fileManagerBucketId: outputs.fileManagerBucketId,
         osTableName:
             outputs.opensearchDynamodbTableName ?? outputs.elasticsearchDynamodbTableName ?? "",
-        osEndpoint: outputs.opensearchDomainEndpoint ?? outputs.elasticsearchDomainEndpoint ?? ""
+        osEndpoint: outputs.opensearchDomainEndpoint ?? outputs.elasticsearchDomainEndpoint ?? "",
+        accountId: extractAccountId(outputs.primaryDynamodbTableArn)
     };
 }

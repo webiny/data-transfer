@@ -186,6 +186,19 @@ export class TransferWizard {
             targetVals = await resolveRawValues(projectDir, "target");
         }
 
+        if (
+            sourceVals.accountId &&
+            targetVals.accountId &&
+            sourceVals.accountId !== targetVals.accountId
+        ) {
+            console.warn(
+                `\n⚠  Source and target are in different AWS accounts:` +
+                    `\n   source: ${sourceVals.accountId}` +
+                    `\n   target: ${targetVals.accountId}` +
+                    `\n   Set SOURCE_PROFILE and TARGET_PROFILE in .env to use the correct credentials.\n`
+            );
+        }
+
         const osPresent = !!(sourceVals.osTableName || targetVals.osTableName);
 
         const segmentsRaw = await input({

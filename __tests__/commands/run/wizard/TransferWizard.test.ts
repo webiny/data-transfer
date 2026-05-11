@@ -18,24 +18,23 @@ vi.mock("../../../../src/commands/initProject/scaffoldProject.ts", () => ({
 
 import { discoverProjects } from "../../../../src/commands/run/wizard/projectDiscovery.ts";
 import { discoverConfig } from "../../../../src/commands/run/wizard/configDiscovery.ts";
-import { listAvailablePresets } from "../../../../src/commands/run/wizard/presetDiscovery.ts";
+import { listAvailablePresetsWithDescriptions } from "../../../../src/commands/run/wizard/presetDiscovery.ts";
 import { writeEnv } from "../../../../src/commands/run/wizard/envWriter.ts";
 import { extractFromWebinyOutput } from "../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "../../../../src/commands/run/wizard/sources/PulumiStateSource.ts";
 import { input, select } from "@inquirer/prompts";
-import { stat, access } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { scaffoldProject } from "../../../../src/commands/initProject/scaffoldProject.ts";
 
 const mockDiscoverProjects = vi.mocked(discoverProjects);
 const mockDiscoverConfig = vi.mocked(discoverConfig);
-const mockListAvailablePresets = vi.mocked(listAvailablePresets);
+const mockListAvailablePresetsWithDescriptions = vi.mocked(listAvailablePresetsWithDescriptions);
 const mockWriteEnv = vi.mocked(writeEnv);
 const mockExtractFromWebinyOutput = vi.mocked(extractFromWebinyOutput);
 const mockExtractFromPulumiState = vi.mocked(extractFromPulumiState);
 const mockInput = vi.mocked(input);
 const mockSelect = vi.mocked(select);
 const mockStat = vi.mocked(stat);
-const mockAccess = vi.mocked(access);
 const mockScaffoldProject = vi.mocked(scaffoldProject);
 
 const noFile = (): never => {
@@ -75,7 +74,6 @@ describe("TransferWizard", () => {
             }
             return noFile();
         });
-        mockAccess.mockRejectedValue(Object.assign(new Error("ENOENT"), { code: "ENOENT" }));
         mockExtractFromWebinyOutput
             .mockResolvedValueOnce(SOURCE_VALS)
             .mockResolvedValueOnce(TARGET_VALS);
@@ -98,7 +96,10 @@ describe("TransferWizard", () => {
             return noFile();
         });
         mockDiscoverConfig.mockResolvedValue(CONFIG_PATH);
-        mockListAvailablePresets.mockReturnValue(["v5-to-v6-ddb", "v5-to-v6-os"]);
+        mockListAvailablePresetsWithDescriptions.mockResolvedValue([
+            { name: "v5-to-v6-ddb", description: "DDB only" },
+            { name: "v5-to-v6-os", description: "DDB + OpenSearch" }
+        ]);
 
         const result = await new TransferWizard(process.cwd()).run();
 
@@ -134,7 +135,6 @@ describe("TransferWizard", () => {
             }
             return noFile();
         });
-        mockAccess.mockRejectedValue(Object.assign(new Error("ENOENT"), { code: "ENOENT" }));
         mockExtractFromWebinyOutput
             .mockResolvedValueOnce(SOURCE_VALS)
             .mockResolvedValueOnce(TARGET_VALS);
