@@ -57,7 +57,8 @@ import {
 
 export default createTransferPreset({
     name: "v5-to-v6-ddb",
-    description: "Webiny v5 to v6 migration with all necessary transformations - DynamoDB only.",
+    description:
+        "Webiny v5 to v6 migration with all necessary transformations - Regular DynamoDb table.",
     configure({ runner, pipelineBuilderFactory: factory, container }): void {
         // ========================================================================
         // Migration records — blackhole all PKs starting with "MIGRATION"
