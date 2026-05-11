@@ -2,6 +2,7 @@ export interface RawOutputValues {
     region: string;
     primaryDynamodbTableName: string;
     fileManagerBucketId: string;
+    auditLogTableName?: string;
     osTableName: string;
     osEndpoint: string;
     accountId?: string;
@@ -15,6 +16,7 @@ export interface EnvValues {
     targetRegion: string;
     targetDdbTable: string;
     targetS3Bucket: string;
+    targetAuditLogTable: string;
     targetOsTable: string;
     targetOsEndpoint: string;
     targetOsIndexPrefix: string;

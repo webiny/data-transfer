@@ -51,6 +51,7 @@ async function resolveRawValues(
         "region",
         "primaryDynamodbTableName",
         "fileManagerBucketId",
+        "auditLogTableName",
         "osTableName",
         "osEndpoint"
     ] as const) {
@@ -64,11 +65,12 @@ async function resolveRawValues(
         );
     }
 
-    // Consistent — prefer webiny, but fill in OS fields from pulumi if webiny lacks them
+    // Consistent — prefer webiny, but fill in fields from pulumi if webiny lacks them
     return {
         region: webinyVals!.region,
         primaryDynamodbTableName: webinyVals!.primaryDynamodbTableName,
         fileManagerBucketId: webinyVals!.fileManagerBucketId,
+        auditLogTableName: webinyVals!.auditLogTableName ?? pulumiVals!.auditLogTableName,
         osTableName: webinyVals!.osTableName || pulumiVals!.osTableName,
         osEndpoint: webinyVals!.osEndpoint || pulumiVals!.osEndpoint,
         accountId: webinyVals!.accountId ?? pulumiVals!.accountId
@@ -225,6 +227,7 @@ export class TransferWizard {
             targetRegion: targetVals.region,
             targetDdbTable: targetVals.primaryDynamodbTableName,
             targetS3Bucket: targetVals.fileManagerBucketId,
+            targetAuditLogTable: targetVals.auditLogTableName ?? "",
             targetOsTable: targetVals.osTableName,
             targetOsEndpoint: targetVals.osEndpoint,
             targetOsIndexPrefix,
