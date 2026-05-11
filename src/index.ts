@@ -65,7 +65,8 @@ export {
     isOsBackgroundTask,
     isOsMailerSettings,
     isAuditLogEntry,
-    isMigrationRecord
+    isMigrationRecord,
+    isFormBuilderRecord
 } from "./domain/transform/filters.ts";
 
 // Scanner / processor implementation tokens — passed into

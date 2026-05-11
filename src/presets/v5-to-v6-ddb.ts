@@ -16,6 +16,7 @@ import {
     isCmsModel,
     isFlpRecord,
     isFmFile,
+    isFormBuilderRecord,
     isMigrationRecord,
     isSecurityTeam
 } from "~/domain/transform/filters.ts";
@@ -270,6 +271,23 @@ export default createTransferPreset({
             .build();
 
         // ========================================================================
+        // Form Builder — blackhole (no v6 migration path yet)
+        // Matches by PK (#FB# segment) first, then TYPE prefix fb.form.* and
+        // the standalone fb.formSubmission type.
+        // IMPORTANT: Must be registered AFTER CmsEntries because FB forms are
+        // CMS entries and would otherwise be claimed first.
+        // ========================================================================
+        const formBuilderRecords = factory
+            .create({
+                name: "FormBuilderRecords",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isFormBuilderRecord))
+            .blackhole()
+            .build();
+
+        // ========================================================================
         // Register pipelines with runner
         // IMPORTANT: Order matters due to first-match-wins behavior
         // ========================================================================
@@ -286,6 +304,7 @@ export default createTransferPreset({
             .register(securityTeams)
             .register(cmsModels)
             .register(folderPermissions)
-            .register(cmsEntries); // After fmFiles
+            .register(cmsEntries) // After fmFiles
+            .register(formBuilderRecords); // After cmsEntries
     }
 });

@@ -116,3 +116,14 @@ export const isMigrationRecord = (record: BaseRecord): boolean => {
     }
     return record.PK.startsWith("MIGRATION");
 };
+
+export const isFormBuilderRecord = (record: BaseRecord): boolean => {
+    if (typeof record.PK === "string" && record.PK.includes("#FB#")) {
+        return true;
+    }
+    const type = record.TYPE as string | undefined;
+    if (!type) {
+        return false;
+    }
+    return type.startsWith("fb.form.") || type === "fb.formSubmission";
+};
