@@ -64,14 +64,13 @@ const createPrettyDestination = (): Writable => {
         colorize: true,
         customColors: "fatal:red,error:red,warn:yellow,info:blue,debug:gray",
         ignore: "pid,hostname,time",
-        messageFormat: "{msg}",
-        sync: true
+        messageFormat: "{msg}"
     });
 };
 
 const createFileDestination = (path: string): DestinationStream => {
     mkdirSync(dirname(path), { recursive: true });
-    return pino.destination({ dest: path, append: true, minLength: 0 });
+    return pino.destination({ dest: path, append: true, periodicFlush: 5000 });
 };
 
 export class PinoLogger implements Logger.Interface {
