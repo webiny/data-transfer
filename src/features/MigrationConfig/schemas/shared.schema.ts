@@ -75,11 +75,10 @@ export const debugSettingsSchema = z
     .object({
         snapshot: z.union([z.boolean(), snapshotSettingsSchema]).optional(),
         /**
-         * When set, the runner writes raw pino JSONL to a log file in
-         * addition to stdout. `true` → default path
-         * (`.transfer/<runId>/logs/<orchestrator|segment-N>.log`).
-         * String → explicit path; user is on their own for gitignore /
-         * cleanup.
+         * Controls log file output. By default logs are written to
+         * `.transfer/<runId>/logs/<orchestrator|segment-N>.log`.
+         * Set to `false` to disable file logging. Set to a string to
+         * write to a custom path instead.
          */
         logFile: z.union([z.boolean(), trimmedString()]).optional(),
         logLevel: z.enum(["debug", "info", "warn", "error"]).optional()

@@ -135,25 +135,24 @@ export function bootstrap(options: BootstrapOptions): Container {
 
 /**
  * Turn `config.debug.logFile` into an absolute path for the pino file
- * stream. `true` → `.transfer/<runId>/logs/<orchestrator|segment-N>.log`.
- * Workers are detected via `--segment <N>` in argv so each one writes
- * to its own file (concurrent appends to a shared file can interleave).
+ * stream. Writes to `.transfer/<runId>/logs/<orchestrator|segment-N>.log`
+ * by default — set `logFile: false` to opt out. A string value overrides
+ * the path entirely. Workers are detected via `--segment <N>` in argv so
+ * each one writes to its own file (concurrent appends to a shared file
+ * can interleave).
  */
 function resolveLogFile(
     config: MigrationConfig.Interface,
     runId: string | undefined
 ): string | undefined {
     const raw = config.debug?.logFile;
-    if (!raw) {
+    if (raw === false) {
         return undefined;
     }
     if (typeof raw === "string") {
         return isAbsolute(raw) ? raw : joinPath(process.cwd(), raw);
     }
     if (!runId) {
-        // Default path needs a runId to anchor the directory; without
-        // it there's nowhere sensible to write. Silent no-op keeps the
-        // feature opt-in-forgiving.
         return undefined;
     }
     const kind = detectProcessKind();
