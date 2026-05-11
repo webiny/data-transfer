@@ -121,7 +121,24 @@ class OsProcessorImpl implements Processor.Interface<
     }
 
     public async checkAccess(): Promise<AccessCheck.Entry[]> {
-        return [];
+        if (!this.config.target.opensearch) {
+            return [];
+        }
+        const endpoint = this.config.target.opensearch.endpoint;
+        const label = `OpenSearch cluster: ${endpoint}`;
+        try {
+            await this.osClient.listIndexes();
+            return [{ label, status: "ok" }];
+        } catch (error) {
+            const statusCode = (error as { statusCode?: number }).statusCode;
+            if (statusCode === 401 || statusCode === 403) {
+                return [{ label, status: "denied" }];
+            }
+            if (statusCode === 404) {
+                return [{ label, status: "missing" }];
+            }
+            return [{ label, status: "unknown" }];
+        }
     }
 
     public afterShard(ctx: Processor.AfterShardContext): void {

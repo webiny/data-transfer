@@ -47,6 +47,7 @@ export interface OsContainerOptions {
     logLevel?: "debug" | "info" | "warn" | "error";
     pipelineOverride?: OsContainerPipelineOverride;
     indexPrefix?: string;
+    noOpenSearch?: boolean;
 }
 
 export function createOsContainer(options: OsContainerOptions = {}): Container {
@@ -67,12 +68,14 @@ export function createOsContainer(options: OsContainerOptions = {}): Container {
             credentials: DEFAULT_CREDS,
             dynamodb: { tableName: "target-table" },
             s3: { bucket: "target-bucket" },
-            opensearch: {
-                endpoint: "https://es.example.com",
-                tableName: "target-os",
-                service: "opensearch" as const,
-                indexPrefix: options.indexPrefix ?? ""
-            }
+            opensearch: options.noOpenSearch
+                ? undefined
+                : {
+                      endpoint: "https://es.example.com",
+                      tableName: "target-os",
+                      service: "opensearch" as const,
+                      indexPrefix: options.indexPrefix ?? ""
+                  }
         },
         pipeline: {
             modelsDir: options.modelsDir,
