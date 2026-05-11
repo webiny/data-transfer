@@ -85,7 +85,8 @@ export const unifiedTransferInputSchema = z
             ctx.addIssue({
                 code: "custom",
                 path: hasSourceOs ? ["target", "opensearch"] : ["source", "opensearch"],
-                message: "source.opensearch and target.opensearch must both be set or both be absent."
+                message:
+                    "source.opensearch and target.opensearch must both be set or both be absent."
             });
         }
 
@@ -102,4 +103,3 @@ export const unifiedTransferInputSchema = z
             });
         }
     });
-

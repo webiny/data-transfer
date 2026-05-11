@@ -85,7 +85,14 @@ export async function handler(
         await beforeHook.execute();
 
         const workers = segmentsToRun.map(segment =>
-            spawnWorker(segment, segments, runId, configPath, presetName, logLevel ?? config.debug?.logLevel)
+            spawnWorker(
+                segment,
+                segments,
+                runId,
+                configPath,
+                presetName,
+                logLevel ?? config.debug?.logLevel
+            )
         );
 
         const results = await Promise.allSettled(workers);

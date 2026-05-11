@@ -135,9 +135,8 @@ describe("loadConfig", () => {
 describe("MigrationConfig DI registration", () => {
     it("registers and resolves the config", async () => {
         const creds = { accessKeyId: "AKIA", secretAccessKey: "secret" };
-        const { migrationConfigSchema } = await import(
-            "../../../src/features/MigrationConfig/validation.ts"
-        );
+        const { migrationConfigSchema } =
+            await import("../../../src/features/MigrationConfig/validation.ts");
         const config = migrationConfigSchema.parse({
             source: {
                 region: "eu-central-1",

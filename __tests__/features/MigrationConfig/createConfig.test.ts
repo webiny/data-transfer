@@ -81,7 +81,12 @@ describe("createConfig — happy path", () => {
 
     it("trims whitespace from string fields", () => {
         const config = createConfig({
-            source: { ...baseSource, region: "  us-east-1  ", dynamodb: { tableName: "  src  " }, s3: { bucket: "  src-b  " } },
+            source: {
+                ...baseSource,
+                region: "  us-east-1  ",
+                dynamodb: { tableName: "  src  " },
+                s3: { bucket: "  src-b  " }
+            },
             target: { ...baseTarget, region: " eu-central-1 " },
             pipeline: {}
         });
@@ -105,7 +110,11 @@ describe("createConfig — happy path", () => {
 describe("createConfig — validation errors", () => {
     it("throws on missing source region", () => {
         expect(() =>
-            createConfig({ source: { ...baseSource, region: "" } as any, target: baseTarget, pipeline: {} })
+            createConfig({
+                source: { ...baseSource, region: "" } as any,
+                target: baseTarget,
+                pipeline: {}
+            })
         ).toThrow();
     });
 
@@ -121,7 +130,11 @@ describe("createConfig — validation errors", () => {
 
     it("throws on missing credentials", () => {
         expect(() =>
-            createConfig({ source: { ...baseSource, credentials: undefined as any }, target: baseTarget, pipeline: {} })
+            createConfig({
+                source: { ...baseSource, credentials: undefined as any },
+                target: baseTarget,
+                pipeline: {}
+            })
         ).toThrow();
     });
 
@@ -167,7 +180,11 @@ describe("createConfig — validation errors", () => {
         expect(() =>
             createConfig({
                 source: baseSource,
-                target: { ...baseTarget, region: baseSource.region, dynamodb: { tableName: baseSource.dynamodb.tableName } },
+                target: {
+                    ...baseTarget,
+                    region: baseSource.region,
+                    dynamodb: { tableName: baseSource.dynamodb.tableName }
+                },
                 pipeline: {}
             })
         ).toThrow(/matches source/);
