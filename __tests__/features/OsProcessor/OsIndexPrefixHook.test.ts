@@ -30,4 +30,12 @@ describe("OsIndexPrefixHook", () => {
         await hook.execute();
         expect(process.env.OPENSEARCH_INDEX_PREFIX).toBe("");
     });
+
+    it("does not set OPENSEARCH_INDEX_PREFIX when OpenSearch is not configured", async () => {
+        delete process.env.OPENSEARCH_INDEX_PREFIX;
+        const container = createOsContainer({ noOpenSearch: true });
+        const hook = container.resolve(BeforeTransferHook);
+        await hook.execute();
+        expect(process.env.OPENSEARCH_INDEX_PREFIX).toBeUndefined();
+    });
 });
