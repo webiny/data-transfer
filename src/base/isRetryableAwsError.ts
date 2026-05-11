@@ -1,3 +1,12 @@
+// Auth/permission errors are never transient — fail immediately without retrying.
+const TERMINAL_ERROR_NAMES = new Set<string>([
+    "AccessDenied",
+    "AccessDeniedException",
+    "AuthorizationError",
+    "AuthorizationErrorException",
+    "UnauthorizedOperation"
+]);
+
 const THROTTLING_ERROR_NAMES = new Set<string>([
     "ProvisionedThroughputExceededException",
     "ThrottlingException",
@@ -61,6 +70,16 @@ export function isRetryableAwsError(error: unknown): boolean {
         return false;
     }
     const candidate = error as AwsErrorLike;
+
+    // Auth/permission failures are permanent — never retry.
+    const nameForTerminal = candidate.name ?? candidate.code;
+    if (typeof nameForTerminal === "string" && TERMINAL_ERROR_NAMES.has(nameForTerminal)) {
+        return false;
+    }
+    const httpStatus = candidate.$metadata?.httpStatusCode;
+    if (httpStatus === 403) {
+        return false;
+    }
 
     if (candidate.$retryable?.throttling === true) {
         return true;

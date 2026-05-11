@@ -1,7 +1,6 @@
 import {
     CopyObjectCommand,
     GetObjectCommand,
-    PutObjectCommand,
     createS3Client,
     type S3Client
 } from "@webiny/aws-sdk/client-s3/index.js";
@@ -80,13 +79,6 @@ export class S3ClientImpl implements SourceS3Client.Interface {
             const response = await this.client.send(command);
             const bytes = await response.Body!.transformToByteArray();
             return Buffer.from(bytes);
-        });
-    }
-
-    public async putObject(bucket: string, key: string, body: Buffer): Promise<void> {
-        const command = new PutObjectCommand({ Bucket: bucket, Key: key, Body: body });
-        await this.executeWithRetry(async () => {
-            await this.client.send(command);
         });
     }
 

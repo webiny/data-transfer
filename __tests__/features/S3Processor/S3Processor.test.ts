@@ -74,7 +74,7 @@ describe("S3Processor", () => {
         it("exposes getFile that delegates to the SourceS3Client", async () => {
             const container = createDdbContainer();
             const sourceS3 = container.resolve(SourceS3Client) as MockS3Client;
-            sourceS3.seedObject("source-bucket", "foo.txt", Buffer.from("hello"));
+            sourceS3.putObject("source-bucket", "foo.txt", Buffer.from("hello"));
 
             const processor = container
                 .resolveAll(Processor)
