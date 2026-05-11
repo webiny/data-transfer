@@ -67,7 +67,7 @@ interface IProcessor<
 export const Processor = createAbstraction<IProcessor<any, any>>("Core/Processor");
 
 export namespace AccessCheck {
-    export type Status = "ok" | "denied" | "unknown";
+    export type Status = "ok" | "denied" | "missing" | "unknown";
 
     export interface Entry {
         label: string;

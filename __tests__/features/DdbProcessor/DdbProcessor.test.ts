@@ -245,7 +245,7 @@ describe("DdbProcessor", () => {
             });
         });
 
-        it("returns denied when DescribeTable throws ResourceNotFoundException", async () => {
+        it("returns missing when DescribeTable throws ResourceNotFoundException", async () => {
             mockDescribeTable.mockRejectedValue(
                 Object.assign(new Error("Table not found"), { name: "ResourceNotFoundException" })
             );
@@ -258,11 +258,11 @@ describe("DdbProcessor", () => {
 
             expect(entries[0]).toEqual({
                 label: "DynamoDB source table: source-table",
-                status: "denied"
+                status: "missing"
             });
             expect(entries[1]).toEqual({
                 label: "DynamoDB target table: target-table",
-                status: "denied"
+                status: "missing"
             });
         });
     });

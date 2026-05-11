@@ -59,7 +59,7 @@ class AuditLogProcessorImpl implements Processor.Interface<
             }
             const errName = (error as { name?: string }).name;
             if (errName === "ResourceNotFoundException") {
-                return [{ label, status: "denied" }];
+                return [{ label, status: "missing" }];
             }
             return [{ label, status: "unknown" }];
         } finally {

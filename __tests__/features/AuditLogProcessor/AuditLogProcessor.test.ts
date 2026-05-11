@@ -200,7 +200,7 @@ describe("checkAccess", () => {
         });
     });
 
-    it("returns denied when DescribeTable throws ResourceNotFoundException", async () => {
+    it("returns missing when DescribeTable throws ResourceNotFoundException", async () => {
         mockDescribeTable.mockRejectedValue(
             Object.assign(new Error("Table not found"), { name: "ResourceNotFoundException" })
         );
@@ -213,7 +213,7 @@ describe("checkAccess", () => {
 
         expect(entries[0]).toEqual({
             label: "DynamoDB audit log table: audit-log-table",
-            status: "denied"
+            status: "missing"
         });
     });
 
