@@ -15,6 +15,7 @@ import {
 } from "~/features/PipelineBuilderFactory/index.ts";
 import { SnapshotWriter } from "~/features/SnapshotWriter/index.ts";
 import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import { Commands } from "~/domain/transform/commands/Commands.ts";
 import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
 import { Processor, Hook, createFilter } from "~/domain/pipeline/index.ts";
@@ -104,7 +105,7 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
     }
 }
 
-function makeContainer(options: { runId?: string } = {}): {
+function makeContainer(options: { runId?: string; flushEvery?: number } = {}): {
     container: Container;
     logger: TestLogger;
 } {
@@ -120,6 +121,9 @@ function makeContainer(options: { runId?: string } = {}): {
     });
     container.registerInstance(DroppedRecordLog, new MockDroppedRecordLog());
     container.registerInstance(TransferredRecordLog, new MockTransferredRecordLog());
+    container.registerInstance(MigrationConfig, {
+        tuning: options.flushEvery !== undefined ? { flushEvery: options.flushEvery } : undefined
+    } as unknown as MigrationConfig.Interface);
     container.register(FakeScannerImpl).inSingletonScope();
     container.register(FakeProcessorImpl).inSingletonScope();
     container.register(FakeHookAImpl).inSingletonScope();
@@ -853,5 +857,107 @@ describe("PipelineRunner.run() — blackhole pipelines", () => {
         // the shard bag. The blackhole pipeline must NOT eat the normal
         // pipeline's output.
         expect(processor.executed[0]?.size()).toBe(1);
+    });
+});
+
+describe("PipelineRunner — periodic flush (flushEvery)", () => {
+    it("flushes mid-shard every flushEvery records", async () => {
+        const { container } = makeContainer({ flushEvery: 2 });
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" },
+            { id: "r3", type: "foo" },
+            { id: "r4", type: "foo" },
+            { id: "r5", type: "foo" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "flush-mid-shard"));
+        await runner.run();
+
+        // flushEvery=2, 5 records: flush at 2, flush at 4, final flush at 5
+        expect(processor.executed).toHaveLength(3);
+        expect(processor.executed[0]?.size()).toBe(2);
+        expect(processor.executed[1]?.size()).toBe(2);
+        expect(processor.executed[2]?.size()).toBe(1);
+    });
+
+    it("flushes exactly N/flushEvery times when count is divisible", async () => {
+        const { container } = makeContainer({ flushEvery: 2 });
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" },
+            { id: "r3", type: "foo" },
+            { id: "r4", type: "foo" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "flush-divisible"));
+        await runner.run();
+
+        // flushEvery=2, 4 records: flush at 2, flush at 4, no remainder
+        expect(processor.executed).toHaveLength(2);
+        expect(processor.executed[0]?.size()).toBe(2);
+        expect(processor.executed[1]?.size()).toBe(2);
+    });
+
+    it("no record loss across flush boundaries", async () => {
+        const { container } = makeContainer({ flushEvery: 2 });
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" },
+            { id: "r3", type: "foo" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "flush-no-loss"));
+        await runner.run();
+
+        const totalCommands = processor.executed.reduce((sum, c) => sum + c.size(), 0);
+        expect(totalCommands).toBe(3);
+    });
+
+    it("afterShard fires exactly once regardless of flush count", async () => {
+        const { container } = makeContainer({ flushEvery: 2 });
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" },
+            { id: "r3", type: "foo" },
+            { id: "r4", type: "foo" },
+            { id: "r5", type: "foo" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "flush-aftershard"));
+        await runner.run();
+
+        expect(processor.afterShardCalls).toHaveLength(1);
+        expect(processor.afterShardCalls[0]).toEqual({ segment: 0, totalSegments: 1 });
+    });
+
+    it("without flushEvery set, uses a single shard-end flush (default 500 > record count)", async () => {
+        const { container } = makeContainer(); // no flushEvery → default 500
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        const processor = container.resolve(Processor) as FakeProcessor;
+        scanner.records = [
+            { id: "r1", type: "foo" },
+            { id: "r2", type: "foo" }
+        ];
+
+        const runner = container.resolve(PipelineRunner);
+        runner.register(buildPipeline(container, "flush-default"));
+        await runner.run();
+
+        // 2 records < 500 default → single execute call at shard end
+        expect(processor.executed).toHaveLength(1);
+        expect(processor.executed[0]?.size()).toBe(2);
     });
 });

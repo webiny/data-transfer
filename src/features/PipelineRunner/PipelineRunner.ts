@@ -13,6 +13,7 @@ import { SnapshotWriter } from "~/features/SnapshotWriter/abstractions/SnapshotW
 import { DroppedRecordLog } from "~/features/DroppedRecordLog/index.ts";
 import { TransferredRecordLog } from "~/features/TransferredRecordLog/index.ts";
 import { RecordDisposition } from "~/domain/pipeline/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
     type RunOptions,
@@ -49,6 +50,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
     public constructor(
         private readonly container: Container,
+        private readonly config: MigrationConfig.Interface,
         private readonly logger: Logger.Interface,
         private readonly transferContext: TransferContext.Interface,
         private readonly baseContextFactory: BaseTransformContextFactory.Interface,
@@ -239,19 +241,13 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
 
     private async runShard(params: RunShardParams): Promise<ShardStats> {
         const { mergeGroupId, pipelines, scanner, shard, pipelineProcessors, shardCtx } = params;
-        // Single shared command buffer for the whole shard. Per-record
-        // transformers + processor.onEnd hooks push into it via slice
-        // helpers / addCommand. At shard end, each processor.execute drains
-        // its own keys via commands.get(key) — which also marks them claimed.
-        // After all processors drain, commands.unclaimedKeys() reports any
-        // keys that nobody handled (transformer pushed X but pipeline lacks
-        // the processor that drains X).
-        const shardCommands = new Commands();
 
-        // Track per-shard dispatch counts — aggregate at shard end instead
-        // of per-record so a real prod run surfaces silent drops (records
-        // matching no pipeline filter) in the default `info` log instead
-        // of being invisible at `debug`.
+        const flushEvery = this.config.tuning?.flushEvery ?? 500;
+        const processorOrder = this.collectProcessorOrder(pipelines, pipelineProcessors);
+        let pendingCommands = new Commands();
+        let recordCount = 0;
+        let periodicFlushCount = 0;
+
         const perPipelineTransferred: Map<string, number> = new Map();
         const perPipelineBlackholed: Map<string, number> = new Map();
         const unmatchedByType: Map<string, number> = new Map();
@@ -272,7 +268,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                     pipeline,
                     processors,
                     record,
-                    shardCommands,
+                    pendingCommands,
                     shardCtx
                 );
                 if (result instanceof RecordDisposition.Blackholed) {
@@ -288,16 +284,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                     );
                     this.transferredLog.add(record, pipeline.name);
                 }
-                // First-match-wins: subsequent pipelines in this group are
-                // skipped for this record. Pipeline registration order
-                // determines priority.
                 break;
             }
             if (!matched) {
                 const { PK, SK, TYPE } = record as any;
-                // TYPE="unknown" is a real stored value in v5 but carries no
-                // useful identity — fall back to PK:SK so the summary entry
-                // identifies the actual record rather than grouping under "unknown".
                 const typeKey: string = TYPE && TYPE !== "unknown" ? TYPE : `${PK}:${SK}`;
                 unmatchedByType.set(typeKey, (unmatchedByType.get(typeKey) ?? 0) + 1);
                 this.logger.warn(`unmatched record — TYPE=${typeKey} PK=${PK} SK=${SK}`);
@@ -306,6 +296,13 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
                     record
                 );
                 this.droppedLog.add(record, new RecordDisposition.Unmatched());
+            }
+
+            recordCount++;
+            if (recordCount % flushEvery === 0) {
+                await this.flushShard(pendingCommands, processorOrder);
+                pendingCommands = new Commands();
+                periodicFlushCount++;
             }
         }
 
@@ -317,16 +314,10 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             unmatchedByType
         );
 
-        // Shard end: each unique processor (across pipelines in this group)
-        // drains the shared buffer in first-seen registration order.
-        const processorOrder = this.collectProcessorOrder(pipelines, pipelineProcessors);
-        for (const processor of processorOrder) {
-            await processor.execute(shardCommands);
+        if (pendingCommands.size() > 0 || periodicFlushCount === 0) {
+            await this.flushShard(pendingCommands, processorOrder);
         }
 
-        // Per-shard terminal hooks: each processor persists its own
-        // cross-boundary state (e.g., OsProcessor writes touchedIndexes).
-        // Sequential, processor array order — same as execute().
         for (const processor of processorOrder) {
             if (!processor.afterShard) {
                 continue;
@@ -334,7 +325,6 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             await processor.afterShard(shardCtx);
         }
 
-        this.warnUnclaimedKeys(shardCommands);
         this.droppedLog.flush(shardCtx.segment);
         this.transferredLog.flush(shardCtx.segment);
 
@@ -343,6 +333,13 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
             blackholed: perPipelineBlackholed,
             unmatched: unmatchedByType
         };
+    }
+
+    private async flushShard(commands: Commands, processors: ProcessorInstance[]): Promise<void> {
+        for (const processor of processors) {
+            await processor.execute(commands);
+        }
+        this.warnUnclaimedKeys(commands);
     }
 
     private async runRecord(
@@ -543,6 +540,7 @@ export const PipelineRunner = PipelineRunnerAbstraction.createImplementation({
     implementation: PipelineRunnerImpl,
     dependencies: [
         ContainerToken,
+        MigrationConfig,
         Logger,
         TransferContext,
         BaseTransformContextFactory,
