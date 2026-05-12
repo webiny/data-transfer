@@ -76,6 +76,7 @@ export namespace AccessCheck {
     export interface Entry {
         label: string;
         status: Status;
+        hint?: string;
     }
 
     export type Report = Entry[];

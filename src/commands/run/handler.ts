@@ -109,8 +109,14 @@ export async function handler(
                     logger.info(`  ok       ${entry.label}`);
                 } else if (entry.status === "denied") {
                     logger.error(`  DENIED   ${entry.label}`);
+                    if (entry.hint) {
+                        logger.error(`           ${entry.hint}`);
+                    }
                 } else if (entry.status === "missing") {
                     logger.error(`  MISSING  ${entry.label}`);
+                    if (entry.hint) {
+                        logger.error(`           ${entry.hint}`);
+                    }
                 } else {
                     logger.warn(`  unknown  ${entry.label}`);
                 }

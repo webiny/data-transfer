@@ -70,7 +70,9 @@ class S3ProcessorImpl implements Processor.Interface<
                     this.config.target.credentials,
                     this.config.source.region,
                     this.config.source.s3.bucket,
-                    `S3 cross-account read (target credentials → source bucket: ${this.config.source.s3.bucket})`
+                    `S3 cross-account read (target credentials → source bucket: ${this.config.source.s3.bucket})`,
+                    `S3 CopyObject runs with target credentials. Add a bucket policy on ` +
+                        `"${this.config.source.s3.bucket}" granting s3:GetObject to account ${targetAccount}.`
                 )
             );
         }
@@ -96,7 +98,8 @@ class S3ProcessorImpl implements Processor.Interface<
         credentials: MigrationConfig.Interface["source"]["credentials"],
         region: string,
         bucket: string,
-        label: string
+        label: string,
+        hint?: string
     ): Promise<AccessCheck.Entry> {
         const client = new S3({ region, credentials: credentials as never });
         try {
@@ -104,12 +107,12 @@ class S3ProcessorImpl implements Processor.Interface<
             return { label, status: "ok" };
         } catch (error) {
             if (isAccessDeniedError(error)) {
-                return { label, status: "denied" };
+                return { label, status: "denied", hint };
             }
             const errName = (error as AwsErrorLike).name ?? (error as AwsErrorLike).code;
             const httpStatus = (error as AwsErrorLike).$metadata?.httpStatusCode;
             if (errName === "NoSuchBucket" || httpStatus === 404) {
-                return { label, status: "missing" };
+                return { label, status: "missing", hint };
             }
             return { label, status: "unknown" };
         } finally {
