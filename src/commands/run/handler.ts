@@ -2,7 +2,6 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { execa } from "execa";
-import { confirm } from "@inquirer/prompts";
 import { bootstrap } from "~/bootstrap.ts";
 import { formatError } from "~/base/index.ts";
 import type { RunStats } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
@@ -121,20 +120,6 @@ export async function handler(
         const blocked = accessReport.filter(e => e.status === "denied" || e.status === "missing");
         if (blocked.length > 0) {
             throw new AccessCheckError(blocked.length);
-        }
-
-        const guardWarnings = (
-            await Promise.all(runner.getProcessors().map(p => p.getGuardWarning?.() ?? null))
-        ).filter((w): w is string => w !== null);
-
-        if (guardWarnings.length > 0) {
-            for (const warning of guardWarnings) {
-                logger.warn(warning);
-            }
-            const proceed = await confirm({ message: "Proceed with transfer?" });
-            if (!proceed) {
-                process.exit(0);
-            }
         }
 
         const beforeHook = container.resolve(BeforeTransferHook);

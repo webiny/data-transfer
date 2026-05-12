@@ -127,3 +127,7 @@ export const isFormBuilderRecord = (record: BaseRecord): boolean => {
     }
     return type.startsWith("fb.form.") || type.startsWith("fb.formSubmission");
 };
+
+export const isAdminUser = (record: BaseRecord): boolean => {
+    return record.PK.includes("#SECURITY#USER#") && record.GSI1_PK === "securityRole#full-access";
+};
