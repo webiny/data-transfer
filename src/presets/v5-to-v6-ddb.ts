@@ -8,6 +8,7 @@ import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
     byType,
     isAcoSearchRecord,
+    isAdminUser,
     isAuditLogEntry,
     isBackgroundTask,
     isBuiltInSecurityRole,
@@ -287,6 +288,15 @@ export default createTransferPreset({
             .blackhole()
             .build();
 
+        const adminUsers = factory
+            .create({
+                name: "AdminUsers",
+                scanner: DdbScanner,
+                processors: [DdbProcessor]
+            })
+            .filter(createFilter(isAdminUser))
+            .build();
+
         // ========================================================================
         // Register pipelines with runner
         // IMPORTANT: Order matters due to first-match-wins behavior
@@ -305,6 +315,7 @@ export default createTransferPreset({
             .register(cmsModels)
             .register(folderPermissions)
             .register(cmsEntries)
+            .register(adminUsers)
             .register(formBuilderRecords);
     }
 });

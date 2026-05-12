@@ -43,21 +43,13 @@ class S3ProcessorImpl implements Processor.Interface<
     // No onEnd — S3 has no sensible per-record default. Transformers call
     // ctx.copyFile(...) explicitly when they want to emit a copy.
 
-    public async getGuardWarning(): Promise<string | null> {
+    public async checkAccess(): Promise<AccessCheck.Entry[]> {
         const sourceAccount = this.config.source.accountId || null;
         const targetAccount = this.config.target.accountId || null;
-        if (sourceAccount === null || targetAccount === null || sourceAccount === targetAccount) {
-            return null;
-        }
-        return (
-            `S3 file copy is cross-account: source account ${sourceAccount} → target account ${targetAccount}.\n` +
-            `CopyObject runs with target credentials — the source bucket "${this.config.source.s3.bucket}"\n` +
-            `must have a bucket policy granting account ${targetAccount} s3:GetObject access.`
-        );
-    }
+        const isCrossAccount =
+            sourceAccount !== null && targetAccount !== null && sourceAccount !== targetAccount;
 
-    public async checkAccess(): Promise<AccessCheck.Entry[]> {
-        const [sourceEntry, targetEntry] = await Promise.all([
+        const checks: Promise<AccessCheck.Entry>[] = [
             this.headBucket(
                 this.config.source.credentials,
                 this.config.source.region,
@@ -70,29 +62,57 @@ class S3ProcessorImpl implements Processor.Interface<
                 this.config.target.s3.bucket,
                 "target"
             )
-        ]);
-        return [sourceEntry, targetEntry];
+        ];
+
+        if (isCrossAccount) {
+            checks.push(
+                this.headBucketWithLabel(
+                    this.config.target.credentials,
+                    this.config.source.region,
+                    this.config.source.s3.bucket,
+                    `S3 cross-account read (target credentials → source bucket: ${this.config.source.s3.bucket})`,
+                    `S3 CopyObject runs with target credentials. Add a bucket policy on ` +
+                        `"${this.config.source.s3.bucket}" granting s3:GetObject to account ${targetAccount}.`
+                )
+            );
+        }
+
+        return Promise.all(checks);
     }
 
-    private async headBucket(
+    private headBucket(
         credentials: MigrationConfig.Interface["source"]["credentials"],
         region: string,
         bucket: string,
         side: string
     ): Promise<AccessCheck.Entry> {
-        const label = `S3 ${side} bucket: ${bucket}`;
+        return this.headBucketWithLabel(
+            credentials,
+            region,
+            bucket,
+            `S3 ${side} bucket: ${bucket}`
+        );
+    }
+
+    private async headBucketWithLabel(
+        credentials: MigrationConfig.Interface["source"]["credentials"],
+        region: string,
+        bucket: string,
+        label: string,
+        hint?: string
+    ): Promise<AccessCheck.Entry> {
         const client = new S3({ region, credentials: credentials as never });
         try {
             await client.headBucket({ Bucket: bucket });
             return { label, status: "ok" };
         } catch (error) {
             if (isAccessDeniedError(error)) {
-                return { label, status: "denied" };
+                return { label, status: "denied", hint };
             }
             const errName = (error as AwsErrorLike).name ?? (error as AwsErrorLike).code;
             const httpStatus = (error as AwsErrorLike).$metadata?.httpStatusCode;
             if (errName === "NoSuchBucket" || httpStatus === 404) {
-                return { label, status: "missing" };
+                return { label, status: "missing", hint };
             }
             return { label, status: "unknown" };
         } finally {
