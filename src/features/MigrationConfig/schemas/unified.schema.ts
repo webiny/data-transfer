@@ -54,7 +54,13 @@ export const unifiedTransferInputSchema = z
         target: targetSchema,
         pipeline: pipelineSettingsSchema,
         tuning: tuningSchema,
-        debug: debugSettingsSchema
+        debug: debugSettingsSchema,
+        fileUrls: z
+            .object({
+                source: trimmedString(),
+                target: trimmedString()
+            })
+            .optional()
     })
     .superRefine((data, ctx) => {
         if (data.source.s3.bucket === data.target.s3.bucket) {
