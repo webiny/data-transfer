@@ -46,7 +46,7 @@ export function replaceFileUrls(config: MigrationConfig.Interface) {
                 async (fieldValues, field, value) => {
                     if (field.type === "file") {
                         if (Array.isArray(value)) {
-                            fieldValues[field.storageId] = (value as unknown[]).map(v =>
+                            fieldValues[field.storageId] = value.map(v =>
                                 typeof v === "string" ? v.replaceAll(source, target) : v
                             );
                         } else if (typeof value === "string") {
