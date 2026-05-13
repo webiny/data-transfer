@@ -74,7 +74,7 @@ export function replaceFileUrls(config: MigrationConfig.Interface) {
     return createTransformer<BaseTransformContext.Interface<BaseRecord>>(
         "replaceFileUrls",
         async ctx => {
-            if (!config.fileUrls) {
+            if (!config.fileUrls?.target || !config.fileUrls.source) {
                 return;
             }
             const { source, target } = config.fileUrls;
