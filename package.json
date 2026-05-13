@@ -60,7 +60,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1045.0",
     "@faker-js/faker": "^10.4.0",
     "@smithy/util-stream": "^4.6.1",
-    "@types/jsdom": "^28.0.2",
+    "@types/jsdom": "^28.0.3",
     "@types/node": "^24.12.4",
     "@types/yargs": "^17.0.35",
     "@vitest/coverage-v8": "4.1.6",
