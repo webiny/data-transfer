@@ -44,6 +44,7 @@ export { createOsTransformer } from "./transformers/createOsTransformer.ts";
 
 // Built-in transformers — ready-made for common patterns in custom presets.
 export { copyFileToTarget } from "./transformers/file-manager/copyFileToTarget.ts";
+export { replaceFileUrls } from "./transformers/cms/replaceFileUrls.ts";
 
 // Pipeline factories
 export { createFilter, type Filter } from "./domain/pipeline/Filter.ts";
