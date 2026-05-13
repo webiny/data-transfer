@@ -10,18 +10,14 @@ interface IRichTextBody {
 }
 
 export function replaceFileUrls(config: MigrationConfig.Interface) {
-    if (!config.fileUrls) {
-        return createTransformer<BaseTransformContext.Interface<BaseRecord>>(
-            "replaceFileUrls",
-            () => {}
-        );
-    }
-
-    const { source, target } = config.fileUrls;
-
     return createTransformer<BaseTransformContext.Interface<BaseRecord>>(
         "replaceFileUrls",
         async ctx => {
+            if (!config.fileUrls) {
+                return;
+            }
+            const { source, target } = config.fileUrls;
+
             const data = ctx.record.data as Record<string, unknown> | undefined;
             if (!data) {
                 return;
@@ -73,6 +69,7 @@ export function replaceFileUrls(config: MigrationConfig.Interface) {
                             fieldValues[field.storageId] =
                                 await compressionHandler.compress(decompressed);
                         } else {
+                            // rt is a reference to the value already in fieldValues — mutation propagates without re-assignment
                             const rt = value as IRichTextBody;
                             if (typeof rt.state === "string") {
                                 rt.state = rt.state.replaceAll(source, target);
