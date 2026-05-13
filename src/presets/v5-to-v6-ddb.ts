@@ -34,6 +34,7 @@ import {
     removeAttributes,
     removeLocale,
     renameFieldAttributes,
+    replaceFileUrls,
     transformModelGroup,
     transformPermissions,
     updateFlpIds,
@@ -269,6 +270,7 @@ export default createTransferPreset({
             .filter(createFilter(isCmsEntry))
             .use(cmsEntryTransformers)
             .use(addLiveField)
+            .use(replaceFileUrls(config))
             .build();
 
         // ========================================================================
