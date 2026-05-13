@@ -33,6 +33,13 @@ const sourceSchema = z.object({
     opensearch: opensearchSourceSchema.nullable().optional()
 });
 
+const fileUrlsSchema = z
+    .object({
+        source: trimmedString(),
+        target: trimmedString()
+    })
+    .optional();
+
 const targetSchema = z.object({
     region: trimmedString(),
     credentials: credentialsOrProviderSchema,
@@ -54,7 +61,8 @@ export const unifiedTransferInputSchema = z
         target: targetSchema,
         pipeline: pipelineSettingsSchema,
         tuning: tuningSchema,
-        debug: debugSettingsSchema
+        debug: debugSettingsSchema,
+        fileUrls: fileUrlsSchema
     })
     .superRefine((data, ctx) => {
         if (data.source.s3.bucket === data.target.s3.bucket) {

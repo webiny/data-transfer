@@ -1,6 +1,7 @@
 import { createTransferPreset } from "~/utils/createTransferPreset.ts";
 import { OsScanner } from "~/features/OsScanner/index.ts";
 import { OsProcessor } from "~/features/OsProcessor/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import {
     isAcoSearchRecord,
@@ -9,12 +10,13 @@ import {
     isOsBackgroundTask,
     isOsMailerSettings
 } from "~/domain/transform/filters.ts";
-import { addLiveField, osCmsEntryTransformers } from "~/transformers/index.ts";
+import { addLiveField, osCmsEntryTransformers, replaceFileUrls } from "~/transformers/index.ts";
 
 export default createTransferPreset({
     name: "v5-to-v6-os",
     description: "Webiny v5 to v6 migration — OpenSearch DDB table.",
-    configure({ runner, pipelineBuilderFactory: factory }): void {
+    configure({ runner, pipelineBuilderFactory: factory, container }): void {
+        const config = container.resolve(MigrationConfig);
         const acoSearchRecords = factory
             .create({
                 name: "AcoSearchRecords",
@@ -82,6 +84,7 @@ export default createTransferPreset({
             .filter(createFilter(isCmsEntry))
             .use(osCmsEntryTransformers)
             .use(addLiveField)
+            .use(replaceFileUrls(config))
             .build();
 
         // ========================================================================
