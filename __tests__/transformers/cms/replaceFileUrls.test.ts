@@ -297,4 +297,65 @@ describe("replaceFileUrls", () => {
             replaceFileUrls(makeConfig({ source: SOURCE, target: TARGET }))(ctx)
         ).resolves.toBeUndefined();
     });
+
+    it("returns early when record.data has no modelId", async () => {
+        const ctx = makeFakeBaseContext(
+            {
+                PK: "T#root#CMS#CME#abc",
+                SK: "L",
+                TYPE: "cms.entry.l",
+                data: { values: { "file@hero": `${SOURCE}/image.png` } }
+            },
+            {
+                modelProvider: {
+                    getModel: () => {
+                        throw new Error("should not be called");
+                    }
+                }
+            }
+        );
+
+        await expect(
+            replaceFileUrls(makeConfig({ source: SOURCE, target: TARGET }))(ctx)
+        ).resolves.toBeUndefined();
+    });
+
+    it("returns early when modelProvider does not know the model", async () => {
+        const ctx = makeFakeBaseContext(
+            {
+                PK: "T#root#CMS#CME#abc",
+                SK: "L",
+                TYPE: "cms.entry.l",
+                data: { modelId: "unknown", values: { "file@hero": `${SOURCE}/image.png` } }
+            },
+            { modelProvider: { getModel: (_modelId: string) => null } }
+        );
+
+        const values = (ctx.record.data as Record<string, unknown>).values as Record<
+            string,
+            unknown
+        >;
+        await replaceFileUrls(makeConfig({ source: SOURCE, target: TARGET }))(ctx);
+        expect(values["file@hero"]).toBe(`${SOURCE}/image.png`);
+    });
+
+    it("returns early when entry has no values object", async () => {
+        const ctx = makeFakeBaseContext(
+            {
+                PK: "T#root#CMS#CME#abc",
+                SK: "L",
+                TYPE: "cms.entry.l",
+                data: { modelId: "page" }
+            },
+            {
+                modelProvider: makeModelProvider([
+                    { id: "hero", fieldId: "hero", storageId: "file@hero", type: "file" }
+                ])
+            }
+        );
+
+        await expect(
+            replaceFileUrls(makeConfig({ source: SOURCE, target: TARGET }))(ctx)
+        ).resolves.toBeUndefined();
+    });
 });
