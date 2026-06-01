@@ -36,7 +36,7 @@
     "@aws-sdk/credential-providers": "^3.1056.0",
     "@inquirer/core": "^11.2.0",
     "@inquirer/prompts": "^8.5.0",
-    "@opensearch-project/opensearch": "^3.6.0",
+    "@opensearch-project/opensearch": "3.6.0",
     "@webiny/api-headless-cms-ddb-es": "^6.3.0",
     "@webiny/api-opensearch": "^6.3.0",
     "@webiny/aws-sdk": "^6.3.0",

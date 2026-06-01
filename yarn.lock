@@ -5231,7 +5231,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opensearch-project/opensearch@npm:3.6.0, @opensearch-project/opensearch@npm:^3.6.0":
+"@opensearch-project/opensearch@npm:3.6.0":
   version: 3.6.0
   resolution: "@opensearch-project/opensearch@npm:3.6.0"
   dependencies:
@@ -7946,7 +7946,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.4.0"
     "@inquirer/core": "npm:^11.2.0"
     "@inquirer/prompts": "npm:^8.5.0"
-    "@opensearch-project/opensearch": "npm:^3.6.0"
+    "@opensearch-project/opensearch": "npm:3.6.0"
     "@smithy/util-stream": "npm:^4.6.5"
     "@types/jsdom": "npm:^28.0.3"
     "@types/node": "npm:^24.12.4"
