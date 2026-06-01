@@ -21,7 +21,7 @@
     "lint": "oxlint --deny-warnings",
     "lint:fix": "oxlint --fix",
     "check:imports": "adio",
-    "full": "yarn format:fix && yarn lint:fix && yarn check:imports && yarn ts-check && yarn test:coverage"
+    "full": "yarn npm audit && yarn format:fix && yarn lint:fix && yarn check:imports && yarn ts-check && yarn test:coverage"
   },
   "keywords": [
     "webiny",

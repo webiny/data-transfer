@@ -299,6 +299,7 @@ No custom token-bucket pacing — the AWS SDK's adaptive mode handles remote-sig
 Verification before any commit:
 
 ```bash
+yarn npm audit       # expect no audit suggestions (see .yarnrc.yml for ignored advisories)
 yarn format:fix      # oxfmt — must be clean before ts-check
 yarn ts-check        # expect 0 errors
 yarn test:coverage   # expect all green (use :coverage to keep thresholds enforced)
@@ -307,7 +308,7 @@ yarn check:imports   # expect 0 errors
 git status           # include ALL modified files
 ```
 
-All five checks are required. Missing any one of them has broken CI in the past.
+All six checks are required. Missing any one of them has broken CI in the past.
 
 ---
 
