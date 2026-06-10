@@ -30,12 +30,12 @@ cp .env.example .env
 Run DDB transfer first, then OS. They are independent and don't share state.
 
 ```bash
-# From the repo root — guided (wizard selects config):
+# From the repo root — guided (wizard selects config + preset):
 yarn transfer
 
 # Or direct:
-yarn transfer --config=./projects/{{PROJECT_NAME}}/ddb.transfer.config.ts
-yarn transfer --config=./projects/{{PROJECT_NAME}}/os.transfer.config.ts
+yarn transfer --config=./projects/{{PROJECT_NAME}}/config.ts --preset=v5-to-v6-ddb
+yarn transfer --config=./projects/{{PROJECT_NAME}}/config.ts --preset=v5-to-v6-os
 ```
 
 ## Config notes
@@ -44,7 +44,7 @@ yarn transfer --config=./projects/{{PROJECT_NAME}}/os.transfer.config.ts
 
 The `target.auditLog` field is required. It defaults to `null`, which means audit
 log records are dropped during transfer. To transfer them, uncomment the line in
-`ddb.transfer.config.ts` and set `TARGET_AUDIT_LOGS_TABLE` in `.env`:
+`config.ts` and set `TARGET_AUDIT_LOGS_TABLE` in `.env`:
 
 ```
 auditLog: { dynamodb: { tableName: fromEnv("TARGET_AUDIT_LOGS_TABLE") } }
@@ -54,12 +54,8 @@ The audit log table must be different from the main target DDB table.
 
 ### `presetsDir`
 
-Both configs have `presetsDir: "./presets"` pre-wired. Drop `.ts` preset files
-into `presets/` and reference them by filename (without extension) in `pipeline.preset`:
-
-```ts
-pipeline: { preset: "my-preset", presetsDir: "./presets" }
-```
+The config has `presetsDir: "./presets"` pre-wired. Drop `.ts` preset files
+into `presets/` and the wizard will discover them at runtime. Or pass `--preset my-preset` directly.
 
 ### `modelsDir`
 

@@ -1,11 +1,11 @@
 ---
 name: writing-data-transfer-preset
-description: Use when writing or editing a @webiny/data-transfer preset file (the one referenced by pipeline.preset in a config). Covers createTransferPreset, pipelineBuilderFactory.create, filter/use/hook composition, first-match-wins record dispatch, unmatched-record drop semantics, writing transformers (createDdbTransformer / createOsTransformer), registering pipelines with the runner, and the onEnd auto-put behavior for DdbProcessor / OsProcessor.
+description: Use when writing or editing a @webiny/data-transfer preset file (selected at runtime by the wizard or --preset flag). Covers createTransferPreset, pipelineBuilderFactory.create, filter/use/hook composition, first-match-wins record dispatch, unmatched-record drop semantics, writing transformers (createDdbTransformer / createOsTransformer), registering pipelines with the runner, and the onEnd auto-put behavior for DdbProcessor / OsProcessor.
 ---
 
 # Writing a `@webiny/data-transfer` preset
 
-A preset is a `.ts` file that `export default`s a `createTransferPreset({...})` call. The config points at it via `pipeline.preset: "./presets/my-preset.ts"` (relative path) OR a built-in name.
+A preset is a `.ts` file that `export default`s a `createTransferPreset({...})` call. It is selected at runtime by the `TransferWizard` (interactive prompt) or passed as `--preset <name>` on the CLI. Built-in presets live in `src/presets/`; user presets go in the project's `presetsDir`.
 
 The preset's job: register one or more **pipelines** — each pipeline is a `{scanner, processors, filter, transformers}` quadruple that processes matching records.
 
@@ -168,7 +168,7 @@ export const stampMigratedAt = createDdbTransformer(
 | Member                     | Description                                                                             |
 | -------------------------- | --------------------------------------------------------------------------------------- |
 | `ctx.copyFile(src, tgt)`   | Emit an S3 copy command (source bucket → target bucket).                                |
-| `ctx.getFile(key)`         | Read a file from the SOURCE bucket. Returns `Buffer`.                                   |
+| `ctx.getFile(key)`         | Read a file from the SOURCE bucket. Returns `Buffer \| null`.                           |
 
 **OsProcessor slice** — available when pipeline includes `OsProcessor`:
 
@@ -216,9 +216,10 @@ Use them for index preparation, schema migration, cache warm-up, etc.
 
 ## Built-in transformer stacks
 
-`src/transformers/index.ts` defines two pre-built transformer arrays used by the built-in presets. They are **not exported from the `@webiny/data-transfer` public API** — custom presets that need them must import via the source path:
+`src/transformers/index.ts` defines two pre-built transformer arrays used by the built-in presets. They are **not exported from the `@webiny/data-transfer` public API** — they are internal to the package. Custom presets running from within the monorepo can import via the source path, but installed-package users must replicate the stack inline:
 
 ```ts
+// Only works from within the data-transfer monorepo, not from an installed package:
 import { cmsEntryTransformers } from "../../src/transformers/index.ts";
 import { osCmsEntryTransformers } from "../../src/transformers/index.ts";
 ```
@@ -230,10 +231,13 @@ import { osCmsEntryTransformers } from "../../src/transformers/index.ts";
 
 ## Built-in presets
 
-Two built-in presets ship with the package (pass by name in `config.pipeline.preset`):
+Five built-in presets ship with the package (selected at runtime via wizard or `--preset`):
 
 - **`v5-to-v6-ddb`** — full Webiny v5→v6 DDB + S3 migration. Pipelines (registration order): AuditLogs (blackholed when no audit log table), AcoSearchRecordsPage (blackhole), ContentModelGroups, BackgroundTasks (blackhole), FileManagerSettings, FileManagerFiles, MailerSettings, SecurityGroups, SecurityTeams, CmsModels, FolderPermissions, CmsEntries. AuditLogs MUST be registered before AcoSearchRecordsPage and CmsEntries (audit log records share the acoSearchRecord modelId prefix).
 - **`v5-to-v6-os`** — OpenSearch companion table migration. Pipelines: BackgroundTasks (blackhole), MailerSettings (blackhole), FileManagerFiles, CmsEntries. Uses `OsScanner` + `OsProcessor`. Registration order is load-bearing: blackhole pipelines BEFORE CmsEntries because background tasks and mailer settings ARE CMS entries in the OS table.
+- **`copy-ddb`** — verbatim DDB + S3 copy (zero transformers).
+- **`copy-os`** — verbatim OpenSearch copy (zero transformers).
+- **`copy-files`** — S3-only file copy.
 
 ## `addLiveField` — querying siblings via cache
 

@@ -6,16 +6,15 @@ This project uses [`@webiny/data-transfer`](https://www.npmjs.com/package/@webin
 
 ```
 projects/<env-name>/
-    ddb.transfer.config.ts      # DDB + S3 transfer
-    os.transfer.config.ts       # OpenSearch transfer
-    custom.transfer.config.ts   # Same as ddb but points at a local preset
+    config.ts                   # Unified config (DDB + S3 + optional OpenSearch)
     setup.ts                    # Optional custom DI wiring
     models/                     # Optional CMS model overrides
+    presets/                    # User preset files (auto-discovered by presetsDir)
     .env                        # Your credentials + table/bucket names (gitignored)
     .env.example                # Template to copy from
 
 transformers/                   # Your custom record transformers
-presets/                        # Your custom pipeline presets
+presets/                        # Shared presets (across projects)
 features/                       # Custom DI features (advanced)
 ```
 
@@ -25,12 +24,12 @@ Duplicate the `projects/<env-name>/` folder for each environment — each has it
 
 Two Claude skills ship with this project (`.claude/skills/`) and activate automatically when you ask Claude for help:
 
-- **`writing-data-transfer-config`** — when editing any `*.transfer.config.ts`.
+- **`writing-data-transfer-config`** — when editing a `config.ts`.
 - **`writing-data-transfer-preset`** — when editing a preset file under `presets/`.
 
 Both include:
 
-- The exact shapes `createDdbConfig` / `createOsConfig` / `createTransferPreset` accept.
+- The exact shapes `createConfig` / `createTransferPreset` accept.
 - `fromEnv` / `numberFromEnv` / `fromAwsProfile` usage.
 - Source/target collision + whitespace-trimming rules (both built into the Zod validators).
 - Pipeline filter order, first-match-wins semantics, silent-drop behavior for unmatched records.
@@ -63,18 +62,17 @@ After reviewing the written `.env`, run `yarn transfer` again. With `.env` prese
 ### Direct run (skip wizard)
 
 ```bash
-# DDB transfer first
-yarn transfer --config=./projects/example/ddb.transfer.config.ts
-
-# OS transfer second (if applicable)
-yarn transfer --config=./projects/example/os.transfer.config.ts
+# One config covers everything; the preset determines which storage operations run.
+# The wizard selects the preset at runtime, or pass --preset directly:
+yarn transfer --config=./projects/example/config.ts --preset=v5-to-v6-ddb
+yarn transfer --config=./projects/example/config.ts --preset=v5-to-v6-os
 ```
 
 Always run DDB before OS — OS depends on models + tenants written by the DDB transfer.
 
 ## Verifying configs before a real run
 
-A misconfigured transfer can destroy production data. The Zod schema in `createDdbConfig` / `createOsConfig` already rejects:
+A misconfigured transfer can destroy production data. The Zod schema in `createConfig` already rejects:
 
 - Same S3 bucket on both sides (would overwrite source files).
 - Same region + same DDB/OS-DDB table name (would read and write to the same table).

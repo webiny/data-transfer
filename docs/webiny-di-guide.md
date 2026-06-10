@@ -211,12 +211,13 @@ import { PinoLogger } from "./PinoLogger.ts";
 export interface LoggerOptions {
     logLevel: "debug" | "info" | "warn" | "error";
     json: boolean;
+    logFile?: string;
 }
 
 export const LoggerFeature = createFeature<LoggerOptions>({
     name: "Core/LoggerFeature",
     register(container, options) {
-        container.registerInstance(Logger, new PinoLoggerImpl(options));
+        container.registerInstance(Logger, new PinoLogger(options));
         // or: container.register(PinoLogger).inSingletonScope();
     }
 });
