@@ -6,6 +6,12 @@ This document is read by AI agents when working on this codebase. It describes t
 
 ---
 
+## 0. Code navigation
+
+Use the **codegraph MCP** as the first tool for browsing code. `codegraph_explore` answers most questions ("how does X work", "where is Y defined", architecture traces) in a single call — it returns verbatim source grouped by file. Only fall back to `Read` / `grep` when codegraph doesn't cover a specific detail or the index hasn't caught a very recent change.
+
+---
+
 ## 1. Project at a glance
 
 **Package:** `@webiny/data-transfer`.
