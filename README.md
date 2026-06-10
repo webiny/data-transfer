@@ -8,7 +8,7 @@ A generic data-transfer tool for Webiny environments. Copies DynamoDB + S3 (or O
 - **Prod → dev seeding** — zero transformers, just copy.
 - **Custom transfers** — write your own transformers + pipelines + preset for bespoke data moves.
 
-The package ships four built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`, `copy-ddb`, `copy-files`) plus full authoring support for your own.
+The package ships five built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`, `copy-ddb`, `copy-os`, `copy-files`) plus full authoring support for your own.
 
 ## Quick start
 
@@ -120,6 +120,7 @@ export default createConfig({
 
 - **`fromEnv(name)`** — required string; throws if unset or empty (empty string counts as missing).
 - **`fromEnv(name, default)`** — falls back to `default` when unset.
+- **`fromEnv(name, null)`** — returns `string | null`; returns `null` (instead of throwing) when unset. Use for optional config sections (e.g. `fromEnv("SOURCE_OS_TABLE", null)`).
 - **`numberFromEnv(name, default?)`** — typed numeric; throws on parse failure (`SEGMENTS=four` fails immediately with a named error).
 
 ### Credentials
@@ -190,8 +191,8 @@ JSON models override DB-loaded models when both exist.
 ```typescript
 tuning: {
   flushEvery: numberFromEnv("FLUSH_EVERY", 500), // records per shard flush — bounds peak memory
-  ddb: { maxRetries: 3, initialBackoffMs: 100 },
-  s3:  { concurrency: 10, maxRetries: 3, initialBackoffMs: 100 },
+  ddb: { maxRetries: 3, initialBackoffMs: 100, requestTimeoutMs: 5000 },
+  s3:  { concurrency: 10, maxRetries: 3, initialBackoffMs: 100, requestTimeoutMs: 10000 },
   os:  { maxRetries: 3, retryScheduleMs: [5000, 10000, 20000], gzipConcurrency: 16 }
 }
 ```
@@ -206,8 +207,9 @@ Add a `debug` block to your config to opt into diagnostics:
 
 ```typescript
 debug: {
-  snapshot: true,    // or: { dir: "./my-snapshot", compress: false }
-  logFile: true      // or: "./my-transfer.log"
+  logLevel: "debug",  // "debug" | "info" | "warn" | "error" (default "info"); also overridable via --log-level CLI flag
+  snapshot: true,     // or: { dir: "./my-snapshot", compress: false }
+  logFile: true       // or: "./my-transfer.log"
 }
 ```
 
@@ -339,6 +341,7 @@ import {
 | `isOsMailerSettings`        | OS mailer settings records                         |
 | `isAuditLogEntry`           | Audit log entry records                            |
 | `isMigrationRecord`         | Migration tracking records                         |
+| `isFormBuilderRecord`       | Form Builder records (forms + submissions)         |
 
 Multiple `.filter()` calls on the same pipeline AND-compose — a record must pass all of them. Register more-specific filters before catch-alls.
 
@@ -390,8 +393,9 @@ Select by name when the wizard asks "Which preset do you want to run?":
 
 - **`"v5-to-v6-ddb"`** — full Webiny v5 → v6 migration of the primary DynamoDB table (CMS entries, file manager, security, mailer, folder permissions, etc.).
 - **`"v5-to-v6-os"`** — migration of the OpenSearch companion DynamoDB table. Run **after** `v5-to-v6-ddb`.
-- **`"copy-ddb"`** — verbatim DynamoDB-only copy (no transformations).
-- **`"copy-files"`** — verbatim DynamoDB + S3 file copy.
+- **`"copy-ddb"`** — verbatim DynamoDB + S3 copy (no transformations).
+- **`"copy-os"`** — verbatim OpenSearch companion table copy (no transformations).
+- **`"copy-files"`** — S3-only file copy.
 
 Custom presets placed in your `presetsDir` are listed alongside built-ins.
 
@@ -515,6 +519,27 @@ export default createTransferPreset({
 ```
 
 **Requires:** pipeline must include `S3Processor`. **Do not use** when you need a new key path (e.g. the v5→v6 `tenants/<id>/files/<key>` migration) — use the internal `createMetadata` transformer instead.
+
+#### `replaceFileUrls`
+
+Rewrites file-manager URLs in CMS rich-text and long-text fields from the source domain to the target domain. Requires a `fileUrls` block in your config root:
+
+```typescript
+export default createConfig({
+  // ...source, target, pipeline as usual...
+  fileUrls: {
+    source: "https://old-cdn.example.com",
+    target: "https://new-cdn.example.com"
+  }
+});
+```
+
+```typescript
+import { replaceFileUrls } from "@webiny/data-transfer";
+
+// In your preset:
+.use(replaceFileUrls)
+```
 
 ### Built-in processors
 
