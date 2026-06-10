@@ -149,7 +149,7 @@ The tool runs a pre-flight access check before any data moves. If permissions ar
 | Service  | Actions                                                     | Resource                                        |
 | -------- | ----------------------------------------------------------- | ----------------------------------------------- |
 | DynamoDB | `dynamodb:Scan`, `dynamodb:Query`, `dynamodb:DescribeTable` | Source primary table                            |
-| S3       | `s3:GetObject`                                              | Source bucket (`arn:aws:s3:::<bucket>/*`)       |
+| S3       | `s3:GetObject`, `s3:ListBucket`                             | Source bucket (`arn:aws:s3:::<bucket>` + `/*`)  |
 | DynamoDB | `dynamodb:Scan`, `dynamodb:Query`, `dynamodb:DescribeTable` | Source OS companion table (if using OpenSearch) |
 
 **Target credentials:**
@@ -157,7 +157,7 @@ The tool runs a pre-flight access check before any data moves. If permissions ar
 | Service    | Actions                                                               | Resource                                                          |
 | ---------- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | DynamoDB   | `dynamodb:BatchWriteItem`, `dynamodb:Query`, `dynamodb:DescribeTable` | Target primary table                                              |
-| S3         | `s3:PutObject`                                                        | Target bucket (`arn:aws:s3:::<bucket>/*`)                         |
+| S3         | `s3:PutObject`, `s3:ListBucket`                                       | Target bucket (`arn:aws:s3:::<bucket>` + `/*`)                    |
 | S3         | `s3:GetObject` on the **source** bucket                               | Source bucket (`arn:aws:s3:::<source-bucket>/*`) — see note below |
 | DynamoDB   | `dynamodb:BatchWriteItem`, `dynamodb:Query`, `dynamodb:DescribeTable` | Target OS companion table (if using OpenSearch)                   |
 | OpenSearch | `es:ESHttpGet`, `es:ESHttpPut`, `es:ESHttpPost`                       | Target OpenSearch domain (if using OpenSearch)                    |
@@ -169,6 +169,8 @@ The tool runs a pre-flight access check before any data moves. If permissions ar
 2. Use a **cross-account IAM role** that the target credentials can assume with read access to the source bucket.
 
 Without this, S3 file copies will fail with `AccessDenied`. The wizard warns you when it detects different account IDs; the pre-flight access check verifies that the target credentials can actually reach the source bucket.
+
+**Pre-flight access checks:** the tool verifies access before any data moves. S3 buckets are checked with `HeadBucket` (requires `s3:ListBucket` at the bucket level), DynamoDB tables with `DescribeTable`. If any check fails, the run aborts with a clear message showing which resource and credential set failed.
 
 ### `modelsDir`
 
