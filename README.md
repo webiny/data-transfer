@@ -140,6 +140,36 @@ credentials: fromAwsCredentialChain()
 credentials: { accessKeyId: "...", secretAccessKey: "..." }
 ```
 
+### Required IAM permissions
+
+The tool runs a pre-flight access check before any data moves. If permissions are missing it reports exactly which check failed and what to fix. The table below lists the minimum IAM actions each credential set must have.
+
+**Source credentials:**
+
+| Service  | Actions                                                     | Resource                                        |
+| -------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| DynamoDB | `dynamodb:Scan`, `dynamodb:Query`, `dynamodb:DescribeTable` | Source primary table                            |
+| S3       | `s3:GetObject`                                              | Source bucket (`arn:aws:s3:::<bucket>/*`)       |
+| DynamoDB | `dynamodb:Scan`, `dynamodb:Query`, `dynamodb:DescribeTable` | Source OS companion table (if using OpenSearch) |
+
+**Target credentials:**
+
+| Service    | Actions                                                               | Resource                                                          |
+| ---------- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| DynamoDB   | `dynamodb:BatchWriteItem`, `dynamodb:Query`, `dynamodb:DescribeTable` | Target primary table                                              |
+| S3         | `s3:PutObject`                                                        | Target bucket (`arn:aws:s3:::<bucket>/*`)                         |
+| S3         | `s3:GetObject` on the **source** bucket                               | Source bucket (`arn:aws:s3:::<source-bucket>/*`) — see note below |
+| DynamoDB   | `dynamodb:BatchWriteItem`, `dynamodb:Query`, `dynamodb:DescribeTable` | Target OS companion table (if using OpenSearch)                   |
+| OpenSearch | `es:ESHttpGet`, `es:ESHttpPut`, `es:ESHttpPost`                       | Target OpenSearch domain (if using OpenSearch)                    |
+| DynamoDB   | `dynamodb:BatchWriteItem`, `dynamodb:DescribeTable`                   | Target audit log table (if configured)                            |
+
+**S3 cross-account access (important):** `CopyObjectCommand` runs with **target credentials**. When source and target are in different AWS accounts, the target account must be able to read from the source bucket. Either:
+
+1. Add a **bucket policy** on the source bucket granting `s3:GetObject` to the target account, or
+2. Use a **cross-account IAM role** that the target credentials can assume with read access to the source bucket.
+
+Without this, S3 file copies will fail with `AccessDenied`. The wizard warns you when it detects different account IDs; the pre-flight access check verifies that the target credentials can actually reach the source bucket.
+
 ### `modelsDir`
 
 Required by the OS preset and by rich-text / field-key transformers. Point at a directory of exported CMS model definitions. Three JSON shapes are accepted and can be mixed in the same directory:
@@ -534,6 +564,8 @@ The CLI picks it up automatically and runs it **before** loading your preset, so
 - **Missing env vars** — run `yarn transfer` (no `--config`) to launch the guided setup wizard, which writes your `.env` automatically. Or copy `.env.example` manually and fill it in. Config files use `loadEnv(import.meta.url)` to load the sibling `.env`.
 - **Target records look wrong** — `DdbProcessor` and `OsProcessor` auto-put `ctx.record` at chain end. If you call `ctx.putRecord(ctx.record)` manually on top of that, you get a duplicate write. Only call `putRecord` for ADDITIONAL records beyond the one being processed.
 - **Unmatched records with no TYPE** — records appear as `PK:SK=N` in the summary instead of a TYPE name. Check the per-record warn lines (`unmatched record — TYPE= PK=... SK=...`) and `segment-N-unmatched.log` to identify what these records are, then decide whether to add a pipeline that handles them or leave them dropped intentionally.
+- **S3 `AccessDenied` on file copies** — `CopyObjectCommand` runs with target credentials, so in cross-account scenarios the target account must have `s3:GetObject` on the source bucket. Add a bucket policy on the source bucket granting read to the target account (see [Required IAM permissions](#required-iam-permissions)). The pre-flight access check catches this before the transfer starts — look for the `S3 cross-account read` check in the output.
+- **DynamoDB `AccessDeniedException`** — source credentials need `Scan` + `Query` + `DescribeTable` on the source table; target credentials need `BatchWriteItem` + `Query` + `DescribeTable` on the target table. The pre-flight check reports which side failed. For the audit log table, `BatchWriteItem` + `DescribeTable` on the target audit log table is required (or set `target.auditLog` to `null` to skip it).
 
 ## License
 
