@@ -1,5 +1,7 @@
 # DDB-ES Migration Pattern Reference
 
+> **Legacy reference only.** This document describes patterns from an external Webiny migration codebase (`.sample/migration/ddb-es`) that is NOT part of this repository. The patterns informed the design of `@webiny/data-transfer` but the file paths, class names, and APIs below do not exist in this project. Refer to AGENTS.md for the current architecture.
+
 Reference documentation for DynamoDB + Elasticsearch migration patterns from `.sample/migration/ddb-es`.
 
 ## Architecture Overview

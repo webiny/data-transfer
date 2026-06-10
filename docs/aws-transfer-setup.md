@@ -45,7 +45,7 @@ region = us-east-1
 ### Run
 
 ```bash
-SOURCE_PROFILE=source TARGET_PROFILE=target yarn start
+SOURCE_PROFILE=source TARGET_PROFILE=target yarn transfer
 ```
 
 ### When local works
@@ -211,7 +211,7 @@ sudo dnf install -y nodejs git
 git clone <repo-url>
 cd <repo>
 yarn install
-SOURCE_ROLE_ARN="arn:aws:iam::<SOURCE_ACCOUNT_ID>:role/CrossAccountTransferReadRole" yarn start
+SOURCE_ROLE_ARN="arn:aws:iam::<SOURCE_ACCOUNT_ID>:role/CrossAccountTransferReadRole" yarn transfer
 ```
 
 ### 6. Tear down when done
@@ -220,15 +220,14 @@ Terminate the instance. IAM roles can be kept for future transfers or deleted.
 
 ## Script Configuration
 
-The script reads from environment variables:
+The tool reads credentials and table/bucket names from a `config.ts` file, which loads values from `.env` via `fromEnv()`. The env var names below are **conventions used in the reference config** — the tool itself does not hardcode them. Wire them in your `config.ts` via `fromEnv("VAR_NAME")`.
 
 | Variable | Description | Required when |
 | --- | --- | --- |
-| `SOURCE_PROFILE` | AWS profile name for source account | Running locally |
-| `TARGET_PROFILE` | AWS profile name for target account | Running locally |
-| `SOURCE_ROLE_ARN` | ARN of source role to assume | Running on EC2 |
-| `AWS_REGION` | Target region | Always |
-| `SOURCE_REGION` | Source region (if different) | If source ≠ target region |
+| `SOURCE_PROFILE` | AWS profile name for source account | Running locally with `fromAwsProfile` |
+| `TARGET_PROFILE` | AWS profile name for target account | Running locally with `fromAwsProfile` |
+| `SOURCE_ROLE_ARN` | ARN of source role to assume | Running on EC2 with `fromAwsCredentialChain` |
+| `SOURCE_REGION` / `TARGET_REGION` | AWS regions | Always (in config.ts) |
 
 ## Permissions
 
