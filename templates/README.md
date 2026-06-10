@@ -40,19 +40,19 @@ Mixed formats are allowed. Re-run `yarn transfer` after placing the files.
 
 After the wizard writes your `.env`, run `yarn transfer` again. The wizard skips setup and prompts for the config to run.
 
-Or skip the wizard and pass `--config` directly:
+Or skip the wizard and pass `--config` + `--preset` directly:
 
 ```bash
-yarn transfer --config=./projects/my-project/ddb.transfer.config.ts  # DDB + S3 first
-yarn transfer --config=./projects/my-project/os.transfer.config.ts   # OS second (if applicable)
+yarn transfer --config=./projects/my-project/config.ts --preset=v5-to-v6-ddb  # DDB + S3 first
+yarn transfer --config=./projects/my-project/config.ts --preset=v5-to-v6-os   # OS second (if applicable)
 ```
 
-Always run the DDB transfer first, then the OS transfer.
+One `config.ts` covers all storage types — the preset determines which operations run. Always run the DDB transfer first, then the OS transfer.
 
 ## Project Structure
 
 ```
-projects/           Per-project configs and .env files
+projects/           Per-project config.ts and .env files
 transformers/       Custom record transformers
 presets/            Custom pipeline presets
 features/           Custom DI features
@@ -65,12 +65,10 @@ Duplicate the `projects/example/` folder for each environment you want to transf
 ```
 projects/
   production/
-    ddb.transfer.config.ts
-    os.transfer.config.ts
+    config.ts
     .env
   staging/
-    ddb.transfer.config.ts
-    os.transfer.config.ts
+    config.ts
     .env
 ```
 
@@ -78,27 +76,21 @@ Each project has its own `.env` file so credentials are isolated.
 
 ## Configuration
 
-### DDB Transfer
+### Unified Config
 
-The DDB config transfers all DynamoDB records (CMS entries, models, security, file manager, settings) and S3 files.
+One `config.ts` covers DDB, S3, and optional OpenSearch. The preset (selected at runtime by the wizard or via `--preset`) determines which storage operations run.
 
-See `projects/example/ddb.transfer.config.ts` for the full template.
-
-### OS Transfer
-
-The OS config transfers CMS entries from the OpenSearch DynamoDB table. It decompresses gzipped records, applies transformations, and writes to the target OS DynamoDB table.
-
-See `projects/example/os.transfer.config.ts` for the full template.
+See `projects/example/config.ts` for the full template.
 
 ### Pipeline Options
 
-- `preset` - File path to your preset, resolved relative to the config file's directory (e.g. `"./presets/my-preset.ts"` or `"../../presets/example.ts"`). No built-in presets ship with the package — author your own.
 - `segments` - Number of parallel workers for scanning (default: 1)
 - `modelsDir` - Path to a directory with custom CMS model JSON files (optional). Resolved relative to the config file's directory.
+- `presetsDir` - Directory of user preset files. The wizard discovers them automatically.
 
 ### Debug Options
 
-Opt-in via a top-level `debug: { ... }` block on your config. See the commented block in `projects/example/ddb.transfer.config.ts` for the full shape.
+Opt-in via a top-level `debug: { ... }` block on your config. See the commented block in `projects/example/config.ts` for the full shape.
 
 - `debug.snapshot` — dump every source/post-transform/command record to local JSONL files under `.transfer/<runId>/snapshot/` (gzipped by default). Use `true` for defaults, or `{ dir, compress }` to override. Great for diffing exactly what a transformer did to a specific record without re-scanning AWS.
 - `debug.logFile` — write the runner's pino log to disk alongside stdout. `true` → `.transfer/<runId>/logs/<orchestrator|segment-N>.log` (one file per process, safe under worker parallelism). String → all processes append to the path you provide. Replay with `cat .transfer/<runId>/logs/*.log | pino-pretty`.
@@ -110,7 +102,7 @@ Both outputs land under `.transfer/` by default, which is gitignored in this rep
 If a run finishes with only some shards failing, you can re-drive just those indices instead of the whole table:
 
 ```bash
-yarn transfer --config=./projects/my-project/ddb.transfer.config.ts --segments=1,3
+yarn transfer --config=./projects/my-project/config.ts --preset=v5-to-v6-ddb --segments=1,3
 ```
 
 Workers still receive the full `--total` (from `pipeline.segments`), so each shard scans the exact same slice it would in a fresh run. Out-of-range indices fail fast before any worker spawns.
@@ -121,21 +113,20 @@ The package ships with starter files so you can compose your own transfer:
 
 - `transformers/stampMigratedAt.ts` — a minimal custom transformer (plain function mutating `ctx.record`).
 - `presets/example.ts` — a minimal preset that registers one pipeline using the transformer.
-- `projects/example/custom.transfer.config.ts` — a config pointing at the custom preset above.
+- `projects/example/config.ts` — a config whose `presetsDir` points at the custom preset above.
 
-Run it:
+Run it (the wizard will discover your preset, or pass `--preset` directly):
 
 ```bash
-yarn transfer --config=./projects/example/custom.transfer.config.ts
+yarn transfer --config=./projects/example/config.ts --preset=example
 ```
 
 A preset is an object:
 
 ```typescript
-import type { MigrationPreset } from "@webiny/data-transfer";
-import { DdbScanner, DdbProcessor, S3Processor } from "@webiny/data-transfer";
+import { createTransferPreset, DdbScanner, DdbProcessor, S3Processor } from "@webiny/data-transfer";
 
-const preset: MigrationPreset = {
+export default createTransferPreset({
   name: "my",
   description: "...",
   configure({ runner, pipelineBuilderFactory }) {
@@ -152,9 +143,7 @@ const preset: MigrationPreset = {
 
     runner.register(myPipeline);
   }
-};
-
-export default preset;
+});
 ```
 
 The `configure` callback also receives `container` — the DI container — if you
