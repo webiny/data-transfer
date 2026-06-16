@@ -8,6 +8,8 @@ import type { ModelField } from "~/transformers/cms/modelTypes.js";
 
 const INTERNAL_MODELS = new Set(["fmfile", "wbyfmfile"]);
 
+const modelMissingWarnings = new Set<string>();
+
 export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "fixBrokenStorageKeys",
     async ctx => {
@@ -26,6 +28,10 @@ export const fixBrokenStorageKeys = createTransformer<BaseTransformContext.Inter
 
         const model = ctx.modelProvider.getModel(modelId);
         if (!model) {
+            if (modelMissingWarnings.has(modelId)) {
+                return;
+            }
+            modelMissingWarnings.add(modelId);
             ctx.logger.warn(`[fixBrokenStorageKeys] Model ${modelId} not found, skipping`);
             return;
         }
