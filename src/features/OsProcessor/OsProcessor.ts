@@ -1,8 +1,7 @@
 import { join } from "node:path";
 import { Container } from "@webiny/di";
-import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
 import { isRetryableAwsError, ContainerToken } from "~/base/index.ts";
-import { IndexConfigurationProvider } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationProvider.ts";
+import { IndexConfigurationResolver } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationResolver.ts";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import {
@@ -60,7 +59,7 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly fileTool: FileTool.Interface,
         private readonly sourceDb: SourceDynamoDbClient.Interface,
         private readonly targetDb: TargetDynamoDbClient.Interface,
-        private readonly indexConfigurationProvider: IndexConfigurationProvider.Interface
+        private readonly indexConfigurationResolver: IndexConfigurationResolver.Interface
     ) {}
 
     private get osClient(): OpenSearchClient.Interface {
@@ -207,8 +206,7 @@ class OsProcessorImpl implements Processor.Interface<
                 ? current.refreshInterval
                 : DEFAULT_REFRESH_INTERVAL;
 
-        const base = this.getBaseIndexConfiguration();
-        const resolved = this.indexConfigurationProvider.getConfiguration(indexName, base);
+        const resolved = this.indexConfigurationResolver.resolve(indexName);
         const resolvedIndexSettings =
             (resolved.settings?.index as Record<string, unknown> | undefined) ?? {};
 
@@ -233,8 +231,7 @@ class OsProcessorImpl implements Processor.Interface<
 
     private async createNewIndex(indexName: string): Promise<void> {
         try {
-            const base = this.getBaseIndexConfiguration();
-            const resolved = this.indexConfigurationProvider.getConfiguration(indexName, base);
+            const resolved = this.indexConfigurationResolver.resolve(indexName);
             const resolvedIndexSettings =
                 (resolved.settings?.index as Record<string, unknown> | undefined) ?? {};
 
@@ -258,13 +255,6 @@ class OsProcessorImpl implements Processor.Interface<
 
         // New indexes were created with "-1"; "1s" is the default we'll restore to.
         this.touchedIndexes.record(indexName, DEFAULT_REFRESH_INTERVAL);
-    }
-
-    private getBaseIndexConfiguration(): IndexConfigurationProvider.Configuration {
-        const baseConfig = getBaseConfiguration();
-        return structuredClone({
-            mappings: baseConfig.mappings as Record<string, unknown> | undefined
-        });
     }
 
     private async withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
@@ -327,6 +317,6 @@ export const OsProcessor = Processor.createImplementation({
         FileTool,
         SourceDynamoDbClient,
         TargetDynamoDbClient,
-        IndexConfigurationProvider
+        IndexConfigurationResolver
     ]
 });
