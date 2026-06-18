@@ -13,7 +13,8 @@ class IndexConfigurationResolverImpl implements IndexConfigurationResolverAbstra
     private getBaseConfiguration(): IndexConfigurationProvider.Configuration {
         const baseConfig = getBaseConfiguration();
         return structuredClone({
-            mappings: baseConfig.mappings as Record<string, unknown> | undefined
+            mappings: baseConfig.mappings,
+            settings: baseConfig.settings
         });
     }
 }

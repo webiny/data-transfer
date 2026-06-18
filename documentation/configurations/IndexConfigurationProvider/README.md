@@ -91,10 +91,10 @@ interface IndexConfigurationProvider.Interface {
     getConfiguration(indexName: string, base: Configuration): Configuration;
 }
 
-interface IndexConfigurationProvider.Configuration {
-    mappings?: Record<string, unknown>;
-    settings?: Record<string, unknown>;
-}
+// Configuration uses the real OpenSearch SDK types from @webiny/api-opensearch:
+//   mappings → TypeMapping (from @opensearch-project/opensearch)
+//   settings → IndexSettings (from @opensearch-project/opensearch)
+type IndexConfigurationProvider.Configuration = Pick<OpenSearchIndexRequestBody, "mappings" | "settings">;
 ```
 
 **Source:** `src/features/IndexConfigurationProvider/`

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { Container } from "@webiny/di";
-import { isRetryableAwsError, ContainerToken } from "~/base/index.ts";
+import { ContainerToken, isRetryableAwsError } from "~/base/index.ts";
 import { IndexConfigurationResolver } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationResolver.ts";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
@@ -207,8 +207,7 @@ class OsProcessorImpl implements Processor.Interface<
                 : DEFAULT_REFRESH_INTERVAL;
 
         const resolved = this.indexConfigurationResolver.resolve(indexName);
-        const resolvedIndexSettings =
-            (resolved.settings?.index as Record<string, unknown> | undefined) ?? {};
+        const resolvedIndexSettings = resolved.settings?.index ?? {};
 
         try {
             await this.osClient.putIndexSettings(indexName, {
