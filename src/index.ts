@@ -100,6 +100,9 @@ export type {
 // Transformer type shape for custom transformers.
 export type { Transformer } from "./domain/pipeline/abstractions/Transformer.ts";
 
+// IndexConfigurationProvider — override to customize OS index mappings/settings.
+export { IndexConfigurationProvider } from "./features/IndexConfigurationProvider/index.ts";
+
 // Pipeline-builder-factory helper type used when typing factory input
 // (NonEmptyArray<...>).
 export type { NonEmptyArray } from "./features/PipelineBuilderFactory/index.ts";

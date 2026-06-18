@@ -30,6 +30,7 @@ import { AuditLogProcessorFeature } from "~/features/AuditLogProcessor/index.ts"
 import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/index.ts";
 import { OsScannerFeature } from "~/features/OsScanner/index.ts";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.ts";
+import { IndexConfigurationProviderFeature } from "~/features/IndexConfigurationProvider/index.ts";
 import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.ts";
 import { AccessCheckerFeature } from "~/features/AccessChecker/index.ts";
 import { DroppedRecordLogFeature } from "~/features/DroppedRecordLog/index.ts";
@@ -126,6 +127,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     DdbScannerFeature.register(container);
     DdbProcessorFeature.register(container);
     AuditLogProcessorFeature.register(container);
+    IndexConfigurationProviderFeature.register(container);
     TouchedIndexesFeature.register(container);
     OsRecordDecompressorFeature.register(container);
     OsScannerFeature.register(container);
