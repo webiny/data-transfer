@@ -64,14 +64,14 @@
     "@types/jsdom": "^28.0.3",
     "@types/node": "^24.13.2",
     "@types/yargs": "^17.0.35",
-    "@vitest/coverage-v8": "4.1.8",
+    "@vitest/coverage-v8": "^4.1.9",
     "adio": "^3.0.1",
     "aws-sdk-client-mock": "^4.1.0",
     "dynalite": "^4.0.0",
     "oxfmt": "^0.54.0",
     "oxlint": "^1.69.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "engines": {
     "node": ">=24.0.0"
