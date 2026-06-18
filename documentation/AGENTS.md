@@ -5,7 +5,12 @@ This directory documents user-facing configuration points — abstractions users
 ## Adding a new configuration
 
 1. Create `configurations/<AbstractionName>/README.md`.
-2. Follow the structure used in `configurations/IndexConfigurationProvider/README.md`:
+2. Add a breadcrumb line as the very first line, before the title:
+   ```
+   [Documentation](../../README.md) > [Configurations](../../README.md#configurations) > AbstractionName
+   ```
+   Adjust the relative path depth to match the file's location. Every doc page must link back to its parent.
+3. Follow the structure used in `configurations/IndexConfigurationProvider/README.md`:
    - **Title** — abstraction name.
    - **When it runs** — where in the transfer lifecycle the abstraction is called and by whom.
    - **Default behavior** — what the built-in implementation does.
@@ -13,7 +18,7 @@ This directory documents user-facing configuration points — abstractions users
    - **Per-X configuration** — if the method receives a discriminator (index name, table name, etc.), show a branching example.
    - **API** — interface and type signatures.
    - **Source** — path to the feature directory.
-3. Add a row to the table in `documentation/README.md`.
+4. Add a row to the table in `documentation/README.md`.
 
 ## Rules
 

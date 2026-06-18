@@ -1,3 +1,5 @@
+[Documentation](../../README.md) > [Configurations](../../README.md#configurations) > IndexConfigurationProvider
+
 # IndexConfigurationProvider
 
 Controls the mappings and settings applied to OpenSearch indexes during a transfer.
