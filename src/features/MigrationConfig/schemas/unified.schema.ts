@@ -3,6 +3,7 @@ import {
     credentialsOrProviderSchema,
     debugSettingsSchema,
     pipelineSettingsSchema,
+    registerSchema,
     trimmedString,
     tuningSchema
 } from "./shared.schema.ts";
@@ -60,6 +61,7 @@ export const unifiedTransferInputSchema = z
         source: sourceSchema,
         target: targetSchema,
         pipeline: pipelineSettingsSchema,
+        register: registerSchema,
         tuning: tuningSchema,
         debug: debugSettingsSchema,
         fileUrls: fileUrlsSchema

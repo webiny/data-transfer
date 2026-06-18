@@ -50,6 +50,10 @@ export default createConfig({
         modelsDir: fromEnv("MODELS_DIR", "./models"),
         presetsDir: "./presets"
     },
+    // register: async (container) => {
+    //     // Register custom DI services before the preset runs, e.g.:
+    //     // container.register(MyCustomProcessor);
+    // },
     tuning: {
         flushEvery: numberFromEnv("FLUSH_EVERY", 500)
     }

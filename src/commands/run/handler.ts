@@ -92,6 +92,10 @@ export async function handler(
     try {
         await loadUserSetup(configPath, container, logger);
 
+        if (config.register) {
+            await config.register(container);
+        }
+
         const presetLoader = container.resolve(PresetLoader);
         const preset = await presetLoader.load(presetName);
 
