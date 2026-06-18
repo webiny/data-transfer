@@ -1,4 +1,7 @@
+import type { Container } from "@webiny/di";
 import { z } from "zod";
+
+export type RegisterFn = (container: Container) => void | Promise<void>;
 
 /**
  * Non-empty string that trims whitespace before validating. Catches the
@@ -46,6 +49,12 @@ export const credentialsOrProviderSchema = z.union([
             "credentials must be an object with accessKeyId+secretAccessKey, or an AWS credential-provider function"
     })
 ]);
+
+export const registerSchema = z
+    .custom<RegisterFn>(val => typeof val === "function", {
+        message: "register must be a function that receives a Container"
+    })
+    .optional();
 
 export const pipelineSettingsSchema = z
     .object({

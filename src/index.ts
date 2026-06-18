@@ -100,6 +100,17 @@ export type {
 // Transformer type shape for custom transformers.
 export type { Transformer } from "./domain/pipeline/abstractions/Transformer.ts";
 
+// IndexConfigurationProvider — override to customize OS index mappings/settings.
+export { IndexConfigurationProvider } from "./features/IndexConfigurationProvider/index.ts";
+
+// ModelProvider — override to customize CMS model loading.
+export { ModelProvider } from "./features/ModelProvider/index.ts";
+
+// Lifecycle hooks — register additional hooks via config.register.
+// Hooks use { multiple: true } so registering adds to the list, not replaces.
+export { BeforeTransferHook, AfterTransferHook } from "./features/TransferLifecycle/index.ts";
+export { BeforeLoadPresetHook, AfterLoadPresetHook } from "./features/PresetLifecycle/index.ts";
+
 // Pipeline-builder-factory helper type used when typing factory input
 // (NonEmptyArray<...>).
 export type { NonEmptyArray } from "./features/PipelineBuilderFactory/index.ts";

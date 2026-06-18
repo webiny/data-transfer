@@ -38,6 +38,10 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
 
     await loadUserSetup(argv.config, container, logger);
 
+    if (config.register) {
+        await config.register(container);
+    }
+
     const beforeLoadPreset = container.resolve(BeforeLoadPresetHook);
     await beforeLoadPreset.execute(config);
 

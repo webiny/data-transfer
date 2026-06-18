@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { Container } from "@webiny/di";
-import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
-import { isRetryableAwsError, ContainerToken } from "~/base/index.ts";
+import { ContainerToken, isRetryableAwsError } from "~/base/index.ts";
+import { IndexConfigurationResolver } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationResolver.ts";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
 import {
@@ -58,7 +58,8 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly dirTool: DirectoryTool.Interface,
         private readonly fileTool: FileTool.Interface,
         private readonly sourceDb: SourceDynamoDbClient.Interface,
-        private readonly targetDb: TargetDynamoDbClient.Interface
+        private readonly targetDb: TargetDynamoDbClient.Interface,
+        private readonly indexConfigurationResolver: IndexConfigurationResolver.Interface
     ) {}
 
     private get osClient(): OpenSearchClient.Interface {
@@ -205,16 +206,22 @@ class OsProcessorImpl implements Processor.Interface<
                 ? current.refreshInterval
                 : DEFAULT_REFRESH_INTERVAL;
 
+        const resolved = this.indexConfigurationResolver.resolve(indexName);
+        const resolvedIndexSettings = resolved.settings?.index ?? {};
+
         try {
             await this.osClient.putIndexSettings(indexName, {
-                index: { refresh_interval: DISABLED_REFRESH_INTERVAL }
+                index: {
+                    ...resolvedIndexSettings,
+                    refresh_interval: DISABLED_REFRESH_INTERVAL
+                }
             });
             this.logger.info(
                 `Disabled refresh on existing index: ${indexName} (was: ${originalRefresh})`
             );
         } catch (settingsError) {
             this.logger.warn(
-                `Failed to disable refresh on index: ${indexName}. Continuing. Error: ${settingsError}`
+                `Failed to update settings on index: ${indexName}. Continuing. Error: ${settingsError}`
             );
         }
 
@@ -223,11 +230,15 @@ class OsProcessorImpl implements Processor.Interface<
 
     private async createNewIndex(indexName: string): Promise<void> {
         try {
-            const baseConfig = getBaseConfiguration();
+            const resolved = this.indexConfigurationResolver.resolve(indexName);
+            const resolvedIndexSettings =
+                (resolved.settings?.index as Record<string, unknown> | undefined) ?? {};
+
             await this.osClient.createIndex(indexName, {
-                mappings: baseConfig.mappings,
+                mappings: resolved.mappings,
                 settings: {
                     index: {
+                        ...resolvedIndexSettings,
                         refresh_interval: DISABLED_REFRESH_INTERVAL
                     }
                 }
@@ -304,6 +315,7 @@ export const OsProcessor = Processor.createImplementation({
         DirectoryTool,
         FileTool,
         SourceDynamoDbClient,
-        TargetDynamoDbClient
+        TargetDynamoDbClient,
+        IndexConfigurationResolver
     ]
 });
