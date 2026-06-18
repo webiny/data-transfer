@@ -262,9 +262,9 @@ class OsProcessorImpl implements Processor.Interface<
 
     private getBaseIndexConfiguration(): IndexConfigurationProvider.Configuration {
         const baseConfig = getBaseConfiguration();
-        return {
+        return structuredClone({
             mappings: baseConfig.mappings as Record<string, unknown> | undefined
-        };
+        });
     }
 
     private async withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
