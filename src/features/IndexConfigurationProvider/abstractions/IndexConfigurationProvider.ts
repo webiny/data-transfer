@@ -6,7 +6,7 @@ interface IndexConfiguration {
 }
 
 interface IIndexConfigurationProvider {
-    getConfiguration(indexName: string): IndexConfiguration;
+    getConfiguration(indexName: string, base: IndexConfiguration): IndexConfiguration;
 }
 
 export const IndexConfigurationProvider = createAbstraction<IIndexConfigurationProvider>(

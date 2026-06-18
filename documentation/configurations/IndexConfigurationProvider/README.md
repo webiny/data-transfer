@@ -6,7 +6,7 @@ Controls the mappings and settings applied to OpenSearch indexes during a transf
 
 ## When it runs
 
-`OsProcessor` calls `getConfiguration(indexName)` every time it touches an index:
+`OsProcessor` calls `getConfiguration(indexName, base)` every time it touches an index. The `base` parameter contains the default Webiny mappings — your implementation receives it and returns a (possibly modified) configuration:
 
 - **New index** — the returned `mappings` and `settings` are passed to the `createIndex` call.
 - **Existing index** — the returned `settings` are applied via `putIndexSettings` before data is written.
@@ -15,7 +15,7 @@ In both cases the transfer engine overrides `index.refresh_interval` to `"-1"` (
 
 ## Default behavior
 
-The built-in implementation calls `getBaseConfiguration()` from `@webiny/api-opensearch` and returns its mappings. No custom settings are applied.
+The built-in implementation returns the `base` configuration unchanged — the default Webiny mappings with no custom settings.
 
 ## Override example
 
@@ -23,14 +23,15 @@ Increase the total fields limit and number of shards for all indexes:
 
 ```typescript
 // features/myIndexConfig.ts
-import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
 import { IndexConfigurationProvider } from "@webiny/data-transfer";
 
 class MyIndexConfigurationProvider implements IndexConfigurationProvider.Interface {
-  public getConfiguration(_indexName: string): IndexConfigurationProvider.Configuration {
-    const base = getBaseConfiguration();
+  public getConfiguration(
+    _indexName: string,
+    base: IndexConfigurationProvider.Configuration
+  ): IndexConfigurationProvider.Configuration {
     return {
-      mappings: base.mappings as Record<string, unknown> | undefined,
+      ...base,
       settings: {
         index: {
           "mapping.total_fields.limit": 2000,
@@ -50,7 +51,7 @@ export const MyIndexConfigurationProviderImpl = IndexConfigurationProvider.creat
 Register it in the config:
 
 ```typescript
-import { createConfig, loadEnv, fromEnv, fromAwsProfile } from "@webiny/data-transfer";
+import { createConfig, loadEnv } from "@webiny/data-transfer";
 import { MyIndexConfigurationProviderImpl } from "./features/myIndexConfig.ts";
 
 loadEnv(import.meta.url);
@@ -68,18 +69,18 @@ export default createConfig({
 The `indexName` parameter lets you return different settings per index:
 
 ```typescript
-public getConfiguration(indexName: string): IndexConfigurationProvider.Configuration {
-    const base = getBaseConfiguration();
-    const mappings = base.mappings as Record<string, unknown> | undefined;
-
+public getConfiguration(
+    indexName: string,
+    base: IndexConfigurationProvider.Configuration
+): IndexConfigurationProvider.Configuration {
     if (indexName.startsWith("root-headless-cms-")) {
         return {
-            mappings,
+            ...base,
             settings: { index: { "mapping.total_fields.limit": 5000 } }
         };
     }
 
-    return { mappings };
+    return base;
 }
 ```
 
@@ -87,7 +88,7 @@ public getConfiguration(indexName: string): IndexConfigurationProvider.Configura
 
 ```typescript
 interface IndexConfigurationProvider.Interface {
-    getConfiguration(indexName: string): IndexConfigurationProvider.Configuration;
+    getConfiguration(indexName: string, base: Configuration): Configuration;
 }
 
 interface IndexConfigurationProvider.Configuration {

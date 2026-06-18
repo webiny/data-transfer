@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { Container } from "@webiny/di";
+import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
 import { isRetryableAwsError, ContainerToken } from "~/base/index.ts";
 import { IndexConfigurationProvider } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationProvider.ts";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
@@ -206,14 +207,15 @@ class OsProcessorImpl implements Processor.Interface<
                 ? current.refreshInterval
                 : DEFAULT_REFRESH_INTERVAL;
 
-        const userConfig = this.indexConfigurationProvider.getConfiguration(indexName);
-        const userIndexSettings =
-            (userConfig.settings?.index as Record<string, unknown> | undefined) ?? {};
+        const base = this.getBaseIndexConfiguration();
+        const resolved = this.indexConfigurationProvider.getConfiguration(indexName, base);
+        const resolvedIndexSettings =
+            (resolved.settings?.index as Record<string, unknown> | undefined) ?? {};
 
         try {
             await this.osClient.putIndexSettings(indexName, {
                 index: {
-                    ...userIndexSettings,
+                    ...resolvedIndexSettings,
                     refresh_interval: DISABLED_REFRESH_INTERVAL
                 }
             });
@@ -231,15 +233,16 @@ class OsProcessorImpl implements Processor.Interface<
 
     private async createNewIndex(indexName: string): Promise<void> {
         try {
-            const userConfig = this.indexConfigurationProvider.getConfiguration(indexName);
-            const userIndexSettings =
-                (userConfig.settings?.index as Record<string, unknown> | undefined) ?? {};
+            const base = this.getBaseIndexConfiguration();
+            const resolved = this.indexConfigurationProvider.getConfiguration(indexName, base);
+            const resolvedIndexSettings =
+                (resolved.settings?.index as Record<string, unknown> | undefined) ?? {};
 
             await this.osClient.createIndex(indexName, {
-                mappings: userConfig.mappings,
+                mappings: resolved.mappings,
                 settings: {
                     index: {
-                        ...userIndexSettings,
+                        ...resolvedIndexSettings,
                         refresh_interval: DISABLED_REFRESH_INTERVAL
                     }
                 }
@@ -255,6 +258,13 @@ class OsProcessorImpl implements Processor.Interface<
 
         // New indexes were created with "-1"; "1s" is the default we'll restore to.
         this.touchedIndexes.record(indexName, DEFAULT_REFRESH_INTERVAL);
+    }
+
+    private getBaseIndexConfiguration(): IndexConfigurationProvider.Configuration {
+        const baseConfig = getBaseConfiguration();
+        return {
+            mappings: baseConfig.mappings as Record<string, unknown> | undefined
+        };
     }
 
     private async withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {

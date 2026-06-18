@@ -1,14 +1,11 @@
-import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/index.js";
 import { IndexConfigurationProvider as IndexConfigurationProviderAbstraction } from "./abstractions/IndexConfigurationProvider.ts";
 
 class IndexConfigurationProviderImpl implements IndexConfigurationProviderAbstraction.Interface {
     public getConfiguration(
-        _indexName: string
+        _indexName: string,
+        base: IndexConfigurationProviderAbstraction.Configuration
     ): IndexConfigurationProviderAbstraction.Configuration {
-        const baseConfig = getBaseConfiguration();
-        return {
-            mappings: baseConfig.mappings as Record<string, unknown> | undefined
-        };
+        return base;
     }
 }
 
