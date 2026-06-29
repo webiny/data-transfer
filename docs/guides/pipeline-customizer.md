@@ -32,7 +32,7 @@ class SkipUnwantedModels implements PipelineCustomizer.Interface {
         return pipelineName === "CmsEntries";
     }
 
-    public configure(builder: PipelineCustomizer.Builder): void {
+    public async configure(builder: PipelineCustomizer.Builder): Promise<void> {
         builder.filter(
             createFilter(record => record.modelId !== "unwantedModel")
         );
@@ -84,7 +84,7 @@ public canUse(pipelineName: string): boolean {
 Use `.use()` on the builder to append transformers after the preset's own:
 
 ```typescript
-public configure(builder: PipelineCustomizer.Builder): void {
+public async configure(builder: PipelineCustomizer.Builder): Promise<void> {
     builder.use(
         createDdbTransformer("injectCustomField", async (ctx) => {
             // Custom post-processing after all preset transformers run
@@ -107,7 +107,7 @@ a record should be written to the target. Call `ctx.blackhole()` inside a
 transformer to suppress all writes for that record:
 
 ```typescript
-public configure(builder: PipelineCustomizer.Builder): void {
+public async configure(builder: PipelineCustomizer.Builder): Promise<void> {
     builder.use(
         createDdbTransformer("skipExisting", async (ctx) => {
             const existing = await ctx.queryTargetRecord(

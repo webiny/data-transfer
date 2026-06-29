@@ -73,7 +73,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
             public canUse(pipelineName: string): boolean {
                 return pipelineName === "MyPipeline";
             }
-            public configure(builder: PipelineCustomizer.Builder): void {
+            public async configure(builder: PipelineCustomizer.Builder): Promise<void> {
                 builder.filter(createFilter(() => false));
             }
         }
@@ -105,7 +105,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
             public canUse(_pipelineName: string): boolean {
                 return false;
             }
-            public configure(builder: PipelineCustomizer.Builder): void {
+            public async configure(builder: PipelineCustomizer.Builder): Promise<void> {
                 builder.filter(createFilter(() => false));
             }
         }
@@ -138,7 +138,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
             public canUse(): boolean {
                 return true;
             }
-            public configure(builder: PipelineCustomizer.Builder): void {
+            public async configure(builder: PipelineCustomizer.Builder): Promise<void> {
                 builder.use((() => {
                     order.push("customizer");
                 }) as any);
@@ -178,7 +178,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
             public canUse(): boolean {
                 return false;
             }
-            public configure(): void {}
+            public async configure(): Promise<void> {}
         }
 
         const UnmatchedCustomizerImpl = PipelineCustomizer.createImplementation({
@@ -211,7 +211,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
             public canUse(): boolean {
                 return true;
             }
-            public configure(): void {}
+            public async configure(): Promise<void> {}
         }
 
         const MatchedCustomizerImpl = PipelineCustomizer.createImplementation({

@@ -4,7 +4,7 @@ import type { PipelineCustomizerBuilder } from "~/domain/pipeline/PipelineCustom
 interface IPipelineCustomizer {
     readonly name: string;
     canUse(pipelineName: string): boolean;
-    configure(builder: PipelineCustomizerBuilder): void | Promise<void>;
+    configure(builder: PipelineCustomizerBuilder): Promise<void>;
 }
 
 export const PipelineCustomizer = createAbstraction<IPipelineCustomizer>("Core/PipelineCustomizer");
