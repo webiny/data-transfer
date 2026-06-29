@@ -77,9 +77,9 @@ export class Pipeline<
         return this.config.blackhole === true;
     }
 
-    public accepts(record: TRecord): boolean {
+    public async accepts(record: TRecord): Promise<boolean> {
         for (const filter of this.config.filters) {
-            if (!filter.check(record)) {
+            if (!(await filter.check(record))) {
                 return false;
             }
         }

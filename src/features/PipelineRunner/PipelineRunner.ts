@@ -255,7 +255,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         for await (const record of scanner.scan(shard)) {
             let matched = false;
             for (const pipeline of pipelines) {
-                if (!pipeline.accepts(record)) {
+                if (!(await pipeline.accepts(record))) {
                     continue;
                 }
                 matched = true;

@@ -52,8 +52,8 @@ describe("PipelineBuilder — construction and build()", () => {
         const pipeline = await makeBuilder("no-filter").build();
 
         expect(pipeline.hasFilter).toBe(false);
-        expect(pipeline.accepts({ id: "r1", type: "anything" })).toBe(true);
-        expect(pipeline.accepts({ id: "r2", type: "else" })).toBe(true);
+        expect(await pipeline.accepts({ id: "r1", type: "anything" })).toBe(true);
+        expect(await pipeline.accepts({ id: "r2", type: "else" })).toBe(true);
     });
 });
 
@@ -64,8 +64,8 @@ describe("PipelineBuilder.filter() — extended rules", () => {
         const pipeline = await makeBuilder("single-filter").filter(isFoo).build();
 
         expect(pipeline.hasFilter).toBe(true);
-        expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
-        expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
+        expect(await pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
+        expect(await pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
     });
 
     it("AND-combines multiple filters via chained .filter() calls in declaration order", async () => {
@@ -77,9 +77,11 @@ describe("PipelineBuilder.filter() — extended rules", () => {
             .filter(notDeleted)
             .build();
 
-        expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
-        expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
-        expect(pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(false);
+        expect(await pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
+        expect(await pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
+        expect(await pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(
+            false
+        );
     });
 
     it("accumulates filters across multiple .filter() calls (declaration order)", async () => {
@@ -96,7 +98,7 @@ describe("PipelineBuilder.filter() — extended rules", () => {
         const pipeline = await makeBuilder("accumulate").filter(filterA).filter(filterB).build();
 
         expect(pipeline.hasFilter).toBe(true);
-        expect(pipeline.accepts({ id: "r1", type: "x" })).toBe(true);
+        expect(await pipeline.accepts({ id: "r1", type: "x" })).toBe(true);
         expect(seen).toEqual(["a", "b"]);
     });
 
@@ -117,7 +119,7 @@ describe("PipelineBuilder.filter() — extended rules", () => {
 
         expect(pipeline.transformerFns).toEqual([t1, t2, t3]);
         expect(pipeline.hasFilter).toBe(true);
-        expect(pipeline.accepts({ id: "r", type: "x" })).toBe(true);
+        expect(await pipeline.accepts({ id: "r", type: "x" })).toBe(true);
     });
 });
 

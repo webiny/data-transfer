@@ -60,24 +60,26 @@ describe("Pipeline — construction + getters", () => {
 });
 
 describe("Pipeline.accepts()", () => {
-    it("returns true when no filters are present", () => {
+    it("returns true when no filters are present", async () => {
         const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(baseConfig());
-        expect(pipeline.accepts({ id: "x", type: "foo" })).toBe(true);
+        expect(await pipeline.accepts({ id: "x", type: "foo" })).toBe(true);
     });
 
-    it("returns true only when every filter passes", () => {
+    it("returns true only when every filter passes", async () => {
         const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
         const notDeleted = createFilter<FakeRecord>(r => r.payload?.deleted !== true);
         const pipeline = new Pipeline<FakeRecord, FakeContext, FakeShard>(
             baseConfig({ filters: [isFoo, notDeleted] })
         );
 
-        expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
-        expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
-        expect(pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(false);
+        expect(await pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
+        expect(await pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
+        expect(await pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(
+            false
+        );
     });
 
-    it("short-circuits on first failing filter", () => {
+    it("short-circuits on first failing filter", async () => {
         const calls: string[] = [];
         const first = createFilter<FakeRecord>(r => {
             calls.push(`first:${r.id}`);
@@ -91,7 +93,7 @@ describe("Pipeline.accepts()", () => {
             baseConfig({ filters: [first, second] })
         );
 
-        expect(pipeline.accepts({ id: "r1", type: "x" })).toBe(false);
+        expect(await pipeline.accepts({ id: "r1", type: "x" })).toBe(false);
         expect(calls).toEqual(["first:r1"]);
     });
 });

@@ -94,7 +94,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
             .build();
 
         // The customizer added a filter that always rejects — pipeline should not accept any record.
-        expect(pipeline.accepts({ id: "anything" })).toBe(false);
+        expect(await pipeline.accepts({ id: "anything" })).toBe(false);
     });
 
     it("does NOT apply a customizer when canUse returns false", async () => {
@@ -126,7 +126,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
             .build();
 
         // No filters from the preset — should accept all records.
-        expect(pipeline.accepts({ id: "anything" })).toBe(true);
+        expect(await pipeline.accepts({ id: "anything" })).toBe(true);
     });
 
     it("applies a customizer transformer after preset transformers", async () => {
@@ -244,7 +244,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
                 processors: [StubProcessorImpl]
             })
             .build();
-        expect(pipeline.accepts({ id: "ok" })).toBe(true);
+        expect(await pipeline.accepts({ id: "ok" })).toBe(true);
 
         const logger = makeLogger();
         factory.warnUnmatchedCustomizers(logger);
