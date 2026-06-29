@@ -23,13 +23,13 @@ yarn transfer
 
 ## Built-in presets
 
-| Preset | Description |
-|--------|-------------|
-| `v5-to-v6-ddb` | Full Webiny v5 → v6 migration of the primary DynamoDB table |
-| `v5-to-v6-os` | Migration of the OpenSearch companion DynamoDB table (run after `v5-to-v6-ddb`) |
-| `copy-ddb` | Verbatim DynamoDB + S3 copy (no transformations) |
-| `copy-os` | Verbatim OpenSearch companion table copy (no transformations) |
-| `copy-files` | S3-only file copy |
+| Preset         | Description                                                                     |
+| -------------- | ------------------------------------------------------------------------------- |
+| `v5-to-v6-ddb` | Full Webiny v5 → v6 migration of the primary DynamoDB table                     |
+| `v5-to-v6-os`  | Migration of the OpenSearch companion DynamoDB table (run after `v5-to-v6-ddb`) |
+| `copy-ddb`     | Verbatim DynamoDB + S3 copy (no transformations)                                |
+| `copy-os`      | Verbatim OpenSearch companion table copy (no transformations)                   |
+| `copy-files`   | S3-only file copy                                                               |
 
 Custom presets placed in your `presetsDir` are listed alongside built-ins.
 
