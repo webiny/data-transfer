@@ -776,7 +776,11 @@ describe("PipelineRunner.run() — ctx.blackhole() per-record blackholing", () =
         const factory = container.resolve(PipelineBuilderFactory);
 
         const pipeline = factory
-            .create({ name: "BlackholeTest", scanner: FakeScannerImpl, processors: [FakeProcessorImpl] })
+            .create({
+                name: "BlackholeTest",
+                scanner: FakeScannerImpl,
+                processors: [FakeProcessorImpl]
+            })
             .use(((ctx: any) => {
                 ctx.blackhole();
             }) as any)

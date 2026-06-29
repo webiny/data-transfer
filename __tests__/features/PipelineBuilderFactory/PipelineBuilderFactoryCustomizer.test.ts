@@ -3,7 +3,10 @@ import { Container } from "@webiny/di";
 import { ContainerToken } from "~/base/index.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import { PipelineBuilderFactory, PipelineBuilderFactoryFeature } from "~/features/PipelineBuilderFactory/index.ts";
+import {
+    PipelineBuilderFactory,
+    PipelineBuilderFactoryFeature
+} from "~/features/PipelineBuilderFactory/index.ts";
 import { PipelineCustomizer } from "~/features/PipelineCustomizer/index.ts";
 import { createFilter } from "~/domain/pipeline/Filter.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
@@ -197,9 +200,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
 
         const logger = makeLogger();
         factory.warnUnmatchedCustomizers(logger);
-        expect(logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining("UnmatchedCustomizer")
-        );
+        expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("UnmatchedCustomizer"));
     });
 
     it("warnUnmatchedCustomizers does NOT log when all customizers matched", () => {

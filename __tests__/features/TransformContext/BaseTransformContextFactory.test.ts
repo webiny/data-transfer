@@ -91,7 +91,9 @@ describe("BaseTransformContextFactory", () => {
         const factory = container.resolve(BaseTransformContextFactory);
         const { ctx } = factory.create<SampleRecord>({ record: { PK: "pk", SK: "sk", name: "a" } });
         ctx.blackhole();
-        const { ctx: ctx2 } = factory.create<SampleRecord>({ record: { PK: "pk2", SK: "sk2", name: "b" } });
+        const { ctx: ctx2 } = factory.create<SampleRecord>({
+            record: { PK: "pk2", SK: "sk2", name: "b" }
+        });
         expect(ctx.isBlackholed).toBe(true);
         expect(ctx2.isBlackholed).toBe(false);
     });
