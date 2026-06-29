@@ -70,4 +70,29 @@ describe("BaseTransformContextFactory", () => {
         expect(ctx.record.name).toBe("alice");
         expect(ctx.original.name).toBe("alice");
     });
+
+    it("ctx.isBlackholed defaults to false", () => {
+        const container = createDdbContainer();
+        const factory = container.resolve(BaseTransformContextFactory);
+        const { ctx } = factory.create<SampleRecord>({ record: { PK: "pk", SK: "sk", name: "a" } });
+        expect(ctx.isBlackholed).toBe(false);
+    });
+
+    it("ctx.blackhole() sets isBlackholed to true", () => {
+        const container = createDdbContainer();
+        const factory = container.resolve(BaseTransformContextFactory);
+        const { ctx } = factory.create<SampleRecord>({ record: { PK: "pk", SK: "sk", name: "a" } });
+        ctx.blackhole();
+        expect(ctx.isBlackholed).toBe(true);
+    });
+
+    it("ctx.blackhole() is irreversible — a second create produces a fresh ctx", () => {
+        const container = createDdbContainer();
+        const factory = container.resolve(BaseTransformContextFactory);
+        const { ctx } = factory.create<SampleRecord>({ record: { PK: "pk", SK: "sk", name: "a" } });
+        ctx.blackhole();
+        const { ctx: ctx2 } = factory.create<SampleRecord>({ record: { PK: "pk2", SK: "sk2", name: "b" } });
+        expect(ctx.isBlackholed).toBe(true);
+        expect(ctx2.isBlackholed).toBe(false);
+    });
 });

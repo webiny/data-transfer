@@ -73,6 +73,7 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
     logger: Logger.Interface;
 } {
     const commands = new Commands();
+    let blackholed = false;
     const ctx = {
         record: structuredClone(record),
         original: Object.freeze(structuredClone(record)) as Readonly<T>,
@@ -86,6 +87,12 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
         },
         addCommand(cmd: unknown): void {
             commands.add(cmd as Parameters<Commands["add"]>[0]);
+        },
+        get isBlackholed(): boolean {
+            return blackholed;
+        },
+        blackhole(): void {
+            blackholed = true;
         }
     };
     return ctx as unknown as BaseTransformContext.Interface<BaseRecord> & {

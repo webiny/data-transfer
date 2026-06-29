@@ -26,6 +26,14 @@ interface IBaseTransformContext<TRecord = unknown> {
      * no slice helper provides.
      */
     addCommand(cmd: Command): void;
+    /**
+     * Suppress all writes for this record. Once called, isBlackholed becomes
+     * true and the pipeline runner discards every command in the bag before
+     * forwarding to processors. The call is irreversible within the record
+     * lifecycle — each factory.create() starts a fresh, un-blackholed ctx.
+     */
+    blackhole(): void;
+    readonly isBlackholed: boolean;
 }
 
 // ============================================================================

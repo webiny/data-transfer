@@ -25,6 +25,8 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
         const logger = this.logger;
         const compressionHandler = this.compressionHandler;
 
+        let blackholed = false;
+
         const ctx: BaseTransformContextAbstraction.Interface<TRecord> = {
             record: structuredClone(params.record),
             original: Object.freeze(structuredClone(params.record)),
@@ -37,6 +39,12 @@ class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbst
             },
             addCommand(cmd): void {
                 commands.add(cmd);
+            },
+            get isBlackholed(): boolean {
+                return blackholed;
+            },
+            blackhole(): void {
+                blackholed = true;
             }
         };
 

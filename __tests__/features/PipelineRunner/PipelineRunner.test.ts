@@ -78,6 +78,7 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
         params: BaseTransformContextFactory.CreateParams<TRecord>
     ): BaseTransformContextFactory.CreateResult<TRecord> {
         const commands = new Commands();
+        let blackholed = false;
         const ctx: BaseTransformContext.Interface<TRecord> = {
             record: params.record,
             original: Object.freeze(params.record as TRecord) as Readonly<TRecord>,
@@ -100,6 +101,12 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
             },
             addCommand(cmd): void {
                 commands.add(cmd);
+            },
+            get isBlackholed(): boolean {
+                return blackholed;
+            },
+            blackhole(): void {
+                blackholed = true;
             }
         };
         return { ctx, commands };

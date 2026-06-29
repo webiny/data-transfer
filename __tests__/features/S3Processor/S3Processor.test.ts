@@ -23,6 +23,7 @@ interface BaseStub<TRecord> {
 
 function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
     const captured: unknown[] = [];
+    let blackholed = false;
     const base: BaseTransformContext.Interface<TRecord> = {
         record,
         original: Object.freeze(record) as Readonly<TRecord>,
@@ -45,6 +46,12 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         },
         addCommand(cmd): void {
             captured.push(cmd);
+        },
+        get isBlackholed(): boolean {
+            return blackholed;
+        },
+        blackhole(): void {
+            blackholed = true;
         }
     };
     return { base, captured };
