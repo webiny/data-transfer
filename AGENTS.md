@@ -20,7 +20,7 @@ Use the **codegraph MCP** as the first tool for browsing code. `codegraph_explor
 
 **Runtime flow (when deployed):**
 
-1. User writes a single `config.ts`: `createConfig({ source, target, pipeline })`. One file covers DDB, S3, and optional OpenSearch.
+1. User writes a single `config.ts`: `createConfig({ source, target, pipeline })`. One file covers DDB, S3, and optional OpenSearch. **User-side custom DI:** `register` callback in `createConfig()` is the primary path (runs before preset loading). `setup.ts` next to the config file is the alternative for larger setups. Both are optional.
 2. CLI `transfer` command (no `--config`): the `TransferWizard` selects a project, writes `.env`, then on subsequent runs prompts for a preset and returns `WizardResult { configPath, preset }`. With `--config`: skips wizard, preset passed as `--preset` flag.
 3. Bootstrap loads the config, registers all features (DDB + S3 always; OS conditional on `config.target.opensearch != null`), loads the named preset, spawns worker processes per segment.
 4. Each worker runs one or more shards: scans source → for each record, first-match-wins pipeline runs: filters → transformers → each processor's `onEnd?` hook (sequential, array order) → commands accumulate in a pending buffer. Every `tuning.flushEvery` records (default 500) each processor's `execute()` drains its own keys from that buffer (sequential, array order) and the buffer resets — this bounds peak memory to `flushEvery × avg_record_size`. A final flush at shard end drains any remainder. `Commands.unclaimedKeys()` surfaces commands no processor claimed.

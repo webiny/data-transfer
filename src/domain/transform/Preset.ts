@@ -9,7 +9,7 @@ import type { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/a
  * - `pipelineBuilderFactory` — typed `PipelineBuilder` factory; call
  *   `.create({ name, scanner, processors })` to start a new builder.
  * - `container` — the DI container, for advanced presets that need to
- *   resolve custom services registered via `setup.ts`.
+ *   resolve custom services registered via `config.register` or `setup.ts`.
  */
 export interface PresetConfigureContext {
     runner: PipelineRunner.Interface;

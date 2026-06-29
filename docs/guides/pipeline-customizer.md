@@ -8,16 +8,22 @@ custom post-processing — without forking the preset.
 ## Quick start
 
 Create a class that implements `PipelineCustomizer.Interface`, wire it
-with `createImplementation`, and register it in your `setup.ts`.
+with `createImplementation`, and register it via the `register` hook in
+your `config.ts`.
 
 ```typescript
-// projects/my-project/setup.ts
+// projects/my-project/config.ts
 import {
-    initDataTransfer,
+    loadEnv,
+    createConfig,
+    fromAwsProfile,
+    fromEnv,
+    numberFromEnv,
     PipelineCustomizer,
-    createFilter,
-    createDdbTransformer
+    createFilter
 } from "@webiny/data-transfer";
+
+loadEnv(import.meta.url);
 
 class SkipUnwantedModels implements PipelineCustomizer.Interface {
     public readonly name = "SkipUnwantedModels";
@@ -38,8 +44,13 @@ const SkipUnwantedModelsCustomizer = PipelineCustomizer.createImplementation({
     dependencies: []
 });
 
-export default initDataTransfer(async ({ container }) => {
-    container.register(SkipUnwantedModelsCustomizer);
+export default createConfig({
+    source: { /* ... */ },
+    target: { /* ... */ },
+    pipeline: { /* ... */ },
+    register: async (container) => {
+        container.register(SkipUnwantedModelsCustomizer);
+    }
 });
 ```
 
@@ -48,15 +59,15 @@ records with `modelId === "unwantedModel"` are filtered out.
 
 ## How it works
 
-The CLI looks for `setup.ts` next to your config file. If present, it runs
-`await fn({ container })` **before** loading your preset — so the preset can
-`container.resolve(...)` anything you registered.
+The `register` callback in your `config.ts` runs **before** the preset
+loads — so the preset can `container.resolve(...)` anything you registered.
 
 `container` is a `@webiny/di` container with all core data-transfer features
-already wired (scanners, processors, executors, etc.). `initDataTransfer` is
-a typed helper that validates the export shape.
+already wired (scanners, processors, executors, etc.).
 
-`setup.ts` is optional — delete it if you don't need custom DI wiring.
+Alternatively, you can use `setup.ts` (next to your config file) with the
+`initDataTransfer` helper — both paths run before preset loading. `register`
+in the config is the simpler option for most cases.
 
 ## Targeting multiple pipelines
 

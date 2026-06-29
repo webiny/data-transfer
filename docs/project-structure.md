@@ -70,7 +70,7 @@ src/
 │   ├── TouchedIndexes/              # per-worker singleton: index → original refresh_interval
 │   ├── PipelineRunner/              # register(...) + run() + getProcessors() + getShardStats(); per-record slice merge + onEnd; shard-end execute
 │   ├── PipelineCustomizer/           # Abstraction-only (no feature.ts). Users implement
-│   │                                # PipelineCustomizer.Interface in setup.ts to extend
+│   │                                # PipelineCustomizer.Interface via config.register or setup.ts
 │   │                                # preset pipelines by name (add filters/transformers).
 │   ├── PipelineBuilderFactory/      # Injects all Processor + Scanner + PipelineCustomizer instances (multiple: true deps); .create({name, scanner, processors})
 │   │                                # finds each instance by constructor identity → PipelineBuilder (carries instances)

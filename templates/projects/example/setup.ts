@@ -3,10 +3,18 @@ import { initDataTransfer } from "@webiny/data-transfer";
 /**
  * Optional custom DI wiring for this project.
  *
- * The CLI looks for `setup.ts` next to your transfer config; if present,
- * it runs this callback BEFORE loading your preset. Use it to register
- * custom processors, features, or any other DI bindings your preset
- * reaches for via `container.resolve(...)`.
+ * The simpler option is `register` in your config.ts:
+ *
+ *   export default createConfig({
+ *     ...,
+ *     register: async (container) => {
+ *       container.register(MyCustomProcessor);
+ *     }
+ *   });
+ *
+ * This `setup.ts` file is the alternative for larger setups. The CLI
+ * looks for it next to your transfer config; if present, it runs this
+ * callback BEFORE loading your preset.
  *
  * This file is OPTIONAL — delete it if you don't need custom DI wiring.
  */

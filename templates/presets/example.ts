@@ -17,7 +17,7 @@ import { stampMigratedAt } from "../transformers/stampMigratedAt.ts";
  * For pure data copy (zero transformers), just omit the `.use(...)` call.
  *
  * `container` is available if you need to `container.resolve(...)` any
- * custom service registered via a sibling `setup.ts`.
+ * custom service registered via `config.register` or `setup.ts`.
  */
 export default createTransferPreset({
     name: "example",
