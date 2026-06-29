@@ -20,7 +20,8 @@ function makeBuilder(
     return new PipelineBuilder<FakeRecord, FakeContext, FakeShard>({
         name,
         scanner: fakeScanner,
-        processors
+        processors,
+        customizers: []
     });
 }
 

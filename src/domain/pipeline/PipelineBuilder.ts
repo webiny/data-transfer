@@ -5,6 +5,8 @@ import type { Hook } from "./abstractions/Hook.ts";
 import type { Transformer } from "./abstractions/Transformer.ts";
 import type { Filter } from "./Filter.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { PipelineCustomizer } from "~/features/PipelineCustomizer/abstractions/PipelineCustomizer.ts";
+import { PipelineCustomizerBuilder } from "./PipelineCustomizerBuilder.ts";
 import { Pipeline, type PipelineConfig } from "./Pipeline.ts";
 
 export interface PipelineBuilderConfig<
@@ -15,6 +17,7 @@ export interface PipelineBuilderConfig<
     name: string;
     scanner: Scanner.Interface<TRecord, TShard>;
     processors: readonly Processor.Interface<BaseTransformContext.Interface<TRecord>, any>[];
+    customizers: readonly PipelineCustomizer.Interface[];
 }
 
 export class PipelineBuilder<
@@ -29,6 +32,7 @@ export class PipelineBuilder<
         BaseTransformContext.Interface<TRecord>,
         any
     >[];
+    private readonly customizers: readonly PipelineCustomizer.Interface[];
 
     private filters: Filter<TRecord>[] = [];
     private transformers: Transformer.Interface<TContext>[] = [];
@@ -43,6 +47,7 @@ export class PipelineBuilder<
         this.name = config.name;
         this.scanner = config.scanner;
         this.processors = config.processors;
+        this.customizers = config.customizers;
     }
 
     /**
@@ -114,12 +119,25 @@ export class PipelineBuilder<
     }
 
     public build(): Pipeline<TRecord, TContext, TShard> {
+        const custFilters: Filter<TRecord>[] = [];
+        const custTransformers: Transformer.Interface<TContext>[] = [];
+
+        for (const customizer of this.customizers) {
+            if (!customizer.canUse(this.name)) {
+                continue;
+            }
+            const custBuilder = new PipelineCustomizerBuilder();
+            customizer.configure(custBuilder);
+            custFilters.push(...custBuilder.getFilters());
+            custTransformers.push(...custBuilder.getTransformers());
+        }
+
         const pipelineConfig: PipelineConfig<TRecord, TContext, TShard> = {
             name: this.name,
             scanner: this.scanner,
             processors: this.processors,
-            filters: [...this.filters],
-            transformers: [...this.transformers],
+            filters: [...this.filters, ...custFilters],
+            transformers: [...this.transformers, ...custTransformers],
             beforeHooks: [...this.beforeHooks],
             afterHooks: [...this.afterHooks],
             blackhole: this.blackholeCommands

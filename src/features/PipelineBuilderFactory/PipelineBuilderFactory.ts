@@ -2,7 +2,9 @@ import { type Abstraction, type Constructor } from "@webiny/di";
 import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
 import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
+import { PipelineCustomizer } from "~/features/PipelineCustomizer/abstractions/PipelineCustomizer.ts";
 import { PipelineBuilderFactory as PipelineBuilderFactoryAbstraction } from "./abstractions/PipelineBuilderFactory.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
@@ -17,9 +19,12 @@ interface CreateImplInput {
 }
 
 class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.Interface {
+    private readonly consumedCustomizers: Set<number> = new Set();
+
     public constructor(
         private readonly processors: Processor.Interface[],
-        private readonly scanners: ScannerInstance[]
+        private readonly scanners: ScannerInstance[],
+        private readonly customizers: PipelineCustomizer.Interface[]
     ) {}
 
     public create(input: CreateImplInput): PipelineBuilder<any, any, any> {
@@ -40,11 +45,28 @@ class PipelineBuilderFactoryImpl implements PipelineBuilderFactoryAbstraction.In
             return instance;
         });
 
+        for (let i = 0; i < this.customizers.length; i++) {
+            if (this.customizers[i]!.canUse(input.name)) {
+                this.consumedCustomizers.add(i);
+            }
+        }
+
         return new PipelineBuilder({
             name: input.name,
             scanner: scannerInstance,
-            processors: processorInstances
+            processors: processorInstances,
+            customizers: this.customizers
         });
+    }
+
+    public warnUnmatchedCustomizers(logger: Logger.Interface): void {
+        for (let i = 0; i < this.customizers.length; i++) {
+            if (!this.consumedCustomizers.has(i)) {
+                logger.warn(
+                    `PipelineCustomizer "${this.customizers[i]!.name}" did not match any registered pipeline`
+                );
+            }
+        }
     }
 }
 
@@ -52,6 +74,7 @@ export const PipelineBuilderFactory = PipelineBuilderFactoryAbstraction.createIm
     implementation: PipelineBuilderFactoryImpl,
     dependencies: [
         [Processor, { multiple: true }],
-        [Scanner, { multiple: true }]
+        [Scanner, { multiple: true }],
+        [PipelineCustomizer, { multiple: true }]
     ]
 });

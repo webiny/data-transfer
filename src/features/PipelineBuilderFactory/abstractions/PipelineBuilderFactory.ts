@@ -4,6 +4,7 @@ import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
 import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
 import type { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
 
 // ============================================================================
 // Type utilities
@@ -86,6 +87,7 @@ interface IPipelineBuilderFactory {
     >(
         input: PipelineFactoryInput<ScannerImpl<TRecord, TShard>, DisjointKeys<TProcessors>>
     ): PipelineBuilder<TRecord, EffectiveContext<TRecord, TProcessors>, TShard>;
+    warnUnmatchedCustomizers(logger: Logger.Interface): void;
 }
 
 export const PipelineBuilderFactory = createAbstraction<IPipelineBuilderFactory>(
