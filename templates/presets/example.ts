@@ -22,8 +22,8 @@ import { stampMigratedAt } from "../transformers/stampMigratedAt.ts";
 export default createTransferPreset({
     name: "example",
     description: "Copy every record from source to target, stamping migratedAt on the way.",
-    configure({ runner, pipelineBuilderFactory }) {
-        const stampAll = pipelineBuilderFactory
+    async configure({ runner, pipelineBuilderFactory }) {
+        const stampAll = await pipelineBuilderFactory
             .create({ name: "stamp-all", scanner: DdbScanner, processors: [DdbProcessor] })
             .use(stampMigratedAt)
             .build();

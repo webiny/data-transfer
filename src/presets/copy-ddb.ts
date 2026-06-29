@@ -5,8 +5,8 @@ import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
 export default createTransferPreset({
     name: "copy-ddb",
     description: "Copy all the data from one table to another - DynamoDB only.",
-    configure({ runner, pipelineBuilderFactory: factory }): void {
-        const everything = factory
+    async configure({ runner, pipelineBuilderFactory: factory }) {
+        const everything = await factory
             .create({
                 name: "Regular DynamoDB Table Data",
                 scanner: DdbScanner,

@@ -8,8 +8,8 @@ import { DdbProcessor } from "~/features/DdbProcessor/index.js";
 export default createTransferPreset({
     name: "copy-files",
     description: "Copy all the S3 files loaded via DynamoDB regular table - pure copy.",
-    configure({ runner, pipelineBuilderFactory: factory }): void {
-        const everything = factory
+    async configure({ runner, pipelineBuilderFactory: factory }) {
+        const everything = await factory
             .create({
                 name: "S3 Files",
                 scanner: DdbScanner,

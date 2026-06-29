@@ -15,9 +15,9 @@ import { addLiveField, osCmsEntryTransformers, replaceFileUrls } from "~/transfo
 export default createTransferPreset({
     name: "v5-to-v6-os",
     description: "Webiny v5 to v6 migration — OpenSearch DDB table.",
-    configure({ runner, pipelineBuilderFactory: factory, container }): void {
+    async configure({ runner, pipelineBuilderFactory: factory, container }) {
         const config = container.resolve(MigrationConfig);
-        const acoSearchRecords = factory
+        const acoSearchRecords = await factory
             .create({
                 name: "AcoSearchRecords",
                 scanner: OsScanner,
@@ -31,7 +31,7 @@ export default createTransferPreset({
         // IMPORTANT: Must be registered BEFORE CmsEntries — background tasks are
         // CMS entries in the OS table and would be written by the catch-all pipeline.
         // ========================================================================
-        const backgroundTasks = factory
+        const backgroundTasks = await factory
             .create({
                 name: "BackgroundTasks",
                 scanner: OsScanner,
@@ -47,7 +47,7 @@ export default createTransferPreset({
         // the actual DDB → KV migration. OS records have no v6 target.
         // IMPORTANT: Must be registered BEFORE CmsEntries.
         // ========================================================================
-        const mailerSettings = factory
+        const mailerSettings = await factory
             .create({
                 name: "MailerSettings",
                 scanner: OsScanner,
@@ -62,7 +62,7 @@ export default createTransferPreset({
         // IMPORTANT: Must be registered BEFORE CmsEntries (fmFile satisfies
         // isCmsEntry via TYPE prefix)
         // ========================================================================
-        const fileManagerFiles = factory
+        const fileManagerFiles = await factory
             .create({
                 name: "FileManagerFiles",
                 scanner: OsScanner,
@@ -75,7 +75,7 @@ export default createTransferPreset({
         // ========================================================================
         // CMS Entries — catch-all
         // ========================================================================
-        const cmsEntries = factory
+        const cmsEntries = await factory
             .create({
                 name: "CmsEntries",
                 scanner: OsScanner,

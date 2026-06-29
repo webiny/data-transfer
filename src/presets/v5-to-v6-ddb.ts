@@ -62,11 +62,11 @@ export default createTransferPreset({
     name: "v5-to-v6-ddb",
     description:
         "Webiny v5 to v6 migration with all necessary transformations - Regular DynamoDb table.",
-    configure({ runner, pipelineBuilderFactory: factory, container }): void {
+    async configure({ runner, pipelineBuilderFactory: factory, container }) {
         // ========================================================================
         // Migration records — blackhole all PKs starting with "MIGRATION"
         // ========================================================================
-        const migrationRecords = factory
+        const migrationRecords = await factory
             .create({
                 name: "MigrationRecords",
                 scanner: DdbScanner,
@@ -84,7 +84,7 @@ export default createTransferPreset({
         // entirely) to skip audit log transfer — records will be blackholed.
         // ========================================================================
         const config = container.resolve(MigrationConfig);
-        const auditLogs = factory
+        const auditLogs = await factory
             .create({
                 name: "AuditLogs",
                 scanner: DdbScanner,
@@ -97,7 +97,7 @@ export default createTransferPreset({
             })
             .build();
 
-        const acoSearchRecordsPage = factory
+        const acoSearchRecordsPage = await factory
             .create({
                 name: "AcoSearchRecordsPage",
                 scanner: DdbScanner,
@@ -109,7 +109,7 @@ export default createTransferPreset({
         // ========================================================================
         // Content Model Groups
         // ========================================================================
-        const contentModelGroups = factory
+        const contentModelGroups = await factory
             .create({
                 name: "ContentModelGroups",
                 scanner: DdbScanner,
@@ -124,7 +124,7 @@ export default createTransferPreset({
         // ========================================================================
         // Background Tasks
         // ========================================================================
-        const backgroundTasks = factory
+        const backgroundTasks = await factory
             .create({
                 name: "BackgroundTasks",
                 scanner: DdbScanner,
@@ -136,7 +136,7 @@ export default createTransferPreset({
         // ========================================================================
         // File Manager Settings
         // ========================================================================
-        const fmSettings = factory
+        const fmSettings = await factory
             .create({
                 name: "FileManagerSettings",
                 scanner: DdbScanner,
@@ -152,7 +152,7 @@ export default createTransferPreset({
         // File Manager Files
         // IMPORTANT: Must be registered BEFORE CmsEntryPipeline due to first-match-wins
         // ========================================================================
-        const fmFiles = factory
+        const fmFiles = await factory
             .create({
                 name: "FileManagerFiles",
                 scanner: DdbScanner,
@@ -170,7 +170,7 @@ export default createTransferPreset({
         // ========================================================================
         // Mailer Settings
         // ========================================================================
-        const mailerSettings = factory
+        const mailerSettings = await factory
             .create({
                 name: "MailerSettings",
                 scanner: DdbScanner,
@@ -189,7 +189,7 @@ export default createTransferPreset({
         // ========================================================================
         // Security Groups → Roles
         // ========================================================================
-        const securityGroups = factory
+        const securityGroups = await factory
             .create({
                 name: "SecurityGroups",
                 scanner: DdbScanner,
@@ -210,7 +210,7 @@ export default createTransferPreset({
         // ========================================================================
         // Security Teams
         // ========================================================================
-        const securityTeams = factory
+        const securityTeams = await factory
             .create({
                 name: "SecurityTeams",
                 scanner: DdbScanner,
@@ -225,7 +225,7 @@ export default createTransferPreset({
         // ========================================================================
         // CMS Models
         // ========================================================================
-        const cmsModels = factory
+        const cmsModels = await factory
             .create({
                 name: "CmsModels",
                 scanner: DdbScanner,
@@ -243,7 +243,7 @@ export default createTransferPreset({
         // ========================================================================
         // Folder Permissions (FLP records)
         // ========================================================================
-        const folderPermissions = factory
+        const folderPermissions = await factory
             .create({
                 name: "FolderPermissions",
                 scanner: DdbScanner,
@@ -261,7 +261,7 @@ export default createTransferPreset({
         // CMS Entries (catch-all for remaining CMS entries)
         // IMPORTANT: Must be registered AFTER FmFilePipeline
         // ========================================================================
-        const cmsEntries = factory
+        const cmsEntries = await factory
             .create({
                 name: "CmsEntries",
                 scanner: DdbScanner,
@@ -280,7 +280,7 @@ export default createTransferPreset({
         // IMPORTANT: Must be registered AFTER CmsEntries because FB forms are
         // CMS entries and would otherwise be claimed first.
         // ========================================================================
-        const formBuilderRecords = factory
+        const formBuilderRecords = await factory
             .create({
                 name: "FormBuilderRecords",
                 scanner: DdbScanner,
@@ -290,7 +290,7 @@ export default createTransferPreset({
             .blackhole()
             .build();
 
-        const adminUsers = factory
+        const adminUsers = await factory
             .create({
                 name: "AdminUsers",
                 scanner: DdbScanner,

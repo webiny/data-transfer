@@ -5,8 +5,8 @@ import { OsProcessor } from "~/features/OsProcessor/index.js";
 export default createTransferPreset({
     name: "copy-os",
     description: "Copy all the data from one table to another + files - OpenSearch only.",
-    configure({ runner, pipelineBuilderFactory: factory }): void {
-        const everything = factory
+    async configure({ runner, pipelineBuilderFactory: factory }) {
+        const everything = await factory
             .create({
                 name: "OpenSearch DynamoDB Table Data",
                 scanner: OsScanner,
