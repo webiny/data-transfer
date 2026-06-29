@@ -52,6 +52,15 @@ export class MockDynamoDbClient implements SourceDynamoDbClient.Interface {
         }) as T[];
     }
 
+    async queryAll<T extends SourceDynamoDbClient.Record>(
+        tableName: string,
+        pk: string,
+        sk?: string,
+        options?: SourceDynamoDbClient.Query
+    ): Promise<T[]> {
+        return this.query<T>(tableName, pk, sk, options);
+    }
+
     async batchPut<T extends SourceDynamoDbClient.Record>(
         tableName: string,
         records: T[]

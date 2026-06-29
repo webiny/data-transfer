@@ -130,6 +130,57 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         return (response.Items || []) as T[];
     }
 
+    public async queryAll<T extends SourceDynamoDbClient.Record>(
+        tableName: string,
+        pk: string,
+        sk?: string,
+        options?: SourceDynamoDbClient.Query
+    ): Promise<T[]> {
+        const pkAttr = options?.pkAttribute ?? "PK";
+        let keyConditionExpression = `${pkAttr} = :pk`;
+        const expressionAttributeValues: Record<string, unknown> = {
+            ":pk": pk
+        };
+
+        if (sk) {
+            if (
+                options &&
+                options.sortKeyCondition &&
+                options.sortKeyCondition.operator === "beginsWith"
+            ) {
+                keyConditionExpression += " AND begins_with(SK, :sk)";
+            } else {
+                keyConditionExpression += " AND SK = :sk";
+            }
+            expressionAttributeValues[":sk"] = sk;
+        }
+
+        const results: T[] = [];
+        let lastEvaluatedKey: Record<string, unknown> | undefined;
+
+        do {
+            const command = new QueryCommand({
+                TableName: tableName,
+                IndexName: options ? options.indexName : undefined,
+                KeyConditionExpression: keyConditionExpression,
+                ExpressionAttributeValues: expressionAttributeValues,
+                ExclusiveStartKey: lastEvaluatedKey
+            });
+
+            const response = await this.executeWithRetry(async () => {
+                return await this.client.send(command);
+            });
+
+            if (response.Items) {
+                results.push(...(response.Items as T[]));
+            }
+
+            lastEvaluatedKey = response.LastEvaluatedKey;
+        } while (lastEvaluatedKey);
+
+        return results;
+    }
+
     public async batchPut<T extends SourceDynamoDbClient.Record>(
         tableName: string,
         records: T[]
