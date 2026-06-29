@@ -66,7 +66,10 @@ describe("processSegment handler", () => {
             getProcessors: getProcessorsSpy,
             getShardStats: vi.fn(() => null)
         });
-        resolveMap.set(PipelineBuilderFactory, { create: vi.fn() });
+        resolveMap.set(PipelineBuilderFactory, {
+            create: vi.fn(),
+            warnUnmatchedCustomizers: vi.fn()
+        });
         resolveMap.set(PresetLoader, { load: loadSpy, getBuiltInPresets: () => [] });
         resolveMap.set(FileTool, { exists: existsSync });
         resolveMap.set(BeforeLoadPresetHook, { execute: vi.fn() });

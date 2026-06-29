@@ -114,3 +114,6 @@ export { BeforeLoadPresetHook, AfterLoadPresetHook } from "./features/PresetLife
 // Pipeline-builder-factory helper type used when typing factory input
 // (NonEmptyArray<...>).
 export type { NonEmptyArray } from "./features/PipelineBuilderFactory/index.ts";
+
+// PipelineCustomizer — extend built-in preset pipelines from setup.ts.
+export { PipelineCustomizer } from "./features/PipelineCustomizer/index.ts";

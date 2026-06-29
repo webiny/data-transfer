@@ -51,10 +51,10 @@ export class PipelineBuilder<
     }
 
     /**
-     * Add a filter. Order across .filter() calls does NOT matter — all
-     * filters are collected and AND-composed at build time. Multiple
-     * calls are allowed; interleaving with .use() is fine. Filters
-     * operate on the record only (not ctx).
+     * Add a filter. Order across .filter() calls within a single builder
+     * does NOT matter — all filters are AND-composed. PipelineCustomizer
+     * filters are always appended after the preset's filters at build()
+     * time.
      */
     public filter(filter: Filter<TRecord>): this {
         this.filters.push(filter);

@@ -46,11 +46,13 @@ export async function handler(argv: ProcessSegmentArgs): Promise<void> {
     await beforeLoadPreset.execute(config);
 
     const preset = await presetLoader.load(argv.preset);
+    const pipelineBuilderFactory = container.resolve(PipelineBuilderFactory);
     await preset.configure({
         runner,
-        pipelineBuilderFactory: container.resolve(PipelineBuilderFactory),
+        pipelineBuilderFactory,
         container
     });
+    pipelineBuilderFactory.warnUnmatchedCustomizers(logger);
 
     const afterLoadPreset = container.resolve(AfterLoadPresetHook);
     await afterLoadPreset.execute(config, preset);

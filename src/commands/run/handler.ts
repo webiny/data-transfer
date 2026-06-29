@@ -102,6 +102,7 @@ export async function handler(
         const runner = container.resolve(PipelineRunner);
         const pipelineBuilderFactory = container.resolve(PipelineBuilderFactory);
         await preset.configure({ runner, pipelineBuilderFactory, container });
+        pipelineBuilderFactory.warnUnmatchedCustomizers(logger);
 
         const accessChecker = container.resolve(AccessChecker);
         const accessReport = await accessChecker.run();
