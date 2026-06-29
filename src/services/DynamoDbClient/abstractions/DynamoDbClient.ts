@@ -54,6 +54,7 @@ export interface IDynamoDbClient {
         sk?: string,
         options?: QueryOptions
     ): Promise<T[]>;
+    get<T extends DatabaseRecord>(tableName: string, pk: string, sk: string): Promise<T | null>;
     batchPut<T extends DatabaseRecord>(tableName: string, records: T[]): Promise<void>;
 }
 

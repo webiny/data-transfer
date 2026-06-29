@@ -1,5 +1,6 @@
 import {
     BatchWriteCommand,
+    GetCommand,
     ScanCommand,
     getDocumentClient,
     type DynamoDBDocument
@@ -179,6 +180,23 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         } while (lastEvaluatedKey);
 
         return results;
+    }
+
+    public async get<T extends SourceDynamoDbClient.Record>(
+        tableName: string,
+        pk: string,
+        sk: string
+    ): Promise<T | null> {
+        const command = new GetCommand({
+            TableName: tableName,
+            Key: { PK: pk, SK: sk }
+        });
+
+        const response = await this.executeWithRetry(async () => {
+            return await this.client.send(command);
+        });
+
+        return (response.Item as T) ?? null;
     }
 
     public async batchPut<T extends SourceDynamoDbClient.Record>(

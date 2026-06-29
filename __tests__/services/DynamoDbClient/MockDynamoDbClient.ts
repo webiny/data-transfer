@@ -52,6 +52,16 @@ export class MockDynamoDbClient implements SourceDynamoDbClient.Interface {
         }) as T[];
     }
 
+    async get<T extends SourceDynamoDbClient.Record>(
+        tableName: string,
+        pk: string,
+        sk: string
+    ): Promise<T | null> {
+        const records = this.records.get(tableName) || [];
+        const found = records.find(r => r.PK === pk && r.SK === sk);
+        return (found as T) ?? null;
+    }
+
     async queryAll<T extends SourceDynamoDbClient.Record>(
         tableName: string,
         pk: string,
