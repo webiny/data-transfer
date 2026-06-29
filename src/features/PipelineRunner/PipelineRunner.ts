@@ -402,7 +402,7 @@ class PipelineRunnerImpl implements PipelineRunnerAbstraction.Interface {
         // still ran (useful side effects stay intact) — only the write
         // path is suppressed. Snapshot above still recorded the commands,
         // so users can diff "what would have been written".
-        if (pipeline.isBlackhole) {
+        if (pipeline.isBlackhole || ctx.isBlackholed) {
             return new RecordDisposition.Blackholed(pipeline.name);
         }
 

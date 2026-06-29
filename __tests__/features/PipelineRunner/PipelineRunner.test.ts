@@ -766,6 +766,30 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
     });
 });
 
+describe("PipelineRunner.run() — ctx.blackhole() per-record blackholing", () => {
+    it("blackholes a record when a transformer calls ctx.blackhole()", async () => {
+        const { container, logger } = makeContainer();
+        const scanner = container.resolve(Scanner) as FakeScanner;
+        scanner.records = [{ id: "rec-1", type: "foo" }];
+
+        const runner = container.resolve(PipelineRunner);
+        const factory = container.resolve(PipelineBuilderFactory);
+
+        const pipeline = factory
+            .create({ name: "BlackholeTest", scanner: FakeScannerImpl, processors: [FakeProcessorImpl] })
+            .use(((ctx: any) => {
+                ctx.blackhole();
+            }) as any)
+            .build();
+
+        runner.register(pipeline);
+        await runner.run();
+
+        const summaryLog = logger.entries.find(e => e.message.includes("blackholed 1"));
+        expect(summaryLog).toBeDefined();
+    });
+});
+
 describe("PipelineRunner.run() — blackhole pipelines", () => {
     it("drops every emitted command — processor.execute sees an empty bag", async () => {
         const { container } = makeContainer();
