@@ -39,7 +39,7 @@ describe("PipelineRunner — DroppedRecordLog integration", () => {
             processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "cms.entry.l"));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 
@@ -65,7 +65,7 @@ describe("PipelineRunner — DroppedRecordLog integration", () => {
         });
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "task.record"));
         builder.blackhole();
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 
@@ -91,7 +91,7 @@ describe("PipelineRunner — DroppedRecordLog integration", () => {
             processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 

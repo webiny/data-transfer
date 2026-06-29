@@ -23,21 +23,21 @@ describe("PipelineRunner.getProcessors", () => {
         expect(runner.getProcessors()).toEqual([]);
     });
 
-    it("returns one entry when pipelines share the same processor token", () => {
+    it("returns one entry when pipelines share the same processor token", async () => {
         const container = createDdbContainer();
         const runner = container.resolve(PipelineRunner);
         const factory = container.resolve(PipelineBuilderFactory);
 
         const b1 = makeBuilder(factory, "p1").filter(createFilter<BaseRecord>(() => true));
         const b2 = makeBuilder(factory, "p2").filter(createFilter<BaseRecord>(() => true));
-        runner.register(b1.build());
-        runner.register(b2.build());
+        runner.register(await b1.build());
+        runner.register(await b2.build());
 
         const processors = runner.getProcessors();
         expect(processors).toHaveLength(1);
     });
 
-    it("returns distinct entries for distinct processor tokens across pipelines", () => {
+    it("returns distinct entries for distinct processor tokens across pipelines", async () => {
         const container = createDdbContainer();
         const runner = container.resolve(PipelineRunner);
         const factory = container.resolve(PipelineBuilderFactory);
@@ -53,7 +53,9 @@ describe("PipelineRunner.getProcessors", () => {
             })
             .filter(createFilter<BaseRecord>(() => true));
 
-        runner.register(onlyDdb.build()).register(bothProcessors.build());
+        const p1 = await onlyDdb.build();
+        const p2 = await bothProcessors.build();
+        runner.register(p1).register(p2);
 
         const processors = runner.getProcessors();
         expect(processors).toHaveLength(2);

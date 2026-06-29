@@ -56,7 +56,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         teamsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
             .use(passthroughTransformer);
-        runner.register(teamsBuilder.build());
+        runner.register(await teamsBuilder.build());
 
         const groupsBuilder = container.resolve(PipelineBuilderFactory).create({
             name: "groups",
@@ -66,7 +66,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         groupsBuilder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.group"))
             .use(passthroughTransformer);
-        runner.register(groupsBuilder.build());
+        runner.register(await groupsBuilder.build());
 
         await runner.run();
 
@@ -78,7 +78,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         expect(types).toEqual(["security.group", "security.team", "security.team"]);
     });
 
-    it("registering two pipelines with the same name throws even across different filters", () => {
+    it("registering two pipelines with the same name throws even across different filters", async () => {
         const container = createDdbContainer();
         const runner = container.resolve(PipelineRunner);
 
@@ -88,7 +88,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             processors: [DdbProcessor]
         });
         builderA.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builderA.build());
+        runner.register(await builderA.build());
 
         const builderB = container.resolve(PipelineBuilderFactory).create({
             name: "dup",
@@ -97,7 +97,10 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         });
         builderB.filter(createFilter<BaseRecord>(() => true));
 
-        expect(() => runner.register(builderB.build())).toThrow(/already registered/i);
+        await expect(async () => {
+            const p = await builderB.build();
+            runner.register(p);
+        }).rejects.toThrow(/already registered/i);
     });
 
     it("pure passthrough: zero filters + zero transformers copies every source record to target unchanged", async () => {
@@ -120,7 +123,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             processors: [DdbProcessor]
         });
         // Intentionally no .filter() and no .use()
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -154,7 +157,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
         builder
             .filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"))
             .use(tagTransformer);
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -187,7 +190,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             ctx.copyFile(`src/${ctx.record.SK}`, `tgt/${ctx.record.SK}`);
         };
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "fm.file")).use(copyTransformer);
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -216,7 +219,7 @@ describe("PipelineRunner — end-to-end against MockDynamoDbClient", () => {
             processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "security.team"));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 

@@ -26,10 +26,10 @@ function makeBuilder(
 }
 
 describe("PipelineBuilder — construction and build()", () => {
-    it("produces a Pipeline with the configured name, scanner/processor tokens, and filter", () => {
+    it("produces a Pipeline with the configured name, scanner/processor tokens, and filter", async () => {
         const matchAll = createFilter<FakeRecord>(() => true);
 
-        const pipeline = makeBuilder("basic").filter(matchAll).build();
+        const pipeline = await makeBuilder("basic").filter(matchAll).build();
 
         expect(pipeline).toBeInstanceOf(Pipeline);
         expect(pipeline.name).toBe("basic");
@@ -48,8 +48,8 @@ describe("PipelineBuilder — construction and build()", () => {
         expect(() => makeBuilder("   ")).toThrow(/name/i);
     });
 
-    it("builds a pipeline that accepts every record when .filter() was never called (pure-passthrough)", () => {
-        const pipeline = makeBuilder("no-filter").build();
+    it("builds a pipeline that accepts every record when .filter() was never called (pure-passthrough)", async () => {
+        const pipeline = await makeBuilder("no-filter").build();
 
         expect(pipeline.hasFilter).toBe(false);
         expect(pipeline.accepts({ id: "r1", type: "anything" })).toBe(true);
@@ -58,28 +58,28 @@ describe("PipelineBuilder — construction and build()", () => {
 });
 
 describe("PipelineBuilder.filter() — extended rules", () => {
-    it("accepts a single Filter and routes records correctly via accepts()", () => {
+    it("accepts a single Filter and routes records correctly via accepts()", async () => {
         const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
 
-        const pipeline = makeBuilder("single-filter").filter(isFoo).build();
+        const pipeline = await makeBuilder("single-filter").filter(isFoo).build();
 
         expect(pipeline.hasFilter).toBe(true);
         expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
         expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
     });
 
-    it("AND-combines multiple filters via chained .filter() calls in declaration order", () => {
+    it("AND-combines multiple filters via chained .filter() calls in declaration order", async () => {
         const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
         const notDeleted = createFilter<FakeRecord>(r => r.payload?.deleted !== true);
 
-        const pipeline = makeBuilder("chained-filters").filter(isFoo).filter(notDeleted).build();
+        const pipeline = await makeBuilder("chained-filters").filter(isFoo).filter(notDeleted).build();
 
         expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
         expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);
         expect(pipeline.accepts({ id: "c", type: "foo", payload: { deleted: true } })).toBe(false);
     });
 
-    it("accumulates filters across multiple .filter() calls (declaration order)", () => {
+    it("accumulates filters across multiple .filter() calls (declaration order)", async () => {
         const seen: string[] = [];
         const filterA = createFilter<FakeRecord>(() => {
             seen.push("a");
@@ -90,21 +90,21 @@ describe("PipelineBuilder.filter() — extended rules", () => {
             return true;
         });
 
-        const pipeline = makeBuilder("accumulate").filter(filterA).filter(filterB).build();
+        const pipeline = await makeBuilder("accumulate").filter(filterA).filter(filterB).build();
 
         expect(pipeline.hasFilter).toBe(true);
         expect(pipeline.accepts({ id: "r1", type: "x" })).toBe(true);
         expect(seen).toEqual(["a", "b"]);
     });
 
-    it("preserves transformer insertion order regardless of where .filter() calls appear", () => {
+    it("preserves transformer insertion order regardless of where .filter() calls appear", async () => {
         const t1 = (() => undefined) as Transformer.Interface<FakeContext>;
         const t2 = (() => undefined) as Transformer.Interface<FakeContext>;
         const t3 = (() => undefined) as Transformer.Interface<FakeContext>;
         const filterA = createFilter<FakeRecord>(() => true);
         const filterB = createFilter<FakeRecord>(() => true);
 
-        const pipeline = makeBuilder("interleaved")
+        const pipeline = await makeBuilder("interleaved")
             .use(t1)
             .filter(filterA)
             .use(t2)
@@ -119,10 +119,10 @@ describe("PipelineBuilder.filter() — extended rules", () => {
 });
 
 describe("PipelineBuilder.use()", () => {
-    it("chains the same transformer function twice and exposes both via transformerFns", () => {
+    it("chains the same transformer function twice and exposes both via transformerFns", async () => {
         const matchAll = createFilter<FakeRecord>(() => true);
 
-        const pipeline = makeBuilder("with-transformers")
+        const pipeline = await makeBuilder("with-transformers")
             .filter(matchAll)
             .use(tagTransformer)
             .use(tagTransformer)
@@ -138,38 +138,38 @@ describe("PipelineBuilder.use()", () => {
         expect(builder.use(tagTransformer)).toBe(builder);
     });
 
-    it("accepts an array of transformers and appends them in order", () => {
+    it("accepts an array of transformers and appends them in order", async () => {
         const t1 = (() => undefined) as Transformer.Interface<FakeContext>;
         const t2 = (() => undefined) as Transformer.Interface<FakeContext>;
         const t3 = (() => undefined) as Transformer.Interface<FakeContext>;
         const stack = [t1, t2, t3] as const;
 
-        const pipeline = makeBuilder("array-stack").use(stack).build();
+        const pipeline = await makeBuilder("array-stack").use(stack).build();
 
         expect(pipeline.transformerFns).toEqual([t1, t2, t3]);
     });
 
-    it("treats an empty array as a no-op", () => {
-        const pipeline = makeBuilder("empty-array").use([]).build();
+    it("treats an empty array as a no-op", async () => {
+        const pipeline = await makeBuilder("empty-array").use([]).build();
         expect(pipeline.transformerFns).toHaveLength(0);
     });
 
-    it("supports mixing single and array calls, preserving insertion order", () => {
+    it("supports mixing single and array calls, preserving insertion order", async () => {
         const t1 = (() => undefined) as Transformer.Interface<FakeContext>;
         const t2 = (() => undefined) as Transformer.Interface<FakeContext>;
         const t3 = (() => undefined) as Transformer.Interface<FakeContext>;
         const t4 = (() => undefined) as Transformer.Interface<FakeContext>;
 
-        const pipeline = makeBuilder("mixed").use(t1).use([t2, t3]).use(t4).build();
+        const pipeline = await makeBuilder("mixed").use(t1).use([t2, t3]).use(t4).build();
 
         expect(pipeline.transformerFns).toEqual([t1, t2, t3, t4]);
     });
 });
 
 describe("PipelineBuilder — hook registration", () => {
-    it("registers before-hooks in declaration order", () => {
+    it("registers before-hooks in declaration order", async () => {
         const matchAll = createFilter<FakeRecord>(() => true);
-        const pipeline = makeBuilder("before-hooks")
+        const pipeline = await makeBuilder("before-hooks")
             .filter(matchAll)
             .beforeExecuteCommands(Hook)
             .beforeExecuteCommands(Hook)
@@ -180,9 +180,9 @@ describe("PipelineBuilder — hook registration", () => {
         expect(pipeline.beforeHookTokens[1]).toBe(Hook);
     });
 
-    it("registers after-hooks in declaration order", () => {
+    it("registers after-hooks in declaration order", async () => {
         const matchAll = createFilter<FakeRecord>(() => true);
-        const pipeline = makeBuilder("after-hooks")
+        const pipeline = await makeBuilder("after-hooks")
             .filter(matchAll)
             .afterExecuteCommands(Hook)
             .afterExecuteCommands(Hook)
@@ -191,9 +191,9 @@ describe("PipelineBuilder — hook registration", () => {
         expect(pipeline.afterHookTokens).toHaveLength(2);
     });
 
-    it("keeps before and after hook lists independent", () => {
+    it("keeps before and after hook lists independent", async () => {
         const matchAll = createFilter<FakeRecord>(() => true);
-        const pipeline = makeBuilder("mixed-hooks")
+        const pipeline = await makeBuilder("mixed-hooks")
             .filter(matchAll)
             .beforeExecuteCommands(Hook)
             .afterExecuteCommands(Hook)

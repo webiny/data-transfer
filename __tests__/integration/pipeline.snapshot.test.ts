@@ -120,7 +120,7 @@ describe("snapshot — end-to-end against dynalite", () => {
             processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(r => r.TYPE === "team"));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 
@@ -169,7 +169,7 @@ describe("snapshot — end-to-end against dynalite", () => {
             processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 

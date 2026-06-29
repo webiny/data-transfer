@@ -37,7 +37,7 @@ describe("PipelineRunner.run — shard mode", () => {
             processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 4 });
 
@@ -56,7 +56,7 @@ describe("PipelineRunner.run — shard mode", () => {
             processors: [DdbProcessor]
         });
         builder.filter(createFilter<BaseRecord>(() => true));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await expect(runner.run({ segment: 0, totalSegments: 4 })).rejects.toThrow(
             /scanner.*reported 2 shards.*totalSegments=4/i

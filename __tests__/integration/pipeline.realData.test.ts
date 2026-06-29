@@ -112,7 +112,7 @@ describe("pipeline — real-world data transfer against dynalite", () => {
 
         const runner = container.resolve(PipelineRunner);
         runner.register(
-            container
+            await container
                 .resolve(PipelineBuilderFactory)
                 .create({
                     name: "real-passthrough",

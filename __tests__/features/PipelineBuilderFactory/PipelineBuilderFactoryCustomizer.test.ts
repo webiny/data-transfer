@@ -65,7 +65,7 @@ function makeLogger(): Logger.Interface {
 }
 
 describe("PipelineBuilderFactory + PipelineCustomizer", () => {
-    it("applies a customizer filter when canUse returns true", () => {
+    it("applies a customizer filter when canUse returns true", async () => {
         const container = makeContainer();
 
         class TestCustomizer implements PipelineCustomizer.Interface {
@@ -85,7 +85,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         container.register(TestCustomizerImpl);
 
         const factory = container.resolve(PipelineBuilderFactory);
-        const pipeline = factory
+        const pipeline = await factory
             .create({
                 name: "MyPipeline",
                 scanner: StubScannerImpl,
@@ -97,7 +97,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         expect(pipeline.accepts({ id: "anything" })).toBe(false);
     });
 
-    it("does NOT apply a customizer when canUse returns false", () => {
+    it("does NOT apply a customizer when canUse returns false", async () => {
         const container = makeContainer();
 
         class SkipCustomizer implements PipelineCustomizer.Interface {
@@ -117,7 +117,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         container.register(SkipCustomizerImpl);
 
         const factory = container.resolve(PipelineBuilderFactory);
-        const pipeline = factory
+        const pipeline = await factory
             .create({
                 name: "SomePipeline",
                 scanner: StubScannerImpl,
@@ -129,7 +129,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         expect(pipeline.accepts({ id: "anything" })).toBe(true);
     });
 
-    it("applies a customizer transformer after preset transformers", () => {
+    it("applies a customizer transformer after preset transformers", async () => {
         const container = makeContainer();
         const order: string[] = [];
 
@@ -152,7 +152,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         container.register(OrderCustomizerImpl);
 
         const factory = container.resolve(PipelineBuilderFactory);
-        const pipeline = factory
+        const pipeline = await factory
             .create({
                 name: "OrderTest",
                 scanner: StubScannerImpl,
@@ -170,7 +170,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         expect(order).toEqual(["preset", "customizer"]);
     });
 
-    it("warnUnmatchedCustomizers logs for customizers that never matched", () => {
+    it("warnUnmatchedCustomizers logs for customizers that never matched", async () => {
         const container = makeContainer();
 
         class UnmatchedCustomizer implements PipelineCustomizer.Interface {
@@ -190,7 +190,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         const factory = container.resolve(PipelineBuilderFactory);
 
         // Build a pipeline — the customizer never matches.
-        factory
+        await factory
             .create({
                 name: "SomePipeline",
                 scanner: StubScannerImpl,
@@ -203,7 +203,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("UnmatchedCustomizer"));
     });
 
-    it("warnUnmatchedCustomizers does NOT log when all customizers matched", () => {
+    it("warnUnmatchedCustomizers does NOT log when all customizers matched", async () => {
         const container = makeContainer();
 
         class MatchedCustomizer implements PipelineCustomizer.Interface {
@@ -221,7 +221,7 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         container.register(MatchedCustomizerImpl);
 
         const factory = container.resolve(PipelineBuilderFactory);
-        factory
+        await factory
             .create({
                 name: "Any",
                 scanner: StubScannerImpl,
@@ -234,10 +234,10 @@ describe("PipelineBuilderFactory + PipelineCustomizer", () => {
         expect(logger.warn).not.toHaveBeenCalled();
     });
 
-    it("works with zero customizers registered", () => {
+    it("works with zero customizers registered", async () => {
         const container = makeContainer();
         const factory = container.resolve(PipelineBuilderFactory);
-        const pipeline = factory
+        const pipeline = await factory
             .create({
                 name: "NoCust",
                 scanner: StubScannerImpl,

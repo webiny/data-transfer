@@ -29,11 +29,11 @@ describe("PipelineBuilderFactory", () => {
         expect(typeof builder.build).toBe("function");
     });
 
-    it("builder.build() produces a Pipeline", () => {
+    it("builder.build() produces a Pipeline", async () => {
         const container = createDdbContainer();
         const factory = container.resolve(PipelineBuilderFactory);
 
-        const pipeline = factory
+        const pipeline = await factory
             .create({
                 name: "test-pipeline",
                 scanner: DdbScanner,

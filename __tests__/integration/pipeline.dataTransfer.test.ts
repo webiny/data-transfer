@@ -106,7 +106,7 @@ describe("pipeline — end-to-end data transfer against dynalite", () => {
             scanner: DdbScanner,
             processors: [DdbProcessor]
         });
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run({ segment: 0, totalSegments: 1 });
 

@@ -173,7 +173,7 @@ describe("pipeline — bulk + retry against dynalite", () => {
 
         const runner = container.resolve(PipelineRunner);
         runner.register(
-            container
+            await container
                 .resolve(PipelineBuilderFactory)
                 .create({
                     name: "bulk-passthrough",
@@ -238,7 +238,7 @@ describe("pipeline — bulk + retry against dynalite", () => {
 
         const runner = container.resolve(PipelineRunner);
         runner.register(
-            container
+            await container
                 .resolve(PipelineBuilderFactory)
                 .create({
                     name: "throttle-passthrough",

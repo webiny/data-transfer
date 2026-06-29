@@ -141,7 +141,7 @@ function makeContainer(options: { runId?: string; flushEvery?: number } = {}): {
     return { container, logger };
 }
 
-function buildPipeline(
+async function buildPipeline(
     container: Container,
     name: string,
     extras: {
@@ -150,7 +150,7 @@ function buildPipeline(
         beforeHook?: Abstraction<Hook.Interface>;
         afterHook?: Abstraction<Hook.Interface>;
     } = {}
-): Pipeline<FakeRecord, FakeContext, FakeShard> {
+): Promise<Pipeline<FakeRecord, FakeContext, FakeShard>> {
     const factory = container.resolve(PipelineBuilderFactory);
     const builder = factory.create({
         name,
@@ -167,7 +167,7 @@ function buildPipeline(
     if (extras.afterHook) {
         builder.afterExecuteCommands(extras.afterHook);
     }
-    return builder.build() as unknown as Pipeline<FakeRecord, FakeContext, FakeShard>;
+    return (await builder.build()) as unknown as Pipeline<FakeRecord, FakeContext, FakeShard>;
 }
 
 describe("PipelineRunner — DI registration", () => {
@@ -201,53 +201,52 @@ describe("PipelineBuilderFactory.create()", () => {
 });
 
 describe("PipelineRunner.register()", () => {
-    it("returns the runner for chaining", () => {
+    it("returns the runner for chaining", async () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
-        const pipeline = buildPipeline(container, "p");
+        const pipeline = await buildPipeline(container, "p");
         expect(runner.register(pipeline)).toBe(runner);
     });
 
-    it("throws when a duplicate pipeline name is registered", () => {
+    it("throws when a duplicate pipeline name is registered", async () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "dup"));
-        expect(() => runner.register(buildPipeline(container, "dup"))).toThrow(
-            /already registered/i
-        );
+        runner.register(await buildPipeline(container, "dup"));
+        const dup2 = await buildPipeline(container, "dup");
+        expect(() => runner.register(dup2)).toThrow(/already registered/i);
     });
 });
 
 describe("runner.register variadic + duplicate-name guard", () => {
-    it("registers multiple pipelines in one variadic call", () => {
+    it("registers multiple pipelines in one variadic call", async () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
-        const p1 = buildPipeline(container, "a");
-        const p2 = buildPipeline(container, "b");
+        const p1 = await buildPipeline(container, "a");
+        const p2 = await buildPipeline(container, "b");
         expect(() => runner.register(p1, p2)).not.toThrow();
     });
 
-    it("returns this for chaining", () => {
+    it("returns this for chaining", async () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
-        const p1 = buildPipeline(container, "c");
+        const p1 = await buildPipeline(container, "c");
         expect(runner.register(p1)).toBe(runner);
     });
 
-    it("throws on duplicate pipeline name", () => {
+    it("throws on duplicate pipeline name", async () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
-        const p1 = buildPipeline(container, "dup");
-        const p2 = buildPipeline(container, "dup");
+        const p1 = await buildPipeline(container, "dup");
+        const p2 = await buildPipeline(container, "dup");
         runner.register(p1);
         expect(() => runner.register(p2)).toThrow(/already registered/);
     });
 
-    it("rejects duplicate within a single variadic call", () => {
+    it("rejects duplicate within a single variadic call", async () => {
         const { container } = makeContainer();
         const runner = container.resolve(PipelineRunner);
-        const p1 = buildPipeline(container, "z");
-        const p2 = buildPipeline(container, "z");
+        const p1 = await buildPipeline(container, "z");
+        const p2 = await buildPipeline(container, "z");
         expect(() => runner.register(p1, p2)).toThrow(/already registered/);
     });
 });
@@ -262,7 +261,7 @@ describe("PipelineRunner.run()", () => {
         // FakeProcessor.onEnd emits a PutRecord into the shared commands bag
         // at shard end — mirrors DdbProcessor's auto-put semantic.
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "single", { useTransformer: true }));
+        runner.register(await buildPipeline(container, "single", { useTransformer: true }));
         await runner.run();
 
         expect(processor.executed).toHaveLength(1);
@@ -276,7 +275,7 @@ describe("PipelineRunner.run()", () => {
         scanner.records = [{ id: "r1", type: "foo" }];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "aftershard-fullrun"));
+        runner.register(await buildPipeline(container, "aftershard-fullrun"));
         await runner.run();
 
         // FakeScanner.listShards returns a single shard — full-run mode
@@ -291,7 +290,7 @@ describe("PipelineRunner.run()", () => {
         scanner.records = [{ id: "r1", type: "foo" }];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "aftershard-shardmode"));
+        runner.register(await buildPipeline(container, "aftershard-shardmode"));
         await runner.run({ segment: 0, totalSegments: 1 });
 
         expect(processor.afterShardCalls).toEqual([{ segment: 0, totalSegments: 1 }]);
@@ -321,7 +320,8 @@ describe("PipelineRunner.run()", () => {
             processors: [FakeProcessorImpl]
         });
         builder.filter(createFilter<FakeRecord>(() => true)).use(emit);
-        runner.register(builder.build());
+        const pipeline = await builder.build();
+        runner.register(pipeline);
         await runner.run();
 
         expect(processor.executed).toHaveLength(1);
@@ -360,7 +360,9 @@ describe("PipelineRunner.run()", () => {
         });
         builderB.filter(createFilter<FakeRecord>(r => r.type === "bar")).use(emit);
 
-        runner.register(builderA.build()).register(builderB.build());
+        const pipelineA = await builderA.build();
+        const pipelineB = await builderB.build();
+        runner.register(pipelineA).register(pipelineB);
         await runner.run();
 
         // Single processor instance → one execute() call per shard. Buffer
@@ -398,7 +400,9 @@ describe("PipelineRunner.run()", () => {
                 return true;
             })
         );
-        runner.register(builderA.build()).register(builderB.build());
+        const pipelineA = await builderA.build();
+        const pipelineB = await builderB.build();
+        runner.register(pipelineA).register(pipelineB);
 
         await runner.run();
 
@@ -411,7 +415,7 @@ describe("PipelineRunner.run()", () => {
         scanner.records = [{ id: "r1", type: "miss" }];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
+        runner.register(await buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
         await runner.run();
 
         const dropMessages = logger.entries.filter(e => e.message.startsWith("unmatched record —"));
@@ -428,7 +432,7 @@ describe("PipelineRunner.run()", () => {
         };
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "p"));
+        runner.register(await buildPipeline(container, "p"));
         await expect(runner.run()).rejects.toThrow("scanner-boom");
 
         scanner.scan = original;
@@ -489,7 +493,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .beforeExecuteCommands(HookFirst)
             .beforeExecuteCommands(HookSecond);
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
         scanner.scan = originalScan;
@@ -525,7 +529,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .afterExecuteCommands(HookFirst)
             .afterExecuteCommands(HookSecond);
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
         scanner.scan = originalScan;
@@ -563,7 +567,9 @@ describe("PipelineRunner — hook lifecycle", () => {
             .beforeExecuteCommands(SharedHook)
             .afterExecuteCommands(SharedAfter);
 
-        runner.register(builderA.build()).register(builderB.build());
+        const pipelineA = await builderA.build();
+        const pipelineB = await builderB.build();
+        runner.register(pipelineA).register(pipelineB);
 
         await runner.run();
 
@@ -595,7 +601,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .beforeExecuteCommands(Before)
             .afterExecuteCommands(After);
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await expect(runner.run()).rejects.toThrow("scanner-boom");
 
@@ -625,7 +631,7 @@ describe("PipelineRunner — hook lifecycle", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .beforeExecuteCommands(HookToken)
             .afterExecuteCommands(HookToken);
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -693,7 +699,7 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
             processors: [FakeProcessorImpl, SecondaryFakeProcessorImpl]
         });
         builder.filter(createFilter<FakeRecord>(() => true));
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -716,7 +722,7 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
         ];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "only-foo", { filterFn: r => r.type === "foo" }));
+        runner.register(await buildPipeline(container, "only-foo", { filterFn: r => r.type === "foo" }));
         await runner.run();
 
         const summaryLines = logger.entries.filter(
@@ -754,7 +760,7 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
             processors: [FakeProcessorImpl]
         });
         builder.filter(createFilter<FakeRecord>(() => true)).use(emitOrphan);
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -775,7 +781,7 @@ describe("PipelineRunner.run() — ctx.blackhole() per-record blackholing", () =
         const runner = container.resolve(PipelineRunner);
         const factory = container.resolve(PipelineBuilderFactory);
 
-        const pipeline = factory
+        const pipeline = await factory
             .create({
                 name: "BlackholeTest",
                 scanner: FakeScannerImpl,
@@ -812,7 +818,7 @@ describe("PipelineRunner.run() — blackhole pipelines", () => {
         });
         builder.filter(createFilter<FakeRecord>(() => true));
         builder.blackhole();
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -847,7 +853,7 @@ describe("PipelineRunner.run() — blackhole pipelines", () => {
             .filter(createFilter<FakeRecord>(() => true))
             .use(observe)
             .blackhole();
-        runner.register(builder.build());
+        runner.register(await builder.build());
 
         await runner.run();
 
@@ -868,7 +874,7 @@ describe("PipelineRunner.run() — blackhole pipelines", () => {
 
         // First-match-wins: foo records hit the blackhole pipeline, bar
         // records fall through to the normal one.
-        const blackholePipeline = factory
+        const blackholePipeline = await factory
             .create({
                 name: "blackhole-foo",
                 scanner: FakeScannerImpl,
@@ -878,7 +884,7 @@ describe("PipelineRunner.run() — blackhole pipelines", () => {
             .blackhole()
             .build();
 
-        const normalPipeline = factory
+        const normalPipeline = await factory
             .create({
                 name: "normal-bar",
                 scanner: FakeScannerImpl,
@@ -914,7 +920,7 @@ describe("PipelineRunner — periodic flush (flushEvery)", () => {
         ];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "flush-mid-shard"));
+        runner.register(await buildPipeline(container, "flush-mid-shard"));
         await runner.run();
 
         // flushEvery=2, 5 records: flush at 2, flush at 4, final flush at 5
@@ -936,7 +942,7 @@ describe("PipelineRunner — periodic flush (flushEvery)", () => {
         ];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "flush-divisible"));
+        runner.register(await buildPipeline(container, "flush-divisible"));
         await runner.run();
 
         // flushEvery=2, 4 records: flush at 2, flush at 4, no remainder
@@ -956,7 +962,7 @@ describe("PipelineRunner — periodic flush (flushEvery)", () => {
         ];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "flush-no-loss"));
+        runner.register(await buildPipeline(container, "flush-no-loss"));
         await runner.run();
 
         const totalCommands = processor.executed.reduce((sum, c) => sum + c.size(), 0);
@@ -976,7 +982,7 @@ describe("PipelineRunner — periodic flush (flushEvery)", () => {
         ];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "flush-aftershard"));
+        runner.register(await buildPipeline(container, "flush-aftershard"));
         await runner.run();
 
         expect(processor.afterShardCalls).toHaveLength(1);
@@ -993,7 +999,7 @@ describe("PipelineRunner — periodic flush (flushEvery)", () => {
         ];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "flush-default"));
+        runner.register(await buildPipeline(container, "flush-default"));
         await runner.run();
 
         // 2 records < 500 default → single execute call at shard end
@@ -1008,7 +1014,7 @@ describe("PipelineRunner — periodic flush (flushEvery)", () => {
         scanner.records = [];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(buildPipeline(container, "flush-empty-shard"));
+        runner.register(await buildPipeline(container, "flush-empty-shard"));
         await runner.run();
 
         // periodicFlushCount === 0 path: no mid-shard flush occurred, so final flush
