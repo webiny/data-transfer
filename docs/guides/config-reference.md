@@ -48,6 +48,32 @@ export default createConfig({
 
 `loadEnv(import.meta.url)` loads the `.env` file sitting next to this config file. Each project folder should have its own `.env` so credentials stay isolated between projects.
 
+### `register` callback (optional)
+
+Add a `register` callback to wire custom DI bindings before the preset loads:
+
+```typescript
+import {
+  createConfig,
+  SourceDynamoDbClient,
+  PipelineCustomizer
+} from "@webiny/data-transfer";
+
+export default createConfig({
+  // ...source, target, pipeline...
+  register: async (container) => {
+    // Resolve a service client for direct access:
+    const sourceDb = container.resolve(SourceDynamoDbClient);
+
+    // Register custom DI bindings the preset can resolve:
+    container.register(MyCustomProcessorImpl);
+    container.register(MyCustomizerImpl);
+  }
+});
+```
+
+Available service client abstractions: `SourceDynamoDbClient`, `TargetDynamoDbClient`, `OpenSearchClient`, `SourceS3Client`, `TargetS3Client`. Resolve any of them from `container` for direct AWS access — useful for pre-flight checks, one-off queries, or custom processors.
+
 **Index management** (OpenSearch): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected.
 
 ### Env helpers

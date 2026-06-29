@@ -14,6 +14,7 @@ Everything users import lives in `src/index.ts`. The surface is primarily infras
 - **Scanner implementations:** `DdbScanner`, `OsScanner` — both share `Symbol("Core/Scanner")`, same as processors share `Symbol("Core/Processor")`.
 - **Processor implementations:** `DdbProcessor`, `OsProcessor`, `S3Processor`, `AuditLogProcessor` (slice-merging; see below). All share `Symbol("Core/Processor")` — no per-processor abstraction tokens.
 - **Processor abstraction:** `Processor` — users implementing custom processors use this.
+- **Service client abstractions:** `SourceDynamoDbClient`, `TargetDynamoDbClient`, `OpenSearchClient`, `SourceS3Client`, `TargetS3Client` — resolve via `container.resolve(SourceDynamoDbClient)` in `config.register` or `setup.ts` for direct AWS access. Useful for custom processors, pre-flight checks, or one-off queries outside the pipeline.
 - **Pipeline construction:** `PipelineBuilderFactory` — injected into `preset.configure({...})` as `pipelineBuilderFactory`.
 - **Preset helper:** `createTransferPreset` — typed identity helper for authoring preset files; use instead of raw `MigrationPreset` annotation.
 - **MigrationPreset type** + `PresetConfigureContext` (the `{runner, pipelineBuilderFactory, container}` arg bag).

@@ -63,7 +63,10 @@ The `register` callback in your `config.ts` runs **before** the preset
 loads — so the preset can `container.resolve(...)` anything you registered.
 
 `container` is a `@webiny/di` container with all core data-transfer features
-already wired (scanners, processors, executors, etc.).
+already wired (scanners, processors, executors, etc.). Service clients are
+also available — resolve `SourceDynamoDbClient`, `TargetDynamoDbClient`,
+`OpenSearchClient`, `SourceS3Client`, or `TargetS3Client` for direct AWS
+access (e.g. pre-flight checks or one-off queries).
 
 Alternatively, you can use `setup.ts` (next to your config file) with the
 `initDataTransfer` helper — both paths run before preset loading. `register`
