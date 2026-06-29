@@ -34,7 +34,7 @@ class SkipUnwantedModels implements PipelineCustomizer.Interface {
 
     public async configure(builder: PipelineCustomizer.Builder): Promise<void> {
         builder.filter(
-            createFilter(record => record.modelId !== "unwantedModel")
+            createFilter(async record => record.modelId !== "unwantedModel")
         );
     }
 }
