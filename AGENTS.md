@@ -34,345 +34,45 @@ Use the **codegraph MCP** as the first tool for browsing code. `codegraph_explor
 
 ## 2. Public API surface
 
-Everything users import lives in `src/index.ts`. The surface is primarily infrastructure, plus stable widely-useful transformers. The package ships five built-in presets: **`v5-to-v6-ddb`** (full DDB + S3 migration), **`v5-to-v6-os`** (OpenSearch companion table migration), **`copy-ddb`** (verbatim DDB + S3 copy), **`copy-os`** (verbatim OpenSearch copy), and **`copy-files`** (S3-only file copy). `PresetLoader` scans `src/presets/` (resolved relative to its own `import.meta.url`, works from source or `node_modules/`) — convention is **filename = preset name**, drop a `.ts` file in there and it ships, no other code change. The authoring reference lives in `templates/presets/example.ts` (scaffolded into user projects by `init`).
+Everything users import lives in `src/index.ts`: config builder (`createConfig`), env helpers, AWS credential helpers, transformer/filter factories, scanner/processor classes, preset helper, pipeline construction, context types. Five built-in presets: `v5-to-v6-ddb`, `v5-to-v6-os`, `copy-ddb`, `copy-os`, `copy-files`.
 
-- **Config builder:** `createConfig` — single unified builder; replaces the old `createDdbConfig` / `createOsConfig` (both deleted 2026-05-10). DDB + S3 always required; `source.opensearch` / `target.opensearch` optional.
-- **Env helpers:** `loadEnv` (dotenv loader), `fromEnv(name)` (required string env, throws on missing), `fromEnv(name, default)` (returns default when missing), `fromEnv(name, null)` (returns `string | null` — use for optional config sections), `numberFromEnv(name, default?)` (typed numeric, throws on parse failure). Empty string counts as missing in both — `.env`'s `KEY=` is almost always a forgotten value, not an intentional empty override.
-- **AWS credential helpers:** re-exports from `@aws-sdk/credential-providers` so users don't need the direct dep. `fromAwsProfile` (= `fromIni`) binds an explicit profile from `~/.aws/credentials` — best for local dev where a stray env var shouldn't hijack auth. `fromAwsCredentialChain` (= `fromNodeProviderChain`) runs the AWS SDK default chain (env → ini → SSO → EC2/ECS IAM) — best for CI / cloud. `credentials` in config also accepts a literal `{accessKeyId, secretAccessKey, sessionToken?}`; the union is schema-validated at `createConfig` time.
-- **Snapshot (debugging):** `config.debug.snapshot` (boolean or `{dir?, compress?}`) dumps per-record JSONL files at `<dir>/<pipeline>/segment-<n>.{source,post-transform,commands}.jsonl[.gz]` + `<dir>/dropped/segment-<n>.jsonl[.gz]`. Default dir: `.transfer/<runId>/snapshot`, gzipped. Opt-in, no-op when disabled — PipelineRunner depends on SnapshotWriter unconditionally so the hot path has no branching.
-- **Log file (debugging):** `config.debug.logFile` (boolean or string). `true` → each process writes raw pino JSONL to `.transfer/<runId>/logs/<orchestrator|segment-N>.log` (per-process files so parallel appends can't interleave). String → shared path across all processes. Bootstrap resolves the path; `detectProcessKind()` reads `--segment N` from argv to distinguish workers from the orchestrator.
-- **Transformer factories:** `createTransformer`, `createDdbTransformer`, `createOsTransformer`
-- **Built-in transformers (public):** `copyFileToTarget` — emits a verbatim S3 copy for file records (`ctx.copyFile(key, key)` on `text@key`). Handles both raw v5 (`record.values["text@key"]`) and post-`wrapInData` (`record.data.values["text@key"]`) shapes. Requires `S3Processor` in the pipeline. Use with `isFmFile` for a verbatim DDB + S3 file copy. `replaceFileUrls` — rewrites file-manager URLs in CMS rich-text / long-text fields from the source domain to the target domain. Requires `fileUrls: { source, target }` in the config root.
-- **Filter factory:** `createFilter` + `Filter` type
-- **Built-in filter predicates (public):** all predicates from `src/domain/transform/filters.ts` are re-exported: `byType`, `byTypePrefix`, `isCmsGroup`, `isCmsModel`, `isCmsEntry`, `byIncludesModelId`, `isAcoSearchRecord`, `isBackgroundTask`, `isFmFile`, `isFlpRecord`, `isBuiltInSecurityRole`, `isSecurityTeam`, `isOsBackgroundTask`, `isOsMailerSettings`, `isAuditLogEntry`, `isMigrationRecord`, `isFormBuilderRecord`. All handle both raw v5 and post-`wrapInData` record shapes. Pass them to `createFilter(predicate)` or compose inline.
-- **Scanner implementations:** `DdbScanner`, `OsScanner` — both share `Symbol("Core/Scanner")`, same as processors share `Symbol("Core/Processor")`.
-- **Processor implementations:** `DdbProcessor`, `OsProcessor`, `S3Processor`, `AuditLogProcessor` (slice-merging; see below). All share `Symbol("Core/Processor")` — no per-processor abstraction tokens.
-- **Processor abstraction:** `Processor` — users implementing custom processors use this.
-- **Pipeline construction:** `PipelineBuilderFactory` — injected into `preset.configure({...})` as `pipelineBuilderFactory`.
-- **Preset helper:** `createTransferPreset` — typed identity helper for authoring preset files; use instead of raw `MigrationPreset` annotation.
-- **MigrationPreset type** + `PresetConfigureContext` (the `{runner, pipelineBuilderFactory, container}` arg bag).
-- **Config schema:** `migrationConfigSchema` (Zod schema) + `MigrationConfiguration` (inferred type) — for users who need schema-level validation or type inference.
-- **Context types:** `BaseTransformContext`, `DdbTransformContext`, `DdbCoreTransformContext` (= Base ∧ DdbProcessorSlice, no S3 — for DDB-only transformers), `OsTransformContext` (type aliases = base ∩ processor slices; see below)
-- **Transformer type:** `Transformer` (namespace with `.Interface`)
-- **Utility types:** `NonEmptyArray<T>` (for typed processor arrays)
-- **Setup helper:** `initDataTransfer` + `InitDataTransferContext` (user-side custom DI wiring — see "setup.ts" below)
-- **Pipeline customizer:** `PipelineCustomizer` — DI abstraction for extending built-in preset pipelines from `setup.ts`. Users implement `PipelineCustomizer.Interface` (`name`, `canUse(pipelineName)`, `configure(builder)`), wire via `createImplementation`, register in `setup.ts`. The `PipelineCustomizerBuilder` (exposed as `PipelineCustomizer.Builder` type) offers `.filter()` and `.use()` — same API as `PipelineBuilder` but restricted to extension-only methods. Customizer filters/transformers are always appended after the preset's own at `build()` time. `PipelineBuilderFactory.warnUnmatchedCustomizers(logger)` logs a warning for any customizer whose `canUse()` never matched. See `docs/guides/pipeline-customizer.md` for full usage guide.
+**Rule:** when adding to `src/index.ts`, it must be something a user building their own transformers/pipelines/presets genuinely needs. Domain-specific migration transformers remain internal.
 
-**Pipeline construction:** inside a preset's `configure({ runner, pipelineBuilderFactory, container })` callback, users call `pipelineBuilderFactory.create({ name, scanner, processors: [...] })`. `processors` is a `NonEmptyArray<ProcessorImpl>` — TS rejects empty arrays AND rejects processors whose slice keys collide (`DisjointKeys<...>`). Returns a typed `PipelineBuilder` whose `ctx` is `BaseTransformContext & (union of processor slices)`. Chain `.filter()` / `.use()` / `.beforeExecuteCommands()` / `.afterExecuteCommands()` in any order; `.build()` takes no arguments (terminal behavior comes from each processor's `onEnd?` hook). Pass the built pipeline to `runner.register(...pipelines)` (variadic, chainable, throws on duplicate name). The legacy `createPipeline` / `createDdbPipeline` / `createOsPipeline` factories were deleted on 2026-04-20; `runner.pipeline()` was moved to `PipelineBuilderFactory.create()` shortly after.
-
-**Preset selection:** `pipeline.preset` was **removed** from the config schema on 2026-05-10. Preset is chosen at runtime — interactively by `TransferWizard` (returns `WizardResult { configPath: string; preset: string; dryRun: boolean }`), or passed as `--preset <name>` directly. Workers receive `--preset` on their CLI argv. Do NOT add `preset` back to `pipelineSettingsSchema`. `dryRun: true` causes `DdbProcessor`, `OsProcessor`, and `S3Processor` to skip their `execute()` bodies entirely — reads still happen, but nothing is written to the target.
-
-**User-side custom DI — `setup.ts`:** CLI looks for `setup.ts` next to the user's config file. If present, dynamic-imports its default export and awaits `fn({ container })` BEFORE `preset.configure({...})` runs. Use the `initDataTransfer` typed helper to export it. Optional — pure-config users skip the file entirely.
-
-**Rule:** when adding something to `src/index.ts`, it must be something a user building their own transformers/pipelines/presets genuinely needs. Filter predicates and stable, widely-useful transformers (`copyFileToTarget`) are appropriate. Domain-specific migration transformers (CMS transformers, `createMetadata`, etc.) remain internal — they are tightly coupled to the v5→v6 schema and subject to change. The full transformer and filter catalogue lives in `.claude/skills/data-transfer-transformers/SKILL.md`.
+> Full reference: [Public API surface](docs/public-api.md)
 
 ---
 
-## 3. Project structure (current)
+## 3. Project structure
 
-```
-src/
-├── cli.ts                    # Entry point — yargs router
-├── bootstrap.ts              # Creates DI container, registers all features
-├── index.ts                  # Public API (imported as @webiny/data-transfer)
-├── base/                     # createAbstraction, createFeature, Result, BaseError,
-│                             # formatError (CLI error formatter), isRetryableAwsError
-│                             # (unified AWS retry classifier)
-├── commands/                 # Self-registering CLI commands
-│   ├── init/                 # Scaffolds a new standalone transfer project from templates/
-│   ├── initProject/          # Adds a project folder to projects/ in the current repo
-│   ├── run/                  # Main orchestrator ($0)
-│   │   ├── register.ts       # --config is optional; no --config → TransferWizard.run()
-│   │   ├── handler.ts        # Unchanged — runs a resolved config path
-│   │   └── wizard/           # Guided .env setup + config selection
-│   │       ├── TransferWizard.ts    # Orchestrator: project select → JSON extract → write .env
-│   │       │                        # OR (re-run, .env exists, no JSON) → preset select → return WizardResult
-│   │       ├── projectDiscovery.ts  # Scans projects/, returns sorted names
-│   │       ├── configDiscovery.ts   # Finds config.ts in project dir; returns path or null
-│   │       ├── presetDiscovery.ts   # listAvailablePresets(presetsDir?) — names only (sync)
-│                        # listAvailablePresetsWithDescriptions(presetsDir?) — async,
-│                        # dynamically imports each preset to read .description
-│   │       ├── envWriter.ts         # {{TOKEN}} substitution from .env.example → writes .env
-│   │       ├── types.ts             # RawOutputValues + EnvValues + WizardResult interfaces
-│   │       ├── sources/
-│   │       │   ├── WebinyOutputSource.ts  # Reads source/target.webiny.json → RawOutputValues
-│   │       │   └── PulumiStateSource.ts   # Reads source/target.pulumi.json → RawOutputValues
-│   │       └── schemas/
-│   │           ├── webinyOutput.schema.ts  # Zod schema for flat outputs object (shared)
-│   │           └── pulumiState.schema.ts   # Zod schema for full Pulumi state file wrapper
-│   └── processSegment/       # Worker — calls PipelineRunner.run({ segment, totalSegments })
-│                             # (storage-agnostic; OsProcessor.afterShard handles OS state)
-├── domain/
-│   ├── pipeline/             # Pipeline abstractions
-│   │   ├── abstractions/
-│   │   │   ├── Processor.ts  # checkAccess + extendContext? + onEnd? + execute + afterShard?; slice type parameter.
-│   │   │   ├── Scanner.ts    # Scanner.Interface<TRecord, TShard>
-│   │   │   ├── Hook.ts       # per-merge-group hook
-│   │   │   └── Transformer.ts
-│   │   ├── Pipeline.ts       # Immutable Pipeline — holds scanner + processors[] + filters + transformers + hooks.
-│   │   ├── PipelineBuilder.ts# Fluent builder — ctx typed via EffectiveContext = BaseCtx ∧ MergeSlices<TProcessors>.
-│   │   └── Filter.ts         # createFilter
-│   └── transform/            # Primitives still used by runner + features
-│       ├── types/            # BaseRecord (PK/SK/_et/_ct/_md/TYPE + index sig)
-│       ├── commands/         # Commands (bag w/ claim tracking + unclaimedKeys) + PutRecord + S3Copy
-│       ├── filters.ts        # byType, isCmsEntry, isFmFile, isOsBackgroundTask,
-│       │                     # isOsMailerSettings, ... (filter predicates).
-│       │                     # OS-specific filters check data.modelId (inside decompressed
-│       │                     # payload) rather than the top-level modelId used by DDB filters.
-│       └── Preset.ts         # MigrationPreset: { name, description, configure({runner, pipelineBuilderFactory, container}) }
-├── tools/                    # Generic utilities
-│   ├── Cache/ GzipCompression/ DirectoryTool/ FileTool/ Logger/
-├── services/                 # External API wrappers
-│   ├── DynamoDbClient/       # Source + Target; scan<T> is generic
-│   ├── OpenSearchClient/     # OS mode only
-│   └── S3Client/             # DDB mode only; has concurrency knob via tuning
-├── features/                 # Domain logic combining tools + services
-│   ├── DdbScanner/                  # AsyncIterable<BaseRecord> from DDB primary
-│   ├── OsScanner/ OsRecordDecompressor/   # OS companion table + decompression
-│   ├── DdbProcessor/                # slice: { putRecord, querySourceRecord, queryTargetRecord }; onEnd auto-puts; execute via DdbExecutor
-│   ├── OsProcessor/                 # slice: { putRecord, querySourceRecord, queryTargetRecord }; onEnd auto-puts; execute = gzip +
-│   │                                # ensureIndex + delegate to DdbExecutor
-│   ├── S3Processor/                 # slice: { copyFile, getFile }; NO onEnd (no default); execute drains S3Copy
-│   │                                # No abstractions/ subdir — uses shared Processor token like all processors
-│   ├── AuditLogProcessor/           # slice: { putAuditLog }; onEnd auto-puts to audit log table; no-op when target.auditLog is null
-│   ├── DdbExecutor/                 # Shared primitive: PutRecord[] → TargetDynamoDbClient.batchPut.
-│   │                                # DdbProcessor + OsProcessor both compose this.
-│   ├── TouchedIndexes/              # per-worker singleton: index → original refresh_interval
-│   ├── PipelineRunner/              # register(...) + run() + getProcessors() + getShardStats(); per-record slice merge + onEnd; shard-end execute
-│   ├── PipelineCustomizer/           # Abstraction-only (no feature.ts). Users implement
-│   │                                # PipelineCustomizer.Interface in setup.ts to extend
-│   │                                # preset pipelines by name (add filters/transformers).
-│   ├── PipelineBuilderFactory/      # Injects all Processor + Scanner + PipelineCustomizer instances (multiple: true deps); .create({name, scanner, processors})
-│   │                                # finds each instance by constructor identity → PipelineBuilder (carries instances)
-│   ├── TransformContext/     # Single BaseTransformContextFactory; factory returns { ctx, commands }
-│   ├── MigrationConfig/      # createConfig (Zod-validated, unified)
-│   ├── ModelProvider/        # Loads CMS model definitions from DB + modelsDir JSON files.
-│   │                         # Accepted JSON shapes (auto-detected, mixed OK in same dir):
-│   │                         #   single model:  { modelId, fields: [...], ... }
-│   │                         #   array of models: [{ modelId, fields, ... }, ...]
-│   │                         #   Webiny export:  { groups: [...], models: [...] }
-│   │                         # Disambiguation guard: object must have fields[] to be treated
-│   │                         # as a model definition (CMS entry records also have modelId but
-│   │                         # no fields[] — this prevents entries from being loaded as models).
-│   ├── SnapshotWriter/              # Per-record JSONL debug dumps (opt-in via config.debug.snapshot)
-│   ├── DroppedRecordLog/            # Writes segment-N-unmatched.log + segment-N-blackholed.log
-│   ├── TransferredRecordLog/        # Writes segment-N-transferred.log
-│   ├── AccessChecker/               # Aggregates checkAccess() across all processors; AccessCheck.Status
-│   ├── PresetLifecycle/             # BeforeLoadPresetHook / AfterLoadPresetHook composites + ModelPreloaderHook
-│   ├── TenantLocales/ PresetLoader/ WorkerSpawner/
-│   └── TransferLifecycle/    # BeforeTransferHookComposite / AfterTransferHookComposite
-├── transformers/             # ~30 built-in transformers (user-land examples)
-│   ├── createTransformer.ts createDdbTransformer.ts createOsTransformer.ts
-│   ├── global/ cms/ file-manager/ folders/ mailer/ security/
-│   │   └── (cms/ also has fieldUtils.ts, fieldVisitor.ts, lexicalRenderer.ts,
-│   │       modelTypes.ts, addLiveField.ts, updateOsIndex.ts — helpers local to
-│   │       CMS transformers; addLiveField uses ctx.cache + querySourceRecord;
-│   │       updateOsIndex uses configurations.es from @webiny/api-headless-cms-ddb-es)
-│   ├── cmsEntryTransformers.ts  # Shared stacks: cmsEntryTransformers (DDB) +
-│   │                            # osCmsEntryTransformers (OS — no wrapInData, adds updateOsIndex).
-│   │                            # addLiveField is NOT in either stack — applied explicitly only
-│   │                            # on the CmsEntries pipeline (files cannot be published).
-│   └── index.ts              # Top-level barrel
-├── presets/                  # Built-in presets — auto-discovered by PresetLoader
-│                             # (filename = preset name).
-│                             # v5-to-v6-ddb: full DDB + S3 Webiny migration.
-│                             # v5-to-v6-os: OpenSearch companion table migration.
-│                             # copy-ddb: verbatim DDB + S3 copy.
-│                             # copy-os: verbatim OpenSearch copy.
-│                             # copy-files: S3-only file copy.
-└── utils/
-    ├── load-env.ts           # loadEnv(import.meta.url) — dotenv loader, public API
-    └── fromEnv.ts            # fromEnv + numberFromEnv — public API, used in user configs
-```
+Source lives in `src/` with `cli.ts` entry point, `bootstrap.ts` DI setup, `index.ts` public API. Domain logic is in `src/features/` (one dir per feature), pipeline abstractions in `src/domain/pipeline/`, transform primitives in `src/domain/transform/`, ~30 built-in transformers in `src/transformers/`, and 5 built-in presets in `src/presets/`.
 
-Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/database/`, `src/config/`, `src/storage/`, `src/opensearch/`, `src/models/`, `src/utils/{logger,tenants,record-guards,gzip-compression,field-visitor,LexicalRenderer}.ts`. The transformer-adjacent helpers that lived under `src/models/` and `src/utils/` now live in `src/transformers/cms/` (they're CMS-transformer-only). Don't expect to find them elsewhere.
+> Full reference: [Project structure](docs/project-structure.md)
 
 ---
 
 ## 4. Architecture patterns
 
-### DI via `@webiny/di`
+DI via `@webiny/di` — `createAbstraction` / `createImplementation`, all processors share one token, constructor identity is the discriminator. Feature layout follows `abstractions/` + impl + `feature.ts` + `index.ts`. Pipeline runtime: first-match-wins per merge group, `onEnd` hooks replace auto-put magic, slice-merged context (`BaseTransformContext ∧ MergeSlices<TProcessors>`).
 
-- `createAbstraction<T>(name)` → `Abstraction<T>` (has `.token: symbol`).
-- `Abstraction.createImplementation({ implementation, dependencies })` → an Implementation class (`I & { __abstraction: A }`). **The Implementation class is NOT an Abstraction at runtime** — it has no `.token`. `container.resolve(ImplClass)` would fail, but `container.register(ImplClass)` works (reads abstraction via `Metadata`).
-- `PipelineBuilderFactory.create({ name, scanner, processors })` accepts Implementation classes (not just abstractions). The type system infers `TRecord` / `TContext` / `TShard` from the Impl class instance types. At runtime the factory has all `Processor` and `Scanner` instances injected via `[Processor, { multiple: true }]` / `[Scanner, { multiple: true }]` dependencies, then finds each right instance by `x.constructor === implClass` — **pipelines carry resolved scanner and processor instances, not tokens**. All processors share `Symbol("Core/Processor")`; all scanners share `Symbol("Core/Scanner")`; constructor identity is the discriminator, not registration order.
-- `runner.register(...pipelines: Pipeline<any, any, any>[])` widens the parameter type intentionally — TRecord is invariant in `Pipeline` (because `Filter<TRecord>` is contravariant), so a strict signature would force every caller to cast. The runner doesn't introspect type params at this boundary.
-
-### Feature layout
-
-Every feature follows:
-
-```
-src/features/FeatureName/
-├── abstractions/
-│   ├── FeatureName.ts    # Interface + abstraction token + namespace
-│   └── index.ts          # Only const tokens (no type exports)
-├── FeatureName.ts        # Class + createImplementation
-├── feature.ts            # createFeature registers into container
-└── index.ts              # Public API
-```
-
-**Rules that are NOT negotiable:**
-
-- Types accessed only via namespace (`FeatureName.Interface`), never direct interface exports from abstractions.
-- `public`/`private`/`protected` on every class member.
-- Braces always — no single-line `if`/`for`/`while`.
-- No `reflect-metadata` imports (loaded by `@webiny/di` internally).
-- `~/*` path alias in `src/`; relative paths in `__tests__/` for test-only infra that lives outside `src/`.
-- Named `interface`/`type` for any structural shape — no inline `{ ... }` in generic positions.
-- File names use **camelCase** (not kebab-case).
-- oxfmt (`yarn format:fix`) — NOT prettier.
-- `yarn` — never `npm`.
-
-### Pipeline runtime model
-
-- **Merge group** = set of pipelines sharing the same scanner instance (keyed by object identity). Runner iterates one merge group at a time.
-- **First-match-wins** per record: within a merge group, the first pipeline whose filters all pass is the one that runs. Subsequent pipelines skip that record.
-- **Unmatched records are dropped per design**: if NO pipeline in the merge group accepts a record, it's skipped. Each unmatched record emits a `warn`-level log line: `"unmatched record — TYPE=<type> PK=<pk> SK=<sk>"`. The shard summary shows a TYPE breakdown: `"unmatched 5 (page.page=3, cms.entry=2)"`; when TYPE is absent or empty, the key is `PK:SK` instead of `unknown`. After the run, `segment-N-unmatched.log` under `.transfer/<runId>/` lists every unmatched record (one per line: `[TYPE] PK : SK`). If users want exhaustive transfer, register a catch-all passthrough pipeline last.
-- **Filter order matters**: register more-specific pipelines before catch-alls.
-- **Blackhole pipelines** (`builder.blackhole()`): filters + transformers + `onEnd` run exactly as usual; the fold-to-shard step in `runRecord` is what's skipped, so every emitted command is dropped before any processor drains. Use for observe-only pipelines (validation, dry-run-one-pipeline, shadow runs). Snapshot still records source/post-transform/commands — diffing a blackholed pipeline's intended writes is the whole point. `PipelineConfig.blackhole` is `?: boolean`; `Pipeline.isBlackhole` getter normalizes missing → `false`.
-- **Per-record `onEnd` hooks replace magic auto-put**: after filters + transformers run, the runner invokes each processor's `onEnd?(ctx)` sequentially in array order. `DdbProcessor.onEnd` and `OsProcessor.onEnd` call `ctx.putRecord(ctx.record)` via their slice helpers — so pipelines containing either get the "auto-put" behavior by virtue of the processor. `S3Processor` has no `onEnd` (no derivable per-record default). Pipelines with zero transformers still produce writes as long as a writer processor is in the list. See `src/features/PipelineRunner/PipelineRunner.ts:runRecord`.
-- **Hooks**: per merge group. Before-hooks run (dedup'd by token, in registration order) before any shards. After-hooks run (dedup'd, in REVERSE order) after all shards succeed. After-hooks are SKIPPED on shard failure. Each hook gets `{ runId, mergeGroupId }`.
-
-### Context surface (slice-merged)
-
-`BaseTransformContext.Interface<TRecord>` (slim — target-agnostic) exposes:
-
-- `record: TRecord` — mutable, transformers change this.
-- `original: Readonly<TRecord>` — **frozen snapshot of the pre-transform record, always present**. Users may consume it for gate-checks, audits, etc. — do NOT remove even if no built-in code uses it.
-- `addCommand(cmd: Command)` — push a command to the (internal) bag. Canonical primitive; slice helpers are sugar over it.
-- `modelProvider`, `cache`, `logger`, `compressionHandler` — shared singletons. Use `ctx.logger` instead of `console.*` inside transformers — it's bound to the current worker and respects the configured log level. `compressionHandler` is used by rich-text and compressed-field transformers.
-- `replace(newRecord)` — replaces `ctx.record`.
-- `blackhole()` — marks this record for per-record blackholing. Remaining transformers and `onEnd` hooks still run (side effects preserved), but all commands are discarded at the fold step. Irreversible within the record lifecycle. The runner checks `ctx.isBlackholed` after transformers + `onEnd`: `if (pipeline.isBlackhole || ctx.isBlackholed) { return Blackholed; }`.
-- `readonly isBlackholed: boolean` — read-only flag set by `blackhole()`. Defaults to `false`; each `create()` call produces an independent closure.
-
-**Raw `commands` bag is NOT on the public ctx** — `addCommand` is the only public push path. The bag still exists internally for `Processor.execute(commands)` at shard end. `Commands.unclaimedKeys()` tracks keys whose commands nobody drained, used by the runner to warn-once.
-
-**Each processor contributes a SLICE of helpers** via its `extendContext(base)` method. The runner spreads all processor slices over the base ctx per-record. Effective ctx = `BaseTransformContext ∧ MergeSlices<TProcessors>`. Slice key collision → TS rejects at the `pipelineBuilderFactory.create({...})` call site via `DisjointKeys<...>`.
-
-Slice inventory:
-
-- **`DdbProcessor` slice**: `putRecord(record)`, `querySourceRecord<T>(pk, sk?)`, `queryTargetRecord<T>(pk, sk?)` → emits PutRecord targeting DDB primary; source/target table lookups.
-- **`OsProcessor` slice**: `putRecord(record)`, `querySourceRecord<T>(pk, sk?)`, `queryTargetRecord<T>(pk, sk?)` → emits PutRecord targeting OS DDB table (same slice keys as DdbProcessor → mutually exclusive in one pipeline).
-- **`S3Processor` slice**: `copyFile(src, tgt)`, `getFile(key)` → PushQueue S3Copy / sync read from source bucket.
-
-Type aliases `DdbTransformContext` (= Base ∧ DdbProcessorSlice ∧ S3ProcessorSlice) and `OsTransformContext` (= Base ∧ OsProcessorSlice) are exported for transformer authors who want typed ctx parameters.
-
-**Removed from context (do not reintroduce):** `executePipeline(pipeline, records)` — nested-pipeline helper, dropped 2026-04-19.
-
-### Scanner / Processor / Executor
-
-- **Scanner** = source iterator. Yields records per shard. `DynamoDbClient.scan<T>` is generic so scanners can narrow the raw row type.
-- **Processor** = per-command-type unit implementing `Processor.Interface<TBase, TSlice>`. Required: `checkAccess() → Promise<AccessCheck.Entry[]>` (pre-flight access validation), `execute(commands) → Promise<void>` (drains its command keys). Optional: `extendContext(base) → slice` (context helpers), `onEnd(ctx) → void | Promise<void>` (per-record terminal hook, replaces legacy auto-put magic), `afterShard({ segment, totalSegments }) → void | Promise<void>` (per-shard persistence hook for processors that carry state across the worker→orchestrator boundary — only OsProcessor implements it today, to write `<segment>-indexes.json`).
-- Per-record orchestration: filters run first (`pipeline.accepts(record)` in the shard loop) → runner builds base ctx → spreads each processor's slice → runs transformers → runs each processor's `onEnd?` SEQUENTIALLY IN ARRAY ORDER.
-- Per-shard orchestration: each processor's `execute()` runs SEQUENTIALLY IN ARRAY ORDER. After all processors drain, runner checks `Commands.unclaimedKeys()` and warns once per unmatched key ("transformer pushed X but no processor drained X").
-- **`DdbExecutor`** is a SHARED primitive (not a Processor) — `batchPut` against a target DDB table. Both `DdbProcessor.execute` and `OsProcessor.execute` compose it. OS adds gzip + ensureIndex preamble before delegating.
-- **"Record carries everything"** is a house invariant — do NOT add pre-transform snapshot queues, metadata side-channels, or "executor derives X" logic. If transformers destroyed something a processor needs, users write a transformer that preps it.
-
-### MigrationConfig tuning
-
-Optional `tuning` section on `MigrationConfig`:
-
-```typescript
-tuning?: {
-    flushEvery?: number;  // records per shard flush (default 500); bounds peak memory
-    ddb?: { maxRetries?: number; initialBackoffMs?: number; requestTimeoutMs?: number };
-    s3?:  { concurrency?: number; maxRetries?: number; initialBackoffMs?: number; requestTimeoutMs?: number };
-    os?:  { maxRetries?: number; retryScheduleMs?: number[]; gzipConcurrency?: number };
-}
-```
-
-**Debug options** on `MigrationConfig`:
-
-```typescript
-debug?: {
-    logLevel?: "debug" | "info" | "warn" | "error";  // default "info"; also overridable via --log-level CLI flag
-    logFile?: boolean | string;   // true → per-process JSONL; string → shared path
-    snapshot?: boolean | { dir?: string; compress?: boolean };
-}
-```
-
-Fields flow to the respective client/executor; absent = module-level defaults. `BATCH_SIZE = 25` in DDB is AWS-enforced, NOT a user knob.
-
-`flushEvery` caps peak per-shard memory: at default 500 × 10 KB avg = ~5 MB/shard. For tables with very large records (approaching the 400 KB DDB max) lower this to 100. Set via `tuning: { flushEvery: numberFromEnv("FLUSH_EVERY", 500) }` in the config.
-
-### AWS retry + error classification
-
-All AWS-facing code shares one classifier: `src/base/isRetryableAwsError.ts` (duck-typed, no SDK import). Retry path per client:
-
-- **DDB + S3**: AWS SDK clients are created with `retryMode: "adaptive"` (self-tuning token bucket inside the SDK). The outer `executeWithRetry` loop in `DynamoDbClientImpl` / `S3ClientImpl` uses the classifier to gate retries: non-retryable errors throw immediately; retryable errors retry up to `tuning.{ddb,s3}.maxRetries` with exponential backoff. Loop bounds: `attempt <= maxRetries` ⇒ 1 initial + N retries.
-- **OpenSearch**: `opensearch-js` `Client` receives `maxRetries` from `tuning.os.maxRetries` (default 3). `OsProcessor.withRetry` is classifier-gated; `ensureIndex` **fails the transfer** on retry-exhaustion (no silent continuation).
-
-No custom token-bucket pacing — the AWS SDK's adaptive mode handles remote-signal-based backoff. See `project_rate_limits_todo.md` memory for the design history.
+> Full reference: [Architecture patterns](docs/architecture.md)
 
 ---
 
 ## 5. Testing
 
-- Tests live in `__tests__/` mirroring `src/` structure.
-- **Shared containers**: `__tests__/containers/{ddb,os}.ts` expose `createDdbContainer({ sourceRecords?, modelsDir?, logLevel? })` / `createOsContainer(...)`. Use these — don't hand-roll DI containers in tests.
-- **Mock clients**: `__tests__/services/DynamoDbClient/MockDynamoDbClient.ts` + `OpenSearchClient/MockOpenSearchClient.ts` + `S3Client/MockS3Client.ts`.
-- **Transformer unit tests** use `__tests__/transformers/fakeContext.ts` → `makeFakeBaseContext<T>(record, overrides?)`. For DDB-specific fields, cast at the test site.
-- **PipelineRunner tests** under `__tests__/features/PipelineRunner/` cover register dedup, multi-pipeline merge groups, shard slicing.
-- **Pipeline dataflow integration** in `__tests__/features/PipelineRunner/PipelineRunner.integration.test.ts` — Mock-client-based, exercises a zero-transformer passthrough case. Does NOT hit the AWS SDK.
-- **Real-SDK integration tests** live under `__tests__/integration/` and run against a local **dynalite** HTTP server. Harness: `__tests__/integration/dynalite.ts` → `startDynalite()` returns `{ endpoint, port, stop() }`. Container: `createDdbIntegrationContainer({ endpoint, sourceTable, targetTable, segments?, useRealS3Client? })` wires the real `DynamoDbClientFeature`; `useRealS3Client: true` adds the real `S3ClientFeature` so tests can intercept via `aws-sdk-client-mock` (GetObject / CopyObject). See:
-  - `dynalite.smoke.test.ts` — harness sanity-check.
-  - `pipeline.dataTransfer.test.ts` — 4-record end-to-end (no preset).
-  - `pipeline.bulkAndRetry.test.ts` — 10k faker records + SDK-middleware throttle injection against `BatchWriteCommand`.
-  - `pipeline.realData.test.ts` — byte-exact roundtrip of 314 real v5 records (no preset).
-  - `pipeline.preset.test.ts` — **golden-file correctness** of the full `v5-to-v6-ddb` preset over the same 314 records. Target deep-equaled against `__tests__/data/small-one.expected.json`. Regenerate via `UPDATE_EXPECTED=1 yarn test ...` after intentional preset/transformer changes and code-review the diff before committing. Frozen clock (`vi.useFakeTimers({toFake:["Date"]}) + vi.setSystemTime`) keeps `createMetadata`'s timestamps stable.
+Tests in `__tests__/` mirror `src/`. Shared containers in `__tests__/containers/`, mock clients in `__tests__/services/`. Integration tests under `__tests__/integration/` run against local dynalite. Golden-file preset test in `pipeline.preset.test.ts`.
 
-  Patterns + gotchas (ambient.d.ts naming, region-separation for source/target so `getDocumentClient`'s config-hash cache doesn't collide, `getInternalDocClient` private-field reach, S3 mocking via `aws-sdk-client-mock`, golden-file workflow) documented in memory `project_integration_tests.md`.
+Verification before any commit: `yarn npm audit`, `yarn format:fix`, `yarn ts-check`, `yarn test:coverage`, `yarn lint`, `yarn check:imports`. All six required.
 
-- `vitest.config.ts` excludes: **empty** (aside from `**/node_modules/**`). All excluded-legacy-tests from the old refactor were ported during Plan B.
-
-Verification before any commit:
-
-```bash
-yarn npm audit       # expect no audit suggestions (see .yarnrc.yml for ignored advisories)
-yarn format:fix      # oxfmt — must be clean before ts-check
-yarn ts-check        # expect 0 errors
-yarn test:coverage   # expect all green (use :coverage to keep thresholds enforced)
-yarn lint            # expect 0 errors
-yarn check:imports   # expect 0 errors
-git status           # include ALL modified files
-```
-
-All six checks are required. Missing any one of them has broken CI in the past.
+> Full reference: [Testing](docs/testing.md)
 
 ---
 
 ## 6. Hard-won decisions (read before changing)
 
-These are one-line summaries. Each links to a spec or PR if fuller context is needed.
+~30 documented decisions covering: unified `createConfig`, runtime preset selection, zero-transformer support, record-carries-everything invariant, slice-merging processors, first-match-wins pipeline dispatch, `afterShard` hook, `PipelineCustomizer`, per-record `ctx.blackhole()`, and more.
 
-- **Periodic shard flush (`flushEvery`, 2026-05-11)** — `PipelineRunner.runShard` no longer buffers all commands for the entire shard. Every `tuning.flushEvery` records (default 500) `processor.execute()` is called and the buffer resets. A final flush drains the remainder. This bounds memory to `flushEvery × avg_record_size` regardless of table size. `afterShard` still fires exactly once per shard, after all flushes. Env var: `FLUSH_EVERY`.
-- **One `createConfig`, no `createDdbConfig`/`createOsConfig`** (2026-05-10) — a single unified config covers all storage types. `source.opensearch` / `target.opensearch` are optional; omit or set to `null` to skip OpenSearch. Bootstrap registers DDB + S3 unconditionally; OS features only when `config.target.opensearch != null`. Storage guards (`storage !== "ddb"`) in `DdbScanner`, `DdbProcessor`, `S3Processor` were deleted. `OsScanner`/`OsProcessor` check `!config.source.opensearch` / `!config.target.opensearch`. Never reintroduce a `storage` discriminator field or per-storage config builders.
-- **Preset selected at runtime, not in config** (2026-05-10) — `pipeline.preset` is gone from the schema. `TransferWizard` prompts the user and returns `WizardResult { configPath, preset }`. Workers receive `--preset <name>` on their argv. Preset name is never derived from config. Never add `preset` back to `pipelineSettingsSchema`.
-- **Zero transformers must work** — infra supports pure data-transfer (prod→dev seeding). `PipelineBuilder.build()` never throws for missing `.filter()`; if the pipeline includes a processor with `onEnd` (e.g. `DdbProcessor`), the terminal put fires via that hook for every matching record.
-- **Record carries everything** — processors + executors trust `ctx.record` at execute time; no side-channel queues or pre-transform snapshot passing. The OS refactor on 2026-04-19 made this explicit.
-- **`ctx.original` always present** — frozen pre-transform snapshot, on every context, permanently. Don't remove even if no built-in code consumes it.
-- **Transformers + presets are user-land** — the `src/transformers/` files are examples. They will be revisited when the core infra is stable. Don't design the infra around them; if a refactor breaks them, update the examples or flag for rewrite. The authoring reference lives in `templates/presets/example.ts`. The package ships five built-in presets (see section 2); users may additionally author their own.
-- **First-match-wins + scanner-keyed merge groups** — registration order is semantic. More-specific pipelines before catch-alls. Different scanners = different merge groups.
-- **Impl-class-as-lookup-key** — `pipelineBuilderFactory.create({ scanner: DdbScanner, processors: [DdbProcessor, S3Processor] })` accepts Implementation classes. The type system infers `TRecord` from the scanner and the effective context from all processor slices. At runtime the factory resolves both scanner and processor instances by `x.constructor === implClass` against the arrays injected via `{ multiple: true }` — pipelines store resolved instances, not tokens. All processors share `Symbol("Core/Processor")`; all scanners share `Symbol("Core/Scanner")`; constructor identity is the discriminator. Don't reintroduce per-type abstraction tokens or "abstraction-only" signatures.
-- **PutRecord target is baked in by the processor** — `ctx.putRecord(record)` (slice helper contributed by `DdbProcessor` or `OsProcessor`) emits a PutRecord command with the target table resolved by that processor's config. Transformers shouldn't need to know table names.
-- **Unified AWS retry classifier** — every outer retry loop goes through `isRetryableAwsError` (see `src/base/isRetryableAwsError.ts`). The SDK clients use `retryMode: "adaptive"` for internal self-tuning. Don't introduce per-client classifiers or hardcoded per-second rate caps — considered and rejected (limits vary per account).
-- **OS `ensureIndex` fails the transfer on retry-exhaustion** — the old swallow-and-continue path masked real schema / mapping bugs. If index prep exhausts retries, the whole run aborts so the user sees and fixes it.
-- **`@webiny/aws-sdk` wrapper** — AWS imports come from `@webiny/aws-sdk/client-{dynamodb,s3}` + helpers `getDocumentClient`, `createS3Client`. Don't import `@aws-sdk/client-*` directly. One exception: `QueryCommand` still comes from `@aws-sdk/lib-dynamodb` because the wrapper's re-export expects pre-marshalled AttributeValues — flagged for Webiny team to fix.
-- **Slice-merging processors** (2026-04-20) — pipelines take `processors: NonEmptyArray<ProcessorImpl>`. Each processor contributes a **slice** of context helpers (via `extendContext(base)`), owns a **terminal hook** (`onEnd?`), and **drains its own commands** (`execute(commands)`). Slice-key collision = mutually exclusive in a pipeline (DdbProcessor + OsProcessor both contribute `putRecord` → TS rejects); `DisjointKeys<>` catches at compile time. Slice + execute run sequentially in array order (don't hammer services). `Commands.unclaimedKeys()` reports commands no processor drained. **No more god-processors**; `DdbProcessor` writes DDB records, `S3Processor` copies S3 objects, `OsProcessor` writes OS records (gzip + ensureIndex + delegate to shared `DdbExecutor`). Adding a new command type = new processor file + add to relevant pipelines. Shared primitive `DdbExecutor` (the raw batchPut) is composed, not a Processor.
-  - **Command-key coupling**: `DdbProcessor` and `OsProcessor` both drain `PutRecord.key`. If both ever land in one pipeline they'd double-write (same record to DDB and OS). Prevented at compile time via `DisjointKeys<>` (both contribute the `putRecord` slice key). The coupling is documented on `src/domain/transform/commands/PutRecord.ts` so future command-sharing scenarios remain visible.
-- **Pipeline construction lives in a dedicated factory** — `PipelineBuilderFactory.create({ name, scanner, processors })` is the only entry point. Originally lived on the runner (`runner.pipeline(...)`), extracted 2026-04-20 because construction isn't runner state. Runner's public surface shrank to `register(...) + run(opts?) + getProcessors() + getShardStats()`. `.create()` infers `TRecord` from scanner + `EffectiveContext = BaseCtx ∧ MergeSlices<TProcessors>` from processors. `.build()` takes no args. The factory is a DI singleton injected into `preset.configure({...})`. Don't reintroduce a `pipeline()` method on the runner.
-- **`preset.configure` takes an object arg bag** — signature is `configure({ runner, pipelineBuilderFactory, container }): void | Promise<void>`. Async returns allowed. `container` exposed so users can resolve custom services they registered in `setup.ts`. Object shape is forward-compat — add fields without breaking existing presets.
-- **User-side custom DI via `setup.ts`** — CLI looks for `setup.ts` sibling of the config file; loads `await fn({ container })` BEFORE `preset.configure({...})`. Use the `initDataTransfer` typed helper. Optional — pure-config users skip it. Canonical location for registering user-authored processors, transformers, or overriding defaults. Don't reintroduce auto-registration-via-inspection magic.
-- **Built-in presets are auto-discovered** — `PresetLoader` scans `src/presets/` (relative to its own `import.meta.url`, so dev / installed layouts both work). Convention: **filename === preset name**. Adding a built-in is a file drop, not a code change. Don't reintroduce a hardcoded `BUILT_IN_PRESETS` map or a "register your preset here" registry.
-- **`v5-to-v6-os` pipeline ordering is load-bearing** — `BackgroundTasks` and `MailerSettings` are blackholed and registered BEFORE `CmsEntries` because both are CMS entries in the OS table (same `TYPE` prefix `cms.entry.*`) and would otherwise be claimed by the catch-all. `FileManagerFiles` must also precede `CmsEntries` for the same reason. Mailer settings are blackholed because v6 stores them in the KV store — the DDB preset handles that migration; the OS record has no v6 target.
-- **DDB parallel scan guarantees same-PK records land in the same segment** — the scan divides by hash range, so all revisions of the same CMS entry (L, P, REV#...) always go to the same worker. This means an in-process `ctx.cache` keyed by PK is sufficient for per-entry deduplication — no cross-worker shared cache is needed. Queries for sibling records within the same entry are deduplicated by the cache; the first record encountered does the query, subsequent siblings hit the cache.
-- **`addLiveField` cache+sentinel pattern** — the transformer uses `ctx.cache` keyed by `ctx.original.PK`. Sentinel value `-1` means "queried, no published revision found" — avoids re-querying. P records skip the query entirely (they ARE the published revision) and populate the cache for siblings. The sentinel must be non-zero (versions start at 1) and truthy (so `if (cached)` correctly identifies a prior miss). Don't use `null` or `undefined` as the sentinel — those are cache misses.
-- **`isModel` guard requires `fields[]`** — `ModelProvider.extractModels` distinguishes model definitions from CMS entry records by requiring `Array.isArray(value.fields)`. Both have a `modelId` field, but only model definitions carry `fields[]`. Without this guard, CMS entry records (which have `modelId` as a reference field) would be loaded as models and crash downstream transformers (`visitFields` would receive `undefined` instead of an array).
-- **OS transformer context typing** — `createOsTransformer` binds `OsTransformContext.Interface<OsScanner.Record>`. `OsScanner.Record` has non-optional `index: string` and `data: Record<string, unknown>` — both are always present (OsScanner skips records where decompression fails). Don't add absent-data guards in OS transformers; trust the scanner contract. Test stubs for OS transformers use `makeFakeOsContext` from `__tests__/transformers/fakeContext.ts`.
-- **PipelineCustomizer extends presets without forking** (2026-06-29) — users implement `PipelineCustomizer.Interface` in `setup.ts` to add filters/transformers to built-in preset pipelines by name. `canUse(pipelineName)` targets pipelines; `configure(builder)` appends to them. The `PipelineBuilderFactory` injects customizers via `[PipelineCustomizer, { multiple: true }]` and passes them to `PipelineBuilder`; `build()` applies matching customizers after the preset's own filters/transformers. `PipelineCustomizerBuilder` is a slim accumulator (`.filter()` + `.use()` only) — users cannot change scanner, processors, hooks, or pipeline-level blackhole. Type erasure to `any` on the slim builder is deliberate (pipeline names are runtime strings; compile-time context typing is impossible). `warnUnmatchedCustomizers(logger)` runs after `preset.configure()` in both handlers. Don't add new builder methods (`.blackhole()`, `.beforeExecuteCommands()`) to the customizer builder — those are pipeline-level concerns owned by the preset.
-- **Per-record `ctx.blackhole()`** (2026-06-29) — transformers can suppress writes for individual records by calling `ctx.blackhole()`. Same semantics as pipeline-level blackhole: remaining transformers + `onEnd` hooks still run, commands are discarded at the fold step. `isBlackholed` is a closured boolean per `create()` call, not shared state. Runner checks `pipeline.isBlackhole || ctx.isBlackholed`. No undo — once called, the record is blackholed. Use for async guard logic (e.g., query target DDB to skip duplicates). Don't confuse with pipeline-level `.blackhole()` on the builder — that's all-or-nothing.
-- **Processors persist their own state via `afterShard`** (2026-04-21) — the previous `getShardState()` + handler-side collection/serialization was the worker handler pulling state OUT of processors, then writing it. `afterShard({ segment, totalSegments })` inverts the direction: the processor owns its state AND its persistence end-to-end, injecting `TransferContext` / `FileTool` / `DirectoryTool` directly. The `processOsSegment` handler is now identical to `processSegment` (bootstrap → configure → run). Runner fires `afterShard` sequentially in array order after `execute()`, before `warnUnclaimedKeys`. Optional hook — DdbProcessor / S3Processor skip it (no cross-boundary state). When `touchedIndexes` is empty, OsProcessor writes nothing — `EnableRefreshHook` tolerates a missing `.transfer/<runId>/` dir. Don't reintroduce a handler-side state-collection loop.
+> Full reference: [Hard-won decisions](docs/hard-won-decisions.md)
 
 ---
 
@@ -394,36 +94,10 @@ These are one-line summaries. Each links to a spec or PR if fuller context is ne
 
 ## 8. Commands / running the tool
 
-- Install: `yarn install`
-- Format: `yarn format:fix` / `yarn format:check`
-- Type-check: `yarn ts-check`
-- Test: `yarn test` (or `yarn test:coverage`)
-- Scaffold a standalone user project: `npx @webiny/data-transfer init my-transfer-folder`
-- Add a project folder to this repo: `yarn transfer init-project <name>` — creates `projects/<name>/` with `config.ts`, `.env.example`, `models/`, and `presets/`. Template lives in `templates/internal-project/`. New project folders are **gitignored** (`projects/*/` except `projects/v5-to-v6/`) — credentials stay local.
-- **Guided setup (recommended):** `yarn transfer` (no `--config`) launches `TransferWizard`:
-  - Selects a project from `projects/`.
-  - If JSON output files are present (`source/target.webiny.json` or `.pulumi.json`):
-    - If `.env` also exists, asks whether to **repopulate** it from the JSON files or **use the existing** `.env`.
-    - If `.env` does not exist, extracts values and writes `.env`, then exits (user reviews and re-runs).
-    - Account IDs extracted from `primaryDynamodbTableArn` in the JSON files. If source and target account IDs differ, the wizard warns and advises setting `SOURCE_PROFILE` / `TARGET_PROFILE`.
-  - Preset selection: lists available presets with their one-line `description` in the prompt (`v5-to-v6-ddb — Full DDB migration`). User-supplied presets in `presetsDir` appear alongside built-ins.
-  - Dry-run prompt: after selecting a preset, the wizard asks if this is a dry run. Dry-run mode reads the source but skips all writes (`DdbProcessor`, `OsProcessor`, `S3Processor` skip `execute()`). Useful for validation passes.
-  - Returns `WizardResult { configPath, preset, dryRun }`. Workers receive `--preset <name>` and optionally `--dry-run`.
-- **Direct run with config:**
+Install: `yarn install`. Run guided setup: `yarn transfer` (no `--config`). Direct run: `yarn transfer --config=./path/config.ts --preset=<name>`.
 
-  ```bash
-  # After .env is written:
-  yarn transfer --config=./projects/v5-to-v6/config.ts --preset=v5-to-v6-ddb
-  # Then OpenSearch (if needed):
-  yarn transfer --config=./projects/v5-to-v6/config.ts --preset=v5-to-v6-os
-  ```
-
-  `.env*` is gitignored. One `config.ts` covers both DDB and OS runs — the preset determines which storage operations execute.
-
-- **JSON file formats for guided setup:** place in `projects/<name>/` before running `yarn transfer`:
-  - `source.webiny.json` / `target.webiny.json` — output of `yarn webiny output core --json` run in the source/target Webiny project.
-  - `source.pulumi.json` / `target.pulumi.json` — Pulumi state file at `.pulumi/apps/core/.pulumi/stacks/core/<env>.json` in the source/target project. Mixed formats (e.g. `source.webiny.json` + `target.pulumi.json`) are allowed.
-- **Re-drive specific shards after a partial failure:** `yarn transfer --config=... --segments=1,3` runs only the listed indices. The workers still receive `--total=<pipeline.segments>`, so each shard scans the same slice as in a full run. Parsing + validation live in `src/commands/run/segmentsFilter.ts`.
+> Full command reference: [Commands](docs/guides/commands.md)
+> Verification commands: [Testing — Verification before commit](docs/testing.md#verification-before-commit)
 
 ---
 
