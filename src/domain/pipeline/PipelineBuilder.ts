@@ -118,7 +118,7 @@ export class PipelineBuilder<
         return this;
     }
 
-    public build(): Pipeline<TRecord, TContext, TShard> {
+    public async build(): Promise<Pipeline<TRecord, TContext, TShard>> {
         const custFilters: Filter<TRecord>[] = [];
         const custTransformers: Transformer.Interface<TContext>[] = [];
 
@@ -127,7 +127,7 @@ export class PipelineBuilder<
                 continue;
             }
             const custBuilder = new PipelineCustomizerBuilder();
-            customizer.configure(custBuilder);
+            await customizer.configure(custBuilder);
             custFilters.push(...custBuilder.getFilters());
             custTransformers.push(...custBuilder.getTransformers());
         }
