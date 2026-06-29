@@ -46,6 +46,18 @@ export default initDataTransfer(async ({ container }) => {
 Now, every time the `v5-to-v6-ddb` preset processes the `CmsEntries` pipeline,
 records with `modelId === "unwantedModel"` are filtered out.
 
+## How it works
+
+The CLI looks for `setup.ts` next to your config file. If present, it runs
+`await fn({ container })` **before** loading your preset — so the preset can
+`container.resolve(...)` anything you registered.
+
+`container` is a `@webiny/di` container with all core data-transfer features
+already wired (scanners, processors, executors, etc.). `initDataTransfer` is
+a typed helper that validates the export shape.
+
+`setup.ts` is optional — delete it if you don't need custom DI wiring.
+
 ## Targeting multiple pipelines
 
 `canUse()` receives the pipeline name. Return `true` for as many as you need:
