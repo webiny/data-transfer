@@ -204,7 +204,7 @@ class SkipUnwantedModels implements PipelineCustomizer.Interface {
     public configure(builder: PipelineCustomizer.Builder): void {
         builder
             .filter(createFilter(record => record.modelId !== "unwantedModel"))
-            .use(createDdbTransformer(async (ctx) => {
+            .use(createDdbTransformer("skipExisting", async (ctx) => {
                 const existing = await ctx.queryTargetRecord(ctx.record.PK, ctx.record.SK);
                 if (existing.length > 0) {
                     ctx.blackhole();

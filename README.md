@@ -448,6 +448,8 @@ Available on every transformer context regardless of pipeline configuration:
 | `ctx.cache`              | Shared `Map`-like cache, persists across records within a shard. Useful for deduplication.                          |
 | `ctx.logger`             | Logger bound to the current worker. Use instead of `console.*` — respects configured log level.                     |
 | `ctx.compressionHandler` | Gzip compression utility. Rarely needed directly.                                                                   |
+| `ctx.blackhole()`        | Per-record blackholing — suppresses all writes for this record. Remaining transformers + `onEnd` still run.         |
+| `ctx.isBlackholed`       | Read-only flag; `true` after `ctx.blackhole()` is called.                                                           |
 
 ### Processor slices
 
@@ -569,6 +571,57 @@ export default initDataTransfer(async ({ container }) => {
 The CLI picks it up automatically and runs it **before** loading your preset, so the preset can `container.resolve(...)` anything you registered. The file is optional — delete it if you don't need custom DI wiring.
 
 `container` is a `@webiny/di` container with all core data-transfer features already wired (scanners, processors, executors, etc.). `initDataTransfer` is a typed helper that validates the export shape.
+
+---
+
+## Extending built-in presets
+
+Need to add a filter or transformer to a built-in preset pipeline without forking it? Use `PipelineCustomizer`. Implement the interface in `setup.ts`, target pipelines by name, and your customizations are appended at build time:
+
+```typescript
+// projects/my-project/setup.ts
+import {
+  initDataTransfer,
+  PipelineCustomizer,
+  createFilter,
+  createDdbTransformer
+} from "@webiny/data-transfer";
+
+class SkipUnwantedModels implements PipelineCustomizer.Interface {
+  public readonly name = "SkipUnwantedModels";
+
+  public canUse(pipelineName: string): boolean {
+    return pipelineName === "CmsEntries";
+  }
+
+  public configure(builder: PipelineCustomizer.Builder): void {
+    builder.filter(createFilter(record => record.modelId !== "unwantedModel")).use(
+      createDdbTransformer("skipExisting", async ctx => {
+        const existing = await ctx.queryTargetRecord(ctx.record.PK, ctx.record.SK);
+        if (existing.length > 0) {
+          ctx.blackhole(); // skip writing this record
+        }
+      })
+    );
+  }
+}
+
+const SkipUnwantedModelsCustomizer = PipelineCustomizer.createImplementation({
+  implementation: SkipUnwantedModels,
+  dependencies: []
+});
+
+export default initDataTransfer(async ({ container }) => {
+  container.register(SkipUnwantedModelsCustomizer);
+});
+```
+
+- **`canUse(pipelineName)`** — return `true` for any pipeline you want to extend. Can target multiple pipelines.
+- **`configure(builder)`** — `.filter()` adds an AND-filter after the preset's filters. `.use()` appends a transformer after the preset's transformers.
+- **`ctx.blackhole()`** — per-record blackholing from within a transformer. Remaining transformers and `onEnd` hooks still run, but all commands for this record are discarded.
+- **Unmatched warning** — if `canUse()` never matches, a warning is logged using the customizer's `name` property.
+
+For the full guide including available pipeline names per preset, see [`docs/guides/pipeline-customizer.md`](docs/guides/pipeline-customizer.md).
 
 ---
 

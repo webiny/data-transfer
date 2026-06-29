@@ -63,7 +63,7 @@ Use `.use()` on the builder to append transformers after the preset's own:
 ```typescript
 public configure(builder: PipelineCustomizer.Builder): void {
     builder.use(
-        createDdbTransformer(async (ctx) => {
+        createDdbTransformer("injectCustomField", async (ctx) => {
             // Custom post-processing after all preset transformers run
             ctx.record.data.values.customField = "injected";
         })
@@ -86,7 +86,7 @@ transformer to suppress all writes for that record:
 ```typescript
 public configure(builder: PipelineCustomizer.Builder): void {
     builder.use(
-        createDdbTransformer(async (ctx) => {
+        createDdbTransformer("skipExisting", async (ctx) => {
             const existing = await ctx.queryTargetRecord(
                 ctx.record.PK,
                 ctx.record.SK
