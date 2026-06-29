@@ -72,7 +72,10 @@ describe("PipelineBuilder.filter() — extended rules", () => {
         const isFoo = createFilter<FakeRecord>(r => r.type === "foo");
         const notDeleted = createFilter<FakeRecord>(r => r.payload?.deleted !== true);
 
-        const pipeline = await makeBuilder("chained-filters").filter(isFoo).filter(notDeleted).build();
+        const pipeline = await makeBuilder("chained-filters")
+            .filter(isFoo)
+            .filter(notDeleted)
+            .build();
 
         expect(pipeline.accepts({ id: "a", type: "foo" })).toBe(true);
         expect(pipeline.accepts({ id: "b", type: "bar" })).toBe(false);

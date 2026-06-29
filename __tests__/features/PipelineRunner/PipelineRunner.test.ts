@@ -415,7 +415,9 @@ describe("PipelineRunner.run()", () => {
         scanner.records = [{ id: "r1", type: "miss" }];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(await buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" }));
+        runner.register(
+            await buildPipeline(container, "filtered", { filterFn: r => r.type === "foo" })
+        );
         await runner.run();
 
         const dropMessages = logger.entries.filter(e => e.message.startsWith("unmatched record —"));
@@ -722,7 +724,9 @@ describe("PipelineRunner.run() — unclaimed-command warnings", () => {
         ];
 
         const runner = container.resolve(PipelineRunner);
-        runner.register(await buildPipeline(container, "only-foo", { filterFn: r => r.type === "foo" }));
+        runner.register(
+            await buildPipeline(container, "only-foo", { filterFn: r => r.type === "foo" })
+        );
         await runner.run();
 
         const summaryLines = logger.entries.filter(
