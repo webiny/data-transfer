@@ -85,6 +85,14 @@ export { OsProcessor } from "./features/OsProcessor/index.ts";
 // processor impls (Processor.createImplementation({...})).
 export { Processor } from "./domain/pipeline/abstractions/Processor.ts";
 
+// Service client abstractions — resolve via container for direct AWS access.
+export {
+    SourceDynamoDbClient,
+    TargetDynamoDbClient
+} from "./services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+export { OpenSearchClient } from "./services/OpenSearchClient/abstractions/OpenSearchClient.ts";
+export { SourceS3Client, TargetS3Client } from "./services/S3Client/abstractions/S3Client.ts";
+
 // MigrationPreset shape — users export an object of this type from their preset file.
 // PresetConfigureContext is the arg bag passed into configure({runner, pipelineBuilderFactory, container}).
 export type { MigrationPreset, PresetConfigureContext } from "./domain/transform/Preset.ts";
