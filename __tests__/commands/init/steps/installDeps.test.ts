@@ -16,18 +16,30 @@ describe("installDeps", () => {
 
     it("runs npm install for npm", async () => {
         await installDeps("/tmp/test", "npm");
-        expect(mockExeca).toHaveBeenCalledWith("npm", ["install"], { cwd: "/tmp/test", stdio: "inherit" });
+        expect(mockExeca).toHaveBeenCalledWith("npm", ["install"], {
+            cwd: "/tmp/test",
+            stdio: "inherit"
+        });
     });
 
     it("runs pnpm install for pnpm", async () => {
         await installDeps("/tmp/test", "pnpm");
-        expect(mockExeca).toHaveBeenCalledWith("pnpm", ["install"], { cwd: "/tmp/test", stdio: "inherit" });
+        expect(mockExeca).toHaveBeenCalledWith("pnpm", ["install"], {
+            cwd: "/tmp/test",
+            stdio: "inherit"
+        });
     });
 
     it("attempts corepack enable then yarn install for yarn", async () => {
         await installDeps("/tmp/test", "yarn");
-        expect(mockExeca).toHaveBeenCalledWith("corepack", ["enable"], { cwd: "/tmp/test", stdio: "inherit" });
-        expect(mockExeca).toHaveBeenCalledWith("yarn", ["install"], { cwd: "/tmp/test", stdio: "inherit" });
+        expect(mockExeca).toHaveBeenCalledWith("corepack", ["enable"], {
+            cwd: "/tmp/test",
+            stdio: "inherit"
+        });
+        expect(mockExeca).toHaveBeenCalledWith("yarn", ["install"], {
+            cwd: "/tmp/test",
+            stdio: "inherit"
+        });
     });
 
     it("continues yarn install even if corepack fails", async () => {
@@ -39,7 +51,10 @@ describe("installDeps", () => {
         }) as any);
 
         await installDeps("/tmp/test", "yarn");
-        expect(mockExeca).toHaveBeenCalledWith("yarn", ["install"], { cwd: "/tmp/test", stdio: "inherit" });
+        expect(mockExeca).toHaveBeenCalledWith("yarn", ["install"], {
+            cwd: "/tmp/test",
+            stdio: "inherit"
+        });
     });
 
     it("throws with hint on install failure", async () => {
