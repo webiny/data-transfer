@@ -52,7 +52,7 @@ class TenantLocalesImpl implements TenantLocalesAbstraction.Interface {
             return true;
         }
 
-        const tenantId = parts[1];
+        const tenantId = parts[1]!;
         const defaultLocale = this.tenantLocales.get(tenantId);
 
         if (!defaultLocale) {
@@ -87,8 +87,8 @@ class TenantLocalesImpl implements TenantLocalesAbstraction.Interface {
             const pk = `T#${tenantId}#I18N#L`;
             const records = await this.database.query(this.tableName, pk, "D");
 
-            if (records.length > 0 && records[0].data) {
-                const data = records[0].data as Record<string, unknown>;
+            if (records.length > 0 && records[0]!.data) {
+                const data = records[0]!.data as Record<string, unknown>;
                 return (data.code as string) || "en-US";
             }
         } catch (error) {

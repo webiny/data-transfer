@@ -22,7 +22,7 @@ export async function extractFromPulumiState(filePath: string): Promise<RawOutpu
 
     const stateResult = pulumiStateSchema.safeParse(parsed);
     if (!stateResult.success) {
-        const first = stateResult.error.issues[0];
+        const first = stateResult.error.issues[0]!;
         throw new Error(
             `${filePath} is not a valid Pulumi state file: ${first.path.join(".")} — ${first.message}`
         );
@@ -32,7 +32,7 @@ export async function extractFromPulumiState(filePath: string): Promise<RawOutpu
 
     const outputResult = webinyOutputSchema.safeParse(outputs);
     if (!outputResult.success) {
-        const first = outputResult.error.issues[0];
+        const first = outputResult.error.issues[0]!;
         throw new Error(
             `Stack outputs in ${filePath} are missing required field: ${first.path.join(".")} — ${first.message}`
         );

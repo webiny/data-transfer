@@ -24,7 +24,7 @@ describe("renameFieldAttributes", () => {
         });
         renameFieldAttributes(ctx);
         const data = ctx.record.data as Record<string, unknown>;
-        const field = (data.fields as Record<string, unknown>[])[0];
+        const field = (data.fields as Record<string, unknown>[])[0]!;
         expect(field.note).toBe("Enter a title");
         expect(field.helpText).toBeUndefined();
         expect(field.placeholder).toBe("Title...");
@@ -62,9 +62,9 @@ describe("renameFieldAttributes", () => {
         });
         renameFieldAttributes(ctx);
         const data = ctx.record.data as Record<string, unknown>;
-        const outer = (data.fields as Record<string, unknown>[])[0];
+        const outer = (data.fields as Record<string, unknown>[])[0]!;
         const settings = outer.settings as Record<string, unknown>;
-        const nested = (settings.fields as Record<string, unknown>[])[0];
+        const nested = (settings.fields as Record<string, unknown>[])[0]!;
         expect(nested.note).toBe("Nested help");
         expect(nested.helpText).toBeUndefined();
     });

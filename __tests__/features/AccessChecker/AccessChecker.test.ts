@@ -93,7 +93,7 @@ describe("AccessChecker", () => {
         const report = await checker.run();
 
         expect(report).toHaveLength(2);
-        expect(report[0].status).toBe("unknown");
-        expect(report[1]).toEqual({ label: "DynamoDB source", status: "ok" });
+        expect(report[0]!.status).toBe("unknown");
+        expect(report[1]!).toEqual({ label: "DynamoDB source", status: "ok" });
     });
 });

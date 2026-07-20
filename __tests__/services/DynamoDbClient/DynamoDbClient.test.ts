@@ -106,15 +106,15 @@ describe("DynamoDbClient Feature", () => {
             const results = await client.query("test-table", "T#root#CMS#CME#aaa");
 
             expect(results).toHaveLength(2);
-            expect(results[0].SK).toBe("L");
-            expect(results[1].SK).toBe("P");
+            expect(results[0]!.SK).toBe("L");
+            expect(results[1]!.SK).toBe("P");
         });
 
         it("should query by PK and SK", async () => {
             const results = await client.query("test-table", "T#root#CMS#CME#aaa", "L");
 
             expect(results).toHaveLength(1);
-            expect(results[0].SK).toBe("L");
+            expect(results[0]!.SK).toBe("L");
         });
 
         it("should return empty for non-matching query", async () => {
@@ -169,7 +169,7 @@ describe("DynamoDbClient Feature", () => {
                 results.push(record as CmsRecord);
             }
 
-            expect(results[0].TYPE).toBe("cms.entry.l");
+            expect(results[0]!.TYPE).toBe("cms.entry.l");
         });
 
         it("should support generic type narrowing on query", async () => {
@@ -179,7 +179,7 @@ describe("DynamoDbClient Feature", () => {
 
             const results = await client.query<CmsRecord>("test-table", "T#root#CMS#CME#aaa");
 
-            expect(results[0].TYPE).toBe("cms.entry.l");
+            expect(results[0]!.TYPE).toBe("cms.entry.l");
         });
     });
 });

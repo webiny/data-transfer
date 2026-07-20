@@ -52,7 +52,7 @@ describe("PinoLogger", () => {
         it("emits info type for info messages", () => {
             const logger = new PinoLogger({ logLevel: "debug", transport: "json" });
             logger.info("hello");
-            const entry = parseLine(capture.lines[0]);
+            const entry = parseLine(capture.lines[0]!);
             expect(entry.type).toBe("info");
             expect(entry.message).toBe("hello");
         });
@@ -60,7 +60,7 @@ describe("PinoLogger", () => {
         it("emits debug type for debug messages", () => {
             const logger = new PinoLogger({ logLevel: "debug", transport: "json" });
             logger.debug("debug msg");
-            const entry = parseLine(capture.lines[0]);
+            const entry = parseLine(capture.lines[0]!);
             expect(entry.type).toBe("debug");
             expect(entry.message).toBe("debug msg");
         });
@@ -68,7 +68,7 @@ describe("PinoLogger", () => {
         it("emits warn type for warn messages", () => {
             const logger = new PinoLogger({ logLevel: "debug", transport: "json" });
             logger.warn("warn msg");
-            const entry = parseLine(capture.lines[0]);
+            const entry = parseLine(capture.lines[0]!);
             expect(entry.type).toBe("warn");
             expect(entry.message).toBe("warn msg");
         });
@@ -76,7 +76,7 @@ describe("PinoLogger", () => {
         it("emits error type for error messages", () => {
             const logger = new PinoLogger({ logLevel: "debug", transport: "json" });
             logger.error("error msg");
-            const entry = parseLine(capture.lines[0]);
+            const entry = parseLine(capture.lines[0]!);
             expect(entry.type).toBe("error");
             expect(entry.message).toBe("error msg");
         });
@@ -84,7 +84,7 @@ describe("PinoLogger", () => {
         it("emits fatal type for fatal messages", () => {
             const logger = new PinoLogger({ logLevel: "debug", transport: "json" });
             logger.fatal("fatal msg");
-            const entry = parseLine(capture.lines[0]);
+            const entry = parseLine(capture.lines[0]!);
             expect(entry.type).toBe("fatal");
             expect(entry.message).toBe("fatal msg");
         });
@@ -92,7 +92,7 @@ describe("PinoLogger", () => {
         it("emits done type for done messages", () => {
             const logger = new PinoLogger({ logLevel: "debug", transport: "json" });
             logger.done("done msg");
-            const entry = parseLine(capture.lines[0]);
+            const entry = parseLine(capture.lines[0]!);
             expect(entry.type).toBe("done");
             expect(entry.message).toBe("done msg");
         });
@@ -116,8 +116,8 @@ describe("PinoLogger", () => {
             logger.error("visible");
             logger.fatal("also visible");
             expect(capture.lines).toHaveLength(2);
-            expect(parseLine(capture.lines[0]).type).toBe("error");
-            expect(parseLine(capture.lines[1]).type).toBe("fatal");
+            expect(parseLine(capture.lines[0]!).type).toBe("error");
+            expect(parseLine(capture.lines[1]!).type).toBe("fatal");
         });
     });
 

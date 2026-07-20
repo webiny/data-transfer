@@ -21,7 +21,7 @@ export async function extractFromWebinyOutput(filePath: string): Promise<RawOutp
 
     const result = webinyOutputSchema.safeParse(parsed);
     if (!result.success) {
-        const first = result.error.issues[0];
+        const first = result.error.issues[0]!;
         throw new Error(
             `${filePath} is missing required field: ${first.path.join(".")} — ${first.message}`
         );

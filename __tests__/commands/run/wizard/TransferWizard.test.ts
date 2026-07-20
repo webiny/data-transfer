@@ -143,7 +143,7 @@ describe("TransferWizard", () => {
         await new TransferWizard(process.cwd()).run();
 
         expect(mockWriteEnv).toHaveBeenCalledOnce();
-        const [, envValues] = mockWriteEnv.mock.calls[0];
+        const [, envValues] = mockWriteEnv.mock.calls[0]!;
         expect(envValues.sourceRegion).toBe("eu-central-1");
         expect(envValues.targetRegion).toBe("us-east-1");
         expect(envValues.segments).toBe(4);
@@ -221,7 +221,7 @@ describe("TransferWizard", () => {
 
         await new TransferWizard(process.cwd()).run();
 
-        const [, envValues] = mockWriteEnv.mock.calls[0];
+        const [, envValues] = mockWriteEnv.mock.calls[0]!;
         expect(envValues.targetOsIndexPrefix).toBe("v6-");
     });
 

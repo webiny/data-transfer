@@ -45,9 +45,9 @@ describe("S3ClientImpl batchCopy failure logging", () => {
 
         const errorLogs = logger.entries.filter(entry => entry.level === "error");
         expect(errorLogs).toHaveLength(1);
-        expect(errorLogs[0].message).toContain("S3 copy failed");
-        expect(errorLogs[0].message).toContain("src-bucket/files/abc.png");
-        expect(errorLogs[0].message).toContain("tgt-bucket/files/abc.png");
+        expect(errorLogs[0]!.message).toContain("S3 copy failed");
+        expect(errorLogs[0]!.message).toContain("src-bucket/files/abc.png");
+        expect(errorLogs[0]!.message).toContain("tgt-bucket/files/abc.png");
     });
 
     it("does not log when copy succeeds on first attempt", async () => {

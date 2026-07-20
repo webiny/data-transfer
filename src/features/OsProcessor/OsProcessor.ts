@@ -177,7 +177,7 @@ class OsProcessorImpl implements Processor.Interface<
                 })
             );
             for (let j = 0; j < gzipped.length; j++) {
-                result[i + j] = gzipped[j];
+                result[i + j] = gzipped[j]!;
             }
         }
 
@@ -269,7 +269,7 @@ class OsProcessorImpl implements Processor.Interface<
                     throw error;
                 }
                 if (attempt < schedule.length) {
-                    const wait = schedule[attempt];
+                    const wait = schedule[attempt]!;
                     this.logger.warn(
                         `${label} failed (attempt ${attempt + 1}/${schedule.length + 1}). Retrying in ${wait / 1000}s...`
                     );

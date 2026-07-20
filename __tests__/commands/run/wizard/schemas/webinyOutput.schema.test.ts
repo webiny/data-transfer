@@ -43,7 +43,7 @@ describe("webinyOutputSchema", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-            expect(result.error.issues[0].path).toContain("region");
+            expect(result.error.issues[0]!.path).toContain("region");
         }
     });
 
@@ -54,7 +54,7 @@ describe("webinyOutputSchema", () => {
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-            expect(result.error.issues[0].path).toContain("primaryDynamodbTableName");
+            expect(result.error.issues[0]!.path).toContain("primaryDynamodbTableName");
         }
     });
 

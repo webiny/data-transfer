@@ -80,5 +80,5 @@ export const transformPermissions = createTransformer<
 function extractDefaultLocale(pk: string): string {
     // Extract locale from PK like "T#root#L#en-US#GROUP#..."
     const match = pk.match(/#L#([^#]+)#/);
-    return match ? match[1] : "en-US";
+    return match ? match[1]! : "en-US";
 }

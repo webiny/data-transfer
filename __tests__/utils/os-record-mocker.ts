@@ -190,7 +190,7 @@ export async function generateOsRecords(
     // CMS entries — each generates L + P
     for (let i = 0; i < entries; i++) {
         const entryId = generateId();
-        const modelId = modelIds[i % modelIds.length];
+        const modelId = modelIds[i % modelIds.length]!;
         const pk = `T#${tenant}#L#${locale}#CMS#CME#${entryId}`;
         const index = `${tenant}-headless-cms-${localeLower}-${modelId}`;
         const now = new Date().toISOString();

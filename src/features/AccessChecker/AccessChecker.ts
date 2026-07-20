@@ -12,7 +12,7 @@ class AccessCheckerImpl implements AccessCheckerAbstraction.Interface {
             if (result.status === "fulfilled") {
                 return result.value;
             }
-            const label = processors[i].constructor.name ?? "unknown processor";
+            const label = processors[i]?.constructor.name ?? "unknown processor";
             return [{ label, status: "unknown" as const }];
         });
     }

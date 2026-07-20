@@ -88,7 +88,7 @@ describe("visitFields", () => {
         await visitFields(values, fields, callback);
         // only the outer "tags" field itself; none of the array items recurse
         expect(callback).toHaveBeenCalledTimes(1);
-        expect(callback.mock.calls[0][1].id).toBe("tags");
+        expect(callback.mock.calls[0]![1].id).toBe("tags");
     });
 
     it("does not recurse into an object field without settings.fields", async () => {
@@ -173,6 +173,6 @@ describe("visitFields", () => {
         const fields = [dynamicZoneField("zone", [{ id: "t1", fields: [textField("x")] }])];
         await visitFields(values, fields, callback);
         expect(callback).toHaveBeenCalledTimes(1);
-        expect(callback.mock.calls[0][1].id).toBe("zone");
+        expect(callback.mock.calls[0]![1].id).toBe("zone");
     });
 });

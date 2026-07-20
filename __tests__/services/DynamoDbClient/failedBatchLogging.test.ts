@@ -39,10 +39,10 @@ describe("DynamoDbClientImpl batchPut failure logging", () => {
 
         const errorLogs = logger.entries.filter(entry => entry.level === "error");
         expect(errorLogs).toHaveLength(1);
-        expect(errorLogs[0].message).toContain("DynamoDB batchPut failed");
-        expect(errorLogs[0].message).toContain('table "target-table"');
-        expect(errorLogs[0].message).toContain("T#root#CMS#CME#aaa");
-        expect(errorLogs[0].message).toContain("T#root#CMS#CME#bbb");
+        expect(errorLogs[0]!.message).toContain("DynamoDB batchPut failed");
+        expect(errorLogs[0]!.message).toContain('table "target-table"');
+        expect(errorLogs[0]!.message).toContain("T#root#CMS#CME#aaa");
+        expect(errorLogs[0]!.message).toContain("T#root#CMS#CME#bbb");
     });
 
     it("does not log when batch succeeds on first attempt", async () => {

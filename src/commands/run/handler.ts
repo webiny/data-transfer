@@ -153,7 +153,7 @@ export async function handler(
         const failures: number[] = [];
         results.forEach((result, index) => {
             if (result.status === "rejected") {
-                const segment = segmentsToRun[index];
+                const segment = segmentsToRun[index]!;
                 failures.push(segment);
                 logger.error(`Segment ${segment} failed: ${formatError(result.reason, verbose)}`);
             }
