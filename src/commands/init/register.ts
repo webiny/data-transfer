@@ -3,17 +3,31 @@ import { handler } from "./handler.ts";
 
 export function registerInitCommand(yargs: Argv): Argv {
     return yargs.command(
-        "init <folder>",
+        "init <project-name>",
         "Scaffold a new data transfer project",
         yargs => {
-            return yargs.positional("folder", {
-                type: "string",
-                demandOption: true,
-                description: "Name of the folder to create"
-            });
+            return yargs
+                .positional("project-name", {
+                    type: "string",
+                    demandOption: true,
+                    description: "Name of the project directory to create"
+                })
+                .option("preset", {
+                    type: "string",
+                    description: "Preset to use (skip interactive prompt)"
+                })
+                .option("pm", {
+                    type: "string",
+                    choices: ["yarn", "npm", "pnpm"] as const,
+                    description: "Package manager (skip interactive prompt)"
+                });
         },
         async argv => {
-            await handler(argv.folder as string);
+            await handler({
+                projectName: argv["project-name"] as string,
+                preset: argv.preset as string | undefined,
+                pm: argv.pm as string | undefined
+            });
         }
     );
 }
