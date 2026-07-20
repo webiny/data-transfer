@@ -21,12 +21,8 @@ export async function promptOptions(args: PromptArgs): Promise<InitOptions> {
         );
     }
 
-    const preset = args.preset
-        ? validatePreset(args.preset, presets)
-        : await promptPreset(presets);
-    const packageManager = args.pm
-        ? validatePackageManager(args.pm)
-        : await promptPackageManager();
+    const preset = args.preset ? validatePreset(args.preset, presets) : await promptPreset(presets);
+    const packageManager = args.pm ? validatePackageManager(args.pm) : await promptPackageManager();
 
     return { projectName: args.projectName, preset, packageManager };
 }
