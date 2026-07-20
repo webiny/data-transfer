@@ -26,11 +26,14 @@ logs.txt
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
-# Projects — only the two reference files below are committed; everything else is local
+# Projects — only the two reference presets below are committed; everything else is local
 projects/**
 !projects/v5-to-v6/
 !projects/v5-to-v6/config.ts
 !projects/v5-to-v6/.env.example
+!projects/blank/
+!projects/blank/config.ts
+!projects/blank/.env.example
 
 CLAUDE.*.md
 # Ignore .claude/ except the two shipped skills — config/preset writing
