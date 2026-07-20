@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { resolve, basename } from "node:path";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { promptOptions } from "./steps/promptOptions.ts";
 import { scaffold } from "./steps/scaffold.ts";
@@ -12,10 +13,18 @@ interface HandlerArgs {
 }
 
 export async function handler(args: HandlerArgs): Promise<void> {
+    validateProjectName(args.projectName);
+
     const packageRoot = resolve(fileURLToPath(import.meta.url), "..", "..", "..", "..");
     const templatesDir = resolve(packageRoot, "templates");
     const projectsDir = resolve(packageRoot, "projects");
     const targetDir = resolve(process.cwd(), args.projectName);
+
+    if (!existsSync(templatesDir)) {
+        throw new Error(
+            `Templates directory not found at ${templatesDir}. The @webiny/data-transfer package may be corrupted — reinstall it.`
+        );
+    }
 
     try {
         const options = await promptOptions({
@@ -34,5 +43,13 @@ export async function handler(args: HandlerArgs): Promise<void> {
     } catch (error) {
         console.error(`\nError: ${error instanceof Error ? error.message : String(error)}\n`);
         process.exit(1);
+    }
+}
+
+function validateProjectName(name: string): void {
+    if (/[/\\]/.test(name) || name.includes("..") || name !== basename(name)) {
+        throw new Error(
+            `Invalid project name "${name}". Must be a simple directory name without path separators or "..".`
+        );
     }
 }

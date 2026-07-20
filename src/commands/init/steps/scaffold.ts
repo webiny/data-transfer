@@ -29,23 +29,31 @@ export function scaffold(args: ScaffoldArgs): void {
 
     cpSync(templatesDir, targetDir, { recursive: true });
 
-    const tplPath = join(targetDir, "package.json.tpl");
-    if (existsSync(tplPath)) {
-        rmSync(tplPath);
+    try {
+        const tplPath = join(targetDir, "package.json.tpl");
+        if (existsSync(tplPath)) {
+            rmSync(tplPath);
+        }
+
+        const tplEnvPath = join(targetDir, ".env.example");
+        if (existsSync(tplEnvPath)) {
+            rmSync(tplEnvPath);
+        }
+
+        const presetDir = join(projectsDir, options.preset);
+        copyPresetFiles(presetDir, targetDir);
+
+        writeFileSync(
+            join(targetDir, "package.json"),
+            generatePackageJson(options.projectName, options.packageManager)
+        );
+
+        const security = generateSecurityConfig(options.packageManager);
+        writeFileSync(join(targetDir, security.filename), security.content);
+    } catch (error) {
+        rmSync(targetDir, { recursive: true, force: true });
+        throw error;
     }
-
-    const tplEnvPath = join(targetDir, ".env.example");
-    if (existsSync(tplEnvPath)) {
-        rmSync(tplEnvPath);
-    }
-
-    const presetDir = join(projectsDir, options.preset);
-    copyPresetFiles(presetDir, targetDir);
-
-    writeFileSync(join(targetDir, "package.json"), generatePackageJson(options.projectName));
-
-    const security = generateSecurityConfig(options.packageManager);
-    writeFileSync(join(targetDir, security.filename), security.content);
 }
 
 function copyPresetFiles(sourceDir: string, targetDir: string): void {

@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import type { PackageManager } from "../types.ts";
 
 interface OwnPackageJson {
     version: string;
     devDependencies: Record<string, string>;
+    packageManager?: string;
 }
 
 let cached: OwnPackageJson | null = null;
@@ -26,10 +28,10 @@ function readOwnPackageJson(): OwnPackageJson {
     return cached;
 }
 
-export function generatePackageJson(projectName: string): string {
+export function generatePackageJson(projectName: string, pm?: PackageManager): string {
     const own = readOwnPackageJson();
 
-    const pkg = {
+    const pkg: Record<string, unknown> = {
         name: projectName,
         private: true,
         type: "module",
@@ -44,6 +46,10 @@ export function generatePackageJson(projectName: string): string {
             typescript: own.devDependencies["typescript"] ?? "^7.0.0"
         }
     };
+
+    if (pm === "yarn" && own.packageManager) {
+        pkg.packageManager = own.packageManager;
+    }
 
     return JSON.stringify(pkg, null, 2) + "\n";
 }

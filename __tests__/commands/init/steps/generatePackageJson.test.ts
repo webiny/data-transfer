@@ -30,4 +30,19 @@ describe("generatePackageJson", () => {
         const result = JSON.parse(generatePackageJson("test"));
         expect(result.devDependencies.typescript).toMatch(/^\^/);
     });
+
+    it("includes packageManager field for yarn", () => {
+        const result = JSON.parse(generatePackageJson("test", "yarn"));
+        expect(result.packageManager).toMatch(/^yarn@/);
+    });
+
+    it("omits packageManager field for npm", () => {
+        const result = JSON.parse(generatePackageJson("test", "npm"));
+        expect(result.packageManager).toBeUndefined();
+    });
+
+    it("omits packageManager field for pnpm", () => {
+        const result = JSON.parse(generatePackageJson("test", "pnpm"));
+        expect(result.packageManager).toBeUndefined();
+    });
 });
