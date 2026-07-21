@@ -47,6 +47,8 @@ CLAUDE.*.md
 .claude/skills/*
 !.claude/skills/writing-data-transfer-config
 !.claude/skills/writing-data-transfer-preset
+!.claude/skills/handoff
+!.claude/skills/review-fix-loop
 .sample/
 .transfer/
 coverage/
