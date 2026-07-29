@@ -143,21 +143,21 @@ describe("OsScanner", () => {
         // scan() before any of those are read in earnest, so we can construct it
         // with a non-OS config.
         const { Container } = await import("@webiny/di");
-        const { ContainerToken } = await import("~/base/index.ts");
+        const { ContainerToken } = await import("~/base/index.js");
         const { TransferContext } =
-            await import("~/features/TransferLifecycle/abstractions/TransferContext.ts");
-        const { MigrationConfigFeature } = await import("~/features/MigrationConfig/index.ts");
-        const { LoggerFeature } = await import("~/tools/Logger/index.ts");
-        const { CacheFeature } = await import("~/tools/Cache/index.ts");
-        const { DirectoryToolFeature } = await import("~/tools/DirectoryTool/index.ts");
-        const { FileToolFeature } = await import("~/tools/FileTool/index.ts");
+            await import("~/features/TransferLifecycle/abstractions/TransferContext.js");
+        const { MigrationConfigFeature } = await import("~/features/MigrationConfig/index.js");
+        const { LoggerFeature } = await import("~/tools/Logger/index.js");
+        const { CacheFeature } = await import("~/tools/Cache/index.js");
+        const { DirectoryToolFeature } = await import("~/tools/DirectoryTool/index.js");
+        const { FileToolFeature } = await import("~/tools/FileTool/index.js");
         const { SourceDynamoDbClient: SourceDdb, TargetDynamoDbClient: TargetDdb } =
-            await import("~/services/DynamoDbClient/abstractions/DynamoDbClient.ts");
+            await import("~/services/DynamoDbClient/abstractions/DynamoDbClient.js");
         const { MockDynamoDbClient } =
             await import("../../services/DynamoDbClient/MockDynamoDbClient.ts");
         const { OsRecordDecompressorFeature } =
-            await import("~/features/OsRecordDecompressor/index.ts");
-        const { OsScannerFeature: ScannerFeature } = await import("~/features/OsScanner/index.ts");
+            await import("~/features/OsRecordDecompressor/index.js");
+        const { OsScannerFeature: ScannerFeature } = await import("~/features/OsScanner/index.js");
 
         // Construct a DDB-only config (no opensearch) and inject it into a fresh container
         // that still registers OsScanner as the Scanner. When scan() is called, its guard

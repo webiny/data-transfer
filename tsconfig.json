@@ -15,10 +15,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true
+    "rewriteRelativeImportExtensions": true
   },
   "files": [],
   "references": [

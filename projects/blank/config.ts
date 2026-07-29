@@ -1,4 +1,4 @@
-import { createConfig, fromAwsProfile, fromEnv, loadEnv, numberFromEnv } from "~/index.ts";
+import { createConfig, fromAwsProfile, fromEnv, loadEnv, numberFromEnv } from "~/index.js";
 
 loadEnv(import.meta.url);
 
