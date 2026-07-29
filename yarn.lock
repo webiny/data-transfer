@@ -9860,7 +9860,7 @@ __metadata:
     yargs: "npm:^18.1.0"
     zod: "npm:^4.4.3"
   bin:
-    webiny-data-transfer: ./bin.js
+    webiny-data-transfer: ./dist/cli.js
   languageName: unknown
   linkType: soft
 
