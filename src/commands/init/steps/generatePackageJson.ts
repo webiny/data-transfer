@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
 import type { PackageManager } from "../types.ts";
 
 interface OwnPackageJson {
@@ -15,15 +16,7 @@ function readOwnPackageJson(): OwnPackageJson {
     if (cached) {
         return cached;
     }
-    const pkgPath = join(
-        fileURLToPath(import.meta.url),
-        "..",
-        "..",
-        "..",
-        "..",
-        "..",
-        "package.json"
-    );
+    const pkgPath = join(findPackageRoot(dirname(fileURLToPath(import.meta.url))), "package.json");
     cached = JSON.parse(readFileSync(pkgPath, "utf-8")) as OwnPackageJson;
     return cached;
 }

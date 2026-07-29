@@ -1,6 +1,7 @@
 import { existsSync, cpSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
 
 interface ScaffoldProjectParams {
     name: string;
@@ -16,11 +17,7 @@ export async function scaffoldProject(params: ScaffoldProjectParams): Promise<vo
     }
 
     const templatesDir = resolve(
-        fileURLToPath(import.meta.url),
-        "..",
-        "..",
-        "..",
-        "..",
+        findPackageRoot(dirname(fileURLToPath(import.meta.url))),
         "templates",
         "internal-project"
     );

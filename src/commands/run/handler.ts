@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { execa } from "execa";
 import { bootstrap } from "~/bootstrap.js";
@@ -18,6 +18,7 @@ import {
 import { PresetLoader } from "~/features/PresetLoader/index.js";
 import { AccessChecker } from "~/features/AccessChecker/index.js";
 import { loadUserSetup } from "~/utils/loadUserSetup.js";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
 import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
 class AccessCheckError extends Error {
@@ -242,7 +243,7 @@ async function spawnWorker(
     logLevel?: string,
     dryRun = false
 ): Promise<void> {
-    const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
+    const binPath = join(findPackageRoot(dirname(fileURLToPath(import.meta.url))), "bin.js");
 
     const args = [
         binPath,

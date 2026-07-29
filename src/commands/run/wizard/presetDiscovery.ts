@@ -1,8 +1,25 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { existsSync, readdirSync } from "node:fs";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
 
-const BUILTIN_PRESETS_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../presets");
+// Presets are compiled/copied alongside everything else, so they land at
+// "<packageRoot>/presets" in the compiled (dist/) and published (npm)
+// contexts, but stay nested under "src/" while running from source (tsx).
+// Resolved lazily (not at module load) so importing this module doesn't
+// require a real filesystem — tests that auto-mock "node:fs" still work.
+let cachedBuiltInPresetsDir: string | null = null;
+
+function getBuiltInPresetsDir(): string {
+    if (cachedBuiltInPresetsDir) {
+        return cachedBuiltInPresetsDir;
+    }
+    const packageRoot = findPackageRoot(dirname(fileURLToPath(import.meta.url)));
+    cachedBuiltInPresetsDir = existsSync(join(packageRoot, "presets"))
+        ? join(packageRoot, "presets")
+        : join(packageRoot, "src", "presets");
+    return cachedBuiltInPresetsDir;
+}
 
 const PRESET_EXTENSIONS: ReadonlySet<string> = new Set([".ts", ".js"]);
 
@@ -35,7 +52,7 @@ function scanDir(dir: string): string[] {
 
 function resolvePresetPath(name: string, presetsDir?: string): string | null {
     for (const ext of PRESET_EXTENSIONS) {
-        const builtIn = join(BUILTIN_PRESETS_DIR, `${name}${ext}`);
+        const builtIn = join(getBuiltInPresetsDir(), `${name}${ext}`);
         if (existsSync(builtIn)) {
             return builtIn;
         }
@@ -66,7 +83,7 @@ async function loadDescription(name: string, presetsDir?: string): Promise<strin
 }
 
 export function listAvailablePresets(presetsDir?: string): string[] {
-    const builtIns = scanDir(BUILTIN_PRESETS_DIR);
+    const builtIns = scanDir(getBuiltInPresetsDir());
     const userPresets = presetsDir ? scanDir(presetsDir) : [];
     const all = new Set([...builtIns, ...userPresets]);
     return [...all].sort();

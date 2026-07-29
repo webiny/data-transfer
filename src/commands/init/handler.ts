@@ -1,6 +1,7 @@
-import { resolve, basename } from "node:path";
+import { resolve, dirname, basename } from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
 import { promptOptions } from "./steps/promptOptions.ts";
 import { scaffold } from "./steps/scaffold.ts";
 import { installDeps } from "./steps/installDeps.ts";
@@ -15,7 +16,7 @@ interface HandlerArgs {
 export async function handler(args: HandlerArgs): Promise<void> {
     validateProjectName(args.projectName);
 
-    const packageRoot = resolve(fileURLToPath(import.meta.url), "..", "..", "..", "..");
+    const packageRoot = findPackageRoot(dirname(fileURLToPath(import.meta.url)));
     const templatesDir = resolve(packageRoot, "templates");
     const projectsDir = resolve(packageRoot, "projects");
     const targetDir = resolve(process.cwd(), args.projectName);

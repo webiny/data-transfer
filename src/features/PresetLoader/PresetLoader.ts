@@ -1,4 +1,5 @@
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { MigrationPreset } from "~/domain/transform/Preset.js";
 import { PresetLoader as PresetLoaderAbstraction } from "./abstractions/PresetLoader.ts";
@@ -6,8 +7,25 @@ import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
 import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
 
-const BUILTIN_PRESETS_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../presets");
+// Presets are compiled/copied alongside everything else, so they land at
+// "<packageRoot>/presets" in the compiled (dist/) and published (npm)
+// contexts, but stay nested under "src/" while running from source (tsx).
+// Resolved lazily (not at module load) so importing this module doesn't
+// require a real filesystem — tests that auto-mock "node:fs" still work.
+let cachedBuiltInPresetsDir: string | null = null;
+
+function getBuiltInPresetsDir(): string {
+    if (cachedBuiltInPresetsDir) {
+        return cachedBuiltInPresetsDir;
+    }
+    const packageRoot = findPackageRoot(dirname(fileURLToPath(import.meta.url)));
+    cachedBuiltInPresetsDir = existsSync(join(packageRoot, "presets"))
+        ? join(packageRoot, "presets")
+        : join(packageRoot, "src", "presets");
+    return cachedBuiltInPresetsDir;
+}
 
 const PRESET_EXTENSIONS: ReadonlySet<string> = new Set([".ts", ".js"]);
 
@@ -55,10 +73,11 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
     }
 
     public getBuiltInPresets(): string[] {
-        if (!this.dirTool.exists(BUILTIN_PRESETS_DIR)) {
+        const builtInPresetsDir = getBuiltInPresetsDir();
+        if (!this.dirTool.exists(builtInPresetsDir)) {
             return [];
         }
-        const entries = this.dirTool.readDir(BUILTIN_PRESETS_DIR) ?? [];
+        const entries = this.dirTool.readDir(builtInPresetsDir) ?? [];
         return entries
             .map(name => this.stripPresetExtension(name))
             .filter((name): name is string => name !== null)
@@ -116,7 +135,7 @@ class PresetLoaderImpl implements PresetLoaderAbstraction.Interface {
 
     private findBuiltInPath(presetName: string): string | null {
         for (const ext of PRESET_EXTENSIONS) {
-            const candidate = join(BUILTIN_PRESETS_DIR, `${presetName}${ext}`);
+            const candidate = join(getBuiltInPresetsDir(), `${presetName}${ext}`);
             if (this.fileTool.exists(candidate)) {
                 return candidate;
             }
