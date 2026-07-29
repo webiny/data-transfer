@@ -15,32 +15,19 @@ describe("printNextSteps", () => {
     });
 
     it("includes cd command with project name", () => {
-        printNextSteps({ projectName: "my-migration", preset: "v5-to-v6", packageManager: "yarn" });
+        printNextSteps({ projectName: "my-migration", preset: "v5-to-v6" });
         const text = output.join("\n");
         expect(text).toContain("cd my-migration");
     });
 
-    it("uses yarn for yarn projects", () => {
-        printNextSteps({ projectName: "test", preset: "blank", packageManager: "yarn" });
+    it("uses yarn for transfer command", () => {
+        printNextSteps({ projectName: "test", preset: "blank" });
         const text = output.join("\n");
         expect(text).toContain("yarn transfer");
-        expect(text).not.toContain("npm run");
-    });
-
-    it("uses npm run for npm projects", () => {
-        printNextSteps({ projectName: "test", preset: "blank", packageManager: "npm" });
-        const text = output.join("\n");
-        expect(text).toContain("npm run transfer");
-    });
-
-    it("uses pnpm for pnpm projects", () => {
-        printNextSteps({ projectName: "test", preset: "blank", packageManager: "pnpm" });
-        const text = output.join("\n");
-        expect(text).toContain("pnpm transfer");
     });
 
     it("includes env copy instruction", () => {
-        printNextSteps({ projectName: "test", preset: "blank", packageManager: "npm" });
+        printNextSteps({ projectName: "test", preset: "blank" });
         const text = output.join("\n");
         expect(text).toContain("cp .env.example .env");
     });

@@ -10,7 +10,6 @@ import { printNextSteps } from "./steps/printNextSteps.ts";
 interface HandlerArgs {
     projectName: string;
     preset?: string;
-    pm?: string;
 }
 
 export async function handler(args: HandlerArgs): Promise<void> {
@@ -31,14 +30,13 @@ export async function handler(args: HandlerArgs): Promise<void> {
         const options = await promptOptions({
             projectName: args.projectName,
             preset: args.preset,
-            pm: args.pm,
             projectsDir
         });
 
         scaffold({ options, targetDir, templatesDir, projectsDir });
 
         console.log("\nInstalling dependencies...\n");
-        await installDeps(targetDir, options.packageManager);
+        await installDeps(targetDir);
 
         printNextSteps(options);
     } catch (error) {

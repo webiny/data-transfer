@@ -43,12 +43,9 @@ export function scaffold(args: ScaffoldArgs): void {
         const presetDir = join(projectsDir, options.preset);
         copyPresetFiles(presetDir, targetDir);
 
-        writeFileSync(
-            join(targetDir, "package.json"),
-            generatePackageJson(options.projectName, options.packageManager)
-        );
+        writeFileSync(join(targetDir, "package.json"), generatePackageJson(options.projectName));
 
-        const security = generateSecurityConfig(options.packageManager);
+        const security = generateSecurityConfig();
         writeFileSync(join(targetDir, security.filename), security.content);
     } catch (error) {
         rmSync(targetDir, { recursive: true, force: true });

@@ -14,57 +14,64 @@ describe("installDeps", () => {
         mockExeca.mockResolvedValue({ stdout: "", stderr: "" } as any);
     });
 
-    it("runs npm install for npm", async () => {
-        await installDeps("/tmp/test", "npm");
-        expect(mockExeca).toHaveBeenCalledWith("npm", ["install"], {
-            cwd: "/tmp/test",
-            stdio: "inherit"
-        });
-    });
-
-    it("runs pnpm install for pnpm", async () => {
-        await installDeps("/tmp/test", "pnpm");
-        expect(mockExeca).toHaveBeenCalledWith("pnpm", ["install"], {
-            cwd: "/tmp/test",
-            stdio: "inherit"
-        });
-    });
-
-    it("attempts corepack enable then yarn install for yarn", async () => {
-        await installDeps("/tmp/test", "yarn");
-        expect(mockExeca).toHaveBeenCalledWith("corepack", ["enable"], {
-            cwd: "/tmp/test",
-            stdio: "inherit"
-        });
+    it("checks yarn availability then runs yarn install", async () => {
+        await installDeps("/tmp/test");
+        expect(mockExeca).toHaveBeenCalledWith("yarn", ["--version"], { stdio: "ignore" });
         expect(mockExeca).toHaveBeenCalledWith("yarn", ["install"], {
             cwd: "/tmp/test",
             stdio: "inherit"
         });
     });
 
-    it("continues yarn install even if corepack fails", async () => {
-        mockExeca.mockImplementation(((cmd: string) => {
-            if (cmd === "corepack") {
-                return Promise.reject(new Error("corepack not found"));
+    it("tries corepack enable if yarn not found directly", async () => {
+        let yarnCheckCount = 0;
+        mockExeca.mockImplementation(((cmd: string, args: string[]) => {
+            if (cmd === "yarn" && args[0] === "--version") {
+                yarnCheckCount++;
+                if (yarnCheckCount === 1) {
+                    return Promise.reject(new Error("not found"));
+                }
             }
             return Promise.resolve({ stdout: "", stderr: "" });
         }) as any);
 
-        await installDeps("/tmp/test", "yarn");
+        await installDeps("/tmp/test");
+        expect(mockExeca).toHaveBeenCalledWith("corepack", ["enable"], { stdio: "ignore" });
+    });
+
+    it("throws clear error when yarn unavailable", async () => {
+        mockExeca.mockImplementation((() => {
+            return Promise.reject(new Error("not found"));
+        }) as any);
+
+        await expect(installDeps("/tmp/test")).rejects.toThrow(/yarn is required/i);
+    });
+
+    it("continues yarn install even if corepack enable fails before install", async () => {
+        let callCount = 0;
+        mockExeca.mockImplementation(((cmd: string, args: string[]) => {
+            callCount++;
+            if (cmd === "corepack" && args[0] === "enable" && callCount > 2) {
+                return Promise.reject(new Error("corepack failed"));
+            }
+            return Promise.resolve({ stdout: "", stderr: "" });
+        }) as any);
+
+        await installDeps("/tmp/test");
         expect(mockExeca).toHaveBeenCalledWith("yarn", ["install"], {
             cwd: "/tmp/test",
             stdio: "inherit"
         });
     });
 
-    it("throws with hint on install failure", async () => {
-        mockExeca.mockImplementation(((cmd: string) => {
-            if (cmd === "npm") {
+    it("throws with retry hint on install failure", async () => {
+        mockExeca.mockImplementation(((cmd: string, args: string[]) => {
+            if (cmd === "yarn" && args[0] === "install") {
                 return Promise.reject(new Error("network error"));
             }
             return Promise.resolve({ stdout: "", stderr: "" });
         }) as any);
 
-        await expect(installDeps("/tmp/test", "npm")).rejects.toThrow(/npm install/);
+        await expect(installDeps("/tmp/test")).rejects.toThrow(/yarn install/);
     });
 });

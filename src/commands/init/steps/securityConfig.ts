@@ -1,5 +1,3 @@
-import type { PackageManager } from "../types.ts";
-
 interface SecurityConfigResult {
     filename: string;
     content: string;
@@ -15,13 +13,6 @@ npmPreapprovedPackages:
 nodeLinker: node-modules
 `;
 
-const NPMRC = `audit-level=high
-ignore-scripts=true
-`;
-
-export function generateSecurityConfig(pm: PackageManager): SecurityConfigResult {
-    if (pm === "yarn") {
-        return { filename: ".yarnrc.yml", content: YARNRC };
-    }
-    return { filename: ".npmrc", content: NPMRC };
+export function generateSecurityConfig(): SecurityConfigResult {
+    return { filename: ".yarnrc.yml", content: YARNRC };
 }

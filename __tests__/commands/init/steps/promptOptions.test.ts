@@ -22,33 +22,24 @@ describe("promptOptions", () => {
         }
     });
 
-    it("returns options directly when all flags provided", async () => {
+    it("returns options directly when preset flag provided", async () => {
         const projectsDir = setupPresets("v5-to-v6", "blank");
         const result = await promptOptions({
             projectName: "my-project",
             preset: "v5-to-v6",
-            pm: "yarn",
             projectsDir
         });
         expect(result).toEqual({
             projectName: "my-project",
-            preset: "v5-to-v6",
-            packageManager: "yarn"
+            preset: "v5-to-v6"
         });
     });
 
     it("throws for invalid preset", async () => {
         const projectsDir = setupPresets("v5-to-v6");
         await expect(
-            promptOptions({ projectName: "x", preset: "nope", pm: "npm", projectsDir })
+            promptOptions({ projectName: "x", preset: "nope", projectsDir })
         ).rejects.toThrow(/nope.*available.*v5-to-v6/i);
-    });
-
-    it("throws for invalid package manager", async () => {
-        const projectsDir = setupPresets("v5-to-v6");
-        await expect(
-            promptOptions({ projectName: "x", preset: "v5-to-v6", pm: "bun", projectsDir })
-        ).rejects.toThrow(/bun.*yarn.*npm.*pnpm/i);
     });
 
     it("throws when no presets found", async () => {

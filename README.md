@@ -37,17 +37,17 @@ import { createConfig, fromAwsProfile, loadEnv } from "@webiny/data-transfer";
 loadEnv(import.meta.url);
 
 export default createConfig({
-    source: {
-        dynamodb: { table: "Source-Table", region: "us-east-1" },
-        credentials: fromAwsProfile("source-profile"),
-    },
-    target: {
-        dynamodb: { table: "Target-Table", region: "eu-central-1" },
-        credentials: fromAwsProfile("target-profile"),
-    },
-    pipeline: {
-        preset: "copy-ddb",
-    },
+  source: {
+    dynamodb: { table: "Source-Table", region: "us-east-1" },
+    credentials: fromAwsProfile("source-profile")
+  },
+  target: {
+    dynamodb: { table: "Target-Table", region: "eu-central-1" },
+    credentials: fromAwsProfile("target-profile")
+  },
+  pipeline: {
+    preset: "copy-ddb"
+  }
 });
 ```
 

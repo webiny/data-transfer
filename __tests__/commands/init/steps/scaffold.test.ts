@@ -38,7 +38,7 @@ describe("scaffold", () => {
     it("creates target directory with templates", () => {
         const target = join(workDir, "my-project");
         scaffold({
-            options: { projectName: "my-project", preset: "blank", packageManager: "npm" },
+            options: { projectName: "my-project", preset: "blank" },
             targetDir: target,
             templatesDir,
             projectsDir
@@ -49,7 +49,7 @@ describe("scaffold", () => {
     it("deletes package.json.tpl after copy", () => {
         const target = join(workDir, "my-project");
         scaffold({
-            options: { projectName: "my-project", preset: "blank", packageManager: "npm" },
+            options: { projectName: "my-project", preset: "blank" },
             targetDir: target,
             templatesDir,
             projectsDir
@@ -60,7 +60,7 @@ describe("scaffold", () => {
     it("replaces templates/.env.example with preset version", () => {
         const target = join(workDir, "my-project");
         scaffold({
-            options: { projectName: "my-project", preset: "blank", packageManager: "npm" },
+            options: { projectName: "my-project", preset: "blank" },
             targetDir: target,
             templatesDir,
             projectsDir
@@ -71,7 +71,7 @@ describe("scaffold", () => {
     it("transforms imports in copied .ts files", () => {
         const target = join(workDir, "my-project");
         scaffold({
-            options: { projectName: "my-project", preset: "blank", packageManager: "npm" },
+            options: { projectName: "my-project", preset: "blank" },
             targetDir: target,
             templatesDir,
             projectsDir
@@ -84,7 +84,7 @@ describe("scaffold", () => {
     it("generates package.json with project name", () => {
         const target = join(workDir, "my-project");
         scaffold({
-            options: { projectName: "my-project", preset: "blank", packageManager: "npm" },
+            options: { projectName: "my-project", preset: "blank" },
             targetDir: target,
             templatesDir,
             projectsDir
@@ -93,21 +93,10 @@ describe("scaffold", () => {
         expect(pkg.name).toBe("my-project");
     });
 
-    it("writes .npmrc for npm", () => {
+    it("writes .yarnrc.yml", () => {
         const target = join(workDir, "my-project");
         scaffold({
-            options: { projectName: "my-project", preset: "blank", packageManager: "npm" },
-            targetDir: target,
-            templatesDir,
-            projectsDir
-        });
-        expect(existsSync(join(target, ".npmrc"))).toBe(true);
-    });
-
-    it("writes .yarnrc.yml for yarn", () => {
-        const target = join(workDir, "my-project");
-        scaffold({
-            options: { projectName: "my-project", preset: "blank", packageManager: "yarn" },
+            options: { projectName: "my-project", preset: "blank" },
             targetDir: target,
             templatesDir,
             projectsDir
@@ -120,7 +109,7 @@ describe("scaffold", () => {
         mkdirSync(target);
         expect(() =>
             scaffold({
-                options: { projectName: "exists", preset: "blank", packageManager: "npm" },
+                options: { projectName: "exists", preset: "blank" },
                 targetDir: target,
                 templatesDir,
                 projectsDir

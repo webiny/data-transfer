@@ -1,24 +1,47 @@
 import { execa } from "execa";
-import type { PackageManager } from "../types.ts";
 
-export async function installDeps(targetDir: string, pm: PackageManager): Promise<void> {
-    if (pm === "yarn") {
-        try {
-            await execa("corepack", ["enable"], { cwd: targetDir, stdio: "inherit" });
-        } catch {
-            console.warn("Warning: corepack enable failed. Continuing with yarn install...");
-        }
+export async function installDeps(targetDir: string): Promise<void> {
+    await ensureYarnAvailable();
+
+    try {
+        await execa("corepack", ["enable"], { cwd: targetDir, stdio: "inherit" });
+    } catch {
+        // corepack may already be enabled or unavailable — yarn itself will work
     }
 
     try {
-        await execa(pm, ["install"], { cwd: targetDir, stdio: "inherit" });
+        await execa("yarn", ["install"], { cwd: targetDir, stdio: "inherit" });
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(
             `Dependency installation failed: ${message}\n\n` +
                 `You can retry manually:\n` +
                 `  cd ${targetDir}\n` +
-                `  ${pm} install\n`
+                `  yarn install\n`
         );
     }
+}
+
+async function ensureYarnAvailable(): Promise<void> {
+    try {
+        await execa("yarn", ["--version"], { stdio: "ignore" });
+        return;
+    } catch {
+        // yarn not found directly, try enabling via corepack
+    }
+
+    try {
+        await execa("corepack", ["enable"], { stdio: "ignore" });
+        await execa("yarn", ["--version"], { stdio: "ignore" });
+        return;
+    } catch {
+        // corepack also failed
+    }
+
+    throw new Error(
+        "Yarn is required but not found.\n\n" +
+            "Install it once with one of:\n" +
+            "  corepack enable          (recommended, ships with Node)\n" +
+            "  npm install -g yarn\n"
+    );
 }

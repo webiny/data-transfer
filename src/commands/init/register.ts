@@ -15,18 +15,12 @@ export function registerInitCommand(yargs: Argv): Argv {
                 .option("preset", {
                     type: "string",
                     description: "Preset to use (skip interactive prompt)"
-                })
-                .option("pm", {
-                    type: "string",
-                    choices: ["yarn", "npm", "pnpm"] as const,
-                    description: "Package manager (skip interactive prompt)"
                 });
         },
         async argv => {
             await handler({
                 projectName: argv["project-name"] as string,
-                preset: argv.preset as string | undefined,
-                pm: argv.pm as string | undefined
+                preset: argv.preset as string | undefined
             });
         }
     );
