@@ -1,0 +1,1 @@
+{"version":3,"file":"removeTenant.js","sourceRoot":"","sources":["../../../src/transformers/security/removeTenant.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,qCAAqC,CAAC;AAIxE;;GAEG;AACH,MAAM,CAAC,MAAM,YAAY,GAAG,iBAAiB,CACzC,cAAc,EACd,GAAG,CAAC,EAAE;IACF,OAAO,GAAG,CAAC,MAAM,CAAC,MAAM,CAAC;AAC7B,CAAC,CACJ,CAAC"}

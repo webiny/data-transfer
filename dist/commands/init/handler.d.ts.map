@@ -1,0 +1,1 @@
+{"version":3,"file":"handler.d.ts","sourceRoot":"","sources":["../../../src/commands/init/handler.ts"],"names":[],"mappings":"AASA,UAAU,WAAW;IACjB,WAAW,EAAE,MAAM,CAAC;IACpB,MAAM,CAAC,EAAE,MAAM,CAAC;IAChB,EAAE,CAAC,EAAE,MAAM,CAAC;CACf;AAED,wBAAsB,OAAO,CAAC,IAAI,EAAE,WAAW,GAAG,OAAO,CAAC,IAAI,CAAC,CAgC9D"}

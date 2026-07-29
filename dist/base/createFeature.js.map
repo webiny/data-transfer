@@ -1,0 +1,1 @@
+{"version":3,"file":"createFeature.js","sourceRoot":"","sources":["../../src/base/createFeature.ts"],"names":[],"mappings":"AAYA,MAAM,UAAU,aAAa,CACzB,GAAiC;IAEjC,MAAM,OAAO,GAAG;QACZ,IAAI,EAAE,GAAG,CAAC,IAAI;QACd,QAAQ,EAAE,GAAG,CAAC,QAAQ;KACzB,CAAC;IAEF,OAAO,CAAC,cAAc,CAAC,eAAe,EAAE,IAAI,EAAE,OAAO,CAAC,CAAC;IAEvD,OAAO,OAAuC,CAAC;AACnD,CAAC"}

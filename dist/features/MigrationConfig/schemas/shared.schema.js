@@ -1,0 +1,96 @@
+import { z } from "zod";
+/**
+ * Non-empty string that trims whitespace before validating. Catches the
+ * common copy-paste mistake of a trailing/leading space — which AWS
+ * would otherwise accept as part of a table/bucket/region name and then
+ * fail with a cryptic ResourceNotFoundException at query time.
+ */
+export const trimmedString = () => z.string().trim().min(1);
+export const awsCredentialsSchema = z.object({
+  accessKeyId: trimmedString(),
+  secretAccessKey: trimmedString(),
+  sessionToken: trimmedString().optional()
+});
+/**
+ * Credentials shape accepted in user config: either a literal credentials
+ * object, or an AWS credential-provider function (e.g., `fromAwsProfile`).
+ * Required — users must pick one, but both are first-class.
+ */
+export const credentialsOrProviderSchema = z.union([
+  awsCredentialsSchema,
+  z.custom(val => typeof val === "function", {
+    message:
+      "credentials must be an object with accessKeyId+secretAccessKey, or an AWS credential-provider function"
+  })
+]);
+export const registerSchema = z
+  .custom(val => typeof val === "function", {
+    message: "register must be a function that receives a Container"
+  })
+  .optional();
+export const pipelineSettingsSchema = z
+  .object({
+    segments: z.number().int().positive().optional(),
+    modelsDir: trimmedString().optional(),
+    presetsDir: trimmedString().optional()
+  })
+  .optional();
+/**
+ * Snapshot settings — when enabled, the runner dumps per-record JSONL
+ * files to `dir` (default: `.transfer/<runId>/snapshot`). Useful for
+ * debugging transformer behavior against specific source records.
+ *
+ * File layout (one file per shard per pipeline per category):
+ *   <dir>/<pipelineName>/segment-<n>.source.jsonl[.gz]
+ *   <dir>/<pipelineName>/segment-<n>.post-transform.jsonl[.gz]
+ *   <dir>/<pipelineName>/segment-<n>.commands.jsonl[.gz]
+ *   <dir>/dropped/segment-<n>.jsonl[.gz]
+ */
+export const snapshotSettingsSchema = z.object({
+  dir: trimmedString().optional(),
+  compress: z.boolean().optional()
+});
+export const debugSettingsSchema = z
+  .object({
+    snapshot: z.union([z.boolean(), snapshotSettingsSchema]).optional(),
+    /**
+     * Controls log file output. By default logs are written to
+     * `.transfer/<runId>/logs/<orchestrator|segment-N>.log`.
+     * Set to `false` to disable file logging. Set to a string to
+     * write to a custom path instead.
+     */
+    logFile: z.union([z.boolean(), trimmedString()]).optional(),
+    logLevel: z.enum(["debug", "info", "warn", "error"]).optional()
+  })
+  .optional();
+// Per-client operational knobs. All optional — clients fall back to module
+// defaults. Use to throttle parallelism or adjust retry behavior against a
+// rate-limited AWS account.
+export const tuningSchema = z
+  .object({
+    flushEvery: z.number().int().positive().optional(),
+    ddb: z
+      .object({
+        maxRetries: z.number().int().nonnegative().optional(),
+        initialBackoffMs: z.number().int().nonnegative().optional(),
+        requestTimeoutMs: z.number().int().positive().optional()
+      })
+      .optional(),
+    s3: z
+      .object({
+        concurrency: z.number().int().positive().optional(),
+        maxRetries: z.number().int().nonnegative().optional(),
+        initialBackoffMs: z.number().int().nonnegative().optional(),
+        requestTimeoutMs: z.number().int().positive().optional()
+      })
+      .optional(),
+    os: z
+      .object({
+        maxRetries: z.number().int().nonnegative().optional(),
+        retryScheduleMs: z.array(z.number().int().nonnegative()).optional(),
+        gzipConcurrency: z.number().int().positive().optional()
+      })
+      .optional()
+  })
+  .optional();
+//# sourceMappingURL=shared.schema.js.map

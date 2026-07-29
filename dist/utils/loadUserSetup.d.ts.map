@@ -1,0 +1,1 @@
+{"version":3,"file":"loadUserSetup.d.ts","sourceRoot":"","sources":["../../src/utils/loadUserSetup.ts"],"names":[],"mappings":"AAEA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,YAAY,CAAC;AAC5C,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,uCAAuC,CAAC;AAMpE;;;;;;;;GAQG;AACH,wBAAsB,aAAa,CAC/B,UAAU,EAAE,MAAM,EAClB,SAAS,EAAE,SAAS,EACpB,MAAM,EAAE,MAAM,CAAC,SAAS,GACzB,OAAO,CAAC,IAAI,CAAC,CAuBf"}

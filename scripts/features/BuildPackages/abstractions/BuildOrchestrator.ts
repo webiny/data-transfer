@@ -1,13 +1,13 @@
 import { Abstraction } from "@webiny/di";
 
 export interface IBuildOrchestrator {
-    run(): void;
+  run(): void;
 }
 
 export const BuildOrchestrator = new Abstraction<IBuildOrchestrator>(
-    "Scripts/Build/BuildOrchestrator"
+  "Scripts/Build/BuildOrchestrator"
 );
 
 export namespace BuildOrchestrator {
-    export type Interface = IBuildOrchestrator;
+  export type Interface = IBuildOrchestrator;
 }

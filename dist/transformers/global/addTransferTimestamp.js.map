@@ -1,0 +1,1 @@
+{"version":3,"file":"addTransferTimestamp.js","sourceRoot":"","sources":["../../../src/transformers/global/addTransferTimestamp.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,qCAAqC,CAAC;AAExE,MAAM,CAAC,MAAM,oBAAoB,GAAG,iBAAiB,CAAC,sBAAsB,EAAE,GAAG,CAAC,EAAE;IAC/E,GAAG,CAAC,MAAkC,CAAC,GAAG,GAAG,IAAI,CAAC,GAAG,EAAE,CAAC;AAC7D,CAAC,CAAC,CAAC"}

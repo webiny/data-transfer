@@ -1,0 +1,1 @@
+{"version":3,"file":"index.d.ts","sourceRoot":"","sources":["../../../src/services/DynamoDbClient/index.ts"],"names":[],"mappings":"AAAA,OAAO,EACH,oBAAoB,EACpB,oBAAoB,EACpB,oBAAoB,EACvB,MAAM,yBAAyB,CAAC;AACjC,OAAO,EAAE,qBAAqB,EAAE,MAAM,cAAc,CAAC"}

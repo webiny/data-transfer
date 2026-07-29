@@ -1,0 +1,1 @@
+{"version":3,"file":"DynamoDbClientConfig.js","sourceRoot":"","sources":["../../../../src/services/DynamoDbClient/abstractions/DynamoDbClientConfig.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,iBAAiB,CAAC;AAyCpD,+EAA+E;AAC/E,cAAc;AACd,+EAA+E;AAE/E,MAAM,CAAC,MAAM,oBAAoB,GAAG,iBAAiB,CACjD,2BAA2B,CAC9B,CAAC"}

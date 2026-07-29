@@ -1,0 +1,1 @@
+{"version":3,"file":"scaffold.d.ts","sourceRoot":"","sources":["../../../../src/commands/init/steps/scaffold.ts"],"names":[],"mappings":"AAUA,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,aAAa,CAAC;AAK/C,UAAU,YAAY;IAClB,OAAO,EAAE,WAAW,CAAC;IACrB,SAAS,EAAE,MAAM,CAAC;IAClB,YAAY,EAAE,MAAM,CAAC;IACrB,WAAW,EAAE,MAAM,CAAC;CACvB;AAED,wBAAgB,QAAQ,CAAC,IAAI,EAAE,YAAY,GAAG,IAAI,CAkCjD"}

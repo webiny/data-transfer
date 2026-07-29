@@ -1,0 +1,1 @@
+{"version":3,"file":"createTransformer.js","sourceRoot":"","sources":["../../src/transformers/createTransformer.ts"],"names":[],"mappings":"AAGA,MAAM,UAAU,iBAAiB,CAC7B,IAAY,EACZ,EAAmC;IAEnC,MAAM,CAAC,cAAc,CAAC,EAAE,EAAE,iBAAiB,EAAE;QACzC,KAAK,EAAE,IAAI;QACX,UAAU,EAAE,KAAK;QACjB,QAAQ,EAAE,KAAK;QACf,YAAY,EAAE,KAAK;KACtB,CAAC,CAAC;IACH,OAAO,EAAE,CAAC;AACd,CAAC"}
