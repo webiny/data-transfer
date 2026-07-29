@@ -14,7 +14,21 @@ export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
         return;
     }
 
-    const { index } = configurations.es({ model: { modelId, tenant } });
+    const { index } = configurations.es({
+        model: {
+            modelId,
+            tenant,
+            group: "any",
+            description: null,
+            icon: null,
+            name: modelId,
+            layout: [],
+            pluralApiName: modelId,
+            singularApiName: modelId,
+            fields: [],
+            titleFieldId: "id"
+        }
+    });
 
     record.index = index;
 });
