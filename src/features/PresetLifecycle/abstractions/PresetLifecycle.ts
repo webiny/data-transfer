@@ -2,11 +2,11 @@ import { createAbstraction } from "~/base/index.js";
 import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import type { MigrationPreset } from "~/domain/transform/Preset.js";
 
-interface IBeforeLoadPresetHook {
+export interface IBeforeLoadPresetHook {
     execute(config: MigrationConfig.Interface): Promise<void>;
 }
 
-interface IAfterLoadPresetHook {
+export interface IAfterLoadPresetHook {
     execute(config: MigrationConfig.Interface, preset: MigrationPreset): Promise<void>;
 }
 

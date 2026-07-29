@@ -12,6 +12,8 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
 import { DynamoDB } from "@aws-sdk/client-dynamodb";
 import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.js";
 
+export type { IProcessor } from "~/domain/pipeline/abstractions/Processor.js";
+
 interface DdbProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
     querySourceRecord<T extends Record<string, unknown> = Record<string, unknown>>(

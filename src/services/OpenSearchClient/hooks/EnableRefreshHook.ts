@@ -7,6 +7,8 @@ import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.
 import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
 import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.js";
 
+export type { IAfterTransferHook } from "~/features/TransferLifecycle/abstractions/TransferLifecycle.js";
+
 class EnableRefreshHookImpl implements AfterTransferHook.Interface {
     public constructor(
         private readonly osClient: OpenSearchClient.Interface,

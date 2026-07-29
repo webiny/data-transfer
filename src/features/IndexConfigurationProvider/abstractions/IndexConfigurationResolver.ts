@@ -1,7 +1,7 @@
 import { createAbstraction } from "~/base/index.js";
 import type { IndexConfigurationProvider } from "./IndexConfigurationProvider.ts";
 
-interface IIndexConfigurationResolver {
+export interface IIndexConfigurationResolver {
     resolve(indexName: string): IndexConfigurationProvider.Configuration;
 }
 

@@ -9,6 +9,8 @@ import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { findPackageRoot } from "~/utils/findPackageRoot.js";
 
+export type { IPresetLoader } from "./abstractions/PresetLoader.js";
+
 // Presets are compiled/copied alongside everything else, so they land at
 // "<packageRoot>/presets" in the compiled (dist/) and published (npm)
 // contexts, but stay nested under "src/" while running from source (tsx).

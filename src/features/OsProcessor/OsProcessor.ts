@@ -20,6 +20,8 @@ import type { Commands } from "~/domain/transform/commands/Commands.js";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
+export type { IProcessor } from "~/domain/pipeline/abstractions/Processor.js";
+
 interface OpenSearchErrorLike {
     statusCode?: number;
 }

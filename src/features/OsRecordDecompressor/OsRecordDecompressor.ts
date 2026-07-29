@@ -2,6 +2,8 @@ import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { OsRecordDecompressor as OsRecordDecompressorAbstraction } from "./abstractions/OsRecordDecompressor.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
+export type { IOsRecordDecompressor } from "./abstractions/OsRecordDecompressor.js";
+
 class OsRecordDecompressorImpl implements OsRecordDecompressorAbstraction.Interface {
     public constructor(
         private readonly logger: Logger.Interface,

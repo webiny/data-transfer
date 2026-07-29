@@ -8,6 +8,8 @@ import {
 } from "./abstractions/BaseTransformContext.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
+export type { IBaseTransformContextFactory } from "./abstractions/BaseTransformContext.js";
+
 class BaseTransformContextFactoryImpl implements BaseTransformContextFactoryAbstraction.Interface {
     public constructor(
         private readonly modelProvider: ModelProvider.Interface,

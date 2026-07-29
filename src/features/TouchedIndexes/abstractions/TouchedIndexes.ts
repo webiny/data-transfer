@@ -1,11 +1,11 @@
 import { createAbstraction } from "~/base/index.js";
 
-interface ITouchedIndex {
+export interface ITouchedIndex {
     indexName: string;
     originalRefresh: string;
 }
 
-interface ITouchedIndexes {
+export interface ITouchedIndexes {
     has(indexName: string): boolean;
     record(indexName: string, originalRefresh: string): void;
     all(): ITouchedIndex[];

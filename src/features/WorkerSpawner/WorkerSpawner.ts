@@ -5,6 +5,8 @@ import { WorkerSpawner as WorkerSpawnerAbstraction } from "./abstractions/Worker
 import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { findPackageRoot } from "~/utils/findPackageRoot.js";
 
+export type { IWorkerSpawner } from "./abstractions/WorkerSpawner.js";
+
 class WorkerSpawnerImpl implements WorkerSpawnerAbstraction.Interface {
     private readonly binPath: string;
 

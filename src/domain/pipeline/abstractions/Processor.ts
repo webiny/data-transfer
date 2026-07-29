@@ -7,7 +7,7 @@ interface IAfterShardContext {
     totalSegments: number;
 }
 
-interface IProcessor<
+export interface IProcessor<
     TBaseContext extends BaseTransformContext.Interface<unknown> =
         BaseTransformContext.Interface<unknown>,
     TSlice = Record<string, never>

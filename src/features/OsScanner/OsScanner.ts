@@ -5,6 +5,8 @@ import { MigrationConfig } from "~/features/MigrationConfig/abstractions/Migrati
 import type { OsRecord, OsShard } from "./abstractions/OsScanner.ts";
 import { Logger } from "~/tools/Logger/index.js";
 
+export type { IScanner } from "~/domain/pipeline/abstractions/Scanner.js";
+
 class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
     public constructor(
         private readonly source: SourceDynamoDbClient.Interface,

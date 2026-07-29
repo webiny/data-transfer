@@ -5,6 +5,8 @@ import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.
 import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
 import { RecordDisposition } from "~/domain/pipeline/RecordDisposition.js";
 
+export type { IDroppedRecordLog } from "./abstractions/DroppedRecordLog.js";
+
 class DroppedRecordLogImpl implements DroppedRecordLogAbstraction.Interface {
     private readonly blackholed: string[] = [];
     private readonly unmatched: string[] = [];

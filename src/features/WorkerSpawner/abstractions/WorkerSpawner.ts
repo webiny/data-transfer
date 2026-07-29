@@ -8,7 +8,7 @@ interface SpawnOptions {
     command: string;
 }
 
-interface IWorkerSpawner {
+export interface IWorkerSpawner {
     spawn(options: SpawnOptions): Promise<void>;
 }
 

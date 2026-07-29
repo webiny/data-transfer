@@ -77,7 +77,7 @@ export interface PipelineFactoryInput<TScanner, TProcessors> {
 // PipelineBuilderFactory abstraction
 // ============================================================================
 
-interface IPipelineBuilderFactory {
+export interface IPipelineBuilderFactory {
     create<
         TRecord,
         TShard,

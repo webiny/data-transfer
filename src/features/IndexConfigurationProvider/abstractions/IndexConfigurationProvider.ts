@@ -6,7 +6,7 @@ interface IndexConfiguration {
     settings?: OpenSearchIndexRequestBody["settings"];
 }
 
-interface IIndexConfigurationProvider {
+export interface IIndexConfigurationProvider {
     getConfiguration(indexName: string, base: IndexConfiguration): IndexConfiguration;
 }
 

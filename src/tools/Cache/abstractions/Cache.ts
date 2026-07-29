@@ -1,6 +1,6 @@
 import { createAbstraction } from "~/base/index.js";
 
-interface ICache {
+export interface ICache {
     get<T>(key: string): T | undefined;
     set<T>(key: string, value: T): void;
     has(key: string): boolean;

@@ -6,6 +6,8 @@ import { PipelineCustomizer } from "~/features/PipelineCustomizer/abstractions/P
 import { PipelineBuilderFactory as PipelineBuilderFactoryAbstraction } from "./abstractions/PipelineBuilderFactory.ts";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
+export type { IPipelineBuilderFactory } from "./abstractions/PipelineBuilderFactory.js";
+
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 
 type ScannerInstance = Scanner.Interface<unknown, unknown>;

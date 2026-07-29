@@ -6,6 +6,8 @@ import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { ModelProvider as ModelProviderAbstraction } from "./abstractions/ModelProvider.ts";
 
+export type { IModelProvider } from "./abstractions/ModelProvider.js";
+
 function isModel(value: unknown): value is ModelProviderAbstraction.ModelType {
     return (
         typeof value === "object" &&

@@ -1,5 +1,7 @@
 import { BeforeTransferHook } from "./abstractions/TransferLifecycle.ts";
 
+export type { IBeforeTransferHook } from "./abstractions/TransferLifecycle.js";
+
 class BeforeTransferHookCompositeImpl implements BeforeTransferHook.Interface {
     public constructor(private readonly hooks: BeforeTransferHook.Interface[]) {}
 

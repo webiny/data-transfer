@@ -8,6 +8,8 @@ import type { BaseTransformContext } from "~/features/TransformContext/abstracti
 import { DynamoDB } from "@aws-sdk/client-dynamodb";
 import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.js";
 
+export type { IProcessor } from "~/domain/pipeline/abstractions/Processor.js";
+
 interface AuditLogProcessorSlice {
     putAuditLog(record: Record<string, unknown>): void;
 }

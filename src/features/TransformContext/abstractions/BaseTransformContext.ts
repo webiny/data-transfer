@@ -10,7 +10,7 @@ import { CompressionHandler } from "@webiny/utils/exports/api.js";
 // Base Context Interface
 // ============================================================================
 
-interface IBaseTransformContext<TRecord = unknown> {
+export interface IBaseTransformContext<TRecord = unknown> {
     record: TRecord;
     readonly original: Readonly<TRecord>;
     readonly modelProvider: ModelProvider.Interface;
@@ -40,16 +40,16 @@ interface IBaseTransformContext<TRecord = unknown> {
 // Base Factory Interface
 // ============================================================================
 
-interface ICreateParams<TRecord> {
+export interface ICreateParams<TRecord> {
     record: TRecord;
 }
 
-interface IBaseContextCreateResult<TRecord> {
+export interface IBaseContextCreateResult<TRecord> {
     ctx: IBaseTransformContext<TRecord>;
     commands: Commands;
 }
 
-interface IBaseTransformContextFactory {
+export interface IBaseTransformContextFactory {
     create<TRecord>(params: ICreateParams<TRecord>): IBaseContextCreateResult<TRecord>;
 }
 

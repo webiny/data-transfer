@@ -4,6 +4,8 @@ import { MigrationConfig } from "~/features/MigrationConfig/abstractions/Migrati
 import type { BaseRecord } from "~/domain/transform/types/records.js";
 import type { DdbShard } from "./abstractions/DdbScanner.ts";
 
+export type { IScanner } from "~/domain/pipeline/abstractions/Scanner.js";
+
 class DdbScannerImpl implements Scanner.Interface<BaseRecord, DdbShard> {
     public constructor(
         private readonly source: SourceDynamoDbClient.Interface,

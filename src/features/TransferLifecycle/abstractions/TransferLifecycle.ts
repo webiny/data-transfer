@@ -1,10 +1,10 @@
 import { createAbstraction } from "~/base/index.js";
 
-interface IBeforeTransferHook {
+export interface IBeforeTransferHook {
     execute(): Promise<void>;
 }
 
-interface IAfterTransferHook {
+export interface IAfterTransferHook {
     execute(): Promise<void>;
 }
 

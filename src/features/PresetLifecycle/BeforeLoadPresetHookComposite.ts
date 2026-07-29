@@ -1,6 +1,8 @@
 import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { BeforeLoadPresetHook } from "./abstractions/PresetLifecycle.ts";
 
+export type { IBeforeLoadPresetHook } from "./abstractions/PresetLifecycle.js";
+
 class BeforeLoadPresetHookCompositeImpl implements BeforeLoadPresetHook.Interface {
     public constructor(private readonly hooks: BeforeLoadPresetHook.Interface[]) {}
 

@@ -20,6 +20,8 @@ import {
     type RunStats
 } from "./abstractions/PipelineRunner.ts";
 
+export type { IPipelineRunner } from "./abstractions/PipelineRunner.js";
+
 type ProcessorInstance = Processor.Interface<BaseTransformContext.Interface<unknown>, any>;
 
 type AnyPipeline = Pipeline<any, any, any>;

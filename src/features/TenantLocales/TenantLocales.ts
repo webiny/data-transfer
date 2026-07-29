@@ -3,6 +3,8 @@ import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { TenantLocales as TenantLocalesAbstraction } from "./abstractions/TenantLocales.ts";
 
+export type { ITenantLocales } from "./abstractions/TenantLocales.js";
+
 class TenantLocalesImpl implements TenantLocalesAbstraction.Interface {
     private tenantLocales: Map<string, string> = new Map();
     private readonly tableName: string;

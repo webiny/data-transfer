@@ -11,7 +11,7 @@ interface OsCompressedRecord extends BaseRecord {
     data: OsCompressedRecordData;
 }
 
-interface IOsRecordDecompressor {
+export interface IOsRecordDecompressor {
     decompress(osRecord: OsCompressedRecord): Promise<Record<string, unknown> | null>;
 }
 

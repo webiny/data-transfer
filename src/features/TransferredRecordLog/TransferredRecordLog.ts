@@ -4,6 +4,8 @@ import { TransferContext } from "~/features/TransferLifecycle/abstractions/Trans
 import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
 import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
 
+export type { ITransferredRecordLog } from "./abstractions/TransferredRecordLog.js";
+
 class TransferredRecordLogImpl implements TransferredRecordLogAbstraction.Interface {
     private readonly buffer: string[] = [];
 

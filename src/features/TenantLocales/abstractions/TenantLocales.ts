@@ -1,6 +1,6 @@
 import { createAbstraction } from "~/base/index.js";
 
-interface ITenantLocales {
+export interface ITenantLocales {
     /** Fetch all tenants with their default locales from the source DB */
     preload(): Promise<void>;
     /** Get the map of tenantId -> defaultLocale */

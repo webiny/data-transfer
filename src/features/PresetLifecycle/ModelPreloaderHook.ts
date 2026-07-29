@@ -4,6 +4,8 @@ import { TenantLocales } from "~/features/TenantLocales/index.js";
 import { ModelProvider } from "~/features/ModelProvider/index.js";
 import { AfterLoadPresetHook } from "./abstractions/PresetLifecycle.ts";
 
+export type { IAfterLoadPresetHook } from "./abstractions/PresetLifecycle.js";
+
 class ModelPreloaderHookImpl implements AfterLoadPresetHook.Interface {
     public constructor(
         private readonly tenantLocales: TenantLocales.Interface,

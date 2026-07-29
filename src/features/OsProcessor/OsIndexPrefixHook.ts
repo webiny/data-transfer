@@ -1,6 +1,8 @@
 import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { BeforeTransferHook } from "~/features/TransferLifecycle/index.js";
 
+export type { IBeforeTransferHook } from "~/features/TransferLifecycle/abstractions/TransferLifecycle.js";
+
 class OsIndexPrefixHookImpl implements BeforeTransferHook.Interface {
     public constructor(private readonly config: MigrationConfig.Interface) {}
 

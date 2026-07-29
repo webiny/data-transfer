@@ -1,6 +1,6 @@
 import { createAbstraction } from "~/base/index.js";
 
-interface ITransferredRecordLog {
+export interface ITransferredRecordLog {
     add(record: unknown, pipelineName: string): void;
     flush(segment: number): void;
 }

@@ -5,6 +5,8 @@ import {
 import type { PutRecord } from "~/domain/transform/commands/PutRecord.js";
 import { DdbExecutor as DdbExecutorAbstraction } from "./abstractions/DdbExecutor.ts";
 
+export type { IDdbExecutor } from "./abstractions/DdbExecutor.js";
+
 class DdbExecutorImpl implements DdbExecutorAbstraction.Interface {
     public constructor(private readonly targetDb: TargetDynamoDbClient.Interface) {}
 

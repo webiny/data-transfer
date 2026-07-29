@@ -8,6 +8,8 @@ import { S3Copy } from "~/domain/transform/commands/S3Copy.js";
 import type { Commands } from "~/domain/transform/commands/Commands.js";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 
+export type { IProcessor } from "~/domain/pipeline/abstractions/Processor.js";
+
 interface S3ProcessorSlice {
     copyFile(sourceKey: string, targetKey: string): void;
     getFile(key: string): Promise<Buffer | null>;

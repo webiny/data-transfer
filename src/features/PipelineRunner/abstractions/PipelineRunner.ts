@@ -30,7 +30,7 @@ export interface RunStats {
 // PipelineRunner abstraction
 // ============================================================================
 
-interface IPipelineRunner {
+export interface IPipelineRunner {
     /**
      * Register one or more pipelines. Heterogeneous record/context types are
      * allowed (each pipeline runs with its own scanner + processor set); the

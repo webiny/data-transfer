@@ -1,5 +1,7 @@
 import { TouchedIndexes as TouchedIndexesAbstraction } from "./abstractions/TouchedIndexes.ts";
 
+export type { ITouchedIndexes } from "./abstractions/TouchedIndexes.js";
+
 class TouchedIndexesImpl implements TouchedIndexesAbstraction.Interface {
     private readonly items: Map<string, string> = new Map();
 

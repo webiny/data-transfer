@@ -9,6 +9,8 @@ import { TransferContext } from "~/features/TransferLifecycle/abstractions/Trans
 import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
 import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
+export type { ISnapshotWriter } from "./abstractions/SnapshotWriter.js";
+
 interface OpenStream {
     /** The stream the writer actually .write()s to — gzip OR the raw file. */
     sink: Gzip | WriteStream;
