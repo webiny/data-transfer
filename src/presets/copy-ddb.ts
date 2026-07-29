@@ -1,6 +1,6 @@
-import { createTransferPreset } from "~/utils/createTransferPreset.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
+import { createTransferPreset } from "~/utils/createTransferPreset.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import { DdbProcessor } from "~/features/DdbProcessor/index.js";
 
 export default createTransferPreset({
     name: "copy-ddb",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatError } from "~/base/index.ts";
+import { formatError } from "~/base/index.js";
 
 describe("formatError", () => {
     it("formats ZodError-like values as a per-issue list", () => {

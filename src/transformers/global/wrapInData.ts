@@ -1,6 +1,6 @@
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 // Reserved top-level attributes that should NOT be wrapped in data
 const RESERVED_ATTRIBUTES = new Set([

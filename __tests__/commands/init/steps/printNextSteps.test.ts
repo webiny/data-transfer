@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { printNextSteps } from "~/commands/init/steps/printNextSteps.ts";
+import { printNextSteps } from "~/commands/init/steps/printNextSteps.js";
 
 describe("printNextSteps", () => {
     let output: string[];

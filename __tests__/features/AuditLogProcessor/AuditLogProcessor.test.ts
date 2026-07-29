@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { AuditLogProcessor } from "~/features/AuditLogProcessor/AuditLogProcessor.ts";
-import { AuditLogPutRecord } from "~/domain/transform/commands/AuditLogPutRecord.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { AuditLogProcessor } from "~/features/AuditLogProcessor/AuditLogProcessor.js";
+import { AuditLogPutRecord } from "~/domain/transform/commands/AuditLogPutRecord.js";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import { createDdbContainer } from "../../containers/ddb.ts";
 import { DynamoDB } from "@aws-sdk/client-dynamodb";
 

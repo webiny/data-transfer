@@ -1,5 +1,5 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { PutRecord } from "~/domain/transform/commands/PutRecord.js";
 
 interface IDdbExecutor {
     /** Write PutRecord commands to the target DDB table. Groups by table; no-op on empty input. */

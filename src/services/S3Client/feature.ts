@@ -1,5 +1,5 @@
-import { createFeature } from "~/base/index.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { createFeature } from "~/base/index.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { S3ClientImpl } from "./S3Client.ts";
 import { SourceS3Client, TargetS3Client } from "./abstractions/S3Client.ts";
 import { S3ClientConfig } from "./abstractions/S3ClientConfig.ts";

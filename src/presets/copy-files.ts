@@ -1,7 +1,7 @@
-import { createTransferPreset } from "~/utils/createTransferPreset.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { S3Processor } from "~/features/S3Processor/index.ts";
-import { isFmFile } from "~/domain/transform/filters.ts";
+import { createTransferPreset } from "~/utils/createTransferPreset.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import { S3Processor } from "~/features/S3Processor/index.js";
+import { isFmFile } from "~/domain/transform/filters.js";
 import { createFilter } from "~/domain/pipeline/index.js";
 import { DdbProcessor } from "~/features/DdbProcessor/index.js";
 

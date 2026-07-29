@@ -1,5 +1,5 @@
-import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.ts";
+import type { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.js";
 
 export function createTransformer<TContext extends Processor.Context>(
     name: string,

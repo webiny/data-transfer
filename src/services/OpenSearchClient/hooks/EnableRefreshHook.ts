@@ -1,11 +1,11 @@
 import { join } from "path";
-import { AfterTransferHook } from "~/features/TransferLifecycle/abstractions/TransferLifecycle.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
+import { AfterTransferHook } from "~/features/TransferLifecycle/abstractions/TransferLifecycle.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
 import { OpenSearchClient } from "../abstractions/OpenSearchClient.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.js";
 
 class EnableRefreshHookImpl implements AfterTransferHook.Interface {
     public constructor(

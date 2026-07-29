@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { BeforeLoadPresetHookComposite } from "./BeforeLoadPresetHookComposite.ts";
 import { AfterLoadPresetHookComposite } from "./AfterLoadPresetHookComposite.ts";
 import { ModelPreloaderHook } from "./ModelPreloaderHook.ts";

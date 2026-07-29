@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/abstractions/PipelineBuilderFactory.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
-import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
-import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/abstractions/PipelineBuilderFactory.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import { DdbProcessor } from "~/features/DdbProcessor/index.js";
+import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.js";
+import { Pipeline } from "~/domain/pipeline/Pipeline.js";
 
 describe("PipelineBuilderFactory", () => {
     it("resolves from the DI container", () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { scaffold } from "~/commands/init/steps/scaffold.ts";
+import { scaffold } from "~/commands/init/steps/scaffold.js";
 
 describe("scaffold", () => {
     let workDir: string;
@@ -24,7 +24,7 @@ describe("scaffold", () => {
         mkdirSync(join(projectsDir, "blank"));
         writeFileSync(
             join(projectsDir, "blank", "config.ts"),
-            `import { createConfig } from "~/index.ts";\nexport default createConfig({});`
+            `import { createConfig } from "~/index.js";\nexport default createConfig({});`
         );
         writeFileSync(join(projectsDir, "blank", ".env.example"), "SOURCE_REGION=us-east-1");
     });

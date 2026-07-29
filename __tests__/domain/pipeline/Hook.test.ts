@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
-import { Hook } from "~/domain/pipeline/index.ts";
+import { Hook } from "~/domain/pipeline/index.js";
 
 class FakeHook implements Hook.Interface {
     public readonly calls: Array<{ runId: string; mergeGroupId: string }> = [];

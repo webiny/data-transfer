@@ -1,9 +1,9 @@
 import { Container } from "@webiny/di";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { Scanner, Processor, Hook } from "~/domain/pipeline/index.ts";
-import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import { Scanner, Processor, Hook } from "~/domain/pipeline/index.js";
+import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import type { FakeRecord, FakeShard, FakeSlice, FakeContext } from "./types.ts";
 
 export class FakeScanner implements Scanner.Interface<FakeRecord, FakeShard> {

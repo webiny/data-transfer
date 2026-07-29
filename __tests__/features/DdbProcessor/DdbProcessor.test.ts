@@ -4,15 +4,15 @@ import { DynamoDB } from "@aws-sdk/client-dynamodb";
 vi.mock("@aws-sdk/client-dynamodb", () => ({
     DynamoDB: vi.fn()
 }));
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { createDdbContainer } from "../../containers/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/DdbProcessor.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { DdbExecutor } from "~/features/DdbExecutor/index.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { DdbProcessor } from "~/features/DdbProcessor/DdbProcessor.js";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import { DdbExecutor } from "~/features/DdbExecutor/index.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 function makeRecord(pk: string, sk: string): BaseRecord {

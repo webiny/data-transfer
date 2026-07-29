@@ -1,5 +1,5 @@
-import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import type { MigrationPreset } from "~/domain/transform/Preset.js";
 import { AfterLoadPresetHook } from "./abstractions/PresetLifecycle.ts";
 
 class AfterLoadPresetHookCompositeImpl implements AfterLoadPresetHook.Interface {

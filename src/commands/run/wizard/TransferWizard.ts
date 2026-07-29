@@ -9,7 +9,7 @@ import { listAvailablePresetsWithDescriptions } from "./presetDiscovery.ts";
 import { writeEnv } from "./envWriter.ts";
 import { extractFromWebinyOutput } from "./sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "./sources/PulumiStateSource.ts";
-import { scaffoldProject } from "~/commands/initProject/scaffoldProject.ts";
+import { scaffoldProject } from "~/commands/initProject/scaffoldProject.js";
 import type { RawOutputValues, EnvValues, WizardResult } from "./types.ts";
 
 async function fileNonEmpty(path: string): Promise<boolean> {

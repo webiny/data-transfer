@@ -1,10 +1,10 @@
-import { createTransferPreset } from "~/utils/createTransferPreset.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
-import { S3Processor } from "~/features/S3Processor/index.ts";
-import { AuditLogProcessor } from "~/features/AuditLogProcessor/index.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
-import { createFilter } from "~/domain/pipeline/Filter.ts";
+import { createTransferPreset } from "~/utils/createTransferPreset.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import { DdbProcessor } from "~/features/DdbProcessor/index.js";
+import { S3Processor } from "~/features/S3Processor/index.js";
+import { AuditLogProcessor } from "~/features/AuditLogProcessor/index.js";
+import { MigrationConfig } from "~/features/MigrationConfig/index.js";
+import { createFilter } from "~/domain/pipeline/Filter.js";
 import {
     byType,
     isAcoSearchRecord,
@@ -20,7 +20,7 @@ import {
     isFormBuilderRecord,
     isMigrationRecord,
     isSecurityTeam
-} from "~/domain/transform/filters.ts";
+} from "~/domain/transform/filters.js";
 import {
     addGsiTenant,
     addLiveField,
@@ -39,7 +39,7 @@ import {
     transformPermissions,
     updateFlpIds,
     wrapInData
-} from "~/transformers/index.ts";
+} from "~/transformers/index.js";
 // ============================================================================
 // Webiny v5 to v6 Migration Preset
 // ============================================================================

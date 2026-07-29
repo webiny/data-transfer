@@ -1,10 +1,10 @@
 import { type Abstraction, type Constructor } from "@webiny/di";
-import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
-import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { PipelineCustomizer } from "~/features/PipelineCustomizer/abstractions/PipelineCustomizer.ts";
+import { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.js";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.js";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { PipelineCustomizer } from "~/features/PipelineCustomizer/abstractions/PipelineCustomizer.js";
 import { PipelineBuilderFactory as PipelineBuilderFactoryAbstraction } from "./abstractions/PipelineBuilderFactory.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
 type AnyImpl = Constructor<unknown> & { __abstraction: Abstraction<unknown> };
 

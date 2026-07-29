@@ -2,7 +2,7 @@ import { Client } from "@opensearch-project/opensearch";
 import { AwsSigv4Signer } from "@opensearch-project/opensearch/aws";
 import { OpenSearchClient as OpenSearchClientAbstraction } from "./abstractions/OpenSearchClient.ts";
 import { OpenSearchClientConfig } from "./abstractions/OpenSearchClientConfig.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
 class OpenSearchClientImpl implements OpenSearchClientAbstraction.Interface {
     private client: Client;

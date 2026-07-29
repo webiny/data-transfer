@@ -1,16 +1,16 @@
-import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
-} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import type { Commands } from "~/domain/transform/commands/Commands.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import { DynamoDB } from "@aws-sdk/client-dynamodb";
-import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
+import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.js";
 
 interface DdbProcessorSlice {
     putRecord(record: Record<string, unknown>): void;

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { createOsContainer } from "../../containers/index.ts";
-import { Scanner } from "~/domain/pipeline/index.ts";
-import { OsScanner } from "~/features/OsScanner/index.ts";
-import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
+import { Scanner } from "~/domain/pipeline/index.js";
+import { OsScanner } from "~/features/OsScanner/index.js";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
 

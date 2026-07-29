@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { addGsiTenant } from "~/transformers/global/addGsiTenant.ts";
+import { addGsiTenant } from "~/transformers/global/addGsiTenant.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("addGsiTenant", () => {

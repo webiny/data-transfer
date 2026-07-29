@@ -1,28 +1,28 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
 import type { Abstraction } from "@webiny/di";
-import { ContainerToken, createAbstraction } from "~/base/index.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.ts";
-import { DroppedRecordLog } from "~/features/DroppedRecordLog/abstractions/DroppedRecordLog.ts";
+import { ContainerToken, createAbstraction } from "~/base/index.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { PipelineRunner, PipelineRunnerFeature } from "~/features/PipelineRunner/index.js";
+import { DroppedRecordLog } from "~/features/DroppedRecordLog/abstractions/DroppedRecordLog.js";
 import { MockDroppedRecordLog } from "../DroppedRecordLog/MockDroppedRecordLog.ts";
-import { TransferredRecordLog } from "~/features/TransferredRecordLog/abstractions/TransferredRecordLog.ts";
+import { TransferredRecordLog } from "~/features/TransferredRecordLog/abstractions/TransferredRecordLog.js";
 import { MockTransferredRecordLog } from "../TransferredRecordLog/MockTransferredRecordLog.ts";
 import {
     PipelineBuilderFactory,
     PipelineBuilderFactoryFeature
-} from "~/features/PipelineBuilderFactory/index.ts";
-import { SnapshotWriter } from "~/features/SnapshotWriter/index.ts";
-import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { Processor, Hook, createFilter } from "~/domain/pipeline/index.ts";
-import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { Pipeline } from "~/domain/pipeline/index.ts";
-import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+} from "~/features/PipelineBuilderFactory/index.js";
+import { SnapshotWriter } from "~/features/SnapshotWriter/index.js";
+import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import { Processor, Hook, createFilter } from "~/domain/pipeline/index.js";
+import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.js";
+import type { Pipeline } from "~/domain/pipeline/index.js";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import {
     FakeScannerImpl,
     FakeProcessorImpl,

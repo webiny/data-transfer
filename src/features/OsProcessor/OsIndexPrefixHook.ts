@@ -1,5 +1,5 @@
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { BeforeTransferHook } from "~/features/TransferLifecycle/index.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import { BeforeTransferHook } from "~/features/TransferLifecycle/index.js";
 
 class OsIndexPrefixHookImpl implements BeforeTransferHook.Interface {
     public constructor(private readonly config: MigrationConfig.Interface) {}

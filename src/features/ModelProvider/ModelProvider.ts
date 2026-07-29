@@ -1,9 +1,9 @@
 import { join } from "path";
-import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { ModelProvider as ModelProviderAbstraction } from "./abstractions/ModelProvider.ts";
 
 function isModel(value: unknown): value is ModelProviderAbstraction.ModelType {

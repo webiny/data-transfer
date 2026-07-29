@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { visitFields } from "~/transformers/cms/fieldVisitor.ts";
-import type { ModelField } from "~/transformers/cms/modelTypes.ts";
+import { visitFields } from "~/transformers/cms/fieldVisitor.js";
+import type { ModelField } from "~/transformers/cms/modelTypes.js";
 
 function textField(id: string): ModelField {
     return { id, fieldId: id, storageId: `text@${id}`, type: "text" };

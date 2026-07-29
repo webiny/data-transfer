@@ -1,7 +1,7 @@
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
-import { Cache } from "~/tools/Cache/abstractions/Cache.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.js";
+import { Cache } from "~/tools/Cache/abstractions/Cache.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import {
     BaseTransformContext as BaseTransformContextAbstraction,
     BaseTransformContextFactory as BaseTransformContextFactoryAbstraction

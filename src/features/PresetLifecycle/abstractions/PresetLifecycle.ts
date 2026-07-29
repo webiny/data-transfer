@@ -1,6 +1,6 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import type { MigrationPreset } from "~/domain/transform/Preset.js";
 
 interface IBeforeLoadPresetHook {
     execute(config: MigrationConfig.Interface): Promise<void>;

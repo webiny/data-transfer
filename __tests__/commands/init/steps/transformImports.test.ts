@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { transformImports } from "~/commands/init/steps/transformImports.ts";
+import { transformImports } from "~/commands/init/steps/transformImports.js";
 
 describe("transformImports", () => {
     it("replaces ~/index.ts with @webiny/data-transfer", () => {
-        const input = `import { createConfig } from "~/index.ts";`;
+        const input = `import { createConfig } from "~/index.js";`;
         expect(transformImports(input)).toBe(
             `import { createConfig } from "@webiny/data-transfer";`
         );
@@ -18,8 +18,8 @@ describe("transformImports", () => {
 
     it("handles multiple imports in same file", () => {
         const input = [
-            `import { createConfig } from "~/index.ts";`,
-            `import { fromEnv } from "~/index.ts";`
+            `import { createConfig } from "~/index.js";`,
+            `import { fromEnv } from "~/index.js";`
         ].join("\n");
         const expected = [
             `import { createConfig } from "@webiny/data-transfer";`,
@@ -34,7 +34,7 @@ describe("transformImports", () => {
     });
 
     it("handles re-exports", () => {
-        const input = `export { createConfig } from "~/index.ts";`;
+        const input = `export { createConfig } from "~/index.js";`;
         expect(transformImports(input)).toBe(
             `export { createConfig } from "@webiny/data-transfer";`
         );

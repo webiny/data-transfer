@@ -3,13 +3,13 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Container } from "@webiny/di";
-import { ContainerToken } from "~/base/index.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { LoggerFeature } from "~/tools/Logger/index.ts";
-import { DirectoryToolFeature } from "~/tools/DirectoryTool/index.ts";
-import { FileToolFeature } from "~/tools/FileTool/index.ts";
-import { DroppedRecordLog, DroppedRecordLogFeature } from "~/features/DroppedRecordLog/index.ts";
-import { RecordDisposition } from "~/domain/pipeline/index.ts";
+import { ContainerToken } from "~/base/index.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { LoggerFeature } from "~/tools/Logger/index.js";
+import { DirectoryToolFeature } from "~/tools/DirectoryTool/index.js";
+import { FileToolFeature } from "~/tools/FileTool/index.js";
+import { DroppedRecordLog, DroppedRecordLogFeature } from "~/features/DroppedRecordLog/index.js";
+import { RecordDisposition } from "~/domain/pipeline/index.js";
 
 function createContainer(): Container {
     const container = new Container();

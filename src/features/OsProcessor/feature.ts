@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { OsProcessor } from "./OsProcessor.ts";
 import { OsIndexPrefixHook } from "./OsIndexPrefixHook.ts";
 

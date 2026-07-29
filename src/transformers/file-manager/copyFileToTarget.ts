@@ -1,4 +1,4 @@
-import { createDdbTransformer } from "~/transformers/createDdbTransformer.ts";
+import { createDdbTransformer } from "~/transformers/createDdbTransformer.js";
 
 // Emits a verbatim S3 copy for a file record — source key == target key.
 // Handles both raw v5 records (values["text@key"]) and post-wrapInData

@@ -18,9 +18,9 @@ import {
     isThrottlingError,
     isTokenBucketExhausted,
     retryBackoffMs
-} from "~/base/index.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+} from "~/base/index.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 const BATCH_SIZE = 25; // AWS-enforced BatchWriteItem limit — not user-tunable
 // Default retry budget — enough to weather a multi-second transient

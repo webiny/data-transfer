@@ -1,8 +1,8 @@
 import {
     type DatabaseRecord,
     TargetDynamoDbClient
-} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import type { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
+} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import type { PutRecord } from "~/domain/transform/commands/PutRecord.js";
 import { DdbExecutor as DdbExecutorAbstraction } from "./abstractions/DdbExecutor.ts";
 
 class DdbExecutorImpl implements DdbExecutorAbstraction.Interface {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { discoverPresets } from "~/commands/init/steps/discoverPresets.ts";
+import { discoverPresets } from "~/commands/init/steps/discoverPresets.js";
 
 describe("discoverPresets", () => {
     let dir: string;

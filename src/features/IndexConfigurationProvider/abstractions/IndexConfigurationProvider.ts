@@ -1,5 +1,5 @@
 import type { OpenSearchIndexRequestBody } from "@webiny/api-opensearch/types.js";
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
 interface IndexConfiguration {
     mappings?: OpenSearchIndexRequestBody["mappings"];

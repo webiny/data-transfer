@@ -1,4 +1,4 @@
-import type { SourceS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
+import type { SourceS3Client } from "~/services/S3Client/abstractions/S3Client.js";
 
 /**
  * In-memory mock for SourceS3Client / TargetS3Client.

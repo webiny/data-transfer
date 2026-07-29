@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { migrateMailerSettings } from "~/transformers/mailer/migrateMailerSettings.ts";
+import { migrateMailerSettings } from "~/transformers/mailer/migrateMailerSettings.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 interface KvRecord {

@@ -1,4 +1,4 @@
-import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import type { MigrationPreset } from "~/domain/transform/Preset.js";
 
 /**
  * Typed identity helper for user preset files.

@@ -4,13 +4,13 @@ import { gunzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Container } from "@webiny/di";
-import { ContainerToken } from "~/base/index.ts";
-import { DirectoryToolFeature } from "~/tools/DirectoryTool/index.ts";
-import { LoggerFeature } from "~/tools/Logger/index.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { SnapshotWriter, SnapshotWriterFeature } from "~/features/SnapshotWriter/index.ts";
+import { ContainerToken } from "~/base/index.js";
+import { DirectoryToolFeature } from "~/tools/DirectoryTool/index.js";
+import { LoggerFeature } from "~/tools/Logger/index.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { SnapshotWriter, SnapshotWriterFeature } from "~/features/SnapshotWriter/index.js";
 
 interface Entry {
     level: string;

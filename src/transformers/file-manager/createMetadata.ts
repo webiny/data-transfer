@@ -1,4 +1,4 @@
-import { createDdbTransformer } from "~/transformers/createDdbTransformer.ts";
+import { createDdbTransformer } from "~/transformers/createDdbTransformer.js";
 
 /**
  * Creates file metadata records in KeyValue format for file entries

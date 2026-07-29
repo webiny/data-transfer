@@ -1,5 +1,5 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { MigrationPreset } from "~/domain/transform/Preset.js";
 
 interface IPresetLoader {
     load(presetNameOrPath: string): Promise<MigrationPreset>;

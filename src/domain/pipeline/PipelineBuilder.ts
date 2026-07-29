@@ -4,8 +4,8 @@ import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
 import type { Transformer } from "./abstractions/Transformer.ts";
 import type { Filter } from "./Filter.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { PipelineCustomizer } from "~/features/PipelineCustomizer/abstractions/PipelineCustomizer.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { PipelineCustomizer } from "~/features/PipelineCustomizer/abstractions/PipelineCustomizer.js";
 import { PipelineCustomizerBuilder } from "./PipelineCustomizerBuilder.ts";
 import { Pipeline, type PipelineConfig } from "./Pipeline.ts";
 

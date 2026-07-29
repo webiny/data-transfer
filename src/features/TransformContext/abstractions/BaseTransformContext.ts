@@ -1,9 +1,9 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { Command } from "~/domain/transform/commands/Command.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
-import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { Command } from "~/domain/transform/commands/Command.js";
+import type { Commands } from "~/domain/transform/commands/Commands.js";
+import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.js";
+import type { Cache } from "~/tools/Cache/abstractions/Cache.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 // ============================================================================

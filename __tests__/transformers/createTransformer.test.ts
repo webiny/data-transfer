@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import { createDdbTransformer } from "~/transformers/createDdbTransformer.ts";
-import { createOsTransformer } from "~/transformers/createOsTransformer.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import { createDdbTransformer } from "~/transformers/createDdbTransformer.js";
+import { createOsTransformer } from "~/transformers/createOsTransformer.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import type {
     DdbTransformContext,
     OsTransformContext
-} from "~/features/TransformContext/abstractions/contextAliases.ts";
-import type { OsScanner } from "~/features/OsScanner/index.ts";
+} from "~/features/TransformContext/abstractions/contextAliases.js";
+import type { OsScanner } from "~/features/OsScanner/index.js";
 
 describe("createTransformer", () => {
     it("returns a function compatible with Transformer.Interface", () => {

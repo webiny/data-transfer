@@ -1,6 +1,6 @@
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 /**
  * Transforms security role permissions to v6 format:

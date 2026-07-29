@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { updateOsIndex } from "~/transformers/cms/updateOsIndex.ts";
+import { updateOsIndex } from "~/transformers/cms/updateOsIndex.js";
 import { makeFakeOsContext } from "../fakeContext.ts";
 
 const BASE_RECORD = {

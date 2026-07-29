@@ -1,4 +1,4 @@
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { OsRecordDecompressor as OsRecordDecompressorAbstraction } from "./abstractions/OsRecordDecompressor.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 

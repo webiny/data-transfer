@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
-import { Scanner } from "~/domain/pipeline/index.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { Scanner } from "~/domain/pipeline/index.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 function makeRecord(pk: string, sk: string, type: string): BaseRecord {
     return {

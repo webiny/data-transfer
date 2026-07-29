@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generatePackageJson } from "~/commands/init/steps/generatePackageJson.ts";
+import { generatePackageJson } from "~/commands/init/steps/generatePackageJson.js";
 
 describe("generatePackageJson", () => {
     it("generates valid JSON with project name", () => {

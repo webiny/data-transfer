@@ -1,4 +1,4 @@
-import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { BeforeLoadPresetHook } from "./abstractions/PresetLifecycle.ts";
 
 class BeforeLoadPresetHookCompositeImpl implements BeforeLoadPresetHook.Interface {

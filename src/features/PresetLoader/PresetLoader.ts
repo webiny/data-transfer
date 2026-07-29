@@ -1,11 +1,11 @@
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+import type { MigrationPreset } from "~/domain/transform/Preset.js";
 import { PresetLoader as PresetLoaderAbstraction } from "./abstractions/PresetLoader.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 
 const BUILTIN_PRESETS_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../presets");
 

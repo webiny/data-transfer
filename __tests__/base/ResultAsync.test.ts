@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { ResultAsync } from "~/base/ResultAsync.ts";
-import { Result } from "~/base/Result.ts";
+import { ResultAsync } from "~/base/ResultAsync.js";
+import { Result } from "~/base/Result.js";
 
 describe("ResultAsync", () => {
     describe("from", () => {

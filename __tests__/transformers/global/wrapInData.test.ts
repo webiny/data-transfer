@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { wrapInData } from "~/transformers/global/wrapInData.ts";
+import { wrapInData } from "~/transformers/global/wrapInData.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("wrapInData", () => {

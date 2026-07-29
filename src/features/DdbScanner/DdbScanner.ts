@@ -1,7 +1,7 @@
-import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.js";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 import type { DdbShard } from "./abstractions/DdbScanner.ts";
 
 class DdbScannerImpl implements Scanner.Interface<BaseRecord, DdbShard> {

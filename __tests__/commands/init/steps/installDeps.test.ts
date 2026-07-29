@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { execa } from "execa";
-import { installDeps } from "~/commands/init/steps/installDeps.ts";
+import { installDeps } from "~/commands/init/steps/installDeps.js";
 
 vi.mock("execa", () => ({
     execa: vi.fn().mockResolvedValue({ stdout: "", stderr: "" })

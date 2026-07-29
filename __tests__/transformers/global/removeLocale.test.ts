@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { removeLocale } from "~/transformers/global/removeLocale.ts";
+import { removeLocale } from "~/transformers/global/removeLocale.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("removeLocale", () => {

@@ -1,6 +1,6 @@
 import { AccessChecker as AccessCheckerAbstraction } from "./abstractions/AccessChecker.ts";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import type { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import type { AccessCheck } from "~/domain/pipeline/abstractions/Processor.js";
 
 class AccessCheckerImpl implements AccessCheckerAbstraction.Interface {
     public constructor(private readonly runner: PipelineRunner.Interface) {}

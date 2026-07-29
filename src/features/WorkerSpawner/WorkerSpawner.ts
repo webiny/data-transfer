@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 import { WorkerSpawner as WorkerSpawnerAbstraction } from "./abstractions/WorkerSpawner.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
 class WorkerSpawnerImpl implements WorkerSpawnerAbstraction.Interface {
     private readonly binPath: string;

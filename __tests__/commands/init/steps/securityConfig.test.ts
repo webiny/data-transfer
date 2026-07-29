@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateSecurityConfig } from "~/commands/init/steps/securityConfig.ts";
+import { generateSecurityConfig } from "~/commands/init/steps/securityConfig.js";
 
 describe("generateSecurityConfig", () => {
     it("generates .yarnrc.yml for yarn", () => {

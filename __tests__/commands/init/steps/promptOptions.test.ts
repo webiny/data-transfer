@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { promptOptions } from "~/commands/init/steps/promptOptions.ts";
+import { promptOptions } from "~/commands/init/steps/promptOptions.js";
 
 describe("promptOptions", () => {
     let dir: string;

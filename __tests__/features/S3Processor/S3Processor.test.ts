@@ -1,14 +1,14 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { createDdbContainer } from "../../containers/index.ts";
 import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
-import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
-import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { S3Processor } from "~/features/S3Processor/S3Processor.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.js";
+import { S3Copy } from "~/domain/transform/commands/S3Copy.js";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { S3Processor } from "~/features/S3Processor/S3Processor.js";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 import { S3 } from "@webiny/aws-sdk/client-s3/index.js";
 

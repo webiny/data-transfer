@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { transformRichText } from "~/transformers/cms/transformRichText.ts";
+import { transformRichText } from "~/transformers/cms/transformRichText.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("transformRichText", () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { copyFileToTarget } from "~/transformers/file-manager/copyFileToTarget.ts";
+import { copyFileToTarget } from "~/transformers/file-manager/copyFileToTarget.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.js";
 
 function makeCtx(record: Record<string, unknown>): {
     ctx: DdbTransformContext.Interface;

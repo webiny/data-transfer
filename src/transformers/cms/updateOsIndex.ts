@@ -1,5 +1,5 @@
 import { configurations } from "@webiny/api-headless-cms-ddb-es/configurations.js";
-import { createOsTransformer } from "~/transformers/createOsTransformer.ts";
+import { createOsTransformer } from "~/transformers/createOsTransformer.js";
 
 export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
     const { record } = ctx;

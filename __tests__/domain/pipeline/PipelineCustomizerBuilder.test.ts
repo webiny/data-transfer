@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { PipelineCustomizerBuilder } from "~/domain/pipeline/PipelineCustomizerBuilder.ts";
-import { createFilter } from "~/domain/pipeline/Filter.ts";
+import { PipelineCustomizerBuilder } from "~/domain/pipeline/PipelineCustomizerBuilder.js";
+import { createFilter } from "~/domain/pipeline/Filter.js";
 
 describe("PipelineCustomizerBuilder", () => {
     it("accumulates filters", () => {

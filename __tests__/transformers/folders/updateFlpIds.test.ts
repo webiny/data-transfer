@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { updateFlpIds } from "~/transformers/folders/updateFlpIds.ts";
+import { updateFlpIds } from "~/transformers/folders/updateFlpIds.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 interface FlpData {

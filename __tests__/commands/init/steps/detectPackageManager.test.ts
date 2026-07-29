@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { detectPackageManager } from "~/commands/init/steps/detectPackageManager.ts";
+import { detectPackageManager } from "~/commands/init/steps/detectPackageManager.js";
 
 describe("detectPackageManager", () => {
     const original = process.env["npm_config_user_agent"];

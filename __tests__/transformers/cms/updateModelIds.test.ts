@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { updateModelIds } from "~/transformers/cms/updateModelIds.ts";
+import { updateModelIds } from "~/transformers/cms/updateModelIds.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("updateModelIds", () => {

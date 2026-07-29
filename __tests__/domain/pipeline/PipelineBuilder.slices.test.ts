@@ -1,13 +1,13 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
-import { OsScanner } from "~/features/OsScanner/index.ts";
-import { OsProcessor } from "~/features/OsProcessor/index.ts";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import { DdbProcessor } from "~/features/DdbProcessor/index.js";
+import { OsScanner } from "~/features/OsScanner/index.js";
+import { OsProcessor } from "~/features/OsProcessor/index.js";
 // The S3Processor index re-exports the abstraction token; the Impl class we
 // need for factory.create({ processors: [...] }) lives in the impl file.
-import { S3Processor } from "~/features/S3Processor/S3Processor.ts";
+import { S3Processor } from "~/features/S3Processor/S3Processor.js";
 
 /**
  * Type-level fixture for PipelineBuilderFactory.create({ processors: [...] }).

@@ -1,4 +1,4 @@
-import { createTransferPreset } from "~/utils/createTransferPreset.ts";
+import { createTransferPreset } from "~/utils/createTransferPreset.js";
 import { OsScanner } from "~/features/OsScanner/index.js";
 import { OsProcessor } from "~/features/OsProcessor/index.js";
 

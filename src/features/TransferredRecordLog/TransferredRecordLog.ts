@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { TransferredRecordLog as TransferredRecordLogAbstraction } from "./abstractions/TransferredRecordLog.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
 
 class TransferredRecordLogImpl implements TransferredRecordLogAbstraction.Interface {
     private readonly buffer: string[] = [];

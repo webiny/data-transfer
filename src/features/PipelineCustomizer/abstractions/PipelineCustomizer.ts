@@ -1,5 +1,5 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { PipelineCustomizerBuilder } from "~/domain/pipeline/PipelineCustomizerBuilder.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { PipelineCustomizerBuilder } from "~/domain/pipeline/PipelineCustomizerBuilder.js";
 
 interface IPipelineCustomizer {
     readonly name: string;

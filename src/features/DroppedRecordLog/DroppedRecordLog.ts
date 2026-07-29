@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { DroppedRecordLog as DroppedRecordLogAbstraction } from "./abstractions/DroppedRecordLog.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import { RecordDisposition } from "~/domain/pipeline/RecordDisposition.ts";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import { RecordDisposition } from "~/domain/pipeline/RecordDisposition.js";
 
 class DroppedRecordLogImpl implements DroppedRecordLogAbstraction.Interface {
     private readonly blackholed: string[] = [];

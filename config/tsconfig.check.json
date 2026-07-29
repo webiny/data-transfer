@@ -1,0 +1,5 @@
+{
+  "extends": ["./tsconfig.build.json", "./tsconfig.checkmode.json"],
+  "include": ["../src", "../__tests__", "../projects"],
+  "exclude": ["../node_modules", "../dist"]
+}

@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/createFeature.ts";
+import { createFeature } from "~/base/createFeature.js";
 import { SnapshotWriter } from "./SnapshotWriter.ts"; // the createImplementation export
 
 /**

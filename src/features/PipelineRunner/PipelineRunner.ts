@@ -1,19 +1,19 @@
 import { type Abstraction, type Container } from "@webiny/di";
-import { ContainerToken } from "~/base/index.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { Hook } from "~/domain/pipeline/abstractions/Hook.ts";
-import { Pipeline } from "~/domain/pipeline/Pipeline.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { SnapshotWriter } from "~/features/SnapshotWriter/abstractions/SnapshotWriter.ts";
-import { DroppedRecordLog } from "~/features/DroppedRecordLog/index.ts";
-import { TransferredRecordLog } from "~/features/TransferredRecordLog/index.ts";
-import { RecordDisposition } from "~/domain/pipeline/index.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { ContainerToken } from "~/base/index.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.js";
+import type { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import type { Hook } from "~/domain/pipeline/abstractions/Hook.js";
+import { Pipeline } from "~/domain/pipeline/Pipeline.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { SnapshotWriter } from "~/features/SnapshotWriter/abstractions/SnapshotWriter.js";
+import { DroppedRecordLog } from "~/features/DroppedRecordLog/index.js";
+import { TransferredRecordLog } from "~/features/TransferredRecordLog/index.js";
+import { RecordDisposition } from "~/domain/pipeline/index.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import {
     PipelineRunner as PipelineRunnerAbstraction,
     type RunOptions,

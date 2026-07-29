@@ -1,16 +1,16 @@
-import { createTransferPreset } from "~/utils/createTransferPreset.ts";
-import { OsScanner } from "~/features/OsScanner/index.ts";
-import { OsProcessor } from "~/features/OsProcessor/index.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
-import { createFilter } from "~/domain/pipeline/Filter.ts";
+import { createTransferPreset } from "~/utils/createTransferPreset.js";
+import { OsScanner } from "~/features/OsScanner/index.js";
+import { OsProcessor } from "~/features/OsProcessor/index.js";
+import { MigrationConfig } from "~/features/MigrationConfig/index.js";
+import { createFilter } from "~/domain/pipeline/Filter.js";
 import {
     isAcoSearchRecord,
     isCmsEntry,
     isFmFile,
     isOsBackgroundTask,
     isOsMailerSettings
-} from "~/domain/transform/filters.ts";
-import { addLiveField, osCmsEntryTransformers, replaceFileUrls } from "~/transformers/index.ts";
+} from "~/domain/transform/filters.js";
+import { addLiveField, osCmsEntryTransformers, replaceFileUrls } from "~/transformers/index.js";
 
 export default createTransferPreset({
     name: "v5-to-v6-os",

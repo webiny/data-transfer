@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { removeTenant } from "~/transformers/security/removeTenant.ts";
+import { removeTenant } from "~/transformers/security/removeTenant.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("removeTenant", () => {
