@@ -1,1 +1,0 @@
-{"version":3,"file":"scaffoldProject.d.ts","sourceRoot":"","sources":["../../../src/commands/initProject/scaffoldProject.ts"],"names":[],"mappings":"AAKA,UAAU,qBAAqB;IAC3B,IAAI,EAAE,MAAM,CAAC;IACb,GAAG,EAAE,MAAM,CAAC;CACf;AAED,wBAAsB,eAAe,CAAC,MAAM,EAAE,qBAAqB,GAAG,OAAO,CAAC,IAAI,CAAC,CA0BlF"}

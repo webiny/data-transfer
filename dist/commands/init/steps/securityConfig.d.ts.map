@@ -1,1 +1,0 @@
-{"version":3,"file":"securityConfig.d.ts","sourceRoot":"","sources":["../../../../src/commands/init/steps/securityConfig.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,aAAa,CAAC;AAElD,UAAU,oBAAoB;IAC1B,QAAQ,EAAE,MAAM,CAAC;IACjB,OAAO,EAAE,MAAM,CAAC;CACnB;AAgBD,wBAAgB,sBAAsB,CAAC,EAAE,EAAE,cAAc,GAAG,oBAAoB,CAK/E"}

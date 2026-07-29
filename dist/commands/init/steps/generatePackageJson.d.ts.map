@@ -1,1 +1,0 @@
-{"version":3,"file":"generatePackageJson.d.ts","sourceRoot":"","sources":["../../../../src/commands/init/steps/generatePackageJson.ts"],"names":[],"mappings":"AAIA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,aAAa,CAAC;AAmBlD,wBAAgB,mBAAmB,CAAC,WAAW,EAAE,MAAM,EAAE,EAAE,CAAC,EAAE,cAAc,GAAG,MAAM,CAwBpF"}

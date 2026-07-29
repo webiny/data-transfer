@@ -1,1 +1,0 @@
-{"version":3,"file":"RecordDisposition.d.ts","sourceRoot":"","sources":["../../../src/domain/pipeline/RecordDisposition.ts"],"names":[],"mappings":"AAAA,yBAAiB,iBAAiB,CAAC;IAC/B,MAAa,SAAS;KAAG;IAEzB,MAAa,UAAU;iBACgB,YAAY,EAAE,MAAM;QAAvD,YAAmC,YAAY,EAAE,MAAM,EAAI;KAC9D;IAED,MAAa,SAAS;KAAG;CAC5B"}

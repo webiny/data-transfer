@@ -1,1 +1,0 @@
-{"version":3,"file":"installDeps.d.ts","sourceRoot":"","sources":["../../../../src/commands/init/steps/installDeps.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,aAAa,CAAC;AAElD,wBAAsB,WAAW,CAAC,SAAS,EAAE,MAAM,EAAE,EAAE,EAAE,cAAc,GAAG,OAAO,CAAC,IAAI,CAAC,CAoBtF"}

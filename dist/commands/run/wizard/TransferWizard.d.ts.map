@@ -1,1 +1,0 @@
-{"version":3,"file":"TransferWizard.d.ts","sourceRoot":"","sources":["../../../../src/commands/run/wizard/TransferWizard.ts"],"names":[],"mappings":"AAYA,OAAO,KAAK,EAA8B,YAAY,EAAE,MAAM,YAAY,CAAC;AA0F3E,qBAAa,cAAc;IACvB,OAAO,CAAC,QAAQ,CAAC,GAAG,CAAS;IAE7B,YAAmB,GAAG,EAAE,MAAM,EAE7B;IAEY,GAAG,IAAI,OAAO,CAAC,YAAY,GAAG,IAAI,CAAC,CAiJ/C;YAEa,kBAAkB;CA0CnC"}

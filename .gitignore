@@ -13,6 +13,7 @@ yarn-error.log*
 .files/
 .changelog
 .history
+dist/
 *.tsbuildinfo
 logs.txt
 .tmp/

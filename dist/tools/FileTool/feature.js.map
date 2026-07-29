@@ -1,1 +1,0 @@
-{"version":3,"file":"feature.js","sourceRoot":"","sources":["../../../src/tools/FileTool/feature.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,aAAa,EAAE,MAAM,iBAAiB,CAAC;AAChD,OAAO,EAAE,QAAQ,EAAE,MAAM,eAAe,CAAC;AAEzC,MAAM,CAAC,MAAM,eAAe,GAAG,aAAa,CAAC;IACzC,IAAI,EAAE,sBAAsB;IAC5B,QAAQ,CAAC,SAAS;QACd,SAAS,CAAC,QAAQ,CAAC,QAAQ,CAAC,CAAC,gBAAgB,EAAE,CAAC;IACpD,CAAC;CACJ,CAAC,CAAC"}

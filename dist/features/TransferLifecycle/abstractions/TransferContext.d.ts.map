@@ -1,1 +1,0 @@
-{"version":3,"file":"TransferContext.d.ts","sourceRoot":"","sources":["../../../../src/features/TransferLifecycle/abstractions/TransferContext.ts"],"names":[],"mappings":"AAEA,UAAU,gBAAgB;IACtB,KAAK,EAAE,MAAM,CAAC;IACd,MAAM,CAAC,EAAE,OAAO,CAAC;CACpB;AAED,eAAO,MAAM,eAAe,oDAAkE,CAAC;AAE/F,yBAAiB,eAAe,CAAC;IAC7B,KAAY,SAAS,GAAG,gBAAgB,CAAC;CAC5C"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"records.d.ts","sourceRoot":"","sources":["../../../../src/domain/transform/types/records.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,UAAU;IACvB,EAAE,EAAE,MAAM,CAAC;IACX,EAAE,EAAE,MAAM,CAAC;IACX,GAAG,EAAE,MAAM,CAAC;IACZ,GAAG,EAAE,MAAM,CAAC;IACZ,GAAG,EAAE,MAAM,CAAC;IACZ,IAAI,EAAE,MAAM,CAAC;IACb,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC;CAC1B"}

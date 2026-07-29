@@ -1,1 +1,0 @@
-{"version":3,"file":"createDdbTransformer.js","sourceRoot":"","sources":["../../src/transformers/createDdbTransformer.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,iBAAiB,EAAE,MAAM,wBAAwB,CAAC;AAE3D,MAAM,UAAU,oBAAoB,CAChC,IAAY,EACZ,EAAwD;IAExD,OAAO,iBAAiB,CAAgC,IAAI,EAAE,EAAE,CAAC,CAAC;AACtE,CAAC"}

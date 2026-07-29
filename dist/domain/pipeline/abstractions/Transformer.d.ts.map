@@ -1,1 +1,0 @@
-{"version":3,"file":"Transformer.d.ts","sourceRoot":"","sources":["../../../../src/domain/pipeline/abstractions/Transformer.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,SAAS,EAAE,MAAM,gBAAgB,CAAC;AAEhD,yBAAiB,WAAW,CAAC;IACzB,KAAY,SAAS,CAAC,QAAQ,SAAS,SAAS,CAAC,OAAO,GAAG,SAAS,CAAC,OAAO,IAAI,CAC5E,GAAG,EAAE,QAAQ,KACZ,IAAI,GAAG,OAAO,CAAC,IAAI,CAAC,CAAC;CAC7B"}
