@@ -1,37 +1,73 @@
 # `@webiny/data-transfer`
 
-A generic data-transfer tool for Webiny environments. Copies DynamoDB + S3 (or OpenSearch) records between AWS accounts, optionally running a transformer chain on each record.
+A data-transfer tool for Webiny environments. Copies DynamoDB, S3, and OpenSearch records between AWS accounts with optional transformer chains.
 
-**Use cases:**
+## Use cases
 
-- **v5 → v6 migration** — write a preset that registers the relevant pipelines.
-- **Prod → dev seeding** — zero transformers, just copy.
-- **Custom transfers** — write your own transformers + pipelines + preset for bespoke data moves.
+- **v5 to v6 migration** — built-in presets handle the full migration pipeline.
+- **Prod to dev seeding** — zero transformers, just copy data as-is.
+- **Custom transfers** — author your own transformers, pipelines, and presets.
 
-The package ships five built-in presets (`v5-to-v6-ddb`, `v5-to-v6-os`, `copy-ddb`, `copy-os`, `copy-files`) plus full authoring support for your own.
-
-## Quick start
+## Getting started
 
 ```bash
-git clone git@github.com:webiny/data-transfer.git
-cd data-transfer
-yarn install
-yarn transfer
+npx @webiny/data-transfer init my-transfer
+cd my-transfer
 ```
 
-`yarn transfer` (no `--config`) launches the **guided setup wizard**. It walks you through selecting a project, collecting credentials, choosing a preset, and starting the transfer. See the [full command reference](docs/guides/commands.md) for all options including direct `--config` runs, re-driving specific shards, and project scaffolding.
+This scaffolds a new project with a `config.ts`, example preset, and everything wired up. The wizard walks you through credentials, preset selection, and transfer execution:
+
+```bash
+npm run transfer
+```
+
+### Manual setup
+
+If you prefer to set up manually:
+
+```bash
+npm install @webiny/data-transfer
+```
+
+Then create a `config.ts`:
+
+```typescript
+import { createConfig, fromAwsProfile, loadEnv } from "@webiny/data-transfer";
+
+loadEnv(import.meta.url);
+
+export default createConfig({
+    source: {
+        dynamodb: { table: "Source-Table", region: "us-east-1" },
+        credentials: fromAwsProfile("source-profile"),
+    },
+    target: {
+        dynamodb: { table: "Target-Table", region: "eu-central-1" },
+        credentials: fromAwsProfile("target-profile"),
+    },
+    pipeline: {
+        preset: "copy-ddb",
+    },
+});
+```
+
+Run it:
+
+```bash
+npx webiny-data-transfer --config=./config.ts --preset=copy-ddb
+```
 
 ## Built-in presets
 
 | Preset         | Description                                                                     |
 | -------------- | ------------------------------------------------------------------------------- |
-| `v5-to-v6-ddb` | Full Webiny v5 → v6 migration of the primary DynamoDB table                     |
+| `v5-to-v6-ddb` | Full Webiny v5 to v6 migration of the primary DynamoDB table                    |
 | `v5-to-v6-os`  | Migration of the OpenSearch companion DynamoDB table (run after `v5-to-v6-ddb`) |
 | `copy-ddb`     | Verbatim DynamoDB + S3 copy (no transformations)                                |
 | `copy-os`      | Verbatim OpenSearch companion table copy (no transformations)                   |
 | `copy-files`   | S3-only file copy                                                               |
 
-Custom presets placed in your `presetsDir` are listed alongside built-ins.
+Custom presets placed in your project's `presets/` directory are listed alongside built-ins.
 
 ## Documentation
 
@@ -43,6 +79,16 @@ Custom presets placed in your `presetsDir` are listed alongside built-ins.
 - [Pipeline runtime](docs/guides/pipeline-runtime.md) — merge groups, first-match-wins, unmatched records, hooks
 - [Troubleshooting](docs/guides/troubleshooting.md) — common issues and fixes
 
+## Development
+
+```bash
+git clone git@github.com:webiny/data-transfer.git
+cd data-transfer
+yarn install
+yarn full    # format, lint, typecheck, test, coverage
+yarn build   # compile to dist/
+```
+
 ## License
 
-See `LICENSE`.
+MIT
