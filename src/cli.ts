@@ -34,9 +34,17 @@ process.on("unhandledRejection", (reason: unknown) => {
     process.exit(1);
 });
 
+const KNOWN_COMMANDS = new Set(["init", "init-project", "run", "process-segment"]);
+
 let cli = yargs(hideBin(process.argv));
 cli = registerInitCommand(cli);
 cli = registerInitProjectCommand(cli);
 cli = registerRunCommand(cli);
 cli = registerProcessSegmentCommand(cli);
-cli.help().parse();
+
+const firstArg = process.argv[2];
+if (firstArg && !firstArg.startsWith("-") && !KNOWN_COMMANDS.has(firstArg)) {
+    cli.parse(["init", ...process.argv.slice(2)]);
+} else {
+    cli.help().parse();
+}

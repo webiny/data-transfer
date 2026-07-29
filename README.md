@@ -11,14 +11,14 @@ A data-transfer tool for Webiny environments. Copies DynamoDB, S3, and OpenSearc
 ## Getting started
 
 ```bash
-npx @webiny/data-transfer init my-transfer
+npx @webiny/data-transfer my-transfer
 cd my-transfer
 ```
 
 This scaffolds a new project with a `config.ts`, example preset, and everything wired up. The wizard walks you through credentials, preset selection, and transfer execution:
 
 ```bash
-npm run transfer
+yarn transfer
 ```
 
 ### Manual setup
@@ -26,7 +26,7 @@ npm run transfer
 If you prefer to set up manually:
 
 ```bash
-npm install @webiny/data-transfer
+yarn add @webiny/data-transfer
 ```
 
 Then create a `config.ts`:
@@ -54,8 +54,16 @@ export default createConfig({
 Run it:
 
 ```bash
-npx webiny-data-transfer --config=./config.ts --preset=copy-ddb
+yarn webiny-data-transfer --config=./config.ts --preset=copy-ddb
 ```
+
+### Upgrading
+
+```bash
+yarn up @webiny/data-transfer
+```
+
+The scaffolded project depends on `@webiny/data-transfer` via a caret range, so minor and patch updates are picked up automatically.
 
 ## Built-in presets
 
