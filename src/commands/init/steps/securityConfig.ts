@@ -3,14 +3,20 @@ interface SecurityConfigResult {
     content: string;
 }
 
-const YARNRC = `enableScripts: false
+const YARNRC = `approvedGitRepositories: []
+
+compressionLevel: mixed
+
+enableGlobalCache: true
+
+enableScripts: false
+
+nodeLinker: node-modules
 
 npmMinimalAgeGate: 3d
 
 npmPreapprovedPackages:
   - "@webiny/*"
-
-nodeLinker: node-modules
 `;
 
 export function generateSecurityConfig(): SecurityConfigResult {
