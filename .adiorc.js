@@ -14,7 +14,7 @@ export default {
       //"apollo-client",
       //"apollo-link",
       //"apollo-utilities",
-      //"graphql",
+      "typescript"
       //"react-dom"
     ],
     devDependencies: true,
