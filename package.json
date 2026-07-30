@@ -92,20 +92,6 @@
     "verdaccio": "^6.9.0",
     "vitest": "^4.1.10"
   },
-  "resolutions": {
-    "@webiny/admin-ui": "npm:empty-npm-package@1.0.0",
-    "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0",
-    "@webiny/project": "npm:empty-npm-package@1.0.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "overrides": {
-    "@webiny/admin-ui": "npm:empty-npm-package@1.0.0",
-    "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0",
-    "@webiny/project": "npm:empty-npm-package@1.0.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
   "engines": {
     "node": ">=24.0.0"
   },

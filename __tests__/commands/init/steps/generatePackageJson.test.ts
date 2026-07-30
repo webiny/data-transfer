@@ -36,15 +36,9 @@ describe("generatePackageJson", () => {
         expect(result.packageManager).toMatch(/^yarn@/);
     });
 
-    it("excludes heavy transitive deps and pins react via resolutions and overrides", () => {
+    it("does not include resolutions or overrides", () => {
         const result = JSON.parse(generatePackageJson("test"));
-        for (const field of ["resolutions", "overrides"]) {
-            const section = result[field];
-            expect(section["@webiny/admin-ui"]).toBe("npm:empty-npm-package@1.0.0");
-            expect(section["@webiny/api-elasticsearch-tasks"]).toBe("npm:empty-npm-package@1.0.0");
-            expect(section["@webiny/project"]).toBe("npm:empty-npm-package@1.0.0");
-            expect(section["react"]).toBe("18.3.1");
-            expect(section["react-dom"]).toBe("18.3.1");
-        }
+        expect(result.resolutions).toBeUndefined();
+        expect(result.overrides).toBeUndefined();
     });
 });
