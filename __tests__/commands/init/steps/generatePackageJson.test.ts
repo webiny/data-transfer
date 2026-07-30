@@ -36,13 +36,14 @@ describe("generatePackageJson", () => {
         expect(result.packageManager).toMatch(/^yarn@/);
     });
 
-    it("excludes @webiny/api-elasticsearch-tasks via resolutions and overrides", () => {
+    it("excludes heavy transitive deps and pins react via resolutions and overrides", () => {
         const result = JSON.parse(generatePackageJson("test"));
-        expect(result.resolutions["@webiny/api-elasticsearch-tasks"]).toBe(
-            "npm:empty-npm-package@1.0.0"
-        );
-        expect(result.overrides["@webiny/api-elasticsearch-tasks"]).toBe(
-            "npm:empty-npm-package@1.0.0"
-        );
+        for (const field of ["resolutions", "overrides"]) {
+            const section = result[field];
+            expect(section["@webiny/api-elasticsearch-tasks"]).toBe("npm:empty-npm-package@1.0.0");
+            expect(section["@webiny/project"]).toBe("npm:empty-npm-package@1.0.0");
+            expect(section["react"]).toBe("18.3.1");
+            expect(section["react-dom"]).toBe("18.3.1");
+        }
     });
 });

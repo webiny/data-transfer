@@ -39,10 +39,16 @@ export function generatePackageJson(projectName: string): string {
             typescript: own.devDependencies["typescript"] ?? "^7.0.0"
         },
         resolutions: {
-            "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0"
+            "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0",
+            "@webiny/project": "npm:empty-npm-package@1.0.0",
+            "react": "18.3.1",
+            "react-dom": "18.3.1"
         },
         overrides: {
-            "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0"
+            "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0",
+            "@webiny/project": "npm:empty-npm-package@1.0.0",
+            "react": "18.3.1",
+            "react-dom": "18.3.1"
         }
     };
 
