@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { execa } from "execa";
 
@@ -15,6 +15,8 @@ export async function installDeps(targetDir: string): Promise<void> {
     console.log(`Setting up yarn ${yarnVersion}...`);
     await execa("yarn", ["set", "version", yarnVersion], { cwd: targetDir, stdio: "inherit" });
 
+    configureVerdaccioIfLocal(targetDir);
+
     try {
         await execa("yarn", ["install"], { cwd: targetDir, stdio: "inherit" });
     } catch (error) {
@@ -26,6 +28,23 @@ export async function installDeps(targetDir: string): Promise<void> {
                 `  yarn install\n`
         );
     }
+}
+
+function configureVerdaccioIfLocal(targetDir: string): void {
+    const pkgPath = join(targetDir, "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    const version = pkg.dependencies?.["@webiny/data-transfer"] as string | undefined;
+
+    if (!version || !version.includes("local-npm")) {
+        return;
+    }
+
+    console.log("Detected local-npm version — configuring verdaccio registry...");
+    const yarnrcPath = join(targetDir, ".yarnrc.yml");
+    appendFileSync(
+        yarnrcPath,
+        "\nnpmRegistryServer: http://localhost:4873\n\nunsafeHttpWhitelist:\n  - localhost\n"
+    );
 }
 
 function readYarnVersion(targetDir: string): string {
