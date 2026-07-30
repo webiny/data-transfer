@@ -2,23 +2,31 @@
 
 Transfer data between Webiny environments.
 
-## Setup
+## Quick start
 
-1. Copy the example project and fill in your AWS config:
+### 1. Create a project
 
 ```bash
 cp -r projects/example projects/my-env
-cp projects/my-env/.env.example projects/my-env/.env
-# edit projects/my-env/.env with your credentials and table names
 ```
 
-2. Run the transfer:
+### 2. Run the guided wizard
 
 ```bash
 yarn transfer
 ```
 
-The wizard discovers projects in `projects/`, asks which one to use, and which preset to run.
+The wizard walks you through the full setup:
+
+1. **Select project** — picks from `projects/` directories
+2. **Import credentials** — drop your Webiny output or Pulumi state JSON files into `projects/my-env/`, and the wizard extracts regions, table names, and bucket names automatically:
+   - `source.webiny.json` + `target.webiny.json` (from `yarn webiny output core --json`)
+   - or `source.pulumi.json` + `target.pulumi.json` (Pulumi state files)
+3. **Write .env** — the wizard populates `projects/my-env/.env` from the imported values
+4. **Select preset** — choose which transfer to run (e.g., `v5-to-v6-ddb`, `copy-ddb`)
+5. **Run transfer** — executes the migration
+
+On subsequent runs, the wizard skips steps that are already done (`.env` exists, JSON files already processed) and goes straight to preset selection.
 
 ### Direct run (skip wizard)
 
@@ -33,13 +41,13 @@ projects/                # one folder per environment pair
   example/               # copy this to create a new project
     config.ts            # source/target AWS settings
     .env                 # credentials (gitignored)
-    .env.example         # template
+    .env.example         # template for manual setup
     models/              # CMS model overrides (optional)
 presets/                 # your custom presets (auto-discovered)
 transformers/            # your custom transformers
 ```
 
-Duplicate `projects/example/` for each environment — each has its own `.env` so credentials stay isolated.
+Duplicate `projects/example/` for each environment pair — each has its own `.env` so credentials stay isolated.
 
 ## Presets
 
@@ -53,7 +61,9 @@ Duplicate `projects/example/` for each environment — each has its own `.env` s
 | `copy-os`      | Verbatim OpenSearch companion copy                            |
 | `copy-files`   | S3-only file copy                                             |
 
-### Project presets (in presets/)
+For v5 to v6 migration, run `v5-to-v6-ddb` first, then `v5-to-v6-os`.
+
+### Custom presets (in presets/)
 
 Custom presets in `presets/` are listed alongside built-ins. See `presets/example.ts` for a starting point.
 
