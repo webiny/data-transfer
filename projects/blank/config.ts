@@ -1,10 +1,4 @@
-import {
-    createConfig,
-    fromAwsProfile,
-    fromEnv,
-    loadEnv,
-    numberFromEnv
-} from "@webiny/data-transfer";
+import { createConfig, fromAwsProfile, fromEnv, loadEnv, numberFromEnv } from "~/index.js";
 
 loadEnv(import.meta.url);
 

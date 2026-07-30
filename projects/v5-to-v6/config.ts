@@ -1,10 +1,4 @@
-import {
-    createConfig,
-    fromAwsProfile,
-    fromEnv,
-    loadEnv,
-    numberFromEnv
-} from "@webiny/data-transfer";
+import { createConfig, fromAwsProfile, fromEnv, loadEnv, numberFromEnv } from "~/index.js";
 
 // Loads projects/v5-to-v6/.env (next to this file). `.env*` is gitignored.
 // Region / tables / buckets come from .env. AWS credentials come from
