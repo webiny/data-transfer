@@ -27,7 +27,14 @@ export function scaffold(args: ScaffoldArgs): void {
         throw new Error(`Directory "${options.projectName}" already exists.`);
     }
 
-    cpSync(templatesDir, targetDir, { recursive: true });
+    const EXCLUDED_DIRS = new Set(["internal-project", "projects"]);
+    cpSync(templatesDir, targetDir, {
+        recursive: true,
+        filter: source => {
+            const name = source.slice(templatesDir.length + 1).split("/")[0];
+            return !name || !EXCLUDED_DIRS.has(name);
+        }
+    });
 
     try {
         const tplPath = join(targetDir, "package.json.tpl");
