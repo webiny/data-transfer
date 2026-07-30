@@ -11,7 +11,7 @@ A data-transfer tool for Webiny environments. Copies DynamoDB, S3, and OpenSearc
 ## Getting started
 
 ```bash
-yarn dlx @webiny/data-transfer my-transfer
+npx @webiny/data-transfer my-transfer
 cd my-transfer
 ```
 
