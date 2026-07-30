@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { register } from "tsx/esm/api";
+register();
+
 // Install the deprecation filter FIRST so it's in place before any
 // import pulls in @webiny/lexical-* (the DEP0151 source). ESM imports
 // are evaluated in order within a module; this one must stay on top.
