@@ -111,8 +111,42 @@ src/
 │                             # copy-os: verbatim OpenSearch copy.
 │                             # copy-files: S3-only file copy.
 └── utils/
+    ├── findPackageRoot.ts    # Walks up to find package.json with @webiny/data-transfer name
     ├── load-env.ts           # loadEnv(import.meta.url) — dotenv loader, public API
     └── fromEnv.ts            # fromEnv + numberFromEnv — public API, used in user configs
 ```
+
+### Build infrastructure
+
+```
+config/                       # TypeScript configs
+├── tsconfig.build.json       # Emit config: composite, declaration, nodenext, outDir=dist
+├── tsconfig.check.json       # Type-check config: extends build + checkmode (noEmit)
+├── tsconfig.checkmode.json   # Overlay: composite=false, noEmit=true, no declarations
+└── tsconfig.check.scripts.json  # Type-check for scripts/ only
+
+scripts/                      # Build scripts (run via node scripts/X.ts)
+├── buildPackages.ts          # Entry: clean → compile → rewrite aliases → copy artifacts
+├── cleanPackages.ts          # rm -rf dist
+├── packPackages.ts           # npm pack --dry-run from dist/
+├── bin.ts                    # Platform-aware .cmd suffix for Windows
+└── features/BuildPackages/   # DI-based build pipeline (mirrors @webiny/stdlib)
+    ├── abstractions/         # ProjectConfig, Cleaner, Compiler, ArtifactCopier,
+    │                         # PathAliasRewriter, BuildOrchestrator
+    ├── index.ts              # DI composition root
+    └── *.ts                  # Implementations
+
+.changeset/config.json        # Changesets versioning config
+.github/workflows/
+├── ci.yml                    # Format, lint, typecheck, build, test, pack (parallel jobs)
+└── publish.yml               # Changesets version + publish (triggered after CI on main)
+```
+
+### Import conventions
+
+- `~/` path-alias imports use `.js` extensions (`from "~/foo/bar.js"`)
+- Relative imports use `.ts` extensions (`from "./foo.ts"`)
+- `rewriteRelativeImportExtensions` handles relative `.ts` → `.js` during build
+- `PathAliasRewriter` handles `~/` → relative path in compiled output
 
 Dirs that are **gone** (deleted in the 2026-04-19 cleanup): `src/core/`, `src/database/`, `src/config/`, `src/storage/`, `src/opensearch/`, `src/models/`, `src/utils/{logger,tenants,record-guards,gzip-compression,field-visitor,LexicalRenderer}.ts`. The transformer-adjacent helpers that lived under `src/models/` and `src/utils/` now live in `src/transformers/cms/` (they're CMS-transformer-only). Don't expect to find them elsewhere.

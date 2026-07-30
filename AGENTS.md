@@ -44,7 +44,7 @@ Everything users import lives in `src/index.ts`: config builder (`createConfig`)
 
 ## 3. Project structure
 
-Source lives in `src/` with `cli.ts` entry point, `bootstrap.ts` DI setup, `index.ts` public API. Domain logic is in `src/features/` (one dir per feature), pipeline abstractions in `src/domain/pipeline/`, transform primitives in `src/domain/transform/`, ~30 built-in transformers in `src/transformers/`, and 5 built-in presets in `src/presets/`.
+Source lives in `src/` with `cli.ts` entry point, `bootstrap.ts` DI setup, `index.ts` public API. Domain logic is in `src/features/` (one dir per feature), pipeline abstractions in `src/domain/pipeline/`, transform primitives in `src/domain/transform/`, ~30 built-in transformers in `src/transformers/`, and 5 built-in presets in `src/presets/`. Build scripts live in `scripts/features/BuildPackages/` (DI-based, mirrors `@webiny/stdlib`). Build tsconfigs in `config/`. Changeset config in `.changeset/`. CI/CD workflows in `.github/workflows/`.
 
 > Full reference: [Project structure](docs/project-structure.md)
 
@@ -85,7 +85,7 @@ Verification before any commit: `yarn npm audit`, `yarn format:fix`, `yarn ts-ch
 
 ### Open work
 
-1. **npm publish story** — the package isn't on npm yet. Needs version strategy, publish script, CI. `npx @webiny/data-transfer init` in the README won't work until this lands.
+1. **First npm publish** — infrastructure is in place (changesets, CI, publish workflow, build scripts). Needs: `NPM_TOKEN` secret in GitHub, first `yarn changeset` to create a version bump, merge to main.
 2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. Scaffold output: `config.ts`, `presets/example.ts`, optional `setup.ts`. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
 3. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
 4. **Public API audit pass (post-refactor)** — `src/index.ts` grew organically. Re-audit before publish to confirm the surface matches user-authoring intent. `DdbCoreTransformContext` (= Base ∧ DdbProcessorSlice) was added as the narrower alternative to `DdbTransformContext`.
@@ -94,7 +94,7 @@ Verification before any commit: `yarn npm audit`, `yarn format:fix`, `yarn ts-ch
 
 ## 8. Commands / running the tool
 
-Install: `yarn install`. Run guided setup: `yarn transfer` (no `--config`). Direct run: `yarn transfer --config=./path/config.ts --preset=<name>`.
+Install: `yarn install`. Run guided setup: `yarn transfer` (no `--config`). Direct run: `yarn transfer --config=./path/config.ts --preset=<name>`. Build: `yarn build`. Pack dry-run: `yarn pack:packages`. Release: `yarn release` (build + changeset publish). Init user project: `npx @webiny/data-transfer my-folder`.
 
 > Full command reference: [Commands](docs/guides/commands.md)
 > Verification commands: [Testing — Verification before commit](docs/testing.md#verification-before-commit)
