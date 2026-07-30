@@ -41,13 +41,13 @@ export function generatePackageJson(projectName: string): string {
         resolutions: {
             "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0",
             "@webiny/project": "npm:empty-npm-package@1.0.0",
-            "react": "18.3.1",
+            react: "18.3.1",
             "react-dom": "18.3.1"
         },
         overrides: {
             "@webiny/api-elasticsearch-tasks": "npm:empty-npm-package@1.0.0",
             "@webiny/project": "npm:empty-npm-package@1.0.0",
-            "react": "18.3.1",
+            react: "18.3.1",
             "react-dom": "18.3.1"
         }
     };
