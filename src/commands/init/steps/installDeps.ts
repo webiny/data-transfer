@@ -18,7 +18,7 @@ export async function installDeps(targetDir: string): Promise<void> {
     configureVerdaccioIfLocal(targetDir);
 
     try {
-        await execa("yarn", ["install"], { cwd: targetDir, stdio: "inherit" });
+        await execa("yarn", ["install", "--no-immutable"], { cwd: targetDir, stdio: "inherit" });
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(

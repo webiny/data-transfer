@@ -175,7 +175,6 @@ jobs:
         env:
           npm_config_registry: http://localhost:4873
           PKG_VERSION: ${{ steps.version.outputs.version }}
-          YARN_ENABLE_HARDENED_MODE: "false"
 
       - name: Verify scaffolded project
         run: |
