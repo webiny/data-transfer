@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { execa } from "execa";
 
 export async function installDeps(targetDir: string): Promise<void> {
@@ -8,6 +10,10 @@ export async function installDeps(targetDir: string): Promise<void> {
     } catch {
         // corepack may already be enabled or unavailable — yarn itself will work
     }
+
+    const yarnVersion = readYarnVersion(targetDir);
+    console.log(`Setting up yarn ${yarnVersion}...`);
+    await execa("yarn", ["set", "version", yarnVersion], { cwd: targetDir, stdio: "inherit" });
 
     try {
         await execa("yarn", ["install"], { cwd: targetDir, stdio: "inherit" });
@@ -20,6 +26,18 @@ export async function installDeps(targetDir: string): Promise<void> {
                 `  yarn install\n`
         );
     }
+}
+
+function readYarnVersion(targetDir: string): string {
+    const pkgPath = join(targetDir, "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    const pm = pkg.packageManager as string | undefined;
+
+    if (!pm || !pm.startsWith("yarn@")) {
+        throw new Error("packageManager field missing or not yarn in scaffolded package.json");
+    }
+
+    return pm.slice("yarn@".length);
 }
 
 async function ensureYarnAvailable(): Promise<void> {
