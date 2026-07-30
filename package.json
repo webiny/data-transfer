@@ -26,6 +26,8 @@
     "build": "node scripts/buildPackages.ts",
     "pack:packages": "node scripts/packPackages.ts",
     "release": "yarn build && changeset publish",
+    "verdaccio:start": "yarn verdaccio -c ./.verdaccio.yaml",
+    "release:verdaccio": "node scripts/releaseVerdaccio.ts",
     "ts-check": "tsc -p config/tsconfig.check.json && tsc -p config/tsconfig.check.scripts.json",
     "test": "vitest run",
     "test:watch": "vitest",
