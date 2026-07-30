@@ -5,7 +5,6 @@ import { findPackageRoot } from "~/utils/findPackageRoot.js";
 
 interface OwnPackageJson {
     version: string;
-    devDependencies: Record<string, string>;
     packageManager: string;
 }
 
@@ -34,9 +33,6 @@ export function generatePackageJson(projectName: string): string {
         },
         dependencies: {
             "@webiny/data-transfer": `^${own.version}`
-        },
-        devDependencies: {
-            typescript: own.devDependencies["typescript"] ?? "^7.0.2"
         }
     };
 
