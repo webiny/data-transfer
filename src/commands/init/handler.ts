@@ -2,14 +2,12 @@ import { resolve, dirname, basename } from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { findPackageRoot } from "~/utils/findPackageRoot.js";
-import { promptOptions } from "./steps/promptOptions.ts";
 import { scaffold } from "./steps/scaffold.ts";
 import { installDeps } from "./steps/installDeps.ts";
 import { printNextSteps } from "./steps/printNextSteps.ts";
 
 interface HandlerArgs {
     projectName: string;
-    preset?: string;
 }
 
 export async function handler(args: HandlerArgs): Promise<void> {
@@ -17,7 +15,6 @@ export async function handler(args: HandlerArgs): Promise<void> {
 
     const packageRoot = findPackageRoot(dirname(fileURLToPath(import.meta.url)));
     const templatesDir = resolve(packageRoot, "templates");
-    const projectsDir = resolve(packageRoot, "projects");
     const targetDir = resolve(process.cwd(), args.projectName);
 
     if (!existsSync(templatesDir)) {
@@ -27,18 +24,12 @@ export async function handler(args: HandlerArgs): Promise<void> {
     }
 
     try {
-        const options = await promptOptions({
-            projectName: args.projectName,
-            preset: args.preset,
-            projectsDir
-        });
-
-        scaffold({ options, targetDir, templatesDir, projectsDir });
+        scaffold({ options: { projectName: args.projectName }, targetDir, templatesDir });
 
         console.log("\nInstalling dependencies...\n");
         await installDeps(targetDir);
 
-        printNextSteps(options);
+        printNextSteps({ projectName: args.projectName });
     } catch (error) {
         console.error(`\nError: ${error instanceof Error ? error.message : String(error)}\n`);
         process.exit(1);

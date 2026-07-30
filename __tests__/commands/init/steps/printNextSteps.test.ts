@@ -15,19 +15,19 @@ describe("printNextSteps", () => {
     });
 
     it("includes cd command with project name", () => {
-        printNextSteps({ projectName: "my-migration", preset: "v5-to-v6" });
+        printNextSteps({ projectName: "my-migration" });
         const text = output.join("\n");
         expect(text).toContain("cd my-migration");
     });
 
     it("uses yarn for transfer command", () => {
-        printNextSteps({ projectName: "test", preset: "blank" });
+        printNextSteps({ projectName: "test" });
         const text = output.join("\n");
         expect(text).toContain("yarn transfer");
     });
 
     it("includes env copy instruction", () => {
-        printNextSteps({ projectName: "test", preset: "blank" });
+        printNextSteps({ projectName: "test" });
         const text = output.join("\n");
         expect(text).toContain("cp .env.example .env");
     });

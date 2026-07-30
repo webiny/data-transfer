@@ -6,21 +6,15 @@ export function registerInitCommand(yargs: Argv): Argv {
         "init <project-name>",
         "Scaffold a new data transfer project",
         yargs => {
-            return yargs
-                .positional("project-name", {
-                    type: "string",
-                    demandOption: true,
-                    description: "Name of the project directory to create"
-                })
-                .option("preset", {
-                    type: "string",
-                    description: "Preset to use (skip interactive prompt)"
-                });
+            return yargs.positional("project-name", {
+                type: "string",
+                demandOption: true,
+                description: "Name of the project directory to create"
+            });
         },
         async argv => {
             await handler({
-                projectName: argv["project-name"] as string,
-                preset: argv.preset as string | undefined
+                projectName: argv["project-name"] as string
             });
         }
     );
