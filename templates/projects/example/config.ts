@@ -33,6 +33,6 @@ export default createConfig({
     pipeline: {
         segments: numberFromEnv("SEGMENTS", 4),
         modelsDir: "./models",
-        presetsDir: "./presets"
+        presetsDir: "../../presets"
     }
 });

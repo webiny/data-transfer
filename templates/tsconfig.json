@@ -9,6 +9,6 @@
         "strict": true,
         "noEmit": true
     },
-    "include": ["*.ts", "presets/**/*.ts", "transformers/**/*.ts"],
+    "include": ["projects/**/*.ts", "presets/**/*.ts", "transformers/**/*.ts"],
     "exclude": ["node_modules"]
 }
