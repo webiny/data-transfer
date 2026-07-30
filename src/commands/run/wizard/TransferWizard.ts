@@ -10,6 +10,7 @@ import { writeEnv } from "./envWriter.ts";
 import { extractFromWebinyOutput } from "./sources/WebinyOutputSource.ts";
 import { extractFromPulumiState } from "./sources/PulumiStateSource.ts";
 import { scaffoldProject } from "~/commands/initProject/scaffoldProject.js";
+import { slugify } from "~/utils/slugify.js";
 import type { RawOutputValues, EnvValues, WizardResult } from "./types.ts";
 
 async function fileNonEmpty(path: string): Promise<boolean> {
@@ -124,20 +125,17 @@ export class TransferWizard {
             const rawName = await input({
                 message: "Project name:",
                 validate: (v: string) => {
-                    const trimmed = v.trim();
-                    if (!trimmed) {
+                    const slug = slugify(v);
+                    if (!slug) {
                         return "Name cannot be empty.";
                     }
-                    if (/[/\\]/.test(trimmed)) {
-                        return "Name cannot contain path separators.";
-                    }
-                    if (existsSync(join(this.cwd, "projects", trimmed))) {
-                        return `Project "projects/${trimmed}" already exists.`;
+                    if (existsSync(join(this.cwd, "projects", slug))) {
+                        return `Project "projects/${slug}" already exists.`;
                     }
                     return true;
                 }
             });
-            const newName = rawName.trim();
+            const newName = slugify(rawName);
             try {
                 await scaffoldProject({ name: newName, cwd: this.cwd });
             } catch (err) {
