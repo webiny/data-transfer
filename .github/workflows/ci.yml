@@ -149,8 +149,13 @@ jobs:
           echo "ERROR: verdaccio failed to start within 30s"
           exit 1
 
-      - name: Point npm at verdaccio
-        run: npm config set registry http://localhost:4873
+      - name: Point npm at verdaccio and authenticate
+        run: |
+          npm config set registry http://localhost:4873
+          TOKEN=$(curl -s -XPUT -H "Content-Type: application/json" \
+            -d '{"name":"ci","password":"ci"}' \
+            http://localhost:4873/-/user/org.couchdb.user:ci | jq -r '.token')
+          npm config set "//localhost:4873/:_authToken" "$TOKEN"
 
       - name: Publish to verdaccio
         run: yarn release:verdaccio
