@@ -123,3 +123,66 @@ jobs:
       - run: yarn install --immutable
       - run: yarn build
       - run: yarn pack:packages
+
+  scaffold-smoke:
+    name: Scaffold smoke test
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
+
+      - name: Start verdaccio
+        run: |
+          npx verdaccio -c ./.verdaccio.yaml &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:4873 > /dev/null && break
+            sleep 1
+          done
+
+      - name: Point npm at verdaccio
+        run: npm config set registry http://localhost:4873
+
+      - name: Publish to verdaccio
+        run: yarn release:verdaccio
+
+      - name: Read published version
+        id: version
+        run: |
+          VERSION=$(npm view @webiny/data-transfer --registry http://localhost:4873 dist-tags.local-npm)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Scaffold user project
+        run: |
+          cd /tmp
+          npx --yes --loglevel=silent --registry http://localhost:4873 "@webiny/data-transfer@${PKG_VERSION}" smoke-test
+        env:
+          npm_config_registry: http://localhost:4873
+          PKG_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Verify scaffolded project
+        run: |
+          cd /tmp/smoke-test
+          test -f projects/example/config.ts
+          test -f package.json
+          test -f .yarnrc.yml
+          test -d presets
+          test -d transformers
+
+      - name: Typecheck scaffolded project
+        run: |
+          cd /tmp/smoke-test
+          yarn tsc --noEmit
+
+      - name: CLI responds
+        run: |
+          cd /tmp/smoke-test
+          yarn webiny-data-transfer --help
+
+      - name: Reset npm registry
+        if: always()
+        run: npm config delete registry
