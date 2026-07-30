@@ -26,9 +26,9 @@ describe("generatePackageJson", () => {
         expect(version.length).toBeGreaterThan(1);
     });
 
-    it("does not include devDependencies", () => {
+    it("includes typescript as devDependency", () => {
         const result = JSON.parse(generatePackageJson("test"));
-        expect(result.devDependencies).toBeUndefined();
+        expect(result.devDependencies.typescript).toMatch(/^\^/);
     });
 
     it("always includes packageManager field with yarn", () => {

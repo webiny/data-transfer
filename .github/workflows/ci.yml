@@ -140,9 +140,14 @@ jobs:
         run: |
           npx verdaccio -c ./.verdaccio.yaml &
           for i in $(seq 1 30); do
-            curl -sf http://localhost:4873 > /dev/null && break
+            if curl -sf http://localhost:4873 > /dev/null; then
+              echo "Verdaccio is ready"
+              exit 0
+            fi
             sleep 1
           done
+          echo "ERROR: verdaccio failed to start within 30s"
+          exit 1
 
       - name: Point npm at verdaccio
         run: npm config set registry http://localhost:4873
@@ -154,6 +159,11 @@ jobs:
         id: version
         run: |
           VERSION=$(npm view @webiny/data-transfer --registry http://localhost:4873 dist-tags.local-npm)
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: could not read published version from verdaccio"
+            exit 1
+          fi
+          echo "Published version: $VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Scaffold user project
