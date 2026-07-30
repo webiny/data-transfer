@@ -40,6 +40,7 @@ describe("generatePackageJson", () => {
         const result = JSON.parse(generatePackageJson("test"));
         for (const field of ["resolutions", "overrides"]) {
             const section = result[field];
+            expect(section["@webiny/admin-ui"]).toBe("npm:empty-npm-package@1.0.0");
             expect(section["@webiny/api-elasticsearch-tasks"]).toBe("npm:empty-npm-package@1.0.0");
             expect(section["@webiny/project"]).toBe("npm:empty-npm-package@1.0.0");
             expect(section["react"]).toBe("18.3.1");
