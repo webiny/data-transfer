@@ -34,7 +34,7 @@ describe("installDeps", () => {
             cwd: "/tmp/test",
             stdio: "inherit"
         });
-        expect(mockExeca).toHaveBeenCalledWith("yarn", ["install"], {
+        expect(mockExeca).toHaveBeenCalledWith("yarn", ["install", "--no-immutable"], {
             cwd: "/tmp/test",
             stdio: "inherit"
         });
