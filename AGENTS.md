@@ -68,7 +68,27 @@ Verification before any commit: `yarn npm audit`, `yarn format:fix`, `yarn ts-ch
 
 ---
 
-## 6. Hard-won decisions (read before changing)
+## 6. User-facing documentation (MUST be kept up to date)
+
+Docs in `docs/guides/` are the primary documentation for end users installing `@webiny/data-transfer` via npm. They are NOT internal developer docs — they must be written for users who have never seen the codebase.
+
+**Rule: any change to public API, CLI behavior, config shape, preset behavior, or pipeline runtime semantics MUST include corresponding updates to the relevant guide(s).** An agent that changes behavior without updating docs has not completed the task.
+
+| Guide                     | Covers                                                                |
+| ------------------------- | --------------------------------------------------------------------- |
+| `config-reference.md`     | `createConfig` shape, env helpers, credentials, IAM, tuning, debug    |
+| `commands.md`             | CLI commands, flags, wizard flow                                      |
+| `writing-presets.md`      | Preset shape, pipeline builder, filters, built-in presets             |
+| `writing-transformers.md` | Transformer factories, context types, processor slices, built-ins     |
+| `pipeline-customizer.md`  | PipelineCustomizer for extending built-in presets                     |
+| `pipeline-runtime.md`     | Merge groups, first-match-wins, unmatched records, hooks, parallelism |
+| `troubleshooting.md`      | Common issues and debugging                                           |
+
+These docs also ship in the published npm package and are referenced from the scaffolded project's README.
+
+---
+
+## 7. Hard-won decisions (read before changing)
 
 ~30 documented decisions covering: unified `createConfig`, runtime preset selection, zero-transformer support, record-carries-everything invariant, slice-merging processors, first-match-wins pipeline dispatch, `afterShard` hook, `PipelineCustomizer`, per-record `ctx.blackhole()`, and more.
 
@@ -76,7 +96,7 @@ Verification before any commit: `yarn npm audit`, `yarn format:fix`, `yarn ts-ch
 
 ---
 
-## 7. Known open work (in priority order)
+## 8. Known open work (in priority order)
 
 ### Merged branches (for historical context)
 
@@ -92,7 +112,7 @@ Verification before any commit: `yarn npm audit`, `yarn format:fix`, `yarn ts-ch
 
 ---
 
-## 8. Commands / running the tool
+## 9. Commands / running the tool
 
 Install: `yarn install`. Run guided setup: `yarn transfer` (no `--config`). Direct run: `yarn transfer --config=./path/config.ts --preset=<name>`. Build: `yarn build`. Pack dry-run: `yarn pack:packages`. Release: `yarn release` (build + changeset publish). Init user project: `npx @webiny/data-transfer my-folder`.
 
@@ -101,7 +121,7 @@ Install: `yarn install`. Run guided setup: `yarn transfer` (no `--config`). Dire
 
 ---
 
-## 9. Memory files
+## 10. Memory files
 
 Persistent user/project memory for agents lives in `~/.claude/projects/.../memory/` and is indexed by `MEMORY.md`. Key entries:
 

@@ -67,6 +67,12 @@ For v5 to v6 migration, run `v5-to-v6-ddb` first, then `v5-to-v6-os`.
 
 Custom presets in `presets/` are listed alongside built-ins. See `presets/example.ts` for a starting point.
 
-## Docs
+## Documentation
 
-See the `@webiny/data-transfer` [documentation](https://www.npmjs.com/package/@webiny/data-transfer).
+- [Config reference](https://github.com/webiny/data-transfer/blob/main/docs/guides/config-reference.md) — config.ts setup, env helpers, credentials, IAM, tuning
+- [Writing presets](https://github.com/webiny/data-transfer/blob/main/docs/guides/writing-presets.md) — preset shape, pipeline builder, filters, built-in presets
+- [Writing transformers](https://github.com/webiny/data-transfer/blob/main/docs/guides/writing-transformers.md) — transformer factories, context types, processor slices
+- [Pipeline customizer](https://github.com/webiny/data-transfer/blob/main/docs/guides/pipeline-customizer.md) — extending built-in presets
+- [Pipeline runtime](https://github.com/webiny/data-transfer/blob/main/docs/guides/pipeline-runtime.md) — merge groups, first-match-wins, hooks, parallelism
+- [Commands](https://github.com/webiny/data-transfer/blob/main/docs/guides/commands.md) — CLI commands and flags
+- [Troubleshooting](https://github.com/webiny/data-transfer/blob/main/docs/guides/troubleshooting.md) — common issues and debugging
