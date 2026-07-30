@@ -112,6 +112,7 @@ src/
 │                             # copy-files: S3-only file copy.
 └── utils/
     ├── findPackageRoot.ts    # Walks up to find package.json with @webiny/data-transfer name
+    ├── slugify.ts            # Slugify project names (lowercase, hyphens, no spaces)
     ├── load-env.ts           # loadEnv(import.meta.url) — dotenv loader, public API
     └── fromEnv.ts            # fromEnv + numberFromEnv — public API, used in user configs
 ```
@@ -137,8 +138,10 @@ scripts/                      # Build scripts (run via node scripts/X.ts)
     └── *.ts                  # Implementations
 
 .changeset/config.json        # Changesets versioning config
+.verdaccio.yaml               # Verdaccio local registry config (listen port, storage)
+
 .github/workflows/
-├── ci.yml                    # Format, lint, typecheck, build, test, pack (parallel jobs)
+├── ci.yml                    # Format, lint, typecheck, build, test, pack, scaffold smoke test
 └── publish.yml               # Changesets version + publish (triggered after CI on main)
 ```
 
