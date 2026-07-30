@@ -1,7 +1,7 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { RecordDisposition } from "~/domain/pipeline/RecordDisposition.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { RecordDisposition } from "~/domain/pipeline/RecordDisposition.js";
 
-interface IDroppedRecordLog {
+export interface IDroppedRecordLog {
     add(
         record: unknown,
         disposition: RecordDisposition.Blackholed | RecordDisposition.Unmatched

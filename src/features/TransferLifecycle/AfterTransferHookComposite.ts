@@ -1,5 +1,7 @@
 import { AfterTransferHook } from "./abstractions/TransferLifecycle.ts";
 
+export type { IAfterTransferHook } from "./abstractions/TransferLifecycle.js";
+
 class AfterTransferHookCompositeImpl implements AfterTransferHook.Interface {
     public constructor(private readonly hooks: AfterTransferHook.Interface[]) {}
 

@@ -1,6 +1,6 @@
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 /**
  * Removes locale codes (e.g., L#en-US#) from PK, SK, and GSI keys,

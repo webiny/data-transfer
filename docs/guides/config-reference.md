@@ -76,6 +76,55 @@ Available service client abstractions: `SourceDynamoDbClient`, `TargetDynamoDbCl
 
 **Index management** (OpenSearch): the tool disables `refresh_interval` just-in-time when it first writes to each index, and restores the original value after the transfer completes. Missing indexes are created with the Webiny base mapping. Only touched indexes are affected.
 
+### Customizing OpenSearch index configuration
+
+Override `IndexConfigurationProvider` to control how indexes are created — change mappings, settings, or apply per-index overrides:
+
+```typescript
+import { createConfig, IndexConfigurationProvider } from "@webiny/data-transfer";
+import { Abstraction } from "@webiny/di";
+
+class CustomIndexConfig implements IndexConfigurationProvider.Interface {
+    public getConfiguration(
+        indexName: string,
+        base: IndexConfigurationProvider.Configuration
+    ): IndexConfigurationProvider.Configuration {
+        // Increase replicas for all indexes
+        const settings = { ...base.settings, number_of_replicas: 2 };
+
+        // Custom mapping for a specific index
+        if (indexName.includes("articles")) {
+            return {
+                settings,
+                mappings: {
+                    ...base.mappings,
+                    properties: {
+                        ...base.mappings?.properties,
+                        title: { type: "text", analyzer: "english" }
+                    }
+                }
+            };
+        }
+
+        return { ...base, settings };
+    }
+}
+
+const CustomIndexConfigImpl = IndexConfigurationProvider.createImplementation({
+    implementation: CustomIndexConfig,
+    dependencies: []
+});
+
+export default createConfig({
+    // ...source, target, pipeline...
+    register: (container) => {
+        container.register(CustomIndexConfigImpl);
+    }
+});
+```
+
+The `getConfiguration(indexName, base)` method receives the index name and the default Webiny mappings/settings. Return a modified configuration — the tool uses it when creating or updating the index during transfer.
+
 ### Env helpers
 
 - **`fromEnv(name)`** — required string; throws if unset or empty (empty string counts as missing).

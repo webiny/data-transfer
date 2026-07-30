@@ -1,9 +1,9 @@
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Container } from "@webiny/di";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import type { InitDataTransferFn } from "~/utils/initDataTransfer.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import type { InitDataTransferFn } from "~/utils/initDataTransfer.js";
 
 const SETUP_FILENAME = "setup.ts";
 

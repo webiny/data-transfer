@@ -1,4 +1,4 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
 interface ModelField {
     id: string;
@@ -47,7 +47,7 @@ interface Model {
     [key: string]: unknown;
 }
 
-interface IModelProvider {
+export interface IModelProvider {
     preloadModels(tenantLocales: Map<string, string>): Promise<void>;
     getModel(modelId: string): Model | undefined;
     getModelIds(): string[];

@@ -1,4 +1,4 @@
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
 export interface CapturedLogEntry {
     level: "debug" | "info" | "warn" | "error" | "fatal" | "done";

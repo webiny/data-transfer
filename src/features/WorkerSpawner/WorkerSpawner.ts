@@ -1,13 +1,17 @@
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 import { WorkerSpawner as WorkerSpawnerAbstraction } from "./abstractions/WorkerSpawner.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
+
+export type { IWorkerSpawner } from "./abstractions/WorkerSpawner.js";
 
 class WorkerSpawnerImpl implements WorkerSpawnerAbstraction.Interface {
     private readonly binPath: string;
 
     public constructor(private readonly logger: Logger.Interface) {
-        this.binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
+        this.binPath = join(findPackageRoot(dirname(fileURLToPath(import.meta.url))), "bin.js");
     }
 
     public async spawn(options: WorkerSpawnerAbstraction.Options): Promise<void> {

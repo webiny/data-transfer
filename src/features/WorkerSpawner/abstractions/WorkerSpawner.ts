@@ -1,4 +1,4 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
 interface SpawnOptions {
     segment: number;
@@ -8,7 +8,7 @@ interface SpawnOptions {
     command: string;
 }
 
-interface IWorkerSpawner {
+export interface IWorkerSpawner {
     spawn(options: SpawnOptions): Promise<void>;
 }
 

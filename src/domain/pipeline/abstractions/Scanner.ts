@@ -1,6 +1,6 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
-interface IScanner<TRecord = unknown, TShard = unknown> {
+export interface IScanner<TRecord = unknown, TShard = unknown> {
     listShards(): Promise<TShard[]>;
     scan(shard: TShard): AsyncIterable<TRecord>;
 }

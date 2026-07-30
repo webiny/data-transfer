@@ -2,6 +2,8 @@ import { getBaseConfiguration } from "@webiny/api-opensearch/indexConfiguration/
 import { IndexConfigurationProvider } from "./abstractions/IndexConfigurationProvider.ts";
 import { IndexConfigurationResolver as IndexConfigurationResolverAbstraction } from "./abstractions/IndexConfigurationResolver.ts";
 
+export type { IIndexConfigurationResolver } from "./abstractions/IndexConfigurationResolver.js";
+
 class IndexConfigurationResolverImpl implements IndexConfigurationResolverAbstraction.Interface {
     public constructor(private readonly provider: IndexConfigurationProvider.Interface) {}
 

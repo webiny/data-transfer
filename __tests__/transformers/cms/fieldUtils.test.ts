@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getCorrectStorageId, isStorageIdCorrupt } from "~/transformers/cms/fieldUtils.ts";
-import type { ModelField } from "~/transformers/cms/modelTypes.ts";
+import { getCorrectStorageId, isStorageIdCorrupt } from "~/transformers/cms/fieldUtils.js";
+import type { ModelField } from "~/transformers/cms/modelTypes.js";
 
 function field(type: string, id: string, storageId: string): ModelField {
     return { id, fieldId: id, storageId, type };

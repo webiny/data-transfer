@@ -1,5 +1,7 @@
 import { IndexConfigurationProvider as IndexConfigurationProviderAbstraction } from "./abstractions/IndexConfigurationProvider.ts";
 
+export type { IIndexConfigurationProvider } from "./abstractions/IndexConfigurationProvider.js";
+
 class IndexConfigurationProviderImpl implements IndexConfigurationProviderAbstraction.Interface {
     public getConfiguration(
         _indexName: string,

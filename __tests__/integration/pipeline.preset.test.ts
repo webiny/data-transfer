@@ -12,12 +12,12 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument, BatchWriteCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { S3Client, GetObjectCommand, CopyObjectCommand } from "@webiny/aws-sdk/client-s3/index.js";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
-import { PresetLoader } from "~/features/PresetLoader/index.ts";
-import { AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.js";
+import { PresetLoader } from "~/features/PresetLoader/index.js";
+import { AfterLoadPresetHook } from "~/features/PresetLifecycle/index.js";
+import { MigrationConfig } from "~/features/MigrationConfig/index.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 import { startDynalite, type DynaliteInstance } from "./dynalite.ts";
 import { createDdbIntegrationContainer } from "./integrationContainer.ts";
 

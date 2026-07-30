@@ -25,7 +25,6 @@
 
 # ─── Dev-only planning + runtime state + dev projects ─────────────
 /plan/
-/projects/
 /scripts/
 /.transfer/
 /.sample/

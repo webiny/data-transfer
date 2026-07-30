@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { OsRecordDecompressor } from "./OsRecordDecompressor.ts";
 
 export const OsRecordDecompressorFeature = createFeature({

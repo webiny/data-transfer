@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dataFieldsTransformer } from "~/transformers/auditLogs/dataFieldsTransformer.ts";
+import { dataFieldsTransformer } from "~/transformers/auditLogs/dataFieldsTransformer.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 const COMPRESSED_CONTENT = '{"compression":"gzip","value":"H4sI..."}';

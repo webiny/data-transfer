@@ -1,9 +1,11 @@
-import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.js";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/index.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import type { OsRecord, OsShard } from "./abstractions/OsScanner.ts";
 import { Logger } from "~/tools/Logger/index.js";
+
+export type { IScanner } from "~/domain/pipeline/abstractions/Scanner.js";
 
 class OsScannerImpl implements Scanner.Interface<OsRecord, OsShard> {
     public constructor(

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupsToRoles } from "~/transformers/security/groupsToRoles.ts";
+import { groupsToRoles } from "~/transformers/security/groupsToRoles.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("groupsToRoles", () => {

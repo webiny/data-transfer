@@ -1,5 +1,7 @@
 import { Cache as CacheAbstraction } from "./abstractions/Cache.ts";
 
+export type { ICache } from "./abstractions/Cache.js";
+
 class InMemoryCacheImpl implements CacheAbstraction.Interface {
     private store: Map<string, unknown> = new Map();
 

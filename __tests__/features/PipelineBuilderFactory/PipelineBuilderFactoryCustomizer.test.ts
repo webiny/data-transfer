@@ -1,17 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { Container } from "@webiny/di";
-import { ContainerToken } from "~/base/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
+import { ContainerToken } from "~/base/index.js";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { Scanner } from "~/domain/pipeline/abstractions/Scanner.js";
 import {
     PipelineBuilderFactory,
     PipelineBuilderFactoryFeature
-} from "~/features/PipelineBuilderFactory/index.ts";
-import { PipelineCustomizer } from "~/features/PipelineCustomizer/index.ts";
-import { createFilter } from "~/domain/pipeline/Filter.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import type { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
+} from "~/features/PipelineBuilderFactory/index.js";
+import { PipelineCustomizer } from "~/features/PipelineCustomizer/index.js";
+import { createFilter } from "~/domain/pipeline/Filter.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import type { AccessCheck } from "~/domain/pipeline/abstractions/Processor.js";
+import type { Commands } from "~/domain/transform/commands/Commands.js";
 
 // Minimal scanner + processor stubs for creating pipelines
 class StubScanner {

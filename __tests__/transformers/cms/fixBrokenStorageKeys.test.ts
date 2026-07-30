@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fixBrokenStorageKeys } from "~/transformers/cms/fixBrokenStorageKeys.ts";
+import { fixBrokenStorageKeys } from "~/transformers/cms/fixBrokenStorageKeys.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("fixBrokenStorageKeys", () => {

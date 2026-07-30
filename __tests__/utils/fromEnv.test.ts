@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { fromEnv, numberFromEnv } from "~/utils/fromEnv.ts";
+import { fromEnv, numberFromEnv } from "~/utils/fromEnv.js";
 
 const TEST_VAR = "__TEST_FROM_ENV_VAR__";
 

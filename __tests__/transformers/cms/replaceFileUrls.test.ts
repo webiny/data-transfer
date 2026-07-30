@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { replaceFileUrls } from "~/transformers/cms/replaceFileUrls.ts";
+import { replaceFileUrls } from "~/transformers/cms/replaceFileUrls.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
-import type { MigrationConfig } from "~/features/MigrationConfig/index.ts";
+import type { MigrationConfig } from "~/features/MigrationConfig/index.js";
 
 const SOURCE = "https://old.cdn.com";
 const TARGET = "https://new.cdn.com";

@@ -1,4 +1,4 @@
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 import type { BaseTransformContext } from "./BaseTransformContext.ts";
 
 // ============================================================================

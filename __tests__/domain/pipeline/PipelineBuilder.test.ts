@@ -6,7 +6,7 @@ import {
     Hook,
     createFilter,
     type Transformer
-} from "~/domain/pipeline/index.ts";
+} from "~/domain/pipeline/index.js";
 import { FakeProcessor, FakeScanner, tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
 

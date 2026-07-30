@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { S3Processor } from "./S3Processor.ts";
 
 export const S3ProcessorFeature = createFeature({

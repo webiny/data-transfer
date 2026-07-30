@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
-import { Scanner } from "~/domain/pipeline/index.ts";
+import { Scanner } from "~/domain/pipeline/index.js";
 
 interface TestRecord {
     id: string;

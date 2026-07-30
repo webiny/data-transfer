@@ -1,4 +1,4 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
 interface ILogger {
     debug(message: string, ...args: unknown[]): void;

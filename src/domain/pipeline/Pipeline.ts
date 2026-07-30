@@ -4,7 +4,7 @@ import type { Processor } from "./abstractions/Processor.ts";
 import type { Hook } from "./abstractions/Hook.ts";
 import type { Transformer } from "./abstractions/Transformer.ts";
 import type { Filter } from "./Filter.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 
 export interface PipelineConfig<
     TRecord,

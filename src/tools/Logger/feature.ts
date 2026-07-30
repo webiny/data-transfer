@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { Logger } from "./abstractions/Logger.ts";
 import { PinoLogger } from "./PinoLogger.ts";
 

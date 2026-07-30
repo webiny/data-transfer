@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { removeFolderRevision } from "~/transformers/cms/removeFolderRevision.ts";
+import { removeFolderRevision } from "~/transformers/cms/removeFolderRevision.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("removeFolderRevision", () => {

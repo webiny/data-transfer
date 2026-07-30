@@ -1,5 +1,5 @@
-import { DroppedRecordLog } from "~/features/DroppedRecordLog/abstractions/DroppedRecordLog.ts";
-import type { RecordDisposition } from "~/domain/pipeline/index.ts";
+import { DroppedRecordLog } from "~/features/DroppedRecordLog/abstractions/DroppedRecordLog.js";
+import type { RecordDisposition } from "~/domain/pipeline/index.js";
 
 export class MockDroppedRecordLog implements DroppedRecordLog.Interface {
     public readonly entries: Array<{

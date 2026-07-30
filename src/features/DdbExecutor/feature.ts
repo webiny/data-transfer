@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { DdbExecutor } from "./DdbExecutor.ts";
 
 export const DdbExecutorFeature = createFeature({

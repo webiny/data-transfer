@@ -1,13 +1,13 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { Commands } from "~/domain/transform/commands/Commands.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 
 interface IAfterShardContext {
     segment: number;
     totalSegments: number;
 }
 
-interface IProcessor<
+export interface IProcessor<
     TBaseContext extends BaseTransformContext.Interface<unknown> =
         BaseTransformContext.Interface<unknown>,
     TSlice = Record<string, never>

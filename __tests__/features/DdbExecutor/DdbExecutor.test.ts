@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "@webiny/di";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
-import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { DdbExecutorFeature } from "~/features/DdbExecutor/feature.ts";
-import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import { DdbExecutorFeature } from "~/features/DdbExecutor/feature.js";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.js";
 
 describe("DdbExecutor", () => {
     let container: Container;

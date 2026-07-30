@@ -1,7 +1,9 @@
-import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
 import { TenantLocales as TenantLocalesAbstraction } from "./abstractions/TenantLocales.ts";
+
+export type { ITenantLocales } from "./abstractions/TenantLocales.js";
 
 class TenantLocalesImpl implements TenantLocalesAbstraction.Interface {
     private tenantLocales: Map<string, string> = new Map();

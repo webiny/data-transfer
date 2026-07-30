@@ -1,6 +1,6 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
-interface IDirectoryTool {
+export interface IDirectoryTool {
     exists(path: string): boolean;
     create(path: string): void;
     readDir(path: string): string[] | null;

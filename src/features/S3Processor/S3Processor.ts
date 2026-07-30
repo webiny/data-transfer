@@ -1,12 +1,14 @@
 import { S3 } from "@webiny/aws-sdk/client-s3/index.js";
-import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.ts";
-import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { S3Copy } from "~/domain/transform/commands/S3Copy.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { isAccessDeniedError, type AwsErrorLike } from "~/base/index.js";
+import { SourceS3Client, TargetS3Client } from "~/services/S3Client/abstractions/S3Client.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { S3Copy } from "~/domain/transform/commands/S3Copy.js";
+import type { Commands } from "~/domain/transform/commands/Commands.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+
+export type { IProcessor } from "~/domain/pipeline/abstractions/Processor.js";
 
 interface S3ProcessorSlice {
     copyFile(sourceKey: string, targetKey: string): void;

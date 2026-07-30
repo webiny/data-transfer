@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { migrateFileManagerSettings } from "~/transformers/file-manager/migrateFileManagerSettings.ts";
+import { migrateFileManagerSettings } from "~/transformers/file-manager/migrateFileManagerSettings.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 interface KvRecord {

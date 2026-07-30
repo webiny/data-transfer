@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { join } from "path";
 import { Container } from "@webiny/di";
-import { EnableRefreshHook } from "~/services/OpenSearchClient/hooks/EnableRefreshHook.ts";
-import { AfterTransferHook } from "~/features/TransferLifecycle/abstractions/TransferLifecycle.ts";
-import { TransferLifecycleFeature } from "~/features/TransferLifecycle/feature.ts";
-import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
+import { EnableRefreshHook } from "~/services/OpenSearchClient/hooks/EnableRefreshHook.js";
+import { AfterTransferHook } from "~/features/TransferLifecycle/abstractions/TransferLifecycle.js";
+import { TransferLifecycleFeature } from "~/features/TransferLifecycle/feature.js";
+import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import type { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.js";
 
 const RUN_ID = "test-run-42";
 const TRANSFER_DIR = join(process.cwd(), ".transfer", RUN_ID);

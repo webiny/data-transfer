@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fixCmePk } from "~/transformers/cms/fixCmePk.ts";
+import { fixCmePk } from "~/transformers/cms/fixCmePk.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("fixCmePk", () => {

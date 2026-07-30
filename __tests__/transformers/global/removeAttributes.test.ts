@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { removeAttributes } from "~/transformers/global/removeAttributes.ts";
+import { removeAttributes } from "~/transformers/global/removeAttributes.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("removeAttributes", () => {

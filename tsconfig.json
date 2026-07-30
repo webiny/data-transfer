@@ -1,9 +1,9 @@
 {
     "compilerOptions": {
         "target": "ES2022",
-        "module": "ES2022",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
         "lib": ["ES2022"],
-        "moduleResolution": "bundler",
         "esModuleInterop": true,
         "skipLibCheck": true,
         "strict": true,
@@ -17,13 +17,11 @@
         "noFallthroughCasesInSwitch": true,
         "noUncheckedIndexedAccess": true,
         "allowImportingTsExtensions": true,
-        "noEmit": true,
-        "outDir": "./dist",
-        "rootDirs": ["./src", "__tests__"],
+        "rewriteRelativeImportExtensions": true,
         "paths": {
             "~/*": ["./src/*"]
         }
     },
-    "include": ["src/**/*", "__tests__/**/*", "projects/**/*"],
-    "exclude": ["node_modules", "dist"]
+    "files": [],
+    "references": [{ "path": "./config/tsconfig.build.json" }]
 }

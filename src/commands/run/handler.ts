@@ -1,23 +1,24 @@
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { execa } from "execa";
-import { bootstrap } from "~/bootstrap.ts";
-import { formatError } from "~/base/index.ts";
-import type { RunStats } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
-import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
-import { Logger } from "~/tools/Logger/index.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/index.ts";
+import { bootstrap } from "~/bootstrap.js";
+import { formatError } from "~/base/index.js";
+import type { RunStats } from "~/features/PipelineRunner/abstractions/PipelineRunner.js";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.js";
+import { loadConfig } from "~/features/MigrationConfig/loadConfig.js";
+import { Logger } from "~/tools/Logger/index.js";
+import { MigrationConfig } from "~/features/MigrationConfig/index.js";
 import {
     BeforeTransferHook,
     AfterTransferHook,
     TransferContext
-} from "~/features/TransferLifecycle/index.ts";
-import { PresetLoader } from "~/features/PresetLoader/index.ts";
-import { AccessChecker } from "~/features/AccessChecker/index.ts";
-import { loadUserSetup } from "~/utils/loadUserSetup.ts";
+} from "~/features/TransferLifecycle/index.js";
+import { PresetLoader } from "~/features/PresetLoader/index.js";
+import { AccessChecker } from "~/features/AccessChecker/index.js";
+import { loadUserSetup } from "~/utils/loadUserSetup.js";
+import { findPackageRoot } from "~/utils/findPackageRoot.js";
 import { resolveSegmentsToRun } from "./segmentsFilter.ts";
 
 class AccessCheckError extends Error {
@@ -242,7 +243,7 @@ async function spawnWorker(
     logLevel?: string,
     dryRun = false
 ): Promise<void> {
-    const binPath = fileURLToPath(new URL("../../../bin.js", import.meta.url));
+    const binPath = join(findPackageRoot(dirname(fileURLToPath(import.meta.url))), "bin.js");
 
     const args = [
         binPath,

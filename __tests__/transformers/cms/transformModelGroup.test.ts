@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { transformModelGroup } from "~/transformers/cms/transformModelGroup.ts";
+import { transformModelGroup } from "~/transformers/cms/transformModelGroup.js";
 import { makeFakeDdbCoreContext } from "../fakeContext.ts";
 
 describe("transformModelGroup", () => {

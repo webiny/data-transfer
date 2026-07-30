@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isRetryableAwsError } from "~/base/index.ts";
+import { isRetryableAwsError } from "~/base/index.js";
 
 describe("isRetryableAwsError", () => {
     it("returns false for null / undefined / non-objects", () => {

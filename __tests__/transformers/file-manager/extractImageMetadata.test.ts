@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { extractImageMetadata } from "~/transformers/file-manager/extractImageMetadata.ts";
+import { extractImageMetadata } from "~/transformers/file-manager/extractImageMetadata.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
-import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
+import type { Cache } from "~/tools/Cache/abstractions/Cache.js";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.js";
 
 interface GetFileCall {
     key: string;

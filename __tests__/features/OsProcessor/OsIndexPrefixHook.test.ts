@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createOsContainer } from "../../containers/index.ts";
-import { BeforeTransferHook } from "~/features/TransferLifecycle/index.ts";
+import { BeforeTransferHook } from "~/features/TransferLifecycle/index.js";
 
 describe("OsIndexPrefixHook", () => {
     let savedPrefix: string | undefined;

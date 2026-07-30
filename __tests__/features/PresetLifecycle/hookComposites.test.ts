@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
-import { BeforeLoadPresetHookComposite } from "~/features/PresetLifecycle/BeforeLoadPresetHookComposite.ts";
-import { AfterLoadPresetHookComposite } from "~/features/PresetLifecycle/AfterLoadPresetHookComposite.ts";
+import { BeforeLoadPresetHookComposite } from "~/features/PresetLifecycle/BeforeLoadPresetHookComposite.js";
+import { AfterLoadPresetHookComposite } from "~/features/PresetLifecycle/AfterLoadPresetHookComposite.js";
 import {
     BeforeLoadPresetHook,
     AfterLoadPresetHook
-} from "~/features/PresetLifecycle/abstractions/PresetLifecycle.ts";
-import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import type { MigrationPreset } from "~/domain/transform/Preset.ts";
+} from "~/features/PresetLifecycle/abstractions/PresetLifecycle.js";
+import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import type { MigrationPreset } from "~/domain/transform/Preset.js";
 
 const STUB_CONFIG = {} as MigrationConfig.Interface;
 const STUB_PRESET = {} as MigrationPreset;

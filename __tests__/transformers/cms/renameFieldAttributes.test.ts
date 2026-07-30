@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renameFieldAttributes } from "~/transformers/cms/renameFieldAttributes.ts";
+import { renameFieldAttributes } from "~/transformers/cms/renameFieldAttributes.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 describe("renameFieldAttributes", () => {

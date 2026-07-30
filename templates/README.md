@@ -1,183 +1,78 @@
 # Webiny Data Transfer
 
-Transfer Webiny data between environments.
+Transfer data between Webiny environments.
 
-## Getting Started
+## Quick start
 
-### 1. Install dependencies
+### 1. Create a project
 
 ```bash
-yarn install
+cp -r projects/example projects/my-env
 ```
 
-### 2. Set up your project
-
-Run the guided setup wizard to create your project folder and populate your `.env`:
+### 2. Run the guided wizard
 
 ```bash
-yarn transfer init-project my-project
 yarn transfer
 ```
 
-`yarn transfer` (no `--config`) launches the **guided setup wizard**. It helps you select your project, validates Webiny output or Pulumi state JSON files, and writes your `.env` automatically. After writing it exits — review the file and run `yarn transfer` again.
+The wizard walks you through the full setup:
 
-**To populate the .env, you need output files from both Webiny systems. Place them in `projects/my-project/` first:**
+1. **Select project** — picks from `projects/` directories
+2. **Import credentials** — drop your Webiny output or Pulumi state JSON files into `projects/my-env/`, and the wizard extracts regions, table names, and bucket names automatically:
+   - `source.webiny.json` + `target.webiny.json` (from `yarn webiny output core --json`)
+   - or `source.pulumi.json` + `target.pulumi.json` (Pulumi state files)
+3. **Write .env** — the wizard populates `projects/my-env/.env` from the imported values
+4. **Select preset** — choose which transfer to run (e.g., `v5-to-v6-ddb`, `copy-ddb`)
+5. **Run transfer** — executes the migration
 
-```bash
-# Option A — Webiny CLI output (recommended):
-# In your source Webiny project:  yarn webiny output core --json > source.webiny.json
-# In your target Webiny project:  yarn webiny output core --json > target.webiny.json
+On subsequent runs, the wizard skips steps that are already done (`.env` exists, JSON files already processed) and goes straight to preset selection.
 
-# Option B — Pulumi state file (when you don't have Webiny CLI access):
-# Copy .pulumi/apps/core/.pulumi/stacks/core/<env>.json from each project as:
-#   projects/my-project/source.pulumi.json
-#   projects/my-project/target.pulumi.json
-```
-
-Mixed formats are allowed. Re-run `yarn transfer` after placing the files.
-
-### 3. Run the transfers
-
-After the wizard writes your `.env`, run `yarn transfer` again. The wizard skips setup and prompts for the config to run.
-
-Or skip the wizard and pass `--config` + `--preset` directly:
+### Direct run (skip wizard)
 
 ```bash
-yarn transfer --config=./projects/my-project/config.ts --preset=v5-to-v6-ddb  # DDB + S3 first
-yarn transfer --config=./projects/my-project/config.ts --preset=v5-to-v6-os   # OS second (if applicable)
+yarn transfer --config=./projects/my-env/config.ts --preset=copy-ddb
 ```
 
-One `config.ts` covers all storage types — the preset determines which operations run. Always run the DDB transfer first, then the OS transfer.
-
-## Project Structure
+## Project structure
 
 ```
-projects/           Per-project config.ts and .env files
-transformers/       Custom record transformers
-presets/            Custom pipeline presets
-features/           Custom DI features
+projects/                # one folder per environment pair
+  example/               # copy this to create a new project
+    config.ts            # source/target AWS settings
+    .env                 # credentials (gitignored)
+    .env.example         # template for manual setup
+    models/              # CMS model overrides (optional)
+presets/                 # your custom presets (auto-discovered)
+transformers/            # your custom transformers
 ```
 
-## Multiple Projects
+Duplicate `projects/example/` for each environment pair — each has its own `.env` so credentials stay isolated.
 
-Duplicate the `projects/example/` folder for each environment you want to transfer:
+## Presets
 
-```
-projects/
-  production/
-    config.ts
-    .env
-  staging/
-    config.ts
-    .env
-```
+### Built-in (shipped with @webiny/data-transfer)
 
-Each project has its own `.env` file so credentials are isolated.
+| Preset         | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| `v5-to-v6-ddb` | Full Webiny v5 to v6 migration (DynamoDB + S3)                |
+| `v5-to-v6-os`  | OpenSearch companion table migration (run after v5-to-v6-ddb) |
+| `copy-ddb`     | Verbatim DynamoDB + S3 copy                                   |
+| `copy-os`      | Verbatim OpenSearch companion copy                            |
+| `copy-files`   | S3-only file copy                                             |
 
-## Configuration
+For v5 to v6 migration, run `v5-to-v6-ddb` first, then `v5-to-v6-os`.
 
-### Unified Config
+### Custom presets (in presets/)
 
-One `config.ts` covers DDB, S3, and optional OpenSearch. The preset (selected at runtime by the wizard or via `--preset`) determines which storage operations run.
+Custom presets in `presets/` are listed alongside built-ins. See `presets/example.ts` for a starting point.
 
-See `projects/example/config.ts` for the full template.
+## Documentation
 
-### Pipeline Options
-
-- `segments` - Number of parallel workers for scanning (default: 1)
-- `modelsDir` - Path to a directory with custom CMS model JSON files (optional). Resolved relative to the config file's directory.
-- `presetsDir` - Directory of user preset files. The wizard discovers them automatically.
-
-### Debug Options
-
-Opt-in via a top-level `debug: { ... }` block on your config. See the commented block in `projects/example/config.ts` for the full shape.
-
-- `debug.snapshot` — dump every source/post-transform/command record to local JSONL files under `.transfer/<runId>/snapshot/` (gzipped by default). Use `true` for defaults, or `{ dir, compress }` to override. Great for diffing exactly what a transformer did to a specific record without re-scanning AWS.
-- `debug.logFile` — write the runner's pino log to disk alongside stdout. `true` → `.transfer/<runId>/logs/<orchestrator|segment-N>.log` (one file per process, safe under worker parallelism). String → all processes append to the path you provide. Replay with `cat .transfer/<runId>/logs/*.log | pino-pretty`.
-
-Both outputs land under `.transfer/` by default, which is gitignored in this repo. If you set a custom path outside `.transfer/`, add it to `.gitignore` — these files typically contain production data and full log payloads.
-
-### Re-running Specific Shards
-
-If a run finishes with only some shards failing, you can re-drive just those indices instead of the whole table:
-
-```bash
-yarn transfer --config=./projects/my-project/config.ts --preset=v5-to-v6-ddb --segments=1,3
-```
-
-Workers still receive the full `--total` (from `pipeline.segments`), so each shard scans the exact same slice it would in a fresh run. Out-of-range indices fail fast before any worker spawns.
-
-## Writing a Custom Preset
-
-The package ships with starter files so you can compose your own transfer:
-
-- `transformers/stampMigratedAt.ts` — a minimal custom transformer (plain function mutating `ctx.record`).
-- `presets/example.ts` — a minimal preset that registers one pipeline using the transformer.
-- `projects/example/config.ts` — a config whose `presetsDir` points at the custom preset above.
-
-Run it (the wizard will discover your preset, or pass `--preset` directly):
-
-```bash
-yarn transfer --config=./projects/example/config.ts --preset=example
-```
-
-A preset is an object:
-
-```typescript
-import { createTransferPreset, DdbScanner, DdbProcessor, S3Processor } from "@webiny/data-transfer";
-
-export default createTransferPreset({
-  name: "my",
-  description: "...",
-  configure({ runner, pipelineBuilderFactory }) {
-    const myPipeline = pipelineBuilderFactory
-      .create({
-        name: "my-pipeline",
-        scanner: DdbScanner,
-        processors: [DdbProcessor] // add S3Processor too if any
-        // transformer uses ctx.copyFile / ctx.getFile
-      })
-      .use(myTransformer) // optional; chain as many as you want
-      // .filter(createFilter(...))       // optional; chain as many as you want
-      .build();
-
-    runner.register(myPipeline);
-  }
-});
-```
-
-The `configure` callback also receives `container` — the DI container — if you
-need to `container.resolve(...)` a custom service you registered in `setup.ts`.
-
-The `processors: [...]` array is the set of processors whose slices are merged
-onto the transformer context. `DdbProcessor` contributes `ctx.putRecord(...)`;
-`S3Processor` contributes `ctx.copyFile(...)` + `ctx.getFile(...)`; `OsProcessor`
-contributes `ctx.putRecord(...)` for the OpenSearch lane. Include every
-processor whose helpers your transformers reach for on `ctx`.
-
-**Zero transformers is valid** — a pipeline with no `.filter()` and no `.use()` accepts every record and emits it verbatim (pure data copy). Useful for prod-to-dev seeding.
-
-## Custom DI Wiring: `setup.ts`
-
-If you want to register your own processors / features / bindings into the DI
-container, drop a `setup.ts` file next to your transfer config:
-
-```typescript
-// projects/my-project/setup.ts
-import { initDataTransfer } from "@webiny/data-transfer";
-import { MyCustomProcessor } from "../../features/MyCustomProcessor.ts";
-
-export default initDataTransfer(async ({ container }) => {
-  container.register(MyCustomProcessor);
-});
-```
-
-The CLI picks it up automatically and runs it **before** loading your preset,
-so the preset can `container.resolve(...)` anything you registered. The file
-is optional — delete it if you don't need custom DI wiring.
-
-## Security
-
-- `.env` files are gitignored and must never be committed
-- Each project has its own `.env` for credential isolation
-- Use IAM roles with minimal required permissions
+- [Config reference](https://github.com/webiny/data-transfer/blob/main/docs/guides/config-reference.md) — config.ts setup, env helpers, credentials, IAM, tuning
+- [Writing presets](https://github.com/webiny/data-transfer/blob/main/docs/guides/writing-presets.md) — preset shape, pipeline builder, filters, built-in presets
+- [Writing transformers](https://github.com/webiny/data-transfer/blob/main/docs/guides/writing-transformers.md) — transformer factories, context types, processor slices
+- [Pipeline customizer](https://github.com/webiny/data-transfer/blob/main/docs/guides/pipeline-customizer.md) — extending built-in presets
+- [Pipeline runtime](https://github.com/webiny/data-transfer/blob/main/docs/guides/pipeline-runtime.md) — merge groups, first-match-wins, hooks, parallelism
+- [Commands](https://github.com/webiny/data-transfer/blob/main/docs/guides/commands.md) — CLI commands and flags
+- [Troubleshooting](https://github.com/webiny/data-transfer/blob/main/docs/guides/troubleshooting.md) — common issues and debugging

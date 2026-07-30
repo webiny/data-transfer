@@ -1,24 +1,26 @@
 import { join } from "node:path";
 import { Container } from "@webiny/di";
-import { ContainerToken, isRetryableAwsError } from "~/base/index.ts";
-import { IndexConfigurationResolver } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationResolver.ts";
-import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
+import { ContainerToken, isRetryableAwsError } from "~/base/index.js";
+import { IndexConfigurationResolver } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationResolver.js";
+import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.js";
 import {
     SourceDynamoDbClient,
     TargetDynamoDbClient
-} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
-import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
-import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+} from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
+import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.js";
+import { TouchedIndexes } from "~/features/TouchedIndexes/abstractions/TouchedIndexes.js";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import type { Commands } from "~/domain/transform/commands/Commands.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
+
+export type { IProcessor } from "~/domain/pipeline/abstractions/Processor.js";
 
 interface OpenSearchErrorLike {
     statusCode?: number;

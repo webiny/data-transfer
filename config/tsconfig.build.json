@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "../src",
+    "outDir": "../dist",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "paths": { "~/*": ["../src/*"] }
+  },
+  "include": ["../src"],
+  "exclude": ["../node_modules", "../dist"]
+}

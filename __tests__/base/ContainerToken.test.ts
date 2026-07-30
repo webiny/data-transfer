@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
-import { ContainerToken } from "~/base/index.ts";
+import { ContainerToken } from "~/base/index.js";
 
 describe("ContainerToken", () => {
     it("resolves to the container instance it was registered with", () => {

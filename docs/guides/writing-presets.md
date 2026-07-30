@@ -31,7 +31,7 @@ export default createTransferPreset({
 });
 ```
 
-Drop the file in your `projects/<name>/presets/` directory. The wizard will offer it by name alongside built-ins.
+Drop the file in your `presets/` directory. The wizard will offer it by name alongside built-ins.
 
 ### `pipelineBuilderFactory.create({ name, scanner, processors })`
 

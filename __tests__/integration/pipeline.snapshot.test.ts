@@ -5,12 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DynamoDBClient, CreateTableCommand } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument, BatchWriteCommand } from "@aws-sdk/lib-dynamodb";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
-import { createFilter } from "~/domain/pipeline/index.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import { DdbProcessor } from "~/features/DdbProcessor/index.js";
+import { createFilter } from "~/domain/pipeline/index.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 import { startDynalite, type DynaliteInstance } from "./dynalite.ts";
 import { createDdbIntegrationContainer } from "./integrationContainer.ts";
 

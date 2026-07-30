@@ -1,6 +1,6 @@
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 const MODEL_ID_MAP: Record<string, string> = {
     fmFile: "wbyFmFile",

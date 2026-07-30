@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { ModelProvider } from "./ModelProvider.ts";
 
 export const ModelProviderFeature = createFeature({

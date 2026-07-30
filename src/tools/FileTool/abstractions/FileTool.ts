@@ -1,6 +1,6 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
-interface IFileTool {
+export interface IFileTool {
     exists(path: string): boolean;
     readFile(path: string): string | null;
     readFileOrThrow(path: string): string;

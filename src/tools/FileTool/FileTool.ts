@@ -4,6 +4,8 @@ import { FileTool as FileToolAbstraction } from "./abstractions/FileTool.ts";
 import { DirectoryTool } from "../DirectoryTool/abstractions/DirectoryTool.ts";
 import { Logger } from "../Logger/abstractions/Logger.ts";
 
+export type { IFileTool } from "./abstractions/FileTool.js";
+
 class FileToolImpl implements FileToolAbstraction.Interface {
     public constructor(
         private readonly logger: Logger.Interface,

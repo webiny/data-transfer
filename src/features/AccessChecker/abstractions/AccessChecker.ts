@@ -1,7 +1,7 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { AccessCheck } from "~/domain/pipeline/abstractions/Processor.js";
 
-interface IAccessChecker {
+export interface IAccessChecker {
     run(): Promise<AccessCheck.Report>;
 }
 

@@ -1,4 +1,4 @@
-import { TransferredRecordLog } from "~/features/TransferredRecordLog/abstractions/TransferredRecordLog.ts";
+import { TransferredRecordLog } from "~/features/TransferredRecordLog/abstractions/TransferredRecordLog.js";
 
 export class MockTransferredRecordLog implements TransferredRecordLog.Interface {
     public readonly entries: Array<{ record: unknown; pipelineName: string }> = [];

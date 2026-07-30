@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { PipelineBuilderFactory } from "./PipelineBuilderFactory.ts";
 
 export const PipelineBuilderFactoryFeature = createFeature({

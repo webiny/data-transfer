@@ -1,6 +1,6 @@
-import type { OsTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
-import type { OsScanner } from "~/features/OsScanner/index.ts";
-import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.ts";
+import type { OsTransformContext } from "~/features/TransformContext/abstractions/contextAliases.js";
+import type { OsScanner } from "~/features/OsScanner/index.js";
+import type { Transformer } from "~/domain/pipeline/abstractions/Transformer.js";
 import { createTransformer } from "./createTransformer.ts";
 
 export function createOsTransformer(

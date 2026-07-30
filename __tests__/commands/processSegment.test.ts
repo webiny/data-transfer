@@ -35,13 +35,13 @@ vi.mock("~/bootstrap.ts", () => ({
     }))
 }));
 
-import { handler } from "~/commands/processSegment/handler.ts";
-import { Logger } from "~/tools/Logger/index.ts";
-import { FileTool } from "~/tools/FileTool/abstractions/FileTool.ts";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
-import { PresetLoader } from "~/features/PresetLoader/index.ts";
-import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
+import { handler } from "~/commands/processSegment/handler.js";
+import { Logger } from "~/tools/Logger/index.js";
+import { FileTool } from "~/tools/FileTool/abstractions/FileTool.js";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.js";
+import { PresetLoader } from "~/features/PresetLoader/index.js";
+import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.js";
 
 describe("processSegment handler", () => {
     beforeEach(() => {

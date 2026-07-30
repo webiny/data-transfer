@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createFilter, type Filter } from "~/domain/pipeline/index.ts";
+import { createFilter, type Filter } from "~/domain/pipeline/index.js";
 
 interface TestRecord {
     type: string;

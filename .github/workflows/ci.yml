@@ -9,18 +9,192 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    name: CI
+  lockfile:
+    name: Lockfile immutability
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
+
+  dist-clean:
+    name: No committed dist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify dist is not tracked in git
+        run: |
+          tracked=$(git ls-files dist/)
+          if [ -n "$tracked" ]; then
+            echo "ERROR: dist/ files are committed to git:"
+            echo "$tracked"
+            echo "Fix: git rm -r --cached dist/"
+            exit 1
+          fi
+          echo "OK: dist/ is not tracked"
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: yarn
       - run: yarn install --immutable
       - run: yarn format:check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
       - run: yarn lint
+
+  imports:
+    name: Import check (adio)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
       - run: yarn check:imports
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
       - run: yarn ts-check
+
+  build:
+    name: Build
+    needs: [lockfile, format, lint, imports, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn build
+
+  test:
+    name: Test & Coverage
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
       - run: yarn test:coverage
+
+  pack:
+    name: Pack dry-run
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn build
+      - run: yarn pack:packages
+
+  scaffold-smoke:
+    name: Scaffold smoke test
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
+
+      - name: Start verdaccio
+        run: |
+          npx verdaccio -c ./.verdaccio.yaml &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4873 > /dev/null; then
+              echo "Verdaccio is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: verdaccio failed to start within 30s"
+          exit 1
+
+      - name: Point npm at verdaccio
+        run: |
+          npm config set registry http://localhost:4873
+          npm config set "//localhost:4873/:_authToken" "none"
+
+      - name: Publish to verdaccio
+        run: yarn release:verdaccio
+
+      - name: Read published version
+        id: version
+        run: |
+          VERSION=$(npm view @webiny/data-transfer --registry http://localhost:4873 dist-tags.local-npm)
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: could not read published version from verdaccio"
+            exit 1
+          fi
+          echo "Published version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Scaffold user project
+        run: |
+          cd /tmp
+          npx --yes --loglevel=silent --registry http://localhost:4873 "@webiny/data-transfer@${PKG_VERSION}" smoke-test
+        env:
+          npm_config_registry: http://localhost:4873
+          PKG_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Verify scaffolded project
+        run: |
+          cd /tmp/smoke-test
+          test -f projects/example/config.ts
+          test -f package.json
+          test -f .yarnrc.yml
+          test -d presets
+          test -d transformers
+
+      - name: Typecheck scaffolded project
+        run: |
+          cd /tmp/smoke-test
+          yarn tsc --noEmit
+
+      - name: CLI responds
+        run: |
+          cd /tmp/smoke-test
+          yarn webiny-data-transfer --help
+
+      - name: Reset npm registry
+        if: always()
+        run: npm config delete registry

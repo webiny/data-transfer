@@ -1,6 +1,6 @@
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import type { DdbCoreTransformContext } from "~/features/TransformContext/abstractions/contextAliases.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 const getLocale = (record: BaseRecord): string => {
     // Try to get locale from record attributes

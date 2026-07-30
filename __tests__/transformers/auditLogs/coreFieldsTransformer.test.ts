@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { coreFieldsTransformer } from "~/transformers/auditLogs/coreFieldsTransformer.ts";
+import { coreFieldsTransformer } from "~/transformers/auditLogs/coreFieldsTransformer.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 import type { CompressionHandler } from "@webiny/utils/exports/api.js";
 

@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { PresetLoader } from "./PresetLoader.ts";
 
 export const PresetLoaderFeature = createFeature({

@@ -1,7 +1,7 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { Pipeline } from "~/domain/pipeline/Pipeline.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { Pipeline } from "~/domain/pipeline/Pipeline.js";
 
 // ============================================================================
 // Run options (runner-specific)
@@ -30,7 +30,7 @@ export interface RunStats {
 // PipelineRunner abstraction
 // ============================================================================
 
-interface IPipelineRunner {
+export interface IPipelineRunner {
     /**
      * Register one or more pipelines. Heterogeneous record/context types are
      * allowed (each pipeline runs with its own scanner + processor set); the

@@ -1,18 +1,18 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
-import { createFilter } from "~/domain/pipeline/index.ts";
-import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.ts";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.js";
+import { createFilter } from "~/domain/pipeline/index.js";
+import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
 import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { DdbScanner } from "~/features/DdbScanner/index.ts";
-import { DdbProcessor } from "~/features/DdbProcessor/index.ts";
-import { S3Processor } from "~/features/S3Processor/index.ts";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
+import type { DdbTransformContext } from "~/features/TransformContext/abstractions/contextAliases.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import { DdbScanner } from "~/features/DdbScanner/index.js";
+import { DdbProcessor } from "~/features/DdbProcessor/index.js";
+import { S3Processor } from "~/features/S3Processor/index.js";
 import { MockS3Client } from "../../services/S3Client/MockS3Client.ts";
-import { TargetS3Client } from "~/services/S3Client/abstractions/S3Client.ts";
+import { TargetS3Client } from "~/services/S3Client/abstractions/S3Client.js";
 
 // Pipelines built with processors:[DdbProcessor] expose only the DDB slice —
 // the S3-slice-bearing alias DdbTransformContext.Interface is too wide.

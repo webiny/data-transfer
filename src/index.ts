@@ -14,6 +14,7 @@ export { loadEnv } from "./utils/load-env.ts";
 export { fromEnv, numberFromEnv } from "./utils/fromEnv.ts";
 export { initDataTransfer, type InitDataTransferContext } from "./utils/initDataTransfer.ts";
 export { createTransferPreset } from "./utils/createTransferPreset.ts";
+export { findPackageRoot } from "./utils/findPackageRoot.ts";
 
 // AWS credential providers — re-exported so users don't need a separate
 // `@aws-sdk/credential-providers` dep.

@@ -12,6 +12,8 @@ import { dirname } from "node:path";
 import { DirectoryTool as DirectoryToolAbstraction } from "./abstractions/DirectoryTool.ts";
 import { Logger } from "../Logger/abstractions/Logger.ts";
 
+export type { IDirectoryTool } from "./abstractions/DirectoryTool.js";
+
 class DirectoryToolImpl implements DirectoryToolAbstraction.Interface {
     public constructor(private readonly logger: Logger.Interface) {}
 

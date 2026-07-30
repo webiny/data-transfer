@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { TouchedIndexes } from "./TouchedIndexes.ts";
 
 export const TouchedIndexesFeature = createFeature({

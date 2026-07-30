@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createOsContainer } from "../../containers/index.ts";
-import { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import { TouchedIndexes } from "~/features/TouchedIndexes/index.ts";
-import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.ts";
-import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.ts";
+import { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import { TouchedIndexes } from "~/features/TouchedIndexes/index.js";
+import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.js";
+import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
-import type { OsScanner } from "~/features/OsScanner/index.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { OsProcessor } from "~/features/OsProcessor/index.ts";
+import type { OsScanner } from "~/features/OsScanner/index.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import { OsProcessor } from "~/features/OsProcessor/index.js";
 import { MockOpenSearchClient } from "../../services/OpenSearchClient/MockOpenSearchClient.ts";
 
 interface OsProcessorSlice {

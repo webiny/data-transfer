@@ -1,7 +1,7 @@
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 import { LexicalRenderer } from "./lexicalRenderer.ts";
 import { visitFields } from "./fieldVisitor.ts";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";

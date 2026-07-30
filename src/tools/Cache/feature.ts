@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { InMemoryCache } from "./InMemoryCache.ts";
 
 export const CacheFeature = createFeature({

@@ -1,16 +1,16 @@
-import { createAbstraction } from "~/base/index.ts";
-import type { Command } from "~/domain/transform/commands/Command.ts";
-import type { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.ts";
-import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { Command } from "~/domain/transform/commands/Command.js";
+import type { Commands } from "~/domain/transform/commands/Commands.js";
+import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelProvider.js";
+import type { Cache } from "~/tools/Cache/abstractions/Cache.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 // ============================================================================
 // Base Context Interface
 // ============================================================================
 
-interface IBaseTransformContext<TRecord = unknown> {
+export interface IBaseTransformContext<TRecord = unknown> {
     record: TRecord;
     readonly original: Readonly<TRecord>;
     readonly modelProvider: ModelProvider.Interface;
@@ -40,16 +40,16 @@ interface IBaseTransformContext<TRecord = unknown> {
 // Base Factory Interface
 // ============================================================================
 
-interface ICreateParams<TRecord> {
+export interface ICreateParams<TRecord> {
     record: TRecord;
 }
 
-interface IBaseContextCreateResult<TRecord> {
+export interface IBaseContextCreateResult<TRecord> {
     ctx: IBaseTransformContext<TRecord>;
     commands: Commands;
 }
 
-interface IBaseTransformContextFactory {
+export interface IBaseTransformContextFactory {
     create<TRecord>(params: ICreateParams<TRecord>): IBaseContextCreateResult<TRecord>;
 }
 

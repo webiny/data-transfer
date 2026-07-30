@@ -1,7 +1,7 @@
 import { mdbid } from "@webiny/utils/mdbid.js";
-import { createTransformer } from "~/transformers/createTransformer.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
+import { createTransformer } from "~/transformers/createTransformer.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
 
 const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 

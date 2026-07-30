@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { Pipeline, createFilter } from "~/domain/pipeline/index.ts";
-import type { PipelineConfig } from "~/domain/pipeline/Pipeline.ts";
+import { Pipeline, createFilter } from "~/domain/pipeline/index.js";
+import type { PipelineConfig } from "~/domain/pipeline/Pipeline.js";
 import { FakeProcessor, FakeScanner, tagTransformer } from "./fixtures/fakes.ts";
 import type { FakeRecord, FakeContext, FakeShard } from "./fixtures/types.ts";
 

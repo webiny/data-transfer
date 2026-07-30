@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { Container } from "@webiny/di";
-import { TransferLifecycleFeature } from "~/features/TransferLifecycle/feature.ts";
+import { TransferLifecycleFeature } from "~/features/TransferLifecycle/feature.js";
 import {
     BeforeTransferHook,
     AfterTransferHook
-} from "~/features/TransferLifecycle/abstractions/TransferLifecycle.ts";
+} from "~/features/TransferLifecycle/abstractions/TransferLifecycle.js";
 
 function createContainer(): Container {
     const container = new Container();

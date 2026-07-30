@@ -1,4 +1,4 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
 interface ITransferContext {
     runId: string;

@@ -1,15 +1,15 @@
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { bootstrap } from "~/bootstrap.ts";
-import { loadConfig } from "~/features/MigrationConfig/loadConfig.ts";
-import { Logger } from "~/tools/Logger/index.ts";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.ts";
-import { PresetLoader } from "~/features/PresetLoader/index.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.ts";
-import { loadUserSetup } from "~/utils/loadUserSetup.ts";
-import { formatError } from "~/base/index.ts";
+import { bootstrap } from "~/bootstrap.js";
+import { loadConfig } from "~/features/MigrationConfig/loadConfig.js";
+import { Logger } from "~/tools/Logger/index.js";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/index.js";
+import { PresetLoader } from "~/features/PresetLoader/index.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { BeforeLoadPresetHook, AfterLoadPresetHook } from "~/features/PresetLifecycle/index.js";
+import { loadUserSetup } from "~/utils/loadUserSetup.js";
+import { formatError } from "~/base/index.js";
 
 export interface ProcessSegmentArgs {
     runId: string;

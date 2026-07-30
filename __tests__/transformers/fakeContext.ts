@@ -1,13 +1,13 @@
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import type {
     DdbCoreTransformContext,
     OsTransformContext
-} from "~/features/TransformContext/abstractions/contextAliases.ts";
-import type { Cache } from "~/tools/Cache/abstractions/Cache.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
-import type { BaseRecord } from "~/domain/transform/types/records.ts";
-import type { OsScanner } from "~/features/OsScanner/index.ts";
+} from "~/features/TransformContext/abstractions/contextAliases.js";
+import type { Cache } from "~/tools/Cache/abstractions/Cache.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
+import type { BaseRecord } from "~/domain/transform/types/records.js";
+import type { OsScanner } from "~/features/OsScanner/index.js";
 import type { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 function makeCache(): Cache.Interface {

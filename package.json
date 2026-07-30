@@ -3,15 +3,32 @@
   "version": "1.0.0",
   "description": "Webiny data transfer tool",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
-    "webiny-data-transfer": "./bin.js"
+    "webiny-data-transfer": "./dist/cli.js"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "directory": "dist"
   },
   "scripts": {
     "transfer": "tsx src/cli.ts",
-    "ts-check": "yarn tsc --noEmit",
+    "clean": "rm -rf dist",
+    "build": "node scripts/buildPackages.ts",
+    "pack:packages": "node scripts/packPackages.ts",
+    "release": "yarn build && changeset publish",
+    "verdaccio:start": "yarn verdaccio -c ./.verdaccio.yaml",
+    "release:verdaccio": "node scripts/releaseVerdaccio.ts",
+    "ts-check": "tsc -p config/tsconfig.check.json && tsc -p config/tsconfig.check.scripts.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --coverage.include=\"src/**/**\"",
@@ -33,48 +50,51 @@
   "author": "Webiny",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/credential-providers": "^3.1089.0",
+    "@aws-sdk/credential-providers": "^3.1095.0",
     "@inquirer/core": "^11.2.1",
     "@inquirer/prompts": "^8.5.2",
     "@opensearch-project/opensearch": "3.6.0",
-    "@webiny/api-headless-cms-ddb-es": "^6.4.3",
-    "@webiny/api-opensearch": "^6.4.3",
-    "@webiny/aws-sdk": "^6.4.3",
+    "@types/node": "^24.13.3",
+    "@webiny/api-headless-cms-ddb-es": "^6.4.5",
+    "@webiny/api-opensearch": "^6.4.5",
+    "@webiny/aws-sdk": "^6.4.5",
     "@webiny/di": "^1.0.2",
-    "@webiny/lexical-converter": "^6.4.3",
-    "@webiny/lexical-nodes": "^6.4.3",
-    "@webiny/utils": "^6.4.3",
+    "@webiny/lexical-converter": "^6.4.5",
+    "@webiny/lexical-nodes": "^6.4.5",
+    "@webiny/utils": "^6.4.5",
     "dotenv": "^17.4.2",
     "execa": "^10.0.0",
-    "exifreader": "^4.41.0",
-    "jsdom": "^29.1.1",
+    "exifreader": "^4.41.3",
+    "jsdom": "^30.0.0",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
     "sharp": "^0.35.3",
     "tsx": "^4.23.1",
-    "yargs": "^18.0.0",
+    "typescript": "^7.0.2",
+    "yargs": "^18.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1089.0",
-    "@aws-sdk/client-s3": "^3.1089.0",
-    "@aws-sdk/lib-dynamodb": "^3.1089.0",
+    "@aws-sdk/client-dynamodb": "^3.1095.0",
+    "@aws-sdk/client-s3": "^3.1095.0",
+    "@aws-sdk/lib-dynamodb": "^3.1095.0",
+    "@changesets/cli": "^2.31.1",
     "@faker-js/faker": "^10.5.0",
-    "@smithy/util-stream": "^4.7.10",
+    "@smithy/util-stream": "^4.7.14",
     "@types/jsdom": "^28.0.3",
-    "@types/node": "^24.13.3",
     "@types/yargs": "^17.0.35",
     "@vitest/coverage-v8": "^4.1.10",
     "adio": "^3.0.1",
     "aws-sdk-client-mock": "^4.1.0",
     "dynalite": "^4.0.0",
-    "oxfmt": "^0.59.0",
-    "oxlint": "^1.74.0",
+    "oxfmt": "^0.60.0",
+    "oxlint": "^1.75.0",
     "typescript": "^7.0.2",
+    "verdaccio": "^6.9.0",
     "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "yarn@4.17.1"
+  "packageManager": "yarn@4.18.0"
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { Result } from "~/base/Result.ts";
+import { Result } from "~/base/Result.js";
 
 describe("Result", () => {
     describe("ok", () => {

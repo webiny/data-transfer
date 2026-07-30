@@ -1,10 +1,10 @@
 import type { Abstraction, Constructor } from "@webiny/di";
-import { createAbstraction } from "~/base/index.ts";
-import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.ts";
-import type { Processor } from "~/domain/pipeline/abstractions/Processor.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import type { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { createAbstraction } from "~/base/index.js";
+import type { Scanner } from "~/domain/pipeline/abstractions/Scanner.js";
+import type { Processor } from "~/domain/pipeline/abstractions/Processor.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import type { PipelineBuilder } from "~/domain/pipeline/PipelineBuilder.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
 // ============================================================================
 // Type utilities
@@ -77,7 +77,7 @@ export interface PipelineFactoryInput<TScanner, TProcessors> {
 // PipelineBuilderFactory abstraction
 // ============================================================================
 
-interface IPipelineBuilderFactory {
+export interface IPipelineBuilderFactory {
     create<
         TRecord,
         TShard,

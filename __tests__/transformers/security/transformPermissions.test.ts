@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { transformPermissions } from "~/transformers/security/transformPermissions.ts";
+import { transformPermissions } from "~/transformers/security/transformPermissions.js";
 import { makeFakeDdbCoreContext } from "../fakeContext.ts";
 
 describe("transformPermissions", () => {

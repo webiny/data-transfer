@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { addLiveField } from "~/transformers/cms/addLiveField.ts";
+import { addLiveField } from "~/transformers/cms/addLiveField.js";
 import { makeFakeDdbCoreContext } from "../fakeContext.ts";
 
 const BASE = {

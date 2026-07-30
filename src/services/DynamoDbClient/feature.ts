@@ -1,5 +1,5 @@
-import { createFeature } from "~/base/index.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { createFeature } from "~/base/index.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { DynamoDbClientImpl } from "./DynamoDbClient.ts";
 import { SourceDynamoDbClient, TargetDynamoDbClient } from "./abstractions/DynamoDbClient.ts";
 import { DynamoDbClientConfig } from "./abstractions/DynamoDbClientConfig.ts";

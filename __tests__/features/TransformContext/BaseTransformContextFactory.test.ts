@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createDdbContainer } from "../../containers/index.ts";
-import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
+import { BaseTransformContextFactory } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
 
 interface SampleRecord {
     PK: string;

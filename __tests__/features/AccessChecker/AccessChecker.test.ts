@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { Container } from "@webiny/di";
-import { ContainerToken } from "~/base/index.ts";
-import { Processor } from "~/domain/pipeline/index.ts";
-import { PipelineRunner } from "~/features/PipelineRunner/index.ts";
-import { AccessChecker, AccessCheckerFeature } from "~/features/AccessChecker/index.ts";
+import { ContainerToken } from "~/base/index.js";
+import { Processor } from "~/domain/pipeline/index.js";
+import { PipelineRunner } from "~/features/PipelineRunner/index.js";
+import { AccessChecker, AccessCheckerFeature } from "~/features/AccessChecker/index.js";
 
 type StubProcessor = Pick<Processor.Interface, "checkAccess" | "execute">;
 

@@ -1,6 +1,6 @@
 import type { Container } from "@webiny/di";
-import type { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.ts";
-import type { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/abstractions/PipelineBuilderFactory.ts";
+import type { PipelineRunner } from "~/features/PipelineRunner/abstractions/PipelineRunner.js";
+import type { PipelineBuilderFactory } from "~/features/PipelineBuilderFactory/abstractions/PipelineBuilderFactory.js";
 
 /**
  * Context passed to `MigrationPreset.configure(...)`. Exposes:

@@ -1,8 +1,10 @@
-import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import type { MigrationPreset } from "~/domain/transform/Preset.ts";
-import { TenantLocales } from "~/features/TenantLocales/index.ts";
-import { ModelProvider } from "~/features/ModelProvider/index.ts";
+import type { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import type { MigrationPreset } from "~/domain/transform/Preset.js";
+import { TenantLocales } from "~/features/TenantLocales/index.js";
+import { ModelProvider } from "~/features/ModelProvider/index.js";
 import { AfterLoadPresetHook } from "./abstractions/PresetLifecycle.ts";
+
+export type { IAfterLoadPresetHook } from "./abstractions/PresetLifecycle.js";
 
 class ModelPreloaderHookImpl implements AfterLoadPresetHook.Interface {
     public constructor(

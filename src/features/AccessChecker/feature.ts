@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { AccessChecker } from "./AccessChecker.ts";
 
 export const AccessCheckerFeature = createFeature({

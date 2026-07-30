@@ -4,10 +4,12 @@ import { dirname, join } from "node:path";
 import { once } from "node:events";
 import { createGzip, type Gzip } from "node:zlib";
 import { SnapshotWriter as SnapshotWriterAbstraction } from "./abstractions/index.ts";
-import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.ts";
-import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.ts";
-import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.ts";
-import { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+import { MigrationConfig } from "~/features/MigrationConfig/abstractions/MigrationConfig.js";
+import { TransferContext } from "~/features/TransferLifecycle/abstractions/TransferContext.js";
+import { DirectoryTool } from "~/tools/DirectoryTool/abstractions/DirectoryTool.js";
+import { Logger } from "~/tools/Logger/abstractions/Logger.js";
+
+export type { ISnapshotWriter } from "./abstractions/SnapshotWriter.js";
 
 interface OpenStream {
     /** The stream the writer actually .write()s to — gzip OR the raw file. */

@@ -11,8 +11,8 @@ import {
     isThrottlingError,
     isTokenBucketExhausted,
     retryBackoffMs
-} from "~/base/index.ts";
-import type { Logger } from "~/tools/Logger/abstractions/Logger.ts";
+} from "~/base/index.js";
+import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 
 // See DynamoDbClient for the rationale on 6 retries + the jittered
 // capped backoff. S3 mirrors the DDB defaults for consistency — same

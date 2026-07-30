@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { Container } from "@webiny/di";
-import { Processor } from "~/domain/pipeline/index.ts";
-import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.ts";
-import { Commands } from "~/domain/transform/commands/Commands.ts";
-import { PutRecord } from "~/domain/transform/commands/PutRecord.ts";
-import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.ts";
+import { Processor } from "~/domain/pipeline/index.js";
+import { AccessCheck } from "~/domain/pipeline/abstractions/Processor.js";
+import { Commands } from "~/domain/transform/commands/Commands.js";
+import { PutRecord } from "~/domain/transform/commands/PutRecord.js";
+import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 
 interface TestRecord {
     id: string;

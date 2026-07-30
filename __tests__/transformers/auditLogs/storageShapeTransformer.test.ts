@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { storageShapeTransformer } from "~/transformers/auditLogs/storageShapeTransformer.ts";
+import { storageShapeTransformer } from "~/transformers/auditLogs/storageShapeTransformer.js";
 import { makeFakeBaseContext } from "../fakeContext.ts";
 
 // Record as it looks AFTER coreFieldsTransformer + dataFieldsTransformer have run

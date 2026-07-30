@@ -1,6 +1,6 @@
-import { createAbstraction } from "~/base/index.ts";
+import { createAbstraction } from "~/base/index.js";
 
-interface ISnapshotWriter {
+export interface ISnapshotWriter {
     /**
      * Write one record as a JSONL line to the file identified by
      * `relativePath` (relative to the configured snapshot dir). Opens the

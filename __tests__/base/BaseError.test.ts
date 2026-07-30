@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { BaseError } from "~/base/BaseError.ts";
+import { BaseError } from "~/base/BaseError.js";
 
 class TestError extends BaseError<{ field: string }> {
     public readonly code = "TEST_ERROR";

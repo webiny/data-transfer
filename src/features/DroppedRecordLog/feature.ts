@@ -1,4 +1,4 @@
-import { createFeature } from "~/base/index.ts";
+import { createFeature } from "~/base/index.js";
 import { DroppedRecordLog } from "./DroppedRecordLog.ts";
 
 export const DroppedRecordLogFeature = createFeature({
