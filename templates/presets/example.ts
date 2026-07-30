@@ -1,5 +1,5 @@
 import { createTransferPreset, DdbScanner, DdbProcessor } from "@webiny/data-transfer";
-import { stampMigratedAt } from "../transformers/stampMigratedAt.ts";
+import { stampMigratedAt } from "../transformers/stampMigratedAt.js";
 
 /**
  * Example custom preset.
