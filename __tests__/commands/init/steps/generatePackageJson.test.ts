@@ -35,4 +35,14 @@ describe("generatePackageJson", () => {
         const result = JSON.parse(generatePackageJson("test"));
         expect(result.packageManager).toMatch(/^yarn@/);
     });
+
+    it("excludes @webiny/api-elasticsearch-tasks via resolutions and overrides", () => {
+        const result = JSON.parse(generatePackageJson("test"));
+        expect(result.resolutions["@webiny/api-elasticsearch-tasks"]).toBe(
+            "npm:empty-npm-package@1.0.0"
+        );
+        expect(result.overrides["@webiny/api-elasticsearch-tasks"]).toBe(
+            "npm:empty-npm-package@1.0.0"
+        );
+    });
 });
