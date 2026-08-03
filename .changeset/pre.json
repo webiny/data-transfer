@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "@webiny/data-transfer": "0.0.0"
+  },
+  "changesets": ["witty-glasses-cheat"]
+}
