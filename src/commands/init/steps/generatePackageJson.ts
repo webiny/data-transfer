@@ -30,6 +30,7 @@ export function generatePackageJson(projectName: string): string {
         packageManager: own.packageManager,
         scripts: {
             transfer: "webiny-data-transfer",
+            "update-skills": "webiny-data-transfer update-skills",
             "ts-check": "tsc --noEmit"
         },
         dependencies: {

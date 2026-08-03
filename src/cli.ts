@@ -12,7 +12,8 @@ import {
     registerRunCommand,
     registerInitCommand,
     registerInitProjectCommand,
-    registerProcessSegmentCommand
+    registerProcessSegmentCommand,
+    registerUpdateSkillsCommand
 } from "./commands/index.ts";
 
 // Last-resort safety net: any promise rejection that escapes all try-catch
@@ -37,13 +38,14 @@ process.on("unhandledRejection", (reason: unknown) => {
     process.exit(1);
 });
 
-const KNOWN_COMMANDS = new Set(["init", "init-project", "run", "process-segment"]);
+const KNOWN_COMMANDS = new Set(["init", "init-project", "run", "process-segment", "update-skills"]);
 
 let cli = yargs(hideBin(process.argv));
 cli = registerInitCommand(cli);
 cli = registerInitProjectCommand(cli);
 cli = registerRunCommand(cli);
 cli = registerProcessSegmentCommand(cli);
+cli = registerUpdateSkillsCommand(cli);
 
 const firstArg = process.argv[2];
 if (firstArg && !firstArg.startsWith("-") && !KNOWN_COMMANDS.has(firstArg)) {
