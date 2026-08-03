@@ -67,6 +67,25 @@ For v5 to v6 migration, run `v5-to-v6-ddb` first, then `v5-to-v6-os`.
 
 Custom presets in `presets/` are listed alongside built-ins. See `presets/example.ts` for a starting point.
 
+## AI agent support (MCP)
+
+This project includes an MCP server that gives AI agents (Claude, Cursor, Kiro, Copilot, etc.) access to all data-transfer documentation — presets, transformers, processors, config reference, and how-to guides.
+
+The `.mcp.json` in the project root auto-configures it for agents that support MCP discovery. No setup needed for new scaffolded projects.
+
+For existing projects, create `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "webiny-data-transfer": {
+      "command": "npx",
+      "args": ["webiny-data-transfer-mcp"]
+    }
+  }
+}
+```
+
 ## Documentation
 
 - [Config reference](https://github.com/webiny/data-transfer/blob/main/docs/guides/config-reference.md) — config.ts setup, env helpers, credentials, IAM, tuning

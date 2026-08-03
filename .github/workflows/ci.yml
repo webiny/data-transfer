@@ -108,6 +108,7 @@ jobs:
           test -f projects/example/config.ts
           test -f package.json
           test -f .yarnrc.yml
+          test -f .mcp.json
           test -d presets
           test -d transformers
 
