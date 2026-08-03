@@ -43,9 +43,41 @@ export { createTransformer } from "./transformers/createTransformer.ts";
 export { createDdbTransformer } from "./transformers/createDdbTransformer.ts";
 export { createOsTransformer } from "./transformers/createOsTransformer.ts";
 
-// Built-in transformers — ready-made for common patterns in custom presets.
-export { copyFileToTarget } from "./transformers/file-manager/copyFileToTarget.ts";
+// Built-in transformers — ready-made for use in custom presets.
+// CMS
+export { addLiveField } from "./transformers/cms/addLiveField.ts";
+export { fixBrokenStorageKeys } from "./transformers/cms/fixBrokenStorageKeys.ts";
+export { fixCmePk } from "./transformers/cms/fixCmePk.ts";
+export { removeFolderRevision } from "./transformers/cms/removeFolderRevision.ts";
+export { renameFieldAttributes } from "./transformers/cms/renameFieldAttributes.ts";
 export { replaceFileUrls } from "./transformers/cms/replaceFileUrls.ts";
+export { transformModelGroup } from "./transformers/cms/transformModelGroup.ts";
+export { transformRichText } from "./transformers/cms/transformRichText.ts";
+export { updateModelIds } from "./transformers/cms/updateModelIds.ts";
+export { updateOsIndex } from "./transformers/cms/updateOsIndex.ts";
+// File manager
+export { copyFileToTarget } from "./transformers/file-manager/copyFileToTarget.ts";
+export { createMetadata } from "./transformers/file-manager/createMetadata.ts";
+export { extractImageMetadata } from "./transformers/file-manager/extractImageMetadata.ts";
+export { migrateFileManagerSettings } from "./transformers/file-manager/migrateFileManagerSettings.ts";
+// Folders
+export { updateFlpIds } from "./transformers/folders/updateFlpIds.ts";
+// Global
+export { addGsiTenant } from "./transformers/global/addGsiTenant.ts";
+export { addTransferTimestamp } from "./transformers/global/addTransferTimestamp.ts";
+export { removeAttributes } from "./transformers/global/removeAttributes.ts";
+export { removeLocale } from "./transformers/global/removeLocale.ts";
+export { wrapInData } from "./transformers/global/wrapInData.ts";
+// Security
+export { groupsToRoles } from "./transformers/security/groupsToRoles.ts";
+export { removeTenant } from "./transformers/security/removeTenant.ts";
+export { transformPermissions } from "./transformers/security/transformPermissions.ts";
+// Mailer
+export { migrateMailerSettings } from "./transformers/mailer/migrateMailerSettings.ts";
+// Audit logs
+export { coreFieldsTransformer } from "./transformers/auditLogs/coreFieldsTransformer.ts";
+export { dataFieldsTransformer } from "./transformers/auditLogs/dataFieldsTransformer.ts";
+export { storageShapeTransformer } from "./transformers/auditLogs/storageShapeTransformer.ts";
 
 // Pipeline factories
 export { createFilter, type Filter } from "./domain/pipeline/Filter.ts";
@@ -59,6 +91,7 @@ export {
     isCmsEntry,
     byIncludesModelId,
     isAcoSearchRecord,
+    isAdminUser,
     isBackgroundTask,
     isFmFile,
     isFlpRecord,
