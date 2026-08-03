@@ -6,6 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
+    "data-transfer": "./dist/cli.js",
     "webiny-data-transfer": "./dist/cli.js",
     "webiny-data-transfer-mcp": "./dist/mcp/bin.js"
   },
