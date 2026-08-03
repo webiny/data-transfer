@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.1-alpha.2
+
+### Patch Changes
+
+- 3cab748: Add MCP server (`webiny-data-transfer-mcp`) with `list_topics` and `get_topic` tools serving 44 documentation topics. Export all 27 built-in transformers and all 18 filter predicates as public API. Consolidate CI workflows and update all GitHub Actions to latest versions.
+
 ## 0.0.1-alpha.1
 
 ### Patch Changes
