@@ -97,7 +97,7 @@ jobs:
       - name: Scaffold user project
         run: |
           cd /tmp
-          npx --yes --loglevel=silent --registry http://localhost:4873 "@webiny/data-transfer@${PKG_VERSION}" smoke-test
+          npx --yes --registry http://localhost:4873 "@webiny/data-transfer@${PKG_VERSION}" smoke-test
         env:
           npm_config_registry: http://localhost:4873
           PKG_VERSION: ${{ steps.version.outputs.version }}
@@ -108,6 +108,7 @@ jobs:
           test -f projects/example/config.ts
           test -f package.json
           test -f .yarnrc.yml
+          test -f .mcp.json
           test -d presets
           test -d transformers
 

@@ -73,7 +73,7 @@ class ArtifactCopierImpl implements ArtifactCopierAbstraction.Interface {
 
   public copyAssets(sourceDir: string, distAbsDir: string): void {
     // presets live in src/presets/ and are compiled by tsc — not copied here
-    for (const dir of ["templates", "projects"]) {
+    for (const dir of ["templates", "projects", "docs/mcp"]) {
       const src = join(sourceDir, dir);
       if (existsSync(src)) {
         cpSync(src, join(distAbsDir, dir), { recursive: true });

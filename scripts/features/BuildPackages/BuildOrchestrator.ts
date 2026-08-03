@@ -48,13 +48,15 @@ class BuildOrchestratorImpl implements BuildOrchestratorAbstraction.Interface {
   }
 
   private ensureShebang(rootDir: string): void {
-    const cliPath = join(rootDir, "dist", "cli.js");
-    if (!existsSync(cliPath)) {
-      return;
-    }
-    const content = readFileSync(cliPath, "utf-8");
-    if (!content.startsWith("#!")) {
-      writeFileSync(cliPath, "#!/usr/bin/env node\n" + content);
+    for (const binPath of ["dist/cli.js", "dist/mcp/bin.js"]) {
+      const fullPath = join(rootDir, binPath);
+      if (!existsSync(fullPath)) {
+        continue;
+      }
+      const content = readFileSync(fullPath, "utf-8");
+      if (!content.startsWith("#!")) {
+        writeFileSync(fullPath, "#!/usr/bin/env node\n" + content);
+      }
     }
   }
 }
