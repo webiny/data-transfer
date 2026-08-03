@@ -3,3 +3,5 @@ node_modules/
 .transfer/
 .yarn/*
 !.yarn/releases
+.idea/
+.DS_Store
