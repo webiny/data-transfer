@@ -1,11 +1,17 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { discoverDocs, buildCatalog, type Doc } from "./discoverDocs.ts";
 
-const DEFAULT_DOCS_DIR = join(fileURLToPath(new URL(".", import.meta.url)), "../docs/mcp");
+const thisDir = fileURLToPath(new URL(".", import.meta.url));
+const DEFAULT_DOCS_DIR =
+    [
+        join(thisDir, "../docs/mcp"), // production (dist/mcp/ → dist/docs/mcp)
+        join(thisDir, "../../docs/mcp") // dev (src/mcp/ → docs/mcp)
+    ].find(existsSync) ?? join(thisDir, "../docs/mcp");
 
 export async function startMcpServer(docsDirs?: string[]): Promise<void> {
     const dirs = docsDirs ?? [DEFAULT_DOCS_DIR];
