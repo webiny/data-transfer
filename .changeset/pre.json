@@ -4,5 +4,5 @@
   "initialVersions": {
     "@webiny/data-transfer": "0.0.0"
   },
-  "changesets": ["witty-glasses-cheat"]
+  "changesets": ["early-suns-rule", "witty-glasses-cheat"]
 }

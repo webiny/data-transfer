@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.1-alpha.1
+
+### Patch Changes
+
+- 24a502a: Consolidate CI workflows, update all GitHub Actions to latest versions, add register callback example to scaffolded config template, fix scaffold yarn install in CI environments.
+
 ## 0.0.1-alpha.0
 
 ### Patch Changes
