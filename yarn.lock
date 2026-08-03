@@ -10243,6 +10243,7 @@ __metadata:
     yargs: "npm:^18.1.0"
     zod: "npm:^4.4.3"
   bin:
+    data-transfer: ./dist/cli.js
     webiny-data-transfer: ./dist/cli.js
     webiny-data-transfer-mcp: ./dist/mcp/bin.js
   languageName: unknown
