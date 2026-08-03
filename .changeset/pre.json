@@ -4,5 +4,8 @@
   "initialVersions": {
     "@webiny/data-transfer": "0.0.0"
   },
-  "changesets": ["tall-dancers-care"]
+  "changesets": [
+    "dry-readers-write",
+    "tall-dancers-care"
+  ]
 }
