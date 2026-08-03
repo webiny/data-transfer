@@ -15,6 +15,7 @@
     "document": "writable"
   },
   "ignorePatterns": [
+    ".changeset/**/*",
     ".github/**/*",
     ".idea/**/*",
     ".stormTests/**/*",
