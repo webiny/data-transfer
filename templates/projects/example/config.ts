@@ -35,4 +35,9 @@ export default createConfig({
         modelsDir: "./models",
         presetsDir: "../../presets"
     }
+    // Wire custom DI bindings before the preset loads.
+    // Runs after all built-in features are registered.
+    // register: async (container) => {
+    //     container.register(MyCustomProcessorImpl);
+    // }
 });
