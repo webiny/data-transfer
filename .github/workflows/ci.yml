@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -60,7 +64,7 @@ jobs:
 
       - name: Start verdaccio
         run: |
-          npx verdaccio -c ./.verdaccio.yaml &
+          yarn verdaccio -c ./.verdaccio.yaml &
           for i in $(seq 1 30); do
             if curl -sf http://localhost:4873 > /dev/null; then
               echo "Verdaccio is ready"
@@ -116,7 +120,3 @@ jobs:
         run: |
           cd /tmp/smoke-test
           yarn webiny-data-transfer --help
-
-      - name: Reset npm registry
-        if: always()
-        run: npm config delete registry
