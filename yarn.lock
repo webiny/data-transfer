@@ -10244,6 +10244,7 @@ __metadata:
     zod: "npm:^4.4.3"
   bin:
     webiny-data-transfer: ./dist/cli.js
+    webiny-data-transfer-mcp: ./dist/mcp/bin.js
   languageName: unknown
   linkType: soft
 
