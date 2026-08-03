@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   check:
@@ -30,10 +31,15 @@ jobs:
           fi
 
       - run: yarn install --immutable
+      - run: yarn npm audit
       - run: yarn format:check
       - run: yarn lint
       - run: yarn check:imports
       - run: yarn ts-check
+
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
 
   build-and-test:
     name: Build & Test
