@@ -97,7 +97,7 @@ jobs:
       - name: Scaffold user project
         run: |
           cd /tmp
-          npx --yes --loglevel=silent --registry http://localhost:4873 "@webiny/data-transfer@${PKG_VERSION}" smoke-test
+          npx --yes --registry http://localhost:4873 "@webiny/data-transfer@${PKG_VERSION}" smoke-test
         env:
           npm_config_registry: http://localhost:4873
           PKG_VERSION: ${{ steps.version.outputs.version }}
