@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.1
+
+### Patch Changes
+
+- 534dfc3: initial release
+
 ## 0.0.1-alpha.3
 
 ### Patch Changes
