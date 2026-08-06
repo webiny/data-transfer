@@ -1,4 +1,4 @@
-import { configurations } from "@webiny/api-headless-cms-ddb-es/configurations.js";
+import { configurations } from "@webiny/api-headless-cms-utils-os/configurations.js";
 import { createOsTransformer } from "~/transformers/createOsTransformer.js";
 
 export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
@@ -17,16 +17,7 @@ export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
     const { index } = configurations.es({
         model: {
             modelId,
-            tenant,
-            group: "any",
-            description: null,
-            icon: null,
-            name: modelId,
-            layout: [],
-            pluralApiName: modelId,
-            singularApiName: modelId,
-            fields: [],
-            titleFieldId: "id"
+            tenant
         }
     });
 
