@@ -1,6 +1,6 @@
 {
   "name": "@webiny/data-transfer",
-  "version": "0.0.1-alpha.3",
+  "version": "0.0.1",
   "description": "Webiny data transfer tool",
   "type": "module",
   "main": "./dist/index.js",
