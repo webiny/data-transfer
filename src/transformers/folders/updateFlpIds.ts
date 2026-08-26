@@ -11,18 +11,37 @@ export const updateFlpIds = createTransformer<BaseTransformContext.Interface<Bas
     ctx => {
         const { record } = ctx;
 
-        if (record.data && typeof record.data === "object") {
-            const data = record.data as Record<string, unknown>;
+        if (!record.data || typeof record.data !== "object") {
+            return;
+        }
+        const data = record.data as Record<string, unknown>;
 
-            // Remove #0001 from id
-            if (typeof data.id === "string") {
-                data.id = data.id.replace(/#0001$/, "");
+        // Remove #0001 from id
+        if (typeof data.id === "string") {
+            data.id = data.id.replace(/#0001$/, "");
+        }
+
+        // Remove #0001 from parentId
+        if (typeof data.parentId === "string") {
+            data.parentId = data.parentId.replace(/#0001$/, "");
+        }
+
+        if (!Array.isArray(data.permissions)) {
+            return;
+        }
+
+        for (const permission of data.permissions) {
+            if (!permission || typeof permission !== "object") {
+                continue;
             }
 
-            // Remove #0001 from parentId
-            if (typeof data.parentId === "string") {
-                data.parentId = data.parentId.replace(/#0001$/, "");
+            const perm = permission as Record<string, unknown>;
+
+            if (typeof perm.inheritedFrom !== "string") {
+                continue;
             }
+
+            perm.inheritedFrom = perm.inheritedFrom.replace(/#0001$/, "");
         }
     }
 );
