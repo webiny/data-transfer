@@ -2,10 +2,8 @@ import { createTransformer } from "~/transformers/createTransformer.js";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import type { BaseRecord } from "~/domain/transform/types/records.js";
 
-/**
- * Removes #0001 revision from data.id and data.parentId in FLP records.
- * Note: FLP records already have data attribute, so wrapInData doesn't wrap them again
- */
+const stripRevision = (value: string) => value.replace(/#\d{4}$/, "");
+
 export const updateFlpIds = createTransformer<BaseTransformContext.Interface<BaseRecord>>(
     "updateFlpIds",
     ctx => {
@@ -16,14 +14,12 @@ export const updateFlpIds = createTransformer<BaseTransformContext.Interface<Bas
         }
         const data = record.data as Record<string, unknown>;
 
-        // Remove #0001 from id
         if (typeof data.id === "string") {
-            data.id = data.id.replace(/#0001$/, "");
+            data.id = stripRevision(data.id);
         }
 
-        // Remove #0001 from parentId
         if (typeof data.parentId === "string") {
-            data.parentId = data.parentId.replace(/#0001$/, "");
+            data.parentId = stripRevision(data.parentId);
         }
 
         if (!Array.isArray(data.permissions)) {
@@ -41,7 +37,7 @@ export const updateFlpIds = createTransformer<BaseTransformContext.Interface<Bas
                 continue;
             }
 
-            perm.inheritedFrom = perm.inheritedFrom.replace(/#0001$/, "");
+            perm.inheritedFrom = stripRevision(perm.inheritedFrom);
         }
     }
 );
