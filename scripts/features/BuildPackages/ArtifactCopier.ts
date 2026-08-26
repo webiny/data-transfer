@@ -18,6 +18,10 @@ function stripDist(path: string): string {
   return path.startsWith("./dist/") ? `./${path.slice("./dist/".length)}` : path;
 }
 
+function stripDistForBin(path: string): string {
+  return path.startsWith("./dist/") ? path.slice("./dist/".length) : path;
+}
+
 function rewriteExports(value: ExportValue): ExportValue {
   if (value == null || Array.isArray(value)) {
     return value;
@@ -52,7 +56,7 @@ class ArtifactCopierImpl implements ArtifactCopierAbstraction.Interface {
     }
     if (pkgJson.bin) {
       for (const [name, path] of Object.entries(pkgJson.bin)) {
-        pkgJson.bin[name] = stripDist(path);
+        pkgJson.bin[name] = stripDistForBin(path);
       }
     }
     delete pkgJson.files;

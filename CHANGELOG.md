@@ -1,17 +1,5 @@
 # @webiny/data-transfer
 
-## 0.0.3
-
-### Patch Changes
-
-- 3a09d52: Strip revision suffixes (`#NNNN`) from `inheritedFrom` in FLP permission records during transfer. Pin `@changesets/cli` to 2.x to fix publishing.
-
-## 0.0.2
-
-### Patch Changes
-
-- 2acdc84: Strip `#0001` revision suffix from `inheritedFrom` in FLP permission records during transfer.
-
 ## 0.0.1
 
 ### Patch Changes
