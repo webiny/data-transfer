@@ -15,6 +15,16 @@ export function registerRunCommand(yargs: Argv): Argv {
                     demandOption: false,
                     description: "Path to configuration file"
                 })
+                .option("preset", {
+                    type: "string",
+                    demandOption: false,
+                    description: "Preset name to run"
+                })
+                .option("dry-run", {
+                    type: "boolean",
+                    default: false,
+                    description: "Read source but skip all writes to target"
+                })
                 .option("segments", {
                     type: "string",
                     description:
@@ -29,6 +39,16 @@ export function registerRunCommand(yargs: Argv): Argv {
                 });
         },
         async argv => {
+            const configPath = argv.config as string | undefined;
+            const preset = argv.preset as string | undefined;
+            const logLevel = argv["log-level"] as string | undefined;
+            const dryRun = argv["dry-run"] as boolean;
+
+            if (configPath && preset) {
+                await handler(configPath, preset, argv.segments, logLevel, dryRun);
+                return;
+            }
+
             const wizard = new TransferWizard(process.cwd());
             try {
                 const result = await wizard.run();
@@ -39,7 +59,7 @@ export function registerRunCommand(yargs: Argv): Argv {
                     result.configPath,
                     result.preset,
                     argv.segments,
-                    argv["log-level"] as string | undefined,
+                    logLevel,
                     result.dryRun
                 );
             } catch (err) {
