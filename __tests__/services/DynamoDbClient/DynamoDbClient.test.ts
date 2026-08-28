@@ -47,6 +47,58 @@ describe("DynamoDbClient Feature", () => {
 
             expect(first).toBe(second);
         });
+
+        it("should create distinct underlying clients when credentials are provider functions", () => {
+            const container = new Container();
+            const sourceProvider = async () => ({
+                accessKeyId: "source-key",
+                secretAccessKey: "source-secret"
+            });
+            const targetProvider = async () => ({
+                accessKeyId: "target-key",
+                secretAccessKey: "target-secret"
+            });
+
+            container.registerInstance(DynamoDbClientConfig, {
+                source: { region: "us-east-1", credentials: sourceProvider },
+                target: { region: "us-east-1", credentials: targetProvider }
+            });
+            container.registerInstance(Logger, new NoopLogger());
+
+            DynamoDbClientFeature.register(container);
+
+            const sourceClient = container.resolve(SourceDynamoDbClient);
+            const targetClient = container.resolve(TargetDynamoDbClient);
+
+            const sourceInternal = (sourceClient as unknown as { client: unknown }).client;
+            const targetInternal = (targetClient as unknown as { client: unknown }).client;
+
+            expect(sourceInternal).not.toBe(targetInternal);
+        });
+
+        it("should create distinct underlying clients even with same region and identical provider shapes", () => {
+            const container = new Container();
+            const makeProvider = (profile: string) => async () => ({
+                accessKeyId: `${profile}-key`,
+                secretAccessKey: `${profile}-secret`
+            });
+
+            container.registerInstance(DynamoDbClientConfig, {
+                source: { region: "us-east-1", credentials: makeProvider("source") },
+                target: { region: "us-east-1", credentials: makeProvider("target") }
+            });
+            container.registerInstance(Logger, new NoopLogger());
+
+            DynamoDbClientFeature.register(container);
+
+            const sourceClient = container.resolve(SourceDynamoDbClient);
+            const targetClient = container.resolve(TargetDynamoDbClient);
+
+            const sourceInternal = (sourceClient as unknown as { client: unknown }).client;
+            const targetInternal = (targetClient as unknown as { client: unknown }).client;
+
+            expect(sourceInternal).not.toBe(targetInternal);
+        });
     });
 
     describe("MockDynamoDbClient", () => {

@@ -42,7 +42,8 @@ export class S3ClientImpl implements SourceS3Client.Interface {
         this.client = createS3Client({
             region: config.region,
             credentials: config.credentials,
-            retryMode: "adaptive"
+            retryMode: "adaptive",
+            cache: false
         });
         this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
