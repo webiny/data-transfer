@@ -1,10 +1,10 @@
 import {
     BatchWriteCommand,
     GetCommand,
-    ScanCommand,
-    getDocumentClient,
-    type DynamoDBDocument
+    ScanCommand
 } from "@webiny/aws-sdk/client-dynamodb/index.js";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 // QueryCommand: @webiny/aws-sdk/client-dynamodb re-exports the LOW-LEVEL
 // variant from @aws-sdk/client-dynamodb, which expects pre-marshalled
 // AttributeValue inputs. Our code passes plain JS values and relies on
@@ -49,14 +49,18 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         tuning?: DynamoDbClientConfig.Tuning
     ) {
         this.logger = logger;
-        // getDocumentClient bakes in marshall options (convertEmptyValues,
-        // removeUndefinedValues, convertClassInstanceToMap) and caches by
-        // config hash — no manual DynamoDBClient/DynamoDBDocument wiring.
-        this.client = getDocumentClient({
+        const client = new DynamoDBClient({
             region: config.region,
             ...(config.credentials && { credentials: config.credentials }),
             ...(config.endpoint && { endpoint: config.endpoint }),
             retryMode: "adaptive"
+        });
+        this.client = DynamoDBDocument.from(client, {
+            marshallOptions: {
+                convertEmptyValues: true,
+                removeUndefinedValues: true,
+                convertClassInstanceToMap: true
+            }
         });
         this.maxRetries = tuning?.maxRetries ?? DEFAULT_MAX_RETRIES;
         this.initialBackoff = tuning?.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF;
