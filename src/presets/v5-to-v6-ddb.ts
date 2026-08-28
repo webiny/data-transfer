@@ -26,6 +26,7 @@ import {
     addLiveField,
     auditLogTransformers,
     cmsEntryTransformers,
+    copyFileToTarget,
     createMetadata,
     extractImageMetadata,
     groupsToRoles,
@@ -163,8 +164,7 @@ export default createTransferPreset({
             // File Manager-specific transformers (append pipeline-specific tail here)
             .use(createMetadata)
             .use(extractImageMetadata)
-            // TODO we dont want to copy files from S3, so discard all commands produced in this pipeline.
-            // .blackhole()
+            .use(copyFileToTarget)
             .build();
 
         // ========================================================================
