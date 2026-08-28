@@ -1,8 +1,37 @@
 import { describe, it, expect } from "vitest";
 import { SourceS3Client, TargetS3Client } from "../../../src/services/S3Client/index.ts";
+import { S3ClientImpl } from "../../../src/services/S3Client/S3Client.ts";
 import { createDdbContainer } from "../../containers/index.ts";
+import { NoopLogger } from "../../helpers/NoopLogger.ts";
 
 describe("S3Client Feature", () => {
+    describe("cross-account isolation", () => {
+        it("should create distinct underlying clients when credentials are provider functions", () => {
+            const sourceProvider = async () => ({
+                accessKeyId: "source-key",
+                secretAccessKey: "source-secret"
+            });
+            const targetProvider = async () => ({
+                accessKeyId: "target-key",
+                secretAccessKey: "target-secret"
+            });
+
+            const source = new S3ClientImpl(
+                { region: "us-east-1", credentials: sourceProvider },
+                new NoopLogger()
+            );
+            const target = new S3ClientImpl(
+                { region: "us-east-1", credentials: targetProvider },
+                new NoopLogger()
+            );
+
+            const sourceInternal = (source as unknown as { client: unknown }).client;
+            const targetInternal = (target as unknown as { client: unknown }).client;
+
+            expect(sourceInternal).not.toBe(targetInternal);
+        });
+    });
+
     describe("DI registration", () => {
         it("should resolve SourceS3Client", () => {
             const container = createDdbContainer();
