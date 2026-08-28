@@ -1,5 +1,7 @@
 import { createServer } from "node:net";
 import type { AddressInfo } from "node:net";
+import { DescribeTableCommand } from "@aws-sdk/client-dynamodb";
+import type { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 import dynalite from "dynalite";
 
 export interface DynaliteOptions {
@@ -55,6 +57,22 @@ export async function startDynalite(options: DynaliteOptions = {}): Promise<Dyna
                 });
             })
     };
+}
+
+export async function waitForTableActive(
+    doc: DynamoDBDocument,
+    tableName: string,
+    timeoutMs = 5000
+): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const result = await doc.send(new DescribeTableCommand({ TableName: tableName }));
+        if (result.Table?.TableStatus === "ACTIVE") {
+            return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    throw new Error(`Table ${tableName} did not become ACTIVE within ${timeoutMs}ms`);
 }
 
 async function pickFreePort(): Promise<number> {

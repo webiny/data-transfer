@@ -8,7 +8,7 @@ import { DdbScanner } from "~/features/DdbScanner/index.js";
 import { DdbProcessor } from "~/features/DdbProcessor/index.js";
 import { TargetDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
 import type { BaseRecord } from "~/domain/transform/types/records.js";
-import { startDynalite, type DynaliteInstance } from "./dynalite.ts";
+import { startDynalite, waitForTableActive, type DynaliteInstance } from "./dynalite.ts";
 import { createDdbIntegrationContainer } from "./integrationContainer.ts";
 
 const FAKE_CREDS = { accessKeyId: "test", secretAccessKey: "test" };
@@ -154,6 +154,8 @@ describe("pipeline — bulk + retry against dynalite", () => {
         };
         await createDdbTable(doc, pair.source);
         await createDdbTable(doc, pair.target);
+        await waitForTableActive(doc, pair.source);
+        await waitForTableActive(doc, pair.target);
         return pair;
     }
 
