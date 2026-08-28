@@ -51,8 +51,9 @@ export class S3ClientImpl implements SourceS3Client.Interface {
     }
 
     public async copy(options: SourceS3Client.Copy): Promise<void> {
+        const encodedKey = options.sourceKey.split("/").map(encodeURIComponent).join("/");
         const command = new CopyObjectCommand({
-            CopySource: `${options.sourceBucket}/${options.sourceKey}`,
+            CopySource: `${options.sourceBucket}/${encodedKey}`,
             Bucket: options.targetBucket,
             Key: options.targetKey
         });

@@ -4,6 +4,7 @@ import { S3Processor } from "~/features/S3Processor/index.js";
 import { isFmFile } from "~/domain/transform/filters.js";
 import { createFilter } from "~/domain/pipeline/index.js";
 import { DdbProcessor } from "~/features/DdbProcessor/index.js";
+import { copyFileToTarget } from "~/transformers/file-manager/copyFileToTarget.js";
 
 export default createTransferPreset({
     name: "copy-files",
@@ -16,6 +17,7 @@ export default createTransferPreset({
                 processors: [DdbProcessor, S3Processor]
             })
             .filter(createFilter(isFmFile))
+            .use(copyFileToTarget)
             .build();
 
         runner.register(everything);
