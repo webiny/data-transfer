@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.3
+
+### Patch Changes
+
+- d5e620c: Fix cross-account migration by bypassing `@webiny/aws-sdk` client cache. Add `--config`, `--preset`, and `--dry-run` flags to skip the wizard. Wire `copyFileToTarget` in `copy-files` and `v5-to-v6-ddb` presets so S3 files are actually copied. URL-encode `CopySource` path segments for keys with special characters. Fix flaky dynalite integration test with `waitForTableActive`.
+
 ## 0.0.2
 
 ### Patch Changes
