@@ -29,6 +29,7 @@ Use the **codegraph MCP** as the first tool for browsing code. `codegraph_explor
 
 - `docs/design/generic-pipeline-framework.md` — long-term design (pipeline-centric model, merge groups keyed by scanner, first-match-wins).
 - `docs/superpowers/specs/2026-04-18-*.md` — recent design docs (transformer-library, preset-migration).
+- `docs/superpowers/specs/2026-09-04-fix-live-field-and-command-menu-design.md` — `fix-live` reconciler + CLI command menu (what v6 actually maintains for `live`, certainty rules, UpdateItem-only writes).
 
 ---
 
@@ -105,6 +106,7 @@ These docs also ship in the published npm package and are referenced from the sc
 
 ### Open work
 
+0. **Fix live field + CLI command menu** — spec approved, two implementation plans ready, nothing implemented yet. Spec: `docs/superpowers/specs/2026-09-04-fix-live-field-and-command-menu-design.md`. Plans: `docs/superpowers/plans/2026-09-04-fix-live-reconciler.md` (do first, tasks 1–11: transformer fix, DDB client additions, reconciler, report/state, runners), then `docs/superpowers/plans/2026-09-04-cli-command-menu.md` (tasks 1–10: clack prompts, command registry, `fix-live` command, docs). Root cause confirmed: `addLiveField` reads root `version` from a gzipped OS source row (`OsProcessor.querySourceRecord`), so OS-preset `L` docs of draft-over-published entries end up with `live: {}`.
 1. **First npm publish** — infrastructure is in place (changesets, CI, publish workflow, build scripts). Needs: `NPM_TOKEN` secret in GitHub, first `yarn changeset` to create a version bump, merge to main.
 2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. Scaffold output: `config.ts`, `presets/example.ts`, optional `setup.ts`. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
 3. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
