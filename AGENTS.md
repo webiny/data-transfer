@@ -21,7 +21,7 @@ Use the **codegraph MCP** as the first tool for browsing code. `codegraph_explor
 **Runtime flow (when deployed):**
 
 1. User writes a single `config.ts`: `createConfig({ source, target, pipeline })`. One file covers DDB, S3, and optional OpenSearch. **User-side custom DI:** `register` callback in `createConfig()` is the primary path (runs before preset loading). `setup.ts` next to the config file is the alternative for larger setups. Both are optional.
-2. CLI `transfer` command (no `--config`): the `TransferWizard` selects a project, writes `.env`, then on subsequent runs prompts for a preset and returns `WizardResult { configPath, preset }`. With `--config`: skips wizard, preset passed as `--preset` flag.
+2. CLI: `yarn transfer` with no arguments opens a menu over the `Command` registry (`src/commands/registry/`) — entries: `transfer`, `fix-live`. `yarn transfer transfer` (or the legacy `yarn transfer --config … --preset …`) runs the system-to-system transfer: without `--config` the `TransferWizard` selects a project, writes `.env`, then on subsequent runs prompts for a preset and returns `WizardResult { configPath, preset, dryRun }`. `yarn transfer <folder>` still scaffolds (`init`). Prompts go through the `Prompts` / `UI` abstractions (`src/commands/prompts/`, `@clack/prompts`); commands never import a prompt library. Cancel exits 130.
 3. Bootstrap loads the config, registers all features (DDB + S3 always; OS conditional on `config.target.opensearch != null`), loads the named preset, spawns worker processes per segment.
 4. Each worker runs one or more shards: scans source → for each record, first-match-wins pipeline runs: filters → transformers → each processor's `onEnd?` hook (sequential, array order) → commands accumulate in a pending buffer. Every `tuning.flushEvery` records (default 500) each processor's `execute()` drains its own keys from that buffer (sequential, array order) and the buffer resets — this bounds peak memory to `flushEvery × avg_record_size`. A final flush at shard end drains any remainder. `Commands.unclaimedKeys()` surfaces commands no processor claimed.
 
@@ -45,7 +45,7 @@ Everything users import lives in `src/index.ts`: config builder (`createConfig`)
 
 ## 3. Project structure
 
-Source lives in `src/` with `cli.ts` entry point, `bootstrap.ts` DI setup, `index.ts` public API. Domain logic is in `src/features/` (one dir per feature), pipeline abstractions in `src/domain/pipeline/`, transform primitives in `src/domain/transform/`, ~30 built-in transformers in `src/transformers/`, and 5 built-in presets in `src/presets/`. Build scripts live in `scripts/features/BuildPackages/` (DI-based, mirrors `@webiny/stdlib`). Build tsconfigs in `config/`. Changeset config in `.changeset/`. CI/CD workflows in `.github/workflows/`.
+Source lives in `src/` with `cli.ts` entry point, `bootstrap.ts` DI setup, `index.ts` public API. CLI commands live in `src/commands/` as implementations of the `Command` token (`src/commands/registry/`); the entry `src/cli.ts` registers `registry.list()` with yargs plus a `$0 [folder]` default that preserves the two historical no-command invocations. Domain logic is in `src/features/` (one dir per feature), pipeline abstractions in `src/domain/pipeline/`, transform primitives in `src/domain/transform/`, ~30 built-in transformers in `src/transformers/`, and 5 built-in presets in `src/presets/`. Build scripts live in `scripts/features/BuildPackages/` (DI-based, mirrors `@webiny/stdlib`). Build tsconfigs in `config/`. Changeset config in `.changeset/`. CI/CD workflows in `.github/workflows/`.
 
 > Full reference: [Project structure](docs/project-structure.md)
 
@@ -106,11 +106,13 @@ These docs also ship in the published npm package and are referenced from the sc
 
 ### Open work
 
-0. **Fix live field + CLI command menu** — spec approved, two implementation plans ready, nothing implemented yet. Spec: `docs/superpowers/specs/2026-09-04-fix-live-field-and-command-menu-design.md`. Plans: `docs/superpowers/plans/2026-09-04-fix-live-reconciler.md` (do first, tasks 1–11: transformer fix, DDB client additions, reconciler, report/state, runners), then `docs/superpowers/plans/2026-09-04-cli-command-menu.md` (tasks 1–10: clack prompts, command registry, `fix-live` command, docs). Root cause confirmed: `addLiveField` reads root `version` from a gzipped OS source row (`OsProcessor.querySourceRecord`), so OS-preset `L` docs of draft-over-published entries end up with `live: {}`.
+0. **Fix live field + CLI command menu** — **implemented.** Transformer fix, reconciler, DDB/OS runners, clack-based command menu, `fix-live` guided command, all landed and tested. Spec: `docs/superpowers/specs/2026-09-04-fix-live-field-and-command-menu-design.md`.
 1. **First npm publish** — infrastructure is in place (changesets, CI, publish workflow, build scripts). Needs: `NPM_TOKEN` secret in GitHub, first `yarn changeset` to create a version bump, merge to main.
 2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. Scaffold output: `config.ts`, `presets/example.ts`, optional `setup.ts`. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
 3. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
 4. **Public API audit pass (post-refactor)** — `src/index.ts` grew organically. Re-audit before publish to confirm the surface matches user-authoring intent. `DdbCoreTransformContext` (= Base ∧ DdbProcessorSlice) was added as the narrower alternative to `DdbTransformContext`.
+5. **Inquirer removal** — `TransferWizard`, `init` and `initProject` still use `@inquirer/prompts`; migrate them to `Prompts` / `UI` and drop `@inquirer/*` from `package.json`.
+6. **`fix-live` OS propagation** — confirm v6's DynamoDB stream handler treats a `data`-only change on the OS companion table as an index update (spec 2026-09-04, open question 1).
 
 ---
 
