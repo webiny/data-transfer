@@ -36,6 +36,7 @@ import { AccessCheckerFeature } from "~/features/AccessChecker/index.js";
 import { DroppedRecordLogFeature } from "~/features/DroppedRecordLog/index.js";
 import { TransferredRecordLogFeature } from "~/features/TransferredRecordLog/index.js";
 import { CompressionFeature } from "@webiny/utils/features/compression/feature.js";
+import { FixLiveFeature } from "~/features/FixLive/index.js";
 
 export interface BootstrapOptions {
     config: MigrationConfig.Interface;
@@ -133,6 +134,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     OsScannerFeature.register(container);
     OsProcessorFeature.register(container);
     AccessCheckerFeature.register(container);
+    FixLiveFeature.register(container);
 
     return container;
 }
