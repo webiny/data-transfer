@@ -71,7 +71,8 @@ function makeHarness(
         writeFileOrThrow: vi.fn(),
         remove: vi.fn(),
         copy: vi.fn(),
-        copyOrThrow: vi.fn()
+        copyOrThrow: vi.fn(),
+        appendLineOrThrow: vi.fn()
     };
 
     const container = new Container();

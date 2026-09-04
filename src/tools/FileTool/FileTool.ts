@@ -1,4 +1,11 @@
-import { existsSync, readFileSync, writeFileSync, rmSync, copyFileSync } from "node:fs";
+import {
+    existsSync,
+    readFileSync,
+    writeFileSync,
+    appendFileSync,
+    rmSync,
+    copyFileSync
+} from "node:fs";
 import { dirname } from "node:path";
 import { FileTool as FileToolAbstraction } from "./abstractions/FileTool.ts";
 import { DirectoryTool } from "../DirectoryTool/abstractions/DirectoryTool.ts";
@@ -64,6 +71,11 @@ class FileToolImpl implements FileToolAbstraction.Interface {
         }
         this.directoryTool.create(dirname(target));
         copyFileSync(source, target);
+    }
+
+    public appendLineOrThrow(path: string, line: string): void {
+        this.directoryTool.create(dirname(path));
+        appendFileSync(path, `${line}\n`, "utf-8");
     }
 }
 
