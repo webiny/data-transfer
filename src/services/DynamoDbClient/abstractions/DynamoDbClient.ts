@@ -18,7 +18,32 @@ export interface DatabaseRecord {
 export interface ScanOptions {
     segment?: number;
     totalSegments?: number;
+    /** Maximum number of items yielded by the generator (also sent as page `Limit`). */
+    limit?: number;
+    /** Server-side `FilterExpression SK = :sk`. Does not reduce consumed capacity. */
+    sortKeyEquals?: string;
 }
+
+export interface UpdateAttributeKey {
+    PK: string;
+    SK: string;
+}
+
+export interface UpdateAttributeCondition {
+    attribute: string;
+    equals: unknown;
+}
+
+export interface UpdateAttributeRequest {
+    key: UpdateAttributeKey;
+    /** Attribute path, e.g. ["data", "live"]. */
+    path: string[];
+    /** Marshalled as-is; `null` allowed. */
+    value: unknown;
+    condition: UpdateAttributeCondition;
+}
+
+export type UpdateAttributeResult = "written" | "condition-failed";
 
 export interface QueryOptions {
     indexName?: string;
@@ -56,6 +81,10 @@ export interface IDynamoDbClient {
     ): Promise<T[]>;
     get<T extends DatabaseRecord>(tableName: string, pk: string, sk: string): Promise<T | null>;
     batchPut<T extends DatabaseRecord>(tableName: string, records: T[]): Promise<void>;
+    updateAttribute(
+        tableName: string,
+        request: UpdateAttributeRequest
+    ): Promise<UpdateAttributeResult>;
 }
 
 // ============================================================================
@@ -70,6 +99,8 @@ export namespace SourceDynamoDbClient {
     export type Record = DatabaseRecord;
     export type Scan = ScanOptions;
     export type Query = QueryOptions;
+    export type UpdateRequest = UpdateAttributeRequest;
+    export type UpdateResult = UpdateAttributeResult;
 }
 
 export namespace TargetDynamoDbClient {
@@ -77,4 +108,6 @@ export namespace TargetDynamoDbClient {
     export type Record = DatabaseRecord;
     export type Scan = ScanOptions;
     export type Query = QueryOptions;
+    export type UpdateRequest = UpdateAttributeRequest;
+    export type UpdateResult = UpdateAttributeResult;
 }
