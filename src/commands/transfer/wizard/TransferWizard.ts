@@ -2,7 +2,8 @@ import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { select, input, confirm } from "@inquirer/prompts";
+import type { Prompts } from "~/commands/prompts/abstractions/Prompts.js";
+import type { UI } from "~/commands/prompts/abstractions/UI.js";
 import { discoverProjects } from "./projectDiscovery.ts";
 import { discoverConfig } from "./configDiscovery.ts";
 import { listAvailablePresetsWithDescriptions } from "./presetDiscovery.ts";
@@ -46,7 +47,6 @@ async function resolveRawValues(
         return pulumiVals;
     }
 
-    // Both present — check for conflicts on all fields
     const conflicts: string[] = [];
     for (const key of [
         "region",
@@ -66,7 +66,6 @@ async function resolveRawValues(
         );
     }
 
-    // Consistent — prefer webiny, but fill in fields from pulumi if webiny lacks them
     return {
         region: webinyVals!.region,
         primaryDynamodbTableName: webinyVals!.primaryDynamodbTableName,
@@ -78,51 +77,54 @@ async function resolveRawValues(
     };
 }
 
-function printInstructions(projectDir: string): void {
+function buildInstructionsText(projectDir: string): string {
     const rel = relative(process.cwd(), projectDir);
-    console.log(`
-To populate your .env, you need output from both your source and target Webiny systems.
-
-Option A — Webiny CLI output (recommended):
-  In your source system project:  yarn webiny output core --json > ${rel}/source.webiny.json
-  In your target system project:  yarn webiny output core --json > ${rel}/target.webiny.json
-
-Option B — Pulumi state file (use when you don't have Webiny CLI access):
-  Copy the Pulumi state file from your source system to: ${rel}/source.pulumi.json
-  Copy the Pulumi state file from your target system to: ${rel}/target.pulumi.json
-  State files are at: .pulumi/apps/core/.pulumi/stacks/core/<env>.json
-
-You can mix formats (e.g. source.webiny.json + target.pulumi.json).
-
-Optionally, drop CMS model exports into ${rel}/models/
-  (export from Webiny Admin → CMS → Models → Export)
-`);
+    return [
+        "To populate your .env, you need output from both your source and target Webiny systems.",
+        "",
+        "Option A — Webiny CLI output (recommended):",
+        `  In your source system project:  yarn webiny output core --json > ${rel}/source.webiny.json`,
+        `  In your target system project:  yarn webiny output core --json > ${rel}/target.webiny.json`,
+        "",
+        "Option B — Pulumi state file (use when you don't have Webiny CLI access):",
+        `  Copy the Pulumi state file from your source system to: ${rel}/source.pulumi.json`,
+        `  Copy the Pulumi state file from your target system to: ${rel}/target.pulumi.json`,
+        "  State files are at: .pulumi/apps/core/.pulumi/stacks/core/<env>.json",
+        "",
+        "You can mix formats (e.g. source.webiny.json + target.pulumi.json).",
+        "",
+        `Optionally, drop CMS model exports into ${rel}/models/`,
+        "  (export from Webiny Admin → CMS → Models → Export)"
+    ].join("\n");
 }
 
 const CREATE_NEW = "__create__";
 
 export class TransferWizard {
-    private readonly cwd: string;
-
-    public constructor(cwd: string) {
-        this.cwd = cwd;
-    }
+    public constructor(
+        private readonly cwd: string,
+        private readonly prompts: Prompts.Interface,
+        private readonly ui: UI.Interface
+    ) {}
 
     public async run(): Promise<WizardResult | null> {
         const projects = await discoverProjects(this.cwd);
 
-        const selected = await select({
+        const selected = await this.prompts.select<string>({
             message: "Which project do you want to transfer?",
-            choices: [
-                ...projects.map(p => ({ value: p, name: p })),
-                { value: CREATE_NEW, name: "+ Create new project" }
+            options: [
+                ...projects.map(p => ({ value: p, label: p })),
+                { value: CREATE_NEW, label: "+ Create new project" }
             ]
         });
+        if (selected === null) {
+            return null;
+        }
 
         let projectName: string;
         let justCreated: boolean;
         if (selected === CREATE_NEW) {
-            const rawName = await input({
+            const rawName = await this.prompts.text({
                 message: "Project name:",
                 validate: (v: string) => {
                     const slug = slugify(v);
@@ -132,9 +134,12 @@ export class TransferWizard {
                     if (existsSync(join(this.cwd, "projects", slug))) {
                         return `Project "projects/${slug}" already exists.`;
                     }
-                    return true;
+                    return undefined;
                 }
             });
+            if (rawName === null) {
+                return null;
+            }
             const newName = slugify(rawName);
             try {
                 await scaffoldProject({ name: newName, cwd: this.cwd });
@@ -143,7 +148,7 @@ export class TransferWizard {
                     `Failed to create project "${newName}": ${err instanceof Error ? err.message : String(err)}`
                 );
             }
-            console.log(`\n✓ Created projects/${newName}/\n`);
+            this.ui.note(`Created projects/${newName}/`);
             projectName = newName;
             justCreated = true;
         } else {
@@ -163,13 +168,16 @@ export class TransferWizard {
         }
 
         if (!justCreated && envExists && sourceValsInitial !== null && targetValsInitial !== null) {
-            const choice = await select({
+            const choice = await this.prompts.select<string>({
                 message: ".env already exists. What would you like to do?",
-                choices: [
-                    { value: "existing", name: "Use existing .env" },
-                    { value: "repopulate", name: "Repopulate .env from JSON files" }
+                options: [
+                    { value: "existing", label: "Use existing .env" },
+                    { value: "repopulate", label: "Repopulate .env from JSON files" }
                 ]
             });
+            if (choice === null) {
+                return null;
+            }
             if (choice === "existing") {
                 return await this.runPresetSelection(projectName);
             }
@@ -179,8 +187,14 @@ export class TransferWizard {
         let targetVals: RawOutputValues | null = targetValsInitial;
 
         while (sourceVals === null || targetVals === null) {
-            printInstructions(projectDir);
-            await input({ message: "Press Enter when you have placed the files:", default: "" });
+            this.ui.note(buildInstructionsText(projectDir), "Setup instructions");
+            const enter = await this.prompts.text({
+                message: "Press Enter when you have placed the files:",
+                defaultValue: ""
+            });
+            if (enter === null) {
+                return null;
+            }
             sourceVals = await resolveRawValues(projectDir, "source");
             targetVals = await resolveRawValues(projectDir, "target");
         }
@@ -190,38 +204,41 @@ export class TransferWizard {
             targetVals.accountId &&
             sourceVals.accountId !== targetVals.accountId
         ) {
-            const bold = "\x1b[1m";
-            const yellow = "\x1b[33m";
-            const dim = "\x1b[2m";
-            const reset = "\x1b[0m";
-            console.warn(
-                `\n${bold}${yellow}⚠  Source and target are in different AWS accounts:${reset}` +
-                    `\n   ${dim}source:${reset} ${bold}${sourceVals.accountId}${reset}` +
-                    `\n   ${dim}target:${reset} ${bold}${targetVals.accountId}${reset}` +
-                    `\n   ${dim}Set SOURCE_PROFILE and TARGET_PROFILE in .env to use the correct credentials.${reset}\n`
+            this.ui.warn(
+                `Source and target are in different AWS accounts:\n` +
+                    `  source: ${sourceVals.accountId}\n` +
+                    `  target: ${targetVals.accountId}\n` +
+                    `  Set SOURCE_PROFILE and TARGET_PROFILE in .env to use the correct credentials.`
             );
         }
 
         const osPresent = !!(sourceVals.osTableName || targetVals.osTableName);
 
-        const segmentsRaw = await input({
+        const segmentsRaw = await this.prompts.text({
             message: "Number of parallel DDB scan segments (SEGMENTS):",
-            default: "4",
+            defaultValue: "4",
             validate: v => {
                 const n = Number(v);
                 if (!Number.isInteger(n) || n < 1) {
                     return "Must be a positive integer.";
                 }
-                return true;
+                return undefined;
             }
         });
+        if (segmentsRaw === null) {
+            return null;
+        }
 
         let targetOsIndexPrefix = "";
         if (osPresent) {
-            targetOsIndexPrefix = await input({
+            const prefix = await this.prompts.text({
                 message: "OpenSearch index prefix (TARGET_OS_INDEX_PREFIX, leave empty if none):",
-                default: ""
+                defaultValue: ""
             });
+            if (prefix === null) {
+                return null;
+            }
+            targetOsIndexPrefix = prefix;
         }
 
         const envValues: EnvValues = {
@@ -244,24 +261,21 @@ export class TransferWizard {
 
         await writeEnv(projectDir, envValues);
 
-        console.log(
-            `\n✓ .env written to projects/${projectName}/.env\n` +
-                `  Review it and re-run: yarn transfer\n`
+        this.ui.note(
+            `.env written to projects/${projectName}/.env\nReview it and re-run: yarn transfer`
         );
 
         return null;
     }
 
-    private async runPresetSelection(projectName: string): Promise<WizardResult> {
+    private async runPresetSelection(projectName: string): Promise<WizardResult | null> {
         const projectDir = resolve(join(this.cwd, "projects", projectName));
         const configPath = await discoverConfig(projectDir);
 
         if (!configPath) {
-            console.error(
-                `\nNo config.ts found in projects/${projectName}/.\n` +
-                    `Run "yarn transfer" to set up the project first.\n`
+            throw new Error(
+                `No config.ts found in projects/${projectName}/. Run "yarn transfer" to set up the project first.`
             );
-            process.exit(1);
         }
 
         let presetsDir: string | undefined;
@@ -275,22 +289,27 @@ export class TransferWizard {
         const presets = await listAvailablePresetsWithDescriptions(presetsDir);
 
         if (presets.length === 0) {
-            console.error("\nNo presets available. Check your presetsDir configuration.\n");
-            process.exit(1);
+            throw new Error("No presets available. Check your presetsDir configuration.");
         }
 
-        const preset = await select({
+        const preset = await this.prompts.select<string>({
             message: "Which preset do you want to run?",
-            choices: presets.map(p => ({
+            options: presets.map(p => ({
                 value: p.name,
-                name: p.description ? `${p.name} — ${p.description}` : p.name
+                label: p.description ? `${p.name} — ${p.description}` : p.name
             }))
         });
+        if (preset === null) {
+            return null;
+        }
 
-        const dryRun = await confirm({
+        const dryRun = await this.prompts.confirm({
             message: "Dry run? (reads source, skips all writes to target)",
-            default: false
+            initialValue: false
         });
+        if (dryRun === null) {
+            return null;
+        }
 
         return { configPath, preset, dryRun };
     }

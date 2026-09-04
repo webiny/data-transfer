@@ -1,7 +1,8 @@
 import type { Argv } from "yargs";
-import { ExitPromptError } from "@inquirer/core";
 import { Command as CommandAbstraction } from "~/commands/registry/abstractions/Command.js";
-import { EXIT_CANCELLED, EXIT_OK } from "~/commands/exitCodes.js";
+import { Prompts } from "~/commands/prompts/abstractions/Prompts.js";
+import { UI } from "~/commands/prompts/abstractions/UI.js";
+import { EXIT_OK } from "~/commands/exitCodes.js";
 import { handler } from "./handler.ts";
 import { parseSegmentsFilter } from "./segmentsFilter.ts";
 import { TransferWizard } from "./wizard/TransferWizard.ts";
@@ -9,6 +10,11 @@ import { TransferWizard } from "./wizard/TransferWizard.ts";
 class TransferCommandImpl implements CommandAbstraction.Interface {
     public readonly name = "transfer";
     public readonly description = "Transfer Webiny data from a source system to a target system";
+
+    public constructor(
+        private readonly prompts: Prompts.Interface,
+        private readonly ui: UI.Interface
+    ) {}
 
     public configure(yargs: Argv): Argv {
         return yargs
@@ -53,24 +59,17 @@ class TransferCommandImpl implements CommandAbstraction.Interface {
             return EXIT_OK;
         }
 
-        const wizard = new TransferWizard(process.cwd());
-        try {
-            const result = await wizard.run();
-            if (result === null) {
-                return EXIT_OK;
-            }
-            await handler(result.configPath, result.preset, segments, logLevel, result.dryRun);
+        const wizard = new TransferWizard(process.cwd(), this.prompts, this.ui);
+        const result = await wizard.run();
+        if (result === null) {
             return EXIT_OK;
-        } catch (error) {
-            if (error instanceof ExitPromptError) {
-                return EXIT_CANCELLED;
-            }
-            throw error;
         }
+        await handler(result.configPath, result.preset, segments, logLevel, result.dryRun);
+        return EXIT_OK;
     }
 }
 
 export const TransferCommand = CommandAbstraction.createImplementation({
     implementation: TransferCommandImpl,
-    dependencies: []
+    dependencies: [Prompts, UI]
 });
