@@ -9,6 +9,7 @@ import {
     ProcessSegmentCommand,
     UpdateSkillsCommand
 } from "./index.ts";
+import { FixLiveCommandFeature } from "./fixLive/feature.ts";
 
 export function createCliContainer(): Container {
     const container = new Container();
@@ -16,6 +17,7 @@ export function createCliContainer(): Container {
     PromptsFeature.register(container);
     CommandRegistryFeature.register(container);
     container.register(TransferCommand).inSingletonScope();
+    FixLiveCommandFeature.register(container);
     container.register(InitCommand).inSingletonScope();
     container.register(InitProjectCommand).inSingletonScope();
     container.register(ProcessSegmentCommand).inSingletonScope();
