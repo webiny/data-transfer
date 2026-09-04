@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import {
     listAvailablePresets,
     listAvailablePresetsWithDescriptions
-} from "../../../../src/commands/run/wizard/presetDiscovery.ts";
+} from "../../../../src/commands/transfer/wizard/presetDiscovery.ts";
 
 describe("listAvailablePresets", () => {
     it("returns built-in preset names (at minimum v5-to-v6-ddb and v5-to-v6-os)", () => {

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
     webinyOutputSchema,
     normalizeOutputs
-} from "../../../../../src/commands/run/wizard/schemas/webinyOutput.schema.ts";
+} from "../../../../../src/commands/transfer/wizard/schemas/webinyOutput.schema.ts";
 
 describe("webinyOutputSchema", () => {
     it("accepts a valid output with elasticsearch prefix", () => {

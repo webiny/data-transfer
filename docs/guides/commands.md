@@ -79,7 +79,7 @@ yarn transfer --config=./projects/v5-to-v6/config.ts --preset=v5-to-v6-os
 yarn transfer --config=... --segments=1,3
 ```
 
-Runs only the listed indices. Workers still receive `--total=<pipeline.segments>`, so each shard scans the exact same slice as in a full run. Use after a partial failure to avoid re-scanning the whole table. Parsing + validation live in `src/commands/run/segmentsFilter.ts`.
+Runs only the listed indices. Workers still receive `--total=<pipeline.segments>`, so each shard scans the exact same slice as in a full run. Use after a partial failure to avoid re-scanning the whole table. Parsing + validation live in `src/commands/transfer/segmentsFilter.ts`.
 
 ## Scaffolding
 

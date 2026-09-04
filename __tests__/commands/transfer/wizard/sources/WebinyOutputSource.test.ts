@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { join } from "node:path";
-import { extractFromWebinyOutput } from "../../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts";
+import { extractFromWebinyOutput } from "../../../../../src/commands/transfer/wizard/sources/WebinyOutputSource.ts";
 
 const FIXTURES = join(import.meta.dirname, "../../../../fixtures/wizard");
 

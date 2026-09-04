@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
     parseSegmentsFilter,
     resolveSegmentsToRun
-} from "../../src/commands/run/segmentsFilter.ts";
+} from "../../src/commands/transfer/segmentsFilter.ts";
 
 describe("parseSegmentsFilter", () => {
     it("parses a comma-separated list", () => {

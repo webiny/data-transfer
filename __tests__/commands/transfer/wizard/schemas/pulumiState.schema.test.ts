@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
     pulumiStateSchema,
     extractStackOutputs
-} from "../../../../../src/commands/run/wizard/schemas/pulumiState.schema.ts";
+} from "../../../../../src/commands/transfer/wizard/schemas/pulumiState.schema.ts";
 
 const VALID_STATE = {
     version: 3 as const,

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Stats } from "node:fs";
-import { TransferWizard } from "../../../../src/commands/run/wizard/TransferWizard.ts";
-import type { RawOutputValues } from "../../../../src/commands/run/wizard/types.ts";
+import { TransferWizard } from "../../../../src/commands/transfer/wizard/TransferWizard.ts";
+import type { RawOutputValues } from "../../../../src/commands/transfer/wizard/types.ts";
 
-vi.mock("../../../../src/commands/run/wizard/projectDiscovery.ts");
-vi.mock("../../../../src/commands/run/wizard/configDiscovery.ts");
-vi.mock("../../../../src/commands/run/wizard/presetDiscovery.ts");
-vi.mock("../../../../src/commands/run/wizard/envWriter.ts");
-vi.mock("../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts");
-vi.mock("../../../../src/commands/run/wizard/sources/PulumiStateSource.ts");
+vi.mock("../../../../src/commands/transfer/wizard/projectDiscovery.ts");
+vi.mock("../../../../src/commands/transfer/wizard/configDiscovery.ts");
+vi.mock("../../../../src/commands/transfer/wizard/presetDiscovery.ts");
+vi.mock("../../../../src/commands/transfer/wizard/envWriter.ts");
+vi.mock("../../../../src/commands/transfer/wizard/sources/WebinyOutputSource.ts");
+vi.mock("../../../../src/commands/transfer/wizard/sources/PulumiStateSource.ts");
 vi.mock("@inquirer/prompts");
 vi.mock("node:fs/promises");
 vi.mock("node:fs", () => ({ existsSync: vi.fn(() => false) }));
@@ -16,12 +16,12 @@ vi.mock("../../../../src/commands/initProject/scaffoldProject.ts", () => ({
     scaffoldProject: vi.fn().mockResolvedValue(undefined)
 }));
 
-import { discoverProjects } from "../../../../src/commands/run/wizard/projectDiscovery.ts";
-import { discoverConfig } from "../../../../src/commands/run/wizard/configDiscovery.ts";
-import { listAvailablePresetsWithDescriptions } from "../../../../src/commands/run/wizard/presetDiscovery.ts";
-import { writeEnv } from "../../../../src/commands/run/wizard/envWriter.ts";
-import { extractFromWebinyOutput } from "../../../../src/commands/run/wizard/sources/WebinyOutputSource.ts";
-import { extractFromPulumiState } from "../../../../src/commands/run/wizard/sources/PulumiStateSource.ts";
+import { discoverProjects } from "../../../../src/commands/transfer/wizard/projectDiscovery.ts";
+import { discoverConfig } from "../../../../src/commands/transfer/wizard/configDiscovery.ts";
+import { listAvailablePresetsWithDescriptions } from "../../../../src/commands/transfer/wizard/presetDiscovery.ts";
+import { writeEnv } from "../../../../src/commands/transfer/wizard/envWriter.ts";
+import { extractFromWebinyOutput } from "../../../../src/commands/transfer/wizard/sources/WebinyOutputSource.ts";
+import { extractFromPulumiState } from "../../../../src/commands/transfer/wizard/sources/PulumiStateSource.ts";
 import { input, select } from "@inquirer/prompts";
 import { stat } from "node:fs/promises";
 import { scaffoldProject } from "../../../../src/commands/initProject/scaffoldProject.ts";

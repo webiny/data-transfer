@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { join } from "node:path";
-import { extractFromPulumiState } from "../../../../../src/commands/run/wizard/sources/PulumiStateSource.ts";
+import { extractFromPulumiState } from "../../../../../src/commands/transfer/wizard/sources/PulumiStateSource.ts";
 
 const FIXTURES = join(import.meta.dirname, "../../../../fixtures/wizard");
 

@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { writeEnv } from "../../../../src/commands/run/wizard/envWriter.ts";
-import type { EnvValues } from "../../../../src/commands/run/wizard/types.ts";
+import { writeEnv } from "../../../../src/commands/transfer/wizard/envWriter.ts";
+import type { EnvValues } from "../../../../src/commands/transfer/wizard/types.ts";
 
 const SAMPLE_VALUES: EnvValues = {
     sourceRegion: "eu-central-1",

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { discoverProjects } from "../../../../src/commands/run/wizard/projectDiscovery.ts";
+import { discoverProjects } from "../../../../src/commands/transfer/wizard/projectDiscovery.ts";
 
 let root: string;
 

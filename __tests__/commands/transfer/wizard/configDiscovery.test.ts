@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { join } from "node:path";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { discoverConfig } from "../../../../src/commands/run/wizard/configDiscovery.ts";
+import { discoverConfig } from "../../../../src/commands/transfer/wizard/configDiscovery.ts";
 
 describe("discoverConfig", () => {
     it("returns the resolved path to config.ts when it exists", async () => {
