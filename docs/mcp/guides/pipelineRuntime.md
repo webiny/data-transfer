@@ -6,7 +6,7 @@ category: Guides
 
 # Pipeline runtime
 
-How records flow through the transfer pipeline at runtime, and the exact ordering of every hook the runner invokes. Source: `docs/guides/pipeline-runtime.md`, `src/features/PipelineRunner/PipelineRunner.ts`, `src/commands/run/handler.ts`, `src/commands/processSegment/handler.ts`.
+How records flow through the transfer pipeline at runtime, and the exact ordering of every hook the runner invokes. Source: `docs/guides/pipeline-runtime.md`, `src/features/PipelineRunner/PipelineRunner.ts`, `src/commands/transfer/handler.ts`, `src/commands/processSegment/handler.ts`.
 
 ## Merge groups (keyed by scanner)
 
@@ -95,12 +95,12 @@ Net effect: peak memory is bounded to roughly `flushEvery × average_record_size
 
 ## Parallelism: segments, shards, and worker processes
 
-`pipeline.segments` (optional in the schema; the orchestrator falls back to `1` if unset — `config.pipeline?.segments || 1` in `src/commands/run/handler.ts`. The example config in `configReference.md` sets `numberFromEnv("SEGMENTS", 4)`, but that `4` is a user-chosen convention, not a schema default) sets **both**:
+`pipeline.segments` (optional in the schema; the orchestrator falls back to `1` if unset — `config.pipeline?.segments || 1` in `src/commands/transfer/handler.ts`. The example config in `configReference.md` sets `numberFromEnv("SEGMENTS", 4)`, but that `4` is a user-chosen convention, not a schema default) sets **both**:
 
 - how many shards each scanner's `listShards()` reports (`{ segment: i, total: segments }`, passed straight through to DynamoDB's native parallel-`Scan` `Segment`/`TotalSegments` parameters), and
 - how many **child worker processes** the orchestrator spawns.
 
-The orchestrator (`src/commands/run/handler.ts`) resolves `segmentsToRun` (all segments, or a filtered subset via `--segments=1,3`), then spawns one worker per segment **concurrently**:
+The orchestrator (`src/commands/transfer/handler.ts`) resolves `segmentsToRun` (all segments, or a filtered subset via `--segments=1,3`), then spawns one worker per segment **concurrently**:
 
 ```typescript
 const workers = segmentsToRun.map(segment =>

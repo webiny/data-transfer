@@ -21,10 +21,10 @@ export default defineConfig({
             reporter: ["text", "json", "html"],
             exclude: ["**/index.ts", "**/feature.ts", "src/presets/**/*.ts"],
             thresholds: {
-                lines: 79,
-                functions: 84,
-                branches: 71,
-                statements: 79
+                lines: 81,
+                functions: 85,
+                branches: 74,
+                statements: 81
             }
         }
     }

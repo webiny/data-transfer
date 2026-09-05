@@ -2,23 +2,15 @@
 import { register } from "tsx/esm/api";
 register();
 
-// Install the deprecation filter FIRST so it's in place before any
-// import pulls in @webiny/lexical-* (the DEP0151 source). ESM imports
-// are evaluated in order within a module; this one must stay on top.
 import "./utils/suppressDeprecations.ts";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import {
-    registerRunCommand,
-    registerInitCommand,
-    registerInitProjectCommand,
-    registerProcessSegmentCommand,
-    registerUpdateSkillsCommand
-} from "./commands/index.ts";
+import { createCliContainer } from "./commands/cliContainer.ts";
+import { CommandRegistry } from "./commands/registry/index.ts";
+import { Prompts, UI } from "./commands/prompts/index.ts";
+import { openMenu } from "./commands/openMenu.ts";
+import { dispatchDefault } from "./commands/dispatchDefault.ts";
 
-// Last-resort safety net: any promise rejection that escapes all try-catch
-// blocks (e.g. from SDK internals during a backoff sleep) is caught here so
-// the process always exits with code 1 rather than crashing silently.
 process.on("unhandledRejection", (reason: unknown) => {
     const lines: string[] = ["Fatal: unhandled rejection"];
     if (reason instanceof Error) {
@@ -38,18 +30,43 @@ process.on("unhandledRejection", (reason: unknown) => {
     process.exit(1);
 });
 
-const KNOWN_COMMANDS = new Set(["init", "init-project", "run", "process-segment", "update-skills"]);
+const container = createCliContainer();
+const registry = container.resolve(CommandRegistry);
+const transfer = registry.get("transfer");
 
-let cli = yargs(hideBin(process.argv));
-cli = registerInitCommand(cli);
-cli = registerInitProjectCommand(cli);
-cli = registerRunCommand(cli);
-cli = registerProcessSegmentCommand(cli);
-cli = registerUpdateSkillsCommand(cli);
+let cli = yargs(hideBin(process.argv)).scriptName("transfer");
 
-const firstArg = process.argv[2];
-if (firstArg && !firstArg.startsWith("-") && !KNOWN_COMMANDS.has(firstArg)) {
-    cli.parse(["init", ...process.argv.slice(2)]);
-} else {
-    cli.help().parse();
+for (const command of registry.list()) {
+    cli = cli.command(
+        command.name,
+        command.description,
+        y => command.configure(y),
+        async argv => {
+            process.exitCode = await command.run(argv);
+        }
+    );
 }
+
+cli = cli.command(
+    "$0 [folder]",
+    false,
+    y =>
+        transfer.configure(y).positional("folder", {
+            type: "string",
+            description: "Scaffold a new project folder (same as `init <folder>`)"
+        }),
+    async argv => {
+        process.exitCode = await dispatchDefault({
+            argv,
+            registry,
+            openMenu: () =>
+                openMenu({
+                    prompts: container.resolve(Prompts),
+                    ui: container.resolve(UI),
+                    registry
+                })
+        });
+    }
+);
+
+await cli.strict().help().parseAsync();
