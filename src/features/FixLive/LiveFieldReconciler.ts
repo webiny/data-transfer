@@ -138,7 +138,7 @@ function padVersion(version: number): string {
 }
 
 function readLiveVersion(live: unknown): number | null {
-    if (typeof live !== "object" || live === null) {
+    if (!live || typeof live !== "object") {
         return null;
     }
     const { version } = live as Record<string, unknown>;
