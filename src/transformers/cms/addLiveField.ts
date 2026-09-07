@@ -20,16 +20,18 @@ export const addLiveField = createTransformer<DdbCoreTransformContext.Interface<
         }
 
         const publishedVersion = await resolvePublishedVersion(ctx);
-
-        if (!publishedVersion) {
-            data.live = null;
-            return;
-        }
-        data.live = {
-            version: publishedVersion
-        };
+        data.live = publishedVersion === null ? null : { version: publishedVersion };
     }
 );
+
+function readPositiveIntegerVersion(record: Record<string, unknown>): number | null {
+    const nested = record.data as Record<string, unknown> | undefined;
+    const raw = record.version !== undefined ? record.version : nested?.version;
+    if (typeof raw === "number" && Number.isInteger(raw) && raw > 0) {
+        return raw;
+    }
+    return null;
+}
 
 async function resolvePublishedVersion(
     ctx: DdbCoreTransformContext.Interface<BaseRecord>
@@ -37,28 +39,44 @@ async function resolvePublishedVersion(
     const cacheKey = `live:${ctx.original.PK}`;
 
     const cached = ctx.cache.get<number>(cacheKey);
-    if (cached) {
+    if (cached !== undefined) {
         return cached === NO_PUBLISHED_REVISION ? null : cached;
     }
 
-    // This record IS the published revision — no query needed.
-    // P record: always the published revision by definition.
-    // L record with status "published": L and P point to the same revision.
     const data = ctx.record.data as Record<string, unknown>;
     const originalSK = ctx.original.SK;
     const isPublishedRevision =
         originalSK === "P" || (originalSK === "L" && data.status === "published");
 
     if (isPublishedRevision) {
-        const version = data.version as number;
+        const version = readPositiveIntegerVersion(data);
+        if (version === null) {
+            ctx.logger.warn(
+                `addLiveField: ${ctx.original.PK} ${originalSK} is the published revision but has no positive integer version — writing live: null`
+            );
+            ctx.cache.set(cacheKey, NO_PUBLISHED_REVISION);
+            return null;
+        }
         ctx.cache.set(cacheKey, version);
         return version;
     }
 
     ctx.logger.debug(`Querying for published revision of ${ctx.original.PK}...`);
     const published = await ctx.querySourceRecord(ctx.original.PK, "P");
-    const version = published ? (published.version as number) : NO_PUBLISHED_REVISION;
+    if (!published) {
+        ctx.cache.set(cacheKey, NO_PUBLISHED_REVISION);
+        return null;
+    }
+
+    const version = readPositiveIntegerVersion(published);
+    if (version === null) {
+        ctx.logger.warn(
+            `addLiveField: P record for ${ctx.original.PK} has no positive integer version — writing live: null`
+        );
+        ctx.cache.set(cacheKey, NO_PUBLISHED_REVISION);
+        return null;
+    }
 
     ctx.cache.set(cacheKey, version);
-    return version === NO_PUBLISHED_REVISION ? null : version;
+    return version;
 }

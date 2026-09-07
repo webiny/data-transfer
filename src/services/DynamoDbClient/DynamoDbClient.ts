@@ -1,7 +1,8 @@
 import {
     BatchWriteCommand,
     GetCommand,
-    ScanCommand
+    ScanCommand,
+    UpdateCommand
 } from "@webiny/aws-sdk/client-dynamodb/index.js";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
@@ -72,13 +73,20 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         options?: SourceDynamoDbClient.Scan
     ): AsyncIterable<T> {
         let lastEvaluatedKey: Record<string, unknown> | undefined;
+        let yielded = 0;
+        const limit = options ? options.limit : undefined;
+        const sortKeyEquals = options ? options.sortKeyEquals : undefined;
 
         do {
             const command = new ScanCommand({
                 TableName: tableName,
                 Segment: options ? options.segment : undefined,
                 TotalSegments: options ? options.totalSegments : undefined,
-                ExclusiveStartKey: lastEvaluatedKey
+                ExclusiveStartKey: lastEvaluatedKey,
+                Limit: limit,
+                FilterExpression: sortKeyEquals !== undefined ? "SK = :sk" : undefined,
+                ExpressionAttributeValues:
+                    sortKeyEquals !== undefined ? { ":sk": sortKeyEquals } : undefined
             });
 
             const response = await this.executeWithRetry(async () => {
@@ -88,6 +96,10 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
             if (response.Items) {
                 for (const item of response.Items) {
                     yield item as T;
+                    yielded++;
+                    if (limit !== undefined && yielded >= limit) {
+                        return;
+                    }
                 }
             }
 
@@ -255,6 +267,42 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
         }
     }
 
+    public async updateAttribute(
+        tableName: string,
+        request: SourceDynamoDbClient.UpdateRequest
+    ): Promise<SourceDynamoDbClient.UpdateResult> {
+        const names: Record<string, string> = {};
+        const pathExpression = request.path
+            .map((segment, index) => {
+                const placeholder = `#p${index}`;
+                names[placeholder] = segment;
+                return placeholder;
+            })
+            .join(".");
+        names["#c"] = request.condition.attribute;
+
+        const command = new UpdateCommand({
+            TableName: tableName,
+            Key: request.key,
+            UpdateExpression: `SET ${pathExpression} = :v`,
+            ConditionExpression: "#c = :c",
+            ExpressionAttributeNames: names,
+            ExpressionAttributeValues: { ":v": request.value, ":c": request.condition.equals }
+        });
+
+        try {
+            await this.executeWithRetry(async () => {
+                return await this.client.send(command);
+            });
+            return "written";
+        } catch (error) {
+            if (isConditionalCheckFailed(error)) {
+                return "condition-failed";
+            }
+            throw error;
+        }
+    }
+
     private withTimeout<T>(fn: () => Promise<T>): Promise<T> {
         const ms = this.requestTimeout;
         return Promise.race([
@@ -297,4 +345,12 @@ export class DynamoDbClientImpl implements SourceDynamoDbClient.Interface {
 
         throw lastError;
     }
+}
+
+function isConditionalCheckFailed(error: unknown): boolean {
+    if (!error || typeof error !== "object") {
+        return false;
+    }
+    const { name } = error as { name?: unknown };
+    return name === "ConditionalCheckFailedException";
 }

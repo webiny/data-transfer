@@ -56,7 +56,7 @@ Controlled by `config.debug.logFile`:
 
 ### Run ID
 
-Generated in `src/commands/run/handler.ts` (not `src/cli.ts`). Passed to all worker processes.
+Generated in `src/commands/transfer/handler.ts` (not `src/cli.ts`). Passed to all worker processes.
 
 ## Gotchas
 

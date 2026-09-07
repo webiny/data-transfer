@@ -6,9 +6,18 @@
 yarn install
 ```
 
-## Guided setup (recommended)
+## Command menu
 
-`yarn transfer` (no `--config`) launches `TransferWizard`. It walks you through:
+`yarn transfer` with no arguments opens a menu of available commands:
+
+- **transfer** — system-to-system transfer (the guided `TransferWizard` below).
+- **fix-live** — reconcile the `live` field on a migrated v6 system (see [fix-live](#fix-live)).
+
+Press Esc / Ctrl+C at any prompt to leave; the process exits with code 130. Every command can also be invoked directly (`yarn transfer transfer`, `yarn transfer fix-live`) and non-interactively with flags — see each section. `yarn transfer --config=… --preset=…` and `yarn transfer <folder>` (scaffold) keep working exactly as before.
+
+## Guided transfer setup (recommended)
+
+`yarn transfer` → **transfer** (or `yarn transfer transfer`) launches `TransferWizard`. It walks you through:
 
 1. Selecting a project from `projects/`.
 2. Collecting your Webiny output or Pulumi state JSON files and writing `.env`.
@@ -79,7 +88,45 @@ yarn transfer --config=./projects/v5-to-v6/config.ts --preset=v5-to-v6-os
 yarn transfer --config=... --segments=1,3
 ```
 
-Runs only the listed indices. Workers still receive `--total=<pipeline.segments>`, so each shard scans the exact same slice as in a full run. Use after a partial failure to avoid re-scanning the whole table. Parsing + validation live in `src/commands/run/segmentsFilter.ts`.
+Runs only the listed indices. Workers still receive `--total=<pipeline.segments>`, so each shard scans the exact same slice as in a full run. Use after a partial failure to avoid re-scanning the whole table. Parsing + validation live in `src/commands/transfer/segmentsFilter.ts`.
+
+## fix-live
+
+Repairs the `live` field on CMS entry records of a system that has **already been migrated to v6**. Earlier OpenSearch migrations could leave `live: {}` on the `L` document of entries whose latest revision is a draft on top of an older published revision, so those entries do not show as published. `fix-live` scans the DynamoDB table and, when the system has one, the OpenSearch companion table, and makes `L`, `P` and the published `REV#` record agree with the actual published state.
+
+### Non-interactive
+
+```bash
+yarn transfer fix-live --project=acme --system=target --dry-run
+yarn transfer fix-live --project=acme --system=target --live --yes
+yarn transfer fix-live --project=acme --system=target --dry-run --table=ddb
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--project` | Project folder under `projects/` (its `config.ts` is loaded). |
+| `--system` | `source` or `target` — the system whose records are modified. |
+| `--dry-run` / `--live` | Mutually exclusive. `--live` exits 1 unless a dry run completed for the same project and system. |
+| `--yes` | Skip the system confirm and the live-run confirm. |
+| `--table` | `ddb` or `os`; default both. The v6 check always runs on the DDB table. |
+| `--concurrency` | Scan segments in flight (default 4). Segment count comes from `pipeline.segments`. |
+
+Exit codes: `0` success, `1` refused or failed (v5 table, missing dry run, unknown project, run error), `130` cancelled.
+
+### Dry run before live
+
+A live run is only allowed after a dry run completed for the same project and system. The dry run writes `.transfer/state/fix-live/<project>__<system>.json` with `lastDryRun { runId, at, changes, skips }`; a live run reads it, recomputes everything from scratch (data may have changed), warns when the change count differs, and records `lastLiveRun`. There is no expiry.
+
+### Report
+
+Every run writes `.transfer/<runId>/fix-live-report.jsonl`, one JSON line per change or skip:
+
+```json
+{"kind":"change","table":"ddb","pk":"T#root#CMS#CME#abc","sk":"L","reason":"missing-live","before":null,"after":{"version":2},"result":"dry-run"}
+{"kind":"skip","table":"ddb","pk":"T#root#CMS#CME#def","sk":"REV#0007","reason":"revision-version-mismatch","detail":"P.version=7 REV#0007.version=6"}
+```
+
+`result` is `dry-run`, `written` or `condition-failed`. Change reasons: `missing-live`, `empty-live`, `wrong-version`, `stale-live`. Skip reasons: `no-latest-record`, `invalid-version`, `revision-record-missing`, `revision-version-mismatch`, `latest-status-contradicts-published`, `latest-status-contradicts-unpublished`, `decompress-failed`, `changed-during-run`. A skip means the whole entry was left untouched.
 
 ## Scaffolding
 

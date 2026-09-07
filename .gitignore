@@ -59,5 +59,3 @@ __tests__/fixtures/full-table-migrated.json
 __tests__/fixtures/es-table-migrated.json
 __tests__/fixtures/os-table-migrated.json
 .codegraph
-.mcp.json
-!templates/.mcp.json

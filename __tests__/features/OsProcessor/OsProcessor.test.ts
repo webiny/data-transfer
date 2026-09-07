@@ -11,13 +11,17 @@ import { TouchedIndexes } from "~/features/TouchedIndexes/index.js";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.js";
 import { OpenSearchClient } from "~/services/OpenSearchClient/abstractions/OpenSearchClient.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
+import { SourceDynamoDbClient } from "~/services/DynamoDbClient/abstractions/DynamoDbClient.js";
 import type { OsScanner } from "~/features/OsScanner/index.js";
 import type { BaseTransformContext } from "~/features/TransformContext/abstractions/BaseTransformContext.js";
 import { OsProcessor } from "~/features/OsProcessor/index.js";
 import { MockOpenSearchClient } from "../../services/OpenSearchClient/MockOpenSearchClient.ts";
+import { MockDynamoDbClient } from "../../services/DynamoDbClient/MockDynamoDbClient.ts";
 
 interface OsProcessorSlice {
     putRecord(record: Record<string, unknown>): void;
+    querySourceRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
+    queryTargetRecord(pk: string, sk?: string): Promise<Record<string, unknown> | null>;
 }
 
 /**
@@ -333,6 +337,47 @@ describe("OsProcessor", () => {
             const entries = await processor.checkAccess();
 
             expect(entries).toHaveLength(0);
+        });
+    });
+
+    describe("querySourceRecord", () => {
+        it("returns the OS row with data decompressed", async () => {
+            const container = createOsContainer();
+            const compression = container.resolve(CompressionHandler);
+            const sourceDb = container.resolve(SourceDynamoDbClient) as MockDynamoDbClient;
+            const compressed = await compression.compress({
+                modelId: "blogPost",
+                version: 2,
+                status: "published"
+            });
+            await sourceDb.batchPut("source-os", [
+                {
+                    PK: "T#root#CMS#CME#q",
+                    SK: "P",
+                    index: "root-headless-cms-en-us-blogpost",
+                    data: compressed,
+                    _ct: "2024-01-01T00:00:00.000Z",
+                    _et: "CmsEntriesElasticsearch",
+                    _md: "2024-01-01T00:00:00.000Z"
+                }
+            ]);
+            const processor = container.resolve(Processor) as OsProcessorInstance & {
+                extendContext(base: BaseTransformContext.Interface<unknown>): {
+                    querySourceRecord(
+                        pk: string,
+                        sk?: string
+                    ): Promise<Record<string, unknown> | null>;
+                };
+            };
+            const { base } = makeBase(makeOsRecord("q", "root-headless-cms-en-us-blogpost"));
+
+            const found = await processor
+                .extendContext(base)
+                .querySourceRecord("T#root#CMS#CME#q", "P");
+
+            expect(found).not.toBeNull();
+            expect((found!.data as Record<string, unknown>).version).toBe(2);
+            expect(found!._md).toBe("2024-01-01T00:00:00.000Z");
         });
     });
 });

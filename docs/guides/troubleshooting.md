@@ -70,6 +70,21 @@ Records that match no pipeline are dropped. Check:
 
 To transfer everything, add a catch-all pipeline with no filters (registered last).
 
+### Published entries not showing as live after migration
+
+Entries whose latest revision is a draft on top of an older published revision may have ended up with `live: {}` in the OpenSearch companion table. Run the reconciler against the migrated system — dry run first, then live:
+
+```bash
+yarn transfer fix-live --project=<name> --system=target --dry-run
+yarn transfer fix-live --project=<name> --system=target --live
+```
+
+See [fix-live](commands.md#fix-live). Notes on the report:
+
+- `changed-during-run` — an editor saved the record between read and write, so the conditional update was refused. Nothing was overwritten; re-run to pick it up.
+- `latest-status-contradicts-published` / `latest-status-contradicts-unpublished` — the `L` record's `status` disagrees with the presence or version of `P`. The tool never guesses; inspect the entry in the admin UI and republish or unpublish it, then re-run.
+- `revision-record-missing` / `revision-version-mismatch` — `P` points at a revision that does not exist or carries a different version. Same treatment: fix the entry, re-run.
+
 ## Debugging
 
 ### Enable snapshot mode

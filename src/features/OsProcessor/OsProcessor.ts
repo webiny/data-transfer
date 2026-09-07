@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { Container } from "@webiny/di";
 import { ContainerToken, isRetryableAwsError } from "~/base/index.js";
 import { IndexConfigurationResolver } from "~/features/IndexConfigurationProvider/abstractions/IndexConfigurationResolver.js";
+import { OsRecordDecompressor } from "~/features/OsRecordDecompressor/abstractions/OsRecordDecompressor.js";
 import { AccessCheck, Processor } from "~/domain/pipeline/abstractions/Processor.js";
 import { DdbExecutor } from "~/features/DdbExecutor/abstractions/DdbExecutor.js";
 import {
@@ -61,7 +62,8 @@ class OsProcessorImpl implements Processor.Interface<
         private readonly fileTool: FileTool.Interface,
         private readonly sourceDb: SourceDynamoDbClient.Interface,
         private readonly targetDb: TargetDynamoDbClient.Interface,
-        private readonly indexConfigurationResolver: IndexConfigurationResolver.Interface
+        private readonly indexConfigurationResolver: IndexConfigurationResolver.Interface,
+        private readonly decompressor: OsRecordDecompressor.Interface
     ) {}
 
     private get osClient(): OpenSearchClient.Interface {
@@ -82,6 +84,9 @@ class OsProcessorImpl implements Processor.Interface<
         const targetTable = this.config.target.opensearch.tableName;
         const sourceDb = this.sourceDb;
         const targetDb = this.targetDb;
+        const decompressRow = (
+            row: OsRecordDecompressor.Compressed
+        ): Promise<Record<string, unknown>> => this.decompressRow(row);
         return {
             putRecord(record: Record<string, unknown>) {
                 base.addCommand(PutRecord.create({ table: targetTable, record }));
@@ -90,15 +95,31 @@ class OsProcessorImpl implements Processor.Interface<
                 pk: string,
                 sk?: string
             ): Promise<T | null> {
-                const results = await sourceDb.query(sourceTable, pk, sk);
-                return results.length > 0 ? (results[0] as unknown as T) : null;
+                const results = await sourceDb.query<OsRecordDecompressor.Compressed>(
+                    sourceTable,
+                    pk,
+                    sk
+                );
+                const first = results[0];
+                if (!first) {
+                    return null;
+                }
+                return (await decompressRow(first)) as unknown as T;
             },
             async queryTargetRecord<T extends Record<string, unknown> = Record<string, unknown>>(
                 pk: string,
                 sk?: string
             ): Promise<T | null> {
-                const results = await targetDb.query(targetTable, pk, sk);
-                return results.length > 0 ? (results[0] as unknown as T) : null;
+                const results = await targetDb.query<OsRecordDecompressor.Compressed>(
+                    targetTable,
+                    pk,
+                    sk
+                );
+                const first = results[0];
+                if (!first) {
+                    return null;
+                }
+                return (await decompressRow(first)) as unknown as T;
             }
         };
     }
@@ -184,6 +205,16 @@ class OsProcessorImpl implements Processor.Interface<
         }
 
         return result;
+    }
+
+    private async decompressRow(
+        row: OsRecordDecompressor.Compressed
+    ): Promise<Record<string, unknown>> {
+        const decompressed = await this.decompressor.decompress(row);
+        if (decompressed === null) {
+            return { ...row };
+        }
+        return { ...row, data: decompressed };
     }
 
     private async ensureIndex(indexName: string): Promise<void> {
@@ -318,6 +349,7 @@ export const OsProcessor = Processor.createImplementation({
         FileTool,
         SourceDynamoDbClient,
         TargetDynamoDbClient,
-        IndexConfigurationResolver
+        IndexConfigurationResolver,
+        OsRecordDecompressor
     ]
 });

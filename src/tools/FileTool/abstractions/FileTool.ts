@@ -9,6 +9,7 @@ export interface IFileTool {
     remove(path: string): void;
     copy(source: string, target: string): void;
     copyOrThrow(source: string, target: string): void;
+    appendLineOrThrow(path: string, line: string): void;
 }
 
 export const FileTool = createAbstraction<IFileTool>("Core/FileTool");

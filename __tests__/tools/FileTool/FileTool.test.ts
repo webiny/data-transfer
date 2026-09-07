@@ -143,4 +143,16 @@ describe("FileTool Feature", () => {
             ).toThrow("Source file not found");
         });
     });
+
+    describe("appendLineOrThrow", () => {
+        it("creates the file and parent directory, then appends one line per call", () => {
+            const filePath = join(tmpDir, "nested", "report.jsonl");
+            const tool = resolve();
+
+            tool.appendLineOrThrow(filePath, '{"a":1}');
+            tool.appendLineOrThrow(filePath, '{"b":2}');
+
+            expect(readFileSync(filePath, "utf-8")).toBe('{"a":1}\n{"b":2}\n');
+        });
+    });
 });
