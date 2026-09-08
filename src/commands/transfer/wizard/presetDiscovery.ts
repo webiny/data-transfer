@@ -78,13 +78,17 @@ async function loadPresetEntry(filePath: string): Promise<PresetEntry | null> {
         const mod = await import(pathToFileURL(filePath).href);
         const preset = mod.default ?? mod.preset;
         if (!preset || typeof preset.name !== "string") {
+            console.warn(`Preset skipped: ${filePath} — no valid name export found.`);
             return null;
         }
         return {
             name: preset.name,
             description: typeof preset.description === "string" ? preset.description : ""
         };
-    } catch {
+    } catch (error) {
+        console.warn(
+            `Preset skipped: ${filePath} — failed to import: ${error instanceof Error ? error.message : String(error)}`
+        );
         return null;
     }
 }
