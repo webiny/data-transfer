@@ -80,12 +80,29 @@ describe("writeEnv", () => {
         expect(content).toContain("SEGMENTS=8");
     });
 
-    it("falls back to built-in template when .env.example has no {{tokens}}", async () => {
-        await writeFile(join(tmpDir, ".env.example"), "# no tokens here\n");
+    it("substitutes values in a plain KEY=value .env.example (no {{tokens}})", async () => {
+        const plain = [
+            "# Source",
+            "SOURCE_REGION=eu-central-1",
+            "SOURCE_DDB_TABLE=",
+            "SOURCE_S3_BUCKET=old-bucket",
+            "# comment preserved",
+            "",
+            "SEGMENTS=4",
+            "CUSTOM_KEY=untouched"
+        ].join("\n");
+        await writeFile(join(tmpDir, ".env.example"), plain);
 
         await writeEnv(tmpDir, SAMPLE_VALUES);
+
         const content = await readFile(join(tmpDir, ".env"), "utf8");
         expect(content).toContain("SOURCE_REGION=eu-central-1");
+        expect(content).toContain("SOURCE_DDB_TABLE=wby-source-primary");
+        expect(content).toContain("SOURCE_S3_BUCKET=wby-source-bucket");
+        expect(content).toContain("SEGMENTS=8");
+        expect(content).toContain("# comment preserved");
+        expect(content).toContain("CUSTOM_KEY=untouched");
+        expect(content).not.toContain("old-bucket");
     });
 
     it("uses built-in template when .env.example is absent", async () => {
