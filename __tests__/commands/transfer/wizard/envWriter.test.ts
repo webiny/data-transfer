@@ -80,10 +80,12 @@ describe("writeEnv", () => {
         expect(content).toContain("SEGMENTS=8");
     });
 
-    it("throws when .env.example exists but has no {{tokens}}", async () => {
+    it("falls back to built-in template when .env.example has no {{tokens}}", async () => {
         await writeFile(join(tmpDir, ".env.example"), "# no tokens here\n");
 
-        await expect(writeEnv(tmpDir, SAMPLE_VALUES)).rejects.toThrow(/{{TOKEN}}/);
+        await writeEnv(tmpDir, SAMPLE_VALUES);
+        const content = await readFile(join(tmpDir, ".env"), "utf8");
+        expect(content).toContain("SOURCE_REGION=eu-central-1");
     });
 
     it("uses built-in template when .env.example is absent", async () => {
