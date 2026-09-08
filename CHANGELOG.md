@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.7
+
+### Patch Changes
+
+- b47e61f: Fix preset discovery listing `.d.ts` declaration files as duplicate entries. Preset names and descriptions are now read from the module export instead of derived from filenames. Warns when a preset file fails to import.
+
 ## 0.0.6
 
 ### Patch Changes
