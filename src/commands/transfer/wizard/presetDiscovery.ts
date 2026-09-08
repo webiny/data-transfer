@@ -3,11 +3,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { existsSync, readdirSync } from "node:fs";
 import { findPackageRoot } from "~/utils/findPackageRoot.js";
 
-// Presets are compiled/copied alongside everything else, so they land at
-// "<packageRoot>/presets" in the compiled (dist/) and published (npm)
-// contexts, but stay nested under "src/" while running from source (tsx).
-// Resolved lazily (not at module load) so importing this module doesn't
-// require a real filesystem — tests that auto-mock "node:fs" still work.
 let cachedBuiltInPresetsDir: string | null = null;
 
 function getBuiltInPresetsDir(): string {
@@ -28,7 +23,22 @@ export interface PresetEntry {
     description: string;
 }
 
+function isPresetFile(filename: string): boolean {
+    if (filename.endsWith(".d.ts")) {
+        return false;
+    }
+    for (const ext of PRESET_EXTENSIONS) {
+        if (filename.endsWith(ext)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function stripExtension(filename: string): string | null {
+    if (filename.endsWith(".d.ts")) {
+        return null;
+    }
     for (const ext of PRESET_EXTENSIONS) {
         if (filename.endsWith(ext)) {
             return filename.slice(0, -ext.length);
@@ -50,35 +60,36 @@ function scanDir(dir: string): string[] {
     }
 }
 
-function resolvePresetPath(name: string, presetsDir?: string): string | null {
-    for (const ext of PRESET_EXTENSIONS) {
-        const builtIn = join(getBuiltInPresetsDir(), `${name}${ext}`);
-        if (existsSync(builtIn)) {
-            return builtIn;
-        }
+function scanDirPaths(dir: string): string[] {
+    if (!existsSync(dir)) {
+        return [];
     }
-    if (presetsDir) {
-        for (const ext of PRESET_EXTENSIONS) {
-            const user = join(presetsDir, `${name}${ext}`);
-            if (existsSync(user)) {
-                return user;
-            }
-        }
+    try {
+        return readdirSync(dir)
+            .filter(isPresetFile)
+            .map(filename => join(dir, filename));
+    } catch {
+        return [];
     }
-    return null;
 }
 
-async function loadDescription(name: string, presetsDir?: string): Promise<string> {
-    const filePath = resolvePresetPath(name, presetsDir);
-    if (!filePath) {
-        return "";
-    }
+async function loadPresetEntry(filePath: string): Promise<PresetEntry | null> {
     try {
         const mod = await import(pathToFileURL(filePath).href);
         const preset = mod.default ?? mod.preset;
-        return typeof preset?.description === "string" ? preset.description : "";
-    } catch {
-        return "";
+        if (!preset || typeof preset.name !== "string") {
+            console.warn(`Preset skipped: ${filePath} — no valid name export found.`);
+            return null;
+        }
+        return {
+            name: preset.name,
+            description: typeof preset.description === "string" ? preset.description : ""
+        };
+    } catch (error) {
+        console.warn(
+            `Preset skipped: ${filePath} — failed to import: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return null;
     }
 }
 
@@ -92,11 +103,20 @@ export function listAvailablePresets(presetsDir?: string): string[] {
 export async function listAvailablePresetsWithDescriptions(
     presetsDir?: string
 ): Promise<PresetEntry[]> {
-    const names = listAvailablePresets(presetsDir);
-    return Promise.all(
-        names.map(async name => ({
-            name,
-            description: await loadDescription(name, presetsDir)
-        }))
-    );
+    const builtInPaths = scanDirPaths(getBuiltInPresetsDir());
+    const userPaths = presetsDir ? scanDirPaths(presetsDir) : [];
+    const allPaths = [...builtInPaths, ...userPaths];
+
+    const results = await Promise.all(allPaths.map(loadPresetEntry));
+
+    const seen = new Set<string>();
+    const entries: PresetEntry[] = [];
+    for (const entry of results) {
+        if (entry && !seen.has(entry.name)) {
+            seen.add(entry.name);
+            entries.push(entry);
+        }
+    }
+
+    return entries.sort((a, b) => a.name.localeCompare(b.name));
 }

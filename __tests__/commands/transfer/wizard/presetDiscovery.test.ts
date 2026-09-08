@@ -77,13 +77,12 @@ describe("listAvailablePresetsWithDescriptions", () => {
         expect(ddb?.description).toBeTruthy();
     });
 
-    it("returns empty description for a preset whose file cannot be imported", async () => {
+    it("skips a preset whose file cannot be imported", async () => {
         const tmp = mkdtempSync(join(tmpdir(), "presetdiscovery-broken-"));
         try {
             writeFileSync(join(tmp, "broken.js"), "this is not valid js export syntax %%%");
             const entries = await listAvailablePresetsWithDescriptions(tmp);
-            const broken = entries.find(e => e.name === "broken");
-            expect(broken?.description).toBe("");
+            expect(entries.find(e => e.name === "broken")).toBeUndefined();
         } finally {
             rmSync(tmp, { recursive: true });
         }
@@ -99,6 +98,21 @@ describe("listAvailablePresetsWithDescriptions", () => {
             const entries = await listAvailablePresetsWithDescriptions(tmp);
             const nodesc = entries.find(e => e.name === "nodesc");
             expect(nodesc?.description).toBe("");
+        } finally {
+            rmSync(tmp, { recursive: true });
+        }
+    });
+
+    it("uses preset.name from the module, not the filename", async () => {
+        const tmp = mkdtempSync(join(tmpdir(), "presetdiscovery-name-"));
+        try {
+            writeFileSync(
+                join(tmp, "my-file.js"),
+                "export default { name: 'custom-name', description: 'Custom preset' }"
+            );
+            const entries = await listAvailablePresetsWithDescriptions(tmp);
+            expect(entries.find(e => e.name === "custom-name")?.description).toBe("Custom preset");
+            expect(entries.find(e => e.name === "my-file")).toBeUndefined();
         } finally {
             rmSync(tmp, { recursive: true });
         }
