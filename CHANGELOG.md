@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.5
+
+### Patch Changes
+
+- b4c7028: Fix `writeEnv` to support plain `KEY=value` format in `.env.example` — older scaffolded projects no longer crash during the wizard. Both `{{TOKEN}}` placeholders and plain env lines are handled; falls back to the built-in template when no `.env.example` exists.
+
 ## 0.0.4
 
 ### Patch Changes
