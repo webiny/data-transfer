@@ -78,27 +78,42 @@ function substituteTokens(template: string, values: EnvValues): string {
     return result;
 }
 
-export async function writeEnv(projectDir: string, values: EnvValues): Promise<void> {
-    let template = BUILT_IN_TEMPLATE;
+function substituteEnvLines(content: string, values: EnvValues): string {
+    return content
+        .split("\n")
+        .map(line => {
+            const trimmed = line.trimStart();
+            if (!trimmed || trimmed.startsWith("#")) {
+                return line;
+            }
+            const eqIndex = trimmed.indexOf("=");
+            if (eqIndex === -1) {
+                return line;
+            }
+            const key = trimmed.slice(0, eqIndex).trim();
+            const envKey = TOKEN_MAP[key];
+            if (envKey) {
+                return `${key}=${String(values[envKey])}`;
+            }
+            return line;
+        })
+        .join("\n");
+}
 
+export async function writeEnv(projectDir: string, values: EnvValues): Promise<void> {
     const examplePath = join(projectDir, ".env.example");
+    let content: string;
+
     try {
         const candidate = await readFile(examplePath, "utf8");
-        if (!candidate.includes("{{")) {
-            throw new Error(
-                `.env.example at ${examplePath} contains no {{TOKEN}} placeholders. ` +
-                    `Add placeholders or remove the file to use the built-in template.`
-            );
-        }
-        template = candidate;
-    } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-            // no .env.example — use built-in
+        if (candidate.includes("{{")) {
+            content = substituteTokens(candidate, values);
         } else {
-            throw err;
+            content = substituteEnvLines(candidate, values);
         }
+    } catch {
+        content = substituteTokens(BUILT_IN_TEMPLATE, values);
     }
 
-    const content = substituteTokens(template, values);
     await writeFile(join(projectDir, ".env"), content, "utf8");
 }
