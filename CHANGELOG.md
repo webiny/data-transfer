@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.6
+
+### Patch Changes
+
+- 74a0a2f: Fix `.env` population for older scaffolded projects: `writeEnv` now supports plain `KEY=value` `.env.example` files by uncommenting commented-out known keys and appending missing ones. Config template auto-enables OpenSearch when the env vars are set — no manual uncommenting needed.
+
 ## 0.0.5
 
 ### Patch Changes
