@@ -8,27 +8,30 @@ import {
 
 loadEnv(import.meta.url);
 
+const sourceOsTable = fromEnv("SOURCE_OS_TABLE", null);
+const targetOsTable = fromEnv("TARGET_OS_TABLE", null);
+
 export default createConfig({
     source: {
         region: fromEnv("SOURCE_REGION", "eu-central-1"),
         credentials: fromAwsProfile({ profile: fromEnv("SOURCE_PROFILE", "default") }),
         dynamodb: { tableName: fromEnv("SOURCE_DDB_TABLE") },
-        s3: { bucket: fromEnv("SOURCE_S3_BUCKET") }
-        // Uncomment if your Webiny project uses OpenSearch:
-        // opensearch: { tableName: fromEnv("SOURCE_OS_TABLE") }
+        s3: { bucket: fromEnv("SOURCE_S3_BUCKET") },
+        opensearch: sourceOsTable ? { tableName: sourceOsTable } : null
     },
     target: {
         region: fromEnv("TARGET_REGION", "eu-central-1"),
         credentials: fromAwsProfile({ profile: fromEnv("TARGET_PROFILE", "default") }),
         dynamodb: { tableName: fromEnv("TARGET_DDB_TABLE") },
-        s3: { bucket: fromEnv("TARGET_S3_BUCKET") }
-        // Uncomment if your Webiny project uses OpenSearch:
-        // opensearch: {
-        //     endpoint: fromEnv("TARGET_OS_ENDPOINT"),
-        //     tableName: fromEnv("TARGET_OS_TABLE"),
-        //     service: "opensearch",
-        //     indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
-        // }
+        s3: { bucket: fromEnv("TARGET_S3_BUCKET") },
+        opensearch: targetOsTable
+            ? {
+                  endpoint: fromEnv("TARGET_OS_ENDPOINT"),
+                  tableName: targetOsTable,
+                  service: "opensearch",
+                  indexPrefix: fromEnv("TARGET_OS_INDEX_PREFIX", "")
+              }
+            : null
     },
     pipeline: {
         segments: numberFromEnv("SEGMENTS", 4),

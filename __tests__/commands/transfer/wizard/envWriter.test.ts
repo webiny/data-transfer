@@ -176,7 +176,40 @@ describe("writeEnv", () => {
         await writeEnv(tmpDir, values);
 
         const content = await readFile(join(tmpDir, ".env"), "utf8");
-        expect(content).toBe("TARGET_OS_INDEX_PREFIX=\n");
+        expect(content).toContain("TARGET_OS_INDEX_PREFIX=\n");
+        expect(content).not.toContain("old-prefix");
+    });
+
+    it("plain format uncomments commented-out known keys and fills them", async () => {
+        const plain = [
+            "SOURCE_REGION=eu-central-1",
+            "# SOURCE_OS_TABLE=",
+            "# TARGET_OS_TABLE=",
+            "# TARGET_OS_ENDPOINT="
+        ].join("\n");
+        await writeFile(join(tmpDir, ".env.example"), plain);
+
+        await writeEnv(tmpDir, SAMPLE_VALUES);
+
+        const content = await readFile(join(tmpDir, ".env"), "utf8");
+        expect(content).toContain("SOURCE_OS_TABLE=wby-source-es");
+        expect(content).toContain("TARGET_OS_TABLE=wby-target-os");
+        expect(content).toContain("TARGET_OS_ENDPOINT=search-target.us-east-1.es.amazonaws.com");
+        expect(content).not.toContain("# SOURCE_OS_TABLE");
+        expect(content).not.toContain("# TARGET_OS_TABLE");
+    });
+
+    it("plain format appends missing known keys at the end", async () => {
+        const plain = "SOURCE_REGION=eu-central-1\nSEGMENTS=4\n";
+        await writeFile(join(tmpDir, ".env.example"), plain);
+
+        await writeEnv(tmpDir, SAMPLE_VALUES);
+
+        const content = await readFile(join(tmpDir, ".env"), "utf8");
+        expect(content).toContain("SOURCE_REGION=eu-central-1");
+        expect(content).toContain("SEGMENTS=8");
+        expect(content).toContain("TARGET_OS_ENDPOINT=search-target.us-east-1.es.amazonaws.com");
+        expect(content).toContain("SOURCE_ACCOUNT_ID=111111111111");
     });
 
     it("uses built-in template when .env.example is absent", async () => {

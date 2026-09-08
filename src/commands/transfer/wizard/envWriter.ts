@@ -79,25 +79,38 @@ function substituteTokens(template: string, values: EnvValues): string {
 }
 
 function substituteEnvLines(content: string, values: EnvValues): string {
-    return content
-        .split("\n")
-        .map(line => {
-            const trimmed = line.trimStart();
-            if (!trimmed || trimmed.startsWith("#")) {
-                return line;
-            }
-            const eqIndex = trimmed.indexOf("=");
-            if (eqIndex === -1) {
-                return line;
-            }
-            const key = trimmed.slice(0, eqIndex).trim();
-            const envKey = TOKEN_MAP[key];
-            if (envKey) {
-                return `${key}=${String(values[envKey])}`;
-            }
+    const seen = new Set<string>();
+    const lines = content.split("\n").map(line => {
+        const trimmed = line.trimStart();
+        if (!trimmed) {
             return line;
-        })
-        .join("\n");
+        }
+
+        const commented = trimmed.startsWith("#");
+        const stripped = commented ? trimmed.slice(1).trimStart() : trimmed;
+        const eqIndex = stripped.indexOf("=");
+        if (eqIndex === -1) {
+            return line;
+        }
+
+        const key = stripped.slice(0, eqIndex).trim();
+        const envKey = TOKEN_MAP[key];
+        if (envKey) {
+            seen.add(key);
+            return `${key}=${String(values[envKey])}`;
+        }
+        return line;
+    });
+
+    const missing = Object.entries(TOKEN_MAP).filter(([key]) => !seen.has(key));
+    if (missing.length > 0) {
+        lines.push("");
+        for (const [key, envKey] of missing) {
+            lines.push(`${key}=${String(values[envKey])}`);
+        }
+    }
+
+    return lines.join("\n");
 }
 
 export async function writeEnv(projectDir: string, values: EnvValues): Promise<void> {
