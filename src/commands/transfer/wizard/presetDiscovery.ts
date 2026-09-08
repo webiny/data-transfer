@@ -29,6 +29,9 @@ export interface PresetEntry {
 }
 
 function stripExtension(filename: string): string | null {
+    if (filename.endsWith(".d.ts")) {
+        return null;
+    }
     for (const ext of PRESET_EXTENSIONS) {
         if (filename.endsWith(ext)) {
             return filename.slice(0, -ext.length);
