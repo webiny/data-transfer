@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { execa } from "execa";
 import { bootstrap } from "~/bootstrap.js";
 import { formatError } from "~/base/index.js";
@@ -243,7 +244,10 @@ async function spawnWorker(
     logLevel?: string,
     dryRun = false
 ): Promise<void> {
-    const binPath = join(findPackageRoot(dirname(fileURLToPath(import.meta.url))), "bin.js");
+    const packageRoot = findPackageRoot(dirname(fileURLToPath(import.meta.url)));
+    const binPath = existsSync(join(packageRoot, "bin.js"))
+        ? join(packageRoot, "bin.js")
+        : join(packageRoot, "cli.js");
 
     const args = [
         binPath,
