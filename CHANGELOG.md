@@ -1,5 +1,11 @@
 # @webiny/data-transfer
 
+## 0.0.8
+
+### Patch Changes
+
+- 758b0d0: Fix worker process spawning in published packages — resolve `cli.js` when `bin.js` is absent.
+
 ## 0.0.7
 
 ### Patch Changes
