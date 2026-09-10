@@ -104,6 +104,10 @@ These docs also ship in the published npm package and are referenced from the sc
 - `bruno/feat/di-features` — slice-merging-processors refactor, afterShard hook, dynalite integration suite, golden-file preset test. **Merged to `main`.**
 - `bruno/feat/os-transfer` — `v5-to-v6-os` preset, `OsScanner` + `OsProcessor`, `addLiveField`, OS transformers, `ModelProvider` multi-format JSON. **Merged to `main`.**
 
+### Session handoffs
+
+Read the latest handoff before starting work: `docs/handoff/2026-09-10-fix-live-implementation-and-cli.md`. It covers all changes from the 2026-09-04 to 2026-09-10 sessions (fix-live reconciler, CLI command menu, inquirer removal, env/preset/worker fixes) and lists pending follow-up work.
+
 ### Open work
 
 0. **Fix live field + CLI command menu** — **implemented.** Transformer fix, reconciler, DDB/OS runners, clack-based command menu, `fix-live` guided command, all landed and tested. Spec: `docs/superpowers/specs/2026-09-04-fix-live-field-and-command-menu-design.md`.
@@ -111,7 +115,7 @@ These docs also ship in the published npm package and are referenced from the sc
 2. **Init scaffolding smoke** — `init` scaffolds from `templates/`. Scaffold output: `config.ts`, `presets/example.ts`, optional `setup.ts`. Do a smoke run to verify a scaffolded project compiles + runs against a live sandbox.
 3. **End-to-end AWS smoke** — no test has ever run against real AWS. Day-long sandbox exercise. Catches real issues mocks can't.
 4. **Public API audit pass (post-refactor)** — `src/index.ts` grew organically. Re-audit before publish to confirm the surface matches user-authoring intent. `DdbCoreTransformContext` (= Base ∧ DdbProcessorSlice) was added as the narrower alternative to `DdbTransformContext`.
-5. **Inquirer removal** — `TransferWizard`, `init` and `initProject` still use `@inquirer/prompts`; migrate them to `Prompts` / `UI` and drop `@inquirer/*` from `package.json`.
+5. **Inquirer removal** — **done.** `TransferWizard` migrated to `Prompts` / `UI`; `@inquirer/*` removed from `package.json`.
 6. **`fix-live` OS propagation** — confirm v6's DynamoDB stream handler treats a `data`-only change on the OS companion table as an index update (spec 2026-09-04, open question 1).
 
 ---
