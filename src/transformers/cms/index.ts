@@ -5,6 +5,7 @@ export { renameFieldAttributes } from "./renameFieldAttributes.ts";
 export { replaceFileUrls } from "./replaceFileUrls.ts";
 export { transformModelGroup } from "./transformModelGroup.ts";
 export { fixBrokenStorageKeys } from "./fixBrokenStorageKeys.ts";
+export { fixLongText } from "./fixLongText.ts";
 export { transformRichText } from "./transformRichText.ts";
 export { updateModelIds } from "./updateModelIds.ts";
 export { updateOsIndex } from "./updateOsIndex.ts";

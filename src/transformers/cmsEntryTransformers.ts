@@ -1,6 +1,7 @@
 import {
     fixBrokenStorageKeys,
     fixCmePk,
+    fixLongText,
     removeFolderRevision,
     transformRichText,
     updateModelIds,
@@ -33,12 +34,15 @@ export const cmsEntryTransformers = [
 // OS-mode transformer stack. `data` is already populated (decompressed by
 // OsScanner), so wrapInData is omitted. updateOsIndex runs after updateModelIds
 // so it sees the renamed modelId when computing the new index name.
+// fixLongText is OS-only: in DDB a compressed long-text envelope is the correct
+// storage shape, while an OS document must hold the plain (decompressed) text.
 export const osCmsEntryTransformers = [
     addGsiTenant,
     removeLocale,
     fixCmePk,
     fixBrokenStorageKeys,
     transformRichText,
+    fixLongText,
     updateModelIds,
     updateOsIndex,
     removeFolderRevision,

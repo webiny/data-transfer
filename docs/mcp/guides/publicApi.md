@@ -60,14 +60,14 @@ import { createTransformer, createDdbTransformer, createOsTransformer } from "@w
 | `createDdbTransformer` | value | Same runtime behavior as `createTransformer`, but binds `fn`'s parameter to `DdbTransformContext.Interface` (Base + `DdbProcessor` slice + `S3Processor` slice). Default choice for v5-to-v6 DDB transformers. |
 | `createOsTransformer` | value | Same, but binds `fn`'s parameter to `OsTransformContext.Interface<OsScanner.Record>` (Base + `OsProcessor` slice). |
 
-## Built-in Transformers (27)
+## Built-in Transformers (28)
 
 Ready-made transformers for use in custom presets via `.use(...)`. Source: `src/transformers/**`. Full per-transformer detail (signatures, config args, edge cases) lives under `docs/mcp/transformers/`.
 
 ```typescript
 import {
   // CMS
-  addLiveField, fixBrokenStorageKeys, fixCmePk, removeFolderRevision,
+  addLiveField, fixBrokenStorageKeys, fixCmePk, fixLongText, removeFolderRevision,
   renameFieldAttributes, replaceFileUrls, transformModelGroup, transformRichText,
   updateModelIds, updateOsIndex,
   // File manager
@@ -85,15 +85,16 @@ import {
 } from "@webiny/data-transfer";
 ```
 
-All 27 are **value** exports (plain functions, or factory functions in `replaceFileUrls`'s case — see `writingTransformers.md`).
+All 28 are **value** exports (plain functions, or factory functions in `replaceFileUrls`'s case — see `writingTransformers.md`).
 
-### CMS (10)
+### CMS (11)
 
 | Export | Description |
 | --- | --- |
 | `addLiveField` | Computes and attaches the `live` pointer (published revision version) to CMS entry records. |
 | `fixBrokenStorageKeys` | Corrects mismatched field storage keys in CMS entry values against the model's declared `storageId`. |
 | `fixCmePk` | Removes a duplicated `#CME#CME#` segment from a record's `PK`. |
+| `fixLongText` | OS-only — decompresses `long-text` field values still stored as a `{ compression, value }` envelope so OpenSearch can index them as `text`. |
 | `removeFolderRevision` | Strips the `#0001` revision suffix from folder location IDs and cleans up legacy folder location fields. |
 | `renameFieldAttributes` | Renames legacy CMS model field attributes (`helpText`, `placeholderText`, `multipleValues`) to their v6 equivalents. |
 | `replaceFileUrls` | Factory — `replaceFileUrls(config)` rewrites file-manager URLs embedded in CMS `file`/`rich-text` field values from `fileUrls.source` to `fileUrls.target`. |

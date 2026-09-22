@@ -47,6 +47,7 @@ export { createOsTransformer } from "./transformers/createOsTransformer.ts";
 // CMS
 export { addLiveField } from "./transformers/cms/addLiveField.ts";
 export { fixBrokenStorageKeys } from "./transformers/cms/fixBrokenStorageKeys.ts";
+export { fixLongText } from "./transformers/cms/fixLongText.ts";
 export { fixCmePk } from "./transformers/cms/fixCmePk.ts";
 export { removeFolderRevision } from "./transformers/cms/removeFolderRevision.ts";
 export { renameFieldAttributes } from "./transformers/cms/renameFieldAttributes.ts";

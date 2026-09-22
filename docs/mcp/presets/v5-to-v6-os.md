@@ -27,7 +27,7 @@ category: Presets
 **Transformers applied** (in pipeline order):
 
 - `AcoSearchRecords`, `BackgroundTasks`, `MailerSettings`: none — everything they emit is discarded via `.blackhole()`, but filters still evaluate.
-- `FileManagerFiles`: `osCmsEntryTransformers` bundle (`addGsiTenant` → `removeLocale` → `fixCmePk` → `fixBrokenStorageKeys` → `transformRichText` → `updateModelIds` → `updateOsIndex` → `removeFolderRevision` → `removeAttributes` → `addTransferTimestamp`)
+- `FileManagerFiles`: `osCmsEntryTransformers` bundle (`addGsiTenant` → `removeLocale` → `fixCmePk` → `fixBrokenStorageKeys` → `transformRichText` → `fixLongText` → `updateModelIds` → `updateOsIndex` → `removeFolderRevision` → `removeAttributes` → `addTransferTimestamp`)
 - `CmsEntries`: `osCmsEntryTransformers` bundle → `addLiveField` → `replaceFileUrls(config)`
 
 **Example usage in a custom preset:**
