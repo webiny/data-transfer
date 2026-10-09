@@ -1,0 +1,7 @@
+[allowlist]
+description = "Global allowlist for test data"
+regexes = [
+  '''a729f1eda364054fdb675e299300de9f612bd9485448e1e3''',
+  '''wat_f894e8020e4b941d1823fc11e695a21007d2''',
+  '''U2FsdGVkX1/6k2xNUKb2oeQD+570saZOZyYGKpo+0PI='''
+]
