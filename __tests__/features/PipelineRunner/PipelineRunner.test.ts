@@ -84,6 +84,7 @@ class FakeBaseContextFactory implements BaseTransformContextFactory.Interface {
             original: Object.freeze(params.record as TRecord) as Readonly<TRecord>,
             modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
             cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+            container: {} as BaseTransformContext.Interface<TRecord>["container"],
             compressionHandler: {} as CompressionHandler.Interface,
             logger: {
                 debug: () => {},

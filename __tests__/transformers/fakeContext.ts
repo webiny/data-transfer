@@ -9,6 +9,8 @@ import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import type { BaseRecord } from "~/domain/transform/types/records.js";
 import type { OsScanner } from "~/features/OsScanner/index.js";
 import type { CompressionHandler } from "@webiny/utils/exports/api.js";
+import { Container } from "@webiny/di";
+import { CmsModelOpenSearchIndexFeature } from "~/features/CmsModelOpenSearchIndex/index.js";
 
 function makeCache(): Cache.Interface {
     const store = new Map<string, unknown>();
@@ -44,6 +46,13 @@ export interface FakeContextOverrides {
     cache?: Cache.Interface;
     logger?: Logger.Interface;
     compressionHandler?: CompressionHandler.Interface;
+    container?: Container;
+}
+
+function makeContainer(): Container {
+    const container = new Container();
+    CmsModelOpenSearchIndexFeature.register(container);
+    return container;
 }
 
 function makeNoOpCompressionHandler(): CompressionHandler.Interface {
@@ -82,6 +91,7 @@ export function makeFakeBaseContext<T extends Record<string, unknown>>(
         cache: overrides.cache ?? makeCache(),
         logger: overrides.logger ?? makeLogger(),
         compressionHandler: overrides.compressionHandler ?? makeNoOpCompressionHandler(),
+        container: overrides.container ?? makeContainer(),
         replace(newRecord: unknown): void {
             (ctx as { record: unknown }).record = newRecord;
         },

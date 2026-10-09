@@ -57,6 +57,7 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@opensearch-project/opensearch": "3.9.0",
     "@types/node": "^26.6.4",
+    "@webiny/api-headless-cms": "^6.6.0-alpha.9",
     "@webiny/api-headless-cms-utils-os": "^6.6.0-alpha.9",
     "@webiny/api-opensearch": "^6.6.0-alpha.9",
     "@webiny/aws-sdk": "^6.6.0-alpha.9",

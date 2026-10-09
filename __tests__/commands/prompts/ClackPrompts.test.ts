@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { CANCEL_SYMBOL } from "@clack/prompts";
 
-const CANCEL = Symbol("clack:cancel");
+const CANCEL: typeof CANCEL_SYMBOL = Symbol("clack:cancel") as typeof CANCEL_SYMBOL;
 
 vi.mock("@clack/prompts", () => ({
     select: vi.fn(),

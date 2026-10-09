@@ -31,6 +31,7 @@ import { OsRecordDecompressorFeature } from "~/features/OsRecordDecompressor/ind
 import { OsScannerFeature } from "~/features/OsScanner/index.js";
 import { OsProcessorFeature } from "~/features/OsProcessor/index.js";
 import { IndexConfigurationProviderFeature } from "~/features/IndexConfigurationProvider/index.js";
+import { CmsModelOpenSearchIndexFeature } from "~/features/CmsModelOpenSearchIndex/index.js";
 import { TouchedIndexesFeature } from "~/features/TouchedIndexes/index.js";
 import { AccessCheckerFeature } from "~/features/AccessChecker/index.js";
 import { DroppedRecordLogFeature } from "~/features/DroppedRecordLog/index.js";
@@ -129,6 +130,7 @@ export function bootstrap(options: BootstrapOptions): Container {
     DdbProcessorFeature.register(container);
     AuditLogProcessorFeature.register(container);
     IndexConfigurationProviderFeature.register(container);
+    CmsModelOpenSearchIndexFeature.register(container);
     TouchedIndexesFeature.register(container);
     OsRecordDecompressorFeature.register(container);
     OsScannerFeature.register(container);

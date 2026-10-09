@@ -1,7 +1,9 @@
-import { configurations } from "@webiny/api-headless-cms-utils-os/configurations.js";
+import { createConfigurations } from "@webiny/api-headless-cms-utils-os/configurations.js";
 import { createOsTransformer } from "~/transformers/createOsTransformer.js";
+import { CmsModelOpenSearchIndexProvider } from "@webiny/api-headless-cms-utils-os/exports/api/cms/opensearch.js";
+import type { StorageCmsModel } from "@webiny/api-headless-cms/types/index.js";
 
-export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
+export const updateOsIndex = createOsTransformer("updateOsIndex", async ctx => {
     const { record } = ctx;
 
     const modelId = record.data.modelId as string | undefined;
@@ -14,12 +16,16 @@ export const updateOsIndex = createOsTransformer("updateOsIndex", ctx => {
         return;
     }
 
-    const { index } = configurations.es({
+    const provider = ctx.container.resolve(CmsModelOpenSearchIndexProvider);
+
+    const configurations = createConfigurations(provider);
+
+    const result = await configurations.es({
         model: {
             modelId,
             tenant
-        }
+        } as StorageCmsModel
     });
 
-    record.index = index;
+    record.index = result.index;
 });

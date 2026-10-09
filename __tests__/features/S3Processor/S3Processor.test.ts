@@ -29,6 +29,7 @@ function makeBase<TRecord>(record: TRecord): BaseStub<TRecord> {
         original: Object.freeze(record) as Readonly<TRecord>,
         modelProvider: {} as BaseTransformContext.Interface<TRecord>["modelProvider"],
         cache: {} as BaseTransformContext.Interface<TRecord>["cache"],
+        container: {} as BaseTransformContext.Interface<TRecord>["container"],
         compressionHandler: {} as CompressionHandler.Interface,
         logger: {
             debug: () => {},

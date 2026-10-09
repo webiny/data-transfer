@@ -5,6 +5,7 @@ import type { ModelProvider } from "~/features/ModelProvider/abstractions/ModelP
 import type { Cache } from "~/tools/Cache/abstractions/Cache.js";
 import type { Logger } from "~/tools/Logger/abstractions/Logger.js";
 import { CompressionHandler } from "@webiny/utils/exports/api.js";
+import type { Container } from "@webiny/di";
 
 // ============================================================================
 // Base Context Interface
@@ -12,6 +13,7 @@ import { CompressionHandler } from "@webiny/utils/exports/api.js";
 
 export interface IBaseTransformContext<TRecord = unknown> {
     record: TRecord;
+    readonly container: Container;
     readonly original: Readonly<TRecord>;
     readonly modelProvider: ModelProvider.Interface;
     readonly cache: Cache.Interface;
